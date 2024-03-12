@@ -1,0 +1,32 @@
+
+
+
+
+
+
+
+$regionInfo = Region::where('code', $region->code_region)->first();
+                    $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Directeur Régional';
+                    // Requête pour obtenir le nombre de projets dans chaque statut pour la région spécifiée
+                    $statutsProjets = DB::table('projet_eha2 as pe')
+                    ->select('sp.libelle AS statut_projet', DB::raw('SUM(pe.cout_projet) AS total_cout_projet2'))
+                    ->join('projet_statut_projet as psp', 'psp.code_projet', '=', 'pe.CodeProjet')
+                    ->join('statut_projet as sp', 'sp.code', '=', 'psp.code_statut_projet')
+                    ->where('pe.code_region', '=', $regionInfo->code)
+                    ->groupBy('sp.libelle')
+                    ->get();
+
+
+                    // Créer un tableau associatif pour stocker les résultats
+                    $projetsParStatut = [];
+
+                    // Initialiser le tableau avec des valeurs par défaut de 0 pour chaque statut
+                    $statuts = ['Prévu', 'En cours', 'Clôturé', 'Redémarré', 'Annulé', 'Suspendu'];
+                    foreach ($statuts as $statut) {
+                        $projetsParStatut[$statut] = 0;
+                    }
+
+                    // Mettre à jour les valeurs avec celles obtenues dans la requête
+                    foreach ($statutsProjets as $statutProjet) {
+                        $projetsParStatut[$statutProjet->statut_projet] = $statutProjet->total_cout_projet2;
+                    }

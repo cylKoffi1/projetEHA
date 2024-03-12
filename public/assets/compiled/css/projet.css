@@ -1,0 +1,401 @@
+
+h1 {
+    text-align: center;
+}
+h2 {
+    margin: 0;
+}
+#multi-step-form-container {
+    margin-top: 5rem;
+}
+.text-center {
+    text-align: center;
+}
+.mx-auto {
+    margin-left: auto;
+    margin-right: auto;
+}
+.pl-0 {
+    padding-left: 0;
+}
+.button {
+    padding: 0.7rem 1.5rem;
+    border: 1px solid #4e4ffa;
+    background-color: #4e4ffa;
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.submit-btn {
+    border: 1px solid #0e9594;
+    background-color: #0e9594;
+}
+
+.mt-3 {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+
+.mt-3 .gauche {
+    flex: 1; /* Pour permettre à la div gauche de prendre autant d'espace que possible */
+    margin-right: 10px;
+     /* Marge entre les divs gauche et droite */
+}
+
+.mt-3 .droit {
+    flex: 1; /* Pour permettre à la div droite de prendre autant d'espace que possible */
+    margin-left: 10px; /* Marge entre les divs gauche et droite */
+}
+
+.mt-3 .gauche2 {
+    flex: 1; /* Pour permettre à la div gauche de prendre autant d'espace que possible */
+    margin-right: 10px;
+    display: flex;
+    justify-content: space-between;
+    width: 180px;
+     /* Marge entre les divs gauche et droite */
+}
+
+.mt-3 .droit2 {
+    flex: 1; /* Pour permettre à la div droite de prendre autant d'espace que possible */
+    margin-left: 10px; /* Marge entre les divs gauche et droite */
+}
+
+
+
+.infrastructure-container {
+    flex: 1; /* Pour permettre à la div droite de prendre autant d'espace que possible */
+    margin-left: 5px; /* Marge entre les divs gauche et droite */
+}
+
+.d-none {
+    display: none;
+}
+.form-step {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    padding: 3rem;
+}
+.font-normal {
+    font-weight: normal;
+}
+ul.form-stepper {
+    counter-reset: section;
+    margin-bottom: 3rem;
+}
+ul.form-stepper .form-stepper-circle {
+    position: relative;
+}
+ul.form-stepper .form-stepper-circle span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+}
+.form-stepper-horizontal {
+    position: relative;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+}
+ul.form-stepper > li:not(:last-of-type) {
+    margin-bottom: 0.625rem;
+    -webkit-transition: margin-bottom 0.4s;
+    -o-transition: margin-bottom 0.4s;
+    transition: margin-bottom 0.4s;
+}
+.form-stepper-horizontal > li:not(:last-of-type) {
+    margin-bottom: 0 !important;
+}
+.form-stepper-horizontal li {
+    position: relative;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    align-items: start;
+    -webkit-transition: 0.5s;
+    transition: 0.5s;
+}
+.form-stepper-horizontal li:not(:last-child):after {
+    position: relative;
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    height: 1px;
+    content: "";
+    top: 32%;
+}
+.form-stepper-horizontal li:after {
+    background-color: #dee2e6;
+}
+.form-stepper-horizontal li.form-stepper-completed:after {
+    background-color: #4e4ffa;
+}
+.form-stepper-horizontal li:last-child {
+    flex: unset;
+}
+ul.form-stepper li a .form-stepper-circle {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    margin-right: 0;
+    line-height: 1.7rem;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.38);
+    border-radius: 50%;
+}
+.form-stepper .form-stepper-active .form-stepper-circle {
+    background-color: #4e4ffa !important;
+    color: #fff;
+}
+.form-stepper .form-stepper-active .label {
+    color: #4e4ffa !important;
+}
+.form-stepper .form-stepper-active .form-stepper-circle:hover {
+    background-color: #4e4ffa !important;
+    color: #fff !important;
+}
+.form-stepper .form-stepper-unfinished .form-stepper-circle {
+    background-color: #f8f7ff;
+}
+.form-stepper .form-stepper-completed .form-stepper-circle {
+    background-color: #0e9594 !important;
+    color: #fff;
+}
+.form-stepper .form-stepper-completed .label {
+    color: #0e9594 !important;
+}
+.form-stepper .form-stepper-completed .form-stepper-circle:hover {
+    background-color: #0e9594 !important;
+    color: #fff !important;
+}
+.form-stepper .form-stepper-active span.text-muted {
+    color: #fff !important;
+}
+.form-stepper .form-stepper-completed span.text-muted {
+    color: #fff !important;
+}
+.form-stepper .label {
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+.form-stepper a {
+    cursor: default;
+}
+/* Styles pour améliorer la mise en forme des champs */
+.form-step .gauche label,
+.form-step .droit label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333; /* Couleur du texte des labels */
+}
+
+.form-step .haut label {
+    display: block;
+    margin: 0 auto;
+    color: #333; /* Couleur du texte des labels */
+}
+
+.form-step .gauche label,
+.form-step .gauche2 label,
+.form-step .droit label {
+
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333; /* Couleur du texte des labels */
+}
+/* .form-step select,
+.form-step .gauche input,
+.form-step .droit input,
+.form-step .gauche2 .actQuan select,
+.form-step .gauche2 .actQuan input,
+.form-step .gauche2 select,
+textarea {
+    width: 100%; /* Largeur de chaque champ avec marge
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    display: inline-block; /* Afficher en ligne
+} */
+
+
+.form-step .haut input {
+    width: calc(60.333% - 1rem);
+    padding: 0.5rem;
+
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    display: inline-block;
+}
+
+
+/* Styles supplémentaires selon vos préférences */
+.form-step {
+    background-color: #f9f9f9;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    padding: 20px;
+}
+
+.button {
+    display: inline-block;
+    padding: 0.7rem 1.5rem;
+    border: 1px solid #4e4ffa;
+    background-color: #4e4ffa;
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: #4e4ffa;
+}
+
+.btn-navigate-form-step {
+    margin-right: 10px;
+}
+
+.form-stepper-unfinished .button {
+    background-color: #ddd;
+    border-color: #ddd;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.submit-btn {
+    background-color: #0e9594;
+    border-color: #0e9594;
+}
+
+.submit-btn:hover {
+    background-color: #0c7d7a;
+}
+
+@media (max-width: 600px) {
+    .form-step {
+        padding: 10px;
+    }
+
+    .button {
+        width: 100%;
+    }
+
+    .form-step select,
+    .form-step input {
+        width: 100%; /* Pour afficher les champs sur toute la largeur sur les petits écrans */
+    }
+}
+.actQuan {
+    width: 48%; /* Ajustez la largeur selon vos besoins */
+    display: flex;
+}
+
+.infrastructure,
+.beneficiaire-container {
+    display: flex;
+    align-items: center;
+}
+.infrastructure-select,
+.beneficiaire-select,
+.add-infrastructure-button,
+.add-beneficiaire-button {
+    margin-left: 8px; /* Ajustez la marge selon vos besoins */
+}
+
+
+
+.table-container {
+    margin-top: 20px; /* Ajustez la marge selon vos besoins */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+/* Style de base pour les écrans plus petits que 768px (mobile) */
+@media (max-width: 768px) {
+
+
+    .form-step {
+        padding: 20px;
+    }
+
+    .gauche,
+    .droit,
+    .gauche2,
+    .droit2 {
+        width: 100%;
+    }
+
+    input,
+    select,
+    textarea {
+        width: 100%;
+    }
+}
+
+/* Style pour les écrans entre 768px et 1024px (tablettes) */
+@media (min-width: 769px) and (max-width: 1024px) {
+
+
+    .form-step {
+        padding: 30px;
+    }
+}
+
+/* Style pour les écrans plus grands que 1024px (ordinateurs) */
+@media (min-width: 1025px) {
+    /* Ajoutez des styles supplémentaires selon vos besoins */
+
+
+    .form-step {
+        padding: 40px;
+    }
+
+    .gauche,
+    .droit,
+    .gauche2,
+    .droit2 {
+        width: 48%;
+    }
+}
+/* Style pour les écrans de 320 pixels de large ou moins */
+@media (max-width: 320px) {
+    .form-stepper-circle {
+        font-size: 16px;
+    }
+
+    .form-step {
+        padding: 25px;
+    }
+
+    .gauche,
+    .droit,
+    .gauche2,
+    .droit2 {
+        width: 100%;
+        /* Ajouter flex-direction: column; pour afficher en colonne */
+        flex-direction: column;
+    }
+}

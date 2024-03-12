@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ProjetChefProjet extends Model
+{
+    use HasFactory;
+    protected $table = 'projet_chef_projet';
+    protected $primaryKey = 'code';
+    public $timestamps = false;
+    protected $fillable = [
+        'code_projet',
+        'code_personnel',
+        'date'
+    ];
+}

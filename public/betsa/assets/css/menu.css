@@ -1,0 +1,263 @@
+/* Styles pour le menu principal */
+nav.navbar.bootsnav {
+    background-color: #435ebe;
+    border-bottom: transparent;
+  }
+
+  .wrap-sticky nav.navbar.bootsnav.sticked {
+    background-color: #435ebe;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  .navbar-header a.navbar-brand,
+  .navbar-header a.navbar-brand:hover,
+  .navbar-header a.navbar-brand:focus {
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    color: #fff;
+    font-size: 24px;
+    letter-spacing: 3px;
+    font-family: 'Rufina', serif;
+    font-weight: 700;
+    padding: 45px 0;
+    text-transform: uppercase;
+  }
+
+  .navbar-header a.navbar-brand span {
+    display: inline-block;
+    color: #000000;
+    text-transform: capitalize;
+  }
+
+  .wrap-sticky nav.navbar.bootsnav.sticked .navbar-header a.navbar-brand,
+  .wrap-sticky nav.navbar.bootsnav.sticked .navbar-header a.navbar-brand:hover,
+  .wrap-sticky nav.navbar.bootsnav.sticked .navbar-header a.navbar-brand:focus {
+    padding: 30px 0;
+  }
+  .navbar-header a.navbar-brand img {
+    margin-right: 20px; /* Ajustez cette valeur selon l'espace souhaité */
+}
+
+  /* Styles pour les éléments du menu principal */
+  nav.navbar.bootsnav ul.nav > li > a {
+    color: #f5f7fa;
+    font-size: 16px;
+    font-weight: 500;
+    text-transform:uppercase;
+    -webkit-transition: 0.3s linear;
+    -moz-transition: 0.3s linear;
+    -ms-transition: 0.3s linear;
+    -o-transition: 0.3s linear;
+    transition: 0.3s linear;
+}
+  nav.navbar.bootsnav ul.nav > li > a:hover,
+  nav.navbar.bootsnav ul.nav > li > a:focus {
+    color: #000000;
+  }
+
+  nav.navbar.bootsnav ul.nav > li.active > a {
+    color: #000000;
+  }
+
+  /* Styles pour les éléments de niveau 2 */
+  nav.navbar.bootsnav ul.nav > li.dropdown > a.dropdown-toggle:after {
+    content: "";
+  }
+
+  nav.navbar.bootsnav ul.nav > li.dropdown span {
+    font-size: 8px;
+    margin-left: 15px;
+  }
+
+  .wrap-sticky nav.navbar.bootsnav.sticked ul.nav > li > a {
+    padding: 30px 25px;
+  }
+
+  /* Styles pour le bouton de menu mobile */
+  nav.navbar.bootsnav .navbar-toggle {
+    position: relative;
+    background-color: transparent;
+    border: 1px solid #000000;
+    padding: 10px;
+    top: 0;
+  }
+
+  nav.navbar.bootsnav .navbar-toggle i {
+    color: #000;
+  }
+
+  /* Styles pour les sous-menus de niveau 1 et 2 */
+  nav.primary-navigation {
+    font-family: 'Arvo', sans-serif;
+    display: block;
+    text-align: center;
+    font-size: 16px;
+  }
+
+  nav.primary-navigation ul {
+    display: flex;
+    justify-content: center;
+  }
+
+  nav.primary-navigation li {
+    border-left: 2px solid #3ca0e7;
+    position: relative;
+  }
+
+  nav.primary-navigation a {
+    text-decoration: none;
+    color: rgb(255, 255, 255);
+    padding: 0 10px;
+  }
+
+  nav.primary-navigation a:hover {
+    color: #3ca0e7;
+  }
+  /*.menu-ui-design*/
+.menu-ui-design{overflow-y:scroll;height: 350px;}
+.menu-ui-design::-webkit-scrollbar {
+    width:5px;
+}
+.menu-ui-design::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 8px #000;
+}
+.menu-ui-design::-webkit-scrollbar-thumb {
+  background-color: #4e4ffa;
+}
+/*.menu-ui-design*/
+
+  nav.primary-navigation ul ul {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    display: none;
+    background: white;
+    min-width: 200px;
+    text-align: left;
+    padding-top: 20px;
+    box-shadow: 0px 3px 5px -1px #ccc;
+    z-index: 1;
+  }
+
+  nav.primary-navigation li:hover > ul,
+  nav.primary-navigation ul li ul:hover {
+    visibility: visible;
+    opacity: 1;
+    display: block;
+  }
+
+  nav.primary-navigation ul ul li {
+    clear: both;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 20px;
+    border-style: none;
+  }
+
+  nav.primary-navigation ul ul a {
+    color: black;
+    text-decoration: none;
+    display: block;
+    padding: 10px 20px;
+  }
+
+  nav.primary-navigation ul ul a:hover {
+    color: #3ca0e7;
+  }
+
+  /* Styles pour les sous-sous-menus de niveau 2 */
+  nav.primary-navigation ul ul ul {
+    left: 100%;
+    top: 0;
+    display: none;
+    background: white;
+    min-width: 200px;
+    text-align: left;
+    box-shadow: -3px 0 5px -1px #ccc;
+    position: absolute;
+    padding-left: 0;
+    visibility: hidden;
+    opacity: 0;
+    z-index: 1;
+  }
+
+  nav.primary-navigation ul ul li:hover > ul,
+  nav.primary-navigation ul ul ul:hover {
+    visibility: visible;
+    opacity: 1;
+    display: block;
+  }
+
+  nav.primary-navigation ul ul ul li {
+    clear: both;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 20px;
+    border-style: none;
+  }
+
+  nav.primary-navigation ul ul ul a {
+    color: black;
+    text-decoration: none;
+    display: block;
+    padding: 10px 20px;
+  }
+
+  nav.primary-navigation ul ul ul a:hover {
+    color: #3ca0e7;
+  }
+
+  /* Styles pour le menu principal */
+
+  /* Ajoutez ces styles pour les écrans de petite taille (par exemple, mobile) */
+  @media (max-width: 768px) {
+    nav.navbar.bootsnav ul.nav > li > a {
+        font-size: 14px; /* Ajustez la taille de la police pour les écrans plus petits */
+        padding: 20px 15px; /* Ajustez les marges et rembourrages pour les écrans plus petits */
+    }
+  }
+
+  /* Ajoutez ces styles pour les écrans de taille moyenne (par exemple, tablettes) */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    nav.navbar.bootsnav ul.nav > li > a {
+        font-size: 18px; /* Ajustez la taille de la police pour les tablettes */
+        padding: 30px 20px; /* Ajustez les marges et rembourrages pour les tablettes */
+    }
+  }
+
+  /* Ajoutez ces styles pour les grands écrans (par exemple, ordinateurs de bureau) */
+  @media (min-width: 1025px) {
+    nav.navbar.bootsnav ul.nav > li > a {
+        /* Gardez les styles existants pour les grands écrans */
+    }
+  }
+
+  /* Styles pour les éléments de niveau 2 */
+  /* Vous pouvez également ajouter des styles de médias queries pour les sous-menus si nécessaire */
+
+  /* Styles pour le bouton de menu mobile */
+
+  /* Ajoutez ces styles pour les écrans de petite taille (par exemple, mobile) */
+  @media (max-width: 768px) {
+    nav.navbar.bootsnav .navbar-toggle {
+        padding: 8px; /* Ajustez la taille du bouton pour les écrans plus petits */
+    }
+  }
+
+  /* Ajoutez ces styles pour les écrans de taille moyenne (par exemple, tablettes) */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    nav.navbar.bootsnav .navbar-toggle {
+        padding: 10px; /* Ajustez la taille du bouton pour les tablettes */
+    }
+  }
+
+  /* Ajoutez ces styles pour les grands écrans (par exemple, ordinateurs de bureau) */
+  @media (min-width: 1025px) {
+    nav.navbar.bootsnav .navbar-toggle {
+        /* Gardez les styles existants pour les grands écrans */
+    }
+  }
+
+  /* Styles pour les sous-menus de niveau 1 et 2 */
+  /* Vous pouvez également ajouter des styles de médias queries pour les sous-menus si nécessaire */
