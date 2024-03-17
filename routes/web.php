@@ -1,13 +1,16 @@
 <?php
 
 use App\Http\Controllers\PlateformeController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Models\Ecran;
 use App\Models\Pays;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\cloturerProjetController;
 use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
@@ -20,6 +23,7 @@ use App\Http\Controllers\representationGraphique;
 use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
 use Laravel\Ui\Presets\React;
+use PasswordResetController as GlobalPasswordResetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -411,12 +415,18 @@ Route::post('/forgot-password', [LoginController::class, 'postResetForm'])->midd
 Route::get('/reset-password/{token}', [LoginController::class, 'ResetPasswordToken'])->middleware('guest')->name('password.reset');
 
 Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middleware('guest')->name('password.update');
-// Route::post('/password/email', 'Auth\ForgotPasswordController@sendResetLinkEmail')->name('password.email');
-// Route::get('/password/reset/{token}', 'Auth\ResetPasswordController@showResetForm')->name('password.reset');
-// Route::post('/password/reset', 'Auth\ResetPaEloquentUserProvidersswordController@reset')->name('password.update');
 
 
+Route::post('/password/reset/email', [PasswordResetController::class, 'sendResetLinkEmail'])->name('password.email');
+// Route pour afficher le formulaire de demande de réinitialisation de mot de passe
+Route::post('/forgot-passwords', [PasswordResetController::class, 'forgotPassword'])->name('password.forgot');
+Route::get('/reset-passwords', [PasswordResetController::class, 'showResetForms'])->name('password.show_reset_form');
 
+// Route pour confirmer l'identité de l'utilisateur
+Route::post('/confirm-identity', [PasswordResetController::class, 'confirmIdentity'])->name('password.confirm_identity');
+
+// Route pour afficher le formulaire de réinitialisation du mot de passe
+Route::get('/reset-password', [PasswordResetController::class, 'resetPasswords'])->name('password.reset');
 
 //génération du code geojson
 Route::get('/sig/{category?}', [GeoJSONController::class, 'showSIG']);

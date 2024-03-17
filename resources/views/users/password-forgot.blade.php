@@ -17,7 +17,7 @@
         body{
             background-color: #DBECF8;
         }
-      
+
     .card-body {
         background-color: #EAF2F8;
     }
@@ -25,24 +25,29 @@
 </head>
 
 <body class="welcom-hero">
-    @include('layouts.header') 
+    @include('layouts.header')
     <div class="container mt-5" >
+
         <div class="row justify-content-center">
             <div class="col-md-6" style="margin-top: 100px;">
                 <div class="card">
                     <div class="card-header">Mot de passe oublié</div>
+                    @if (session('status'))
+                        <div class="alert alert-success" role="alert">
+                            {{ session('status') }}
+                        </div>
+                    @endif
                     <div class="card-body">
                         <form action="{{ route('password.email') }}" method="post">
                             @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                            <div class="form-group">
+                           <div class="form-group">
                                 <label for="email">Votre addresse Email</label>
                                 <input type="email" class="form-control" placeholder="Entrer votre email" id="email" name="email" required>
                             </div>
                             <div class="col-12 text-end btn-page">
                                 <button type="submit" class="btn btn-primary">Envoyer</button>
                             </div>
-                            
+
                         </form>
                         <div class="text-center p-t-115">
                             <div class="d-flex justify-content-between align-items-top mb-4 small">

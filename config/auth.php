@@ -64,7 +64,10 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
         ],
-
+        'mot_de_passe_utilisateur' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\MotDePasseUtilisateur::class,
+        ],
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
@@ -90,12 +93,18 @@ return [
     |
     */
 
+
     'passwords' => [
         'users' => [
             'provider' => 'users',
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
+        ],
+        'mot_de_passe_utilisateur' => [
+            'provider' => 'mot_de_passe_utilisateur',
+            'table' => 'password_resets',
+            'expire' => 60,
         ],
     ],
 

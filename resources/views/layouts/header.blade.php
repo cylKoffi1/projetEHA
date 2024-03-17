@@ -78,44 +78,69 @@
     $projets_redemarrer = isset($montantParStatut['06']) ? $montantParStatut['06'] : 0;
 
     // Récupérer le code région de l'utilisateur
-    $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
-    $code_region = $region ? $region->code_region : null;
+$user = auth()->user();
+$region = null;
 
-    // Déclaration de la variable $personnelAffiche
-    $personnelAffiche = '';
+// Vérifier si la relation personnel existe et est chargée
+if ($user && $user->relationLoaded('personnel') && $user->personnel) {
+    $region = CouvrirRegion::where('code_personnel', $user->personnel->code_personnel)->first();
+}
 
-    // Switch pour déterminer la valeur de $personnelAffiche en fonction du groupe utilisateur
-    switch (auth()->user()->latestFonction->fonctionUtilisateur->code) {
-        case 'ad': //admin
-            $personnelAffiche ='';
-            break;
+$code_region = $region ? $region->code_region : null;
 
-        case 'cp': // Chef de projet
-            $personnelAffiche = 'Personnel';
-            break;
-        case 'ba': // Bailleur
-            // Récupérer les données du bailleur
-            $bailleur = BailleursProjet::where('code_bailleur', auth()->user()->personnel->code)->first();
-            $personnelAffiche = $bailleur ? $bailleur->libelle_long : '';
-            break;
-        case 'dc': // Directeur de cabinet
-            // Récupérer le nom de la région de l'utilisateur
-            $ministere = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
-            if ($ministere) {
-                // Si le ministere est trouvée, récupérer son libellé depuis la table Region
-                $regionInfo = Region::where('code', $region->code_region)->first();
-                $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Ministère';
-            }
-            break;
-        case 'dr': // Directeur Régional
-        // Récupérer le nom de la région de l'utilisateur
-        $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
-        if ($region) {
-            // Si la région est trouvée, récupérer son libellé depuis la table Region
-            $regionInfo = Region::where('code', $region->code_region)->first();
-            $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Directeur Régional';
+// Déclaration de la variable $personnelAffiche
+$personnelAffiche = '';
+
+// Vérifier si la relation latestFonction est définie
+if ($user && $user->latestFonction) {
+    // Vérifier si la relation personnel est définie
+    if ($user->latestFonction->fonctionUtilisateur && $user->latestFonction->fonctionUtilisateur->code === 'ba' && $user->personnel) {
+        // Switch pour déterminer la valeur de $personnelAffiche en fonction du groupe utilisateur
+        switch ($user->latestFonction->fonctionUtilisateur->code) {
+            case 'ad': //admin
+                $personnelAffiche = '';
+                break;
+
+            case 'cp': // Chef de projet
+                $personnelAffiche = 'Personnel';
+                break;
+            case 'ba': // Bailleur
+                // Récupérer les données du bailleur
+                $bailleur = BailleursProjet::where('code_bailleur', $user->personnel->code)->first();
+                $personnelAffiche = $bailleur ? $bailleur->libelle_long : '';
+                break;
+            case 'dc': // Directeur de cabinet
+                // Récupérer le nom de la région de l'utilisateur
+                $ministere = CouvrirRegion::where('code_personnel', $user->personnel->code_personnel)->first();
+                if ($ministere) {
+                    // Si le ministère est trouvé, récupérer son libellé depuis la table Region
+                    $regionInfo = Region::where('code', $region->code_region)->first();
+                    $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Ministère';
+                }
+                break;
+            case 'dr': // Directeur Régional
+                // Récupérer le nom de la région de l'utilisateur
+                $region = CouvrirRegion::where('code_personnel', $user->personnel->code_personnel)->first();
+                if ($region) {
+                    // Si la région est trouvée, récupérer son libellé depuis la table Region
+                    $regionInfo = Region::where('code', $region->code_region)->first();
+                    $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Directeur Régional';
+                }
+                break;
         }
+    } else {
+        // Gérer le cas où la relation personnel ou fonctionUtilisateur n'est pas définie
+        $personnelAffiche = ''; // Ou une autre valeur par défaut
     }
+} else {
+    // Gérer le cas où la relation latestFonction n'est pas définie
+    $personnelAffiche = ''; // Ou une autre valeur par défaut
+}
+
+
+
+
+
 @endphp
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000;  width: 100%; height: 90px; background-color: #435ebe;">
     <div class="container-fluid" style="align-items: center;">
@@ -123,10 +148,16 @@
             <img src="{{ asset('betsa/assets/images/ehaImages/armoirie.png')}}" style="width: 40px; height: auto; margin-right: 15px;" alt="" />GERAC-EHA
         </a>
         <span style="color: #F1C40F; display: flex; flex-direction: column; align-items: center;">
-            <span>{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}</span>
+
+        <span>{{ auth()->user()?->personnel?->nom }} {{ auth()->user()?->personnel?->prenom }}</span>
+
+        @if(auth()->user()?->personnel?->latestFonction)
             <span>{{ auth()->user()->personnel->latestFonction->fonctionUtilisateur->libelle_fonction ?? "" }} {{ $personnelAffiche }}</span>
+        @endif
 
         </span>
+
+
         <header class="mb-3 navbar-toggler">
             <a href="#" class="burger-btn d-block d-xl-none">
                 {{-- <i class="bi bi-justify fs-3"></i> --}}
@@ -176,8 +207,8 @@
                         <!--  <i class="fas fa-user"></i> -->
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="/admin/users/details-user/{{ auth()->user()->id }}"><i class="fas fa-sliders-h fa-fw"></i> Mon compte</a></li>
-                        <li><a class="dropdown-item" href="/admin/users/details-user/{{ auth()->user()->id }}"><i class="fas fa-cog fa-fw"></i> Réglages</a></li>
+                        <li><a class="dropdown-item" href="/admin/users/details-user/{{ auth()->user()->id }}?ecran_id={{ $ecran->id }}"><i class="fas fa-sliders-h fa-fw"></i> Mon compte</a></li>
+                        <li><a class="dropdown-item" href="/admin/users/details-user/{{ auth()->user()->id }}?ecran_id={{ $ecran->id }}"><i class="fas fa-cog fa-fw"></i> Réglages</a></li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
@@ -187,7 +218,7 @@
                             </a>
                             <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
                                 @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                             </form>
                         </li>
 

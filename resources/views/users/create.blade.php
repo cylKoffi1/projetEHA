@@ -339,9 +339,27 @@
         <h4><a href="{{ route('users.personnel') }}?ecran_id={{ $ecran->id }}">Voir la liste</a></h4>
     </div>
 </section>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var niveauAccesSelect = document.getElementById("niveau_acces_id");
+        var paysSelect = document.getElementById("na");
+
+        niveauAccesSelect.addEventListener("change", function() {
+            if (niveauAccesSelect.value == "na") {
+                paysSelect.value = "110"; // La valeur de code d'Ivoire
+                paysSelect.disabled = true; // Désactiver la sélection
+            } else {
+                paysSelect.value = ""; // Réinitialiser la valeur du pays si une autre option est sélectionnée
+                paysSelect.disabled = false; // Activer la sélection
+            }
+        });
+    });
+</script>
 
 <script>
     $(document).ready(function() {
+
+
 
         console.log('{{ $personnes }}')
         var domaines = $('#domaine').filterMultiSelect({

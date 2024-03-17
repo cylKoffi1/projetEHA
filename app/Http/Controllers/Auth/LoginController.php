@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\ResetsPasswords;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use App\Models\Ecran;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Providers\RouteServiceProvider;
@@ -54,6 +55,7 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         $request->validate([
             'login' => 'required|string',
             'password' => 'required|string',
@@ -72,7 +74,7 @@ class LoginController extends Controller
         }
 
         // Authentication failed
-        return redirect()->route('login')->withErrors(['login' => 'Login ou mot de passe incorrect']);
+        return redirect()->route('login',['ecran' => $ecran,])->withErrors(['login' => 'Login ou mot de passe incorrect']);
     }
 
     /**

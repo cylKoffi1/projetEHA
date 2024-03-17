@@ -64,7 +64,7 @@ class RealiseProjetController extends Controller
         $typeInstruments = TypeInstrument::all();
         $familleInfras = FamilleInfrastructure::all();
         $natureTravaux = NatureTravaux::all();
-       $ecran = Ecran::find($request->input('ecran_id'));
+        $ecran = Ecran::find($request->input('ecran_id'));
         // Récupérer les paramètres de la requête
         $codeProjet = $request->input('codeProjet');
         $codeActionMenerProjet = $request->input('codeActionMenerProjet');
@@ -183,7 +183,9 @@ class RealiseProjetController extends Controller
         // Récupérer les paramètres de la requête
         $codeProjet = $request->input('codeProjet');
         $codeActionMenerProjet = $request->input('codeActionMenerProjet');
-
+        $numeroOrdre = ProjetActionAMener::where('CodeProjet', $codeProjet)
+        ->where('code', $codeActionMenerProjet)
+        ->value('Num_ordre');
         // Faites ici la logique pour récupérer le numéro d'ordre en fonction du code du projet et du code de l'action à mener
         // Par exemple, supposons que vous avez un modèle ActionMenerProjet avec une colonne 'numero_ordre'
         $infrastructureData = ProjetActionAMener::where('CodeProjet', $codeProjet)
@@ -200,12 +202,10 @@ class RealiseProjetController extends Controller
         ->select('nom_famille')
         ->distinct()
         ->first();
-
+        
         $libelleFamilleInfrastructure = $libelleFamilleInfrastructureData->nom_famille;
 
-        $numeroOrdre = ProjetActionAMener::where('CodeProjet', $codeProjet)
-        ->where('code', $codeActionMenerProjet)
-        ->value('Num_ordre');
+
 
         // Retournez le numéro d'ordre sous forme de réponse JSON
         return response()->json([
@@ -577,7 +577,8 @@ class RealiseProjetController extends Controller
         LEFT JOIN localite l ON abp.beneficiaire_id = l.code AND abp.type_beneficiaire = "localite"
         LEFT JOIN etablissement e ON abp.beneficiaire_id = e.code AND abp.type_beneficiaire = "etablissement"
         WHERE abp.type_beneficiaire IN ("district", "region", "departement", "sous_prefecture", "localite", "etablissement")
-        AND abp.CodeProjet = :codeProjet', ['codeProjet' => $codeProjet]);
+        AND abp.CodeProjet = :codeProjet AND abp.numOrdre = :numOrdre', ['codeProjet' => $codeProjet, 'numOrdre'=>$numOrdre]
+        );
 
         return response()->json($beneficiaires);
     }

@@ -192,8 +192,8 @@
                                             <div class="row">
                                                 <div class="row">
                                                     <label for="structure_ratache">Bénéficiaire :</label>
-                                                    <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
-                                                    <input type="hidden" name="numOrdreBene" id="numOrdreBene">
+                                                    <input type="text" name="CodeProjetBene" id="CodeProjetBene">
+                                                    <input type="text" name="numOrdreBene" id="numOrdreBene">
 
                                                     <div class="col-2" style="width: 16%;">
                                                         <label for="age">Localité :</label>
@@ -456,15 +456,10 @@
                                 });
 
 
-                                function loadBeneficiaires() {
-                                    // Récupérer le code du projet et le numéro d'ordre
-                                    var codeProjet = $("#code_projet").val();
-                                    var inputCodeProjet = document.getElementById('numOrdreBene');
-                                    var numOrdre = inputCodeProjet.value;
-
+                                function loadBeneficiaires(codeProjet, numOrdre) {
                                     // Effectuer une requête AJAX pour récupérer les données des bénéficiaires
                                     $.ajax({
-                                        url: '/recuperer-beneficiaires', // Remplacez par l'URL de votre route Laravel pour récupérer les bénéficiaires
+                                        url: '/recuperer-beneficiaires',
                                         type: 'GET',
                                         data: { CodeProjet: codeProjet, NumOrdre: numOrdre },
                                         success: function(response) {
@@ -488,6 +483,7 @@
                                         }
                                     });
                                 }
+
 
 
 
@@ -642,8 +638,8 @@
             row += '<td>' + data[i].Quantite + '</td>';
             row += '<td>' + data[i].Unite_mesure + '</td>';
             row += '<td>' + data[i].infrastructure_libelle + '</td>';
-            row += '<td><a href="#" data-toggle="modal" data-target="#largeModal" onclick="loadBeneficiaires()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"></path></svg>Bénéficiaire</a></td>';
-            row += '<td><a href="realise/PramatreRealise?codeProjet=' + data[i].CodeProjet + '&codeActionMenerProjet=' + data[i].code + '" class="btn btn-secondary" style="color: white; width:137px; font-size: 10;"> Paramètre Infrastructure</a></td>';
+            row += '<td><a href="#" data-toggle="modal" data-target="#largeModal" onclick="loadBeneficiaires(\'' + data[i].CodeProjet + '\', \'' + data[i].Num_ordre + '\')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"></path></svg>Bénéficiaire</a></td>';
+            row += '<td><a href="realise/PramatreRealise?ecran_id={{ $ecran->id }}&codeProjet=' + data[i].CodeProjet + '&codeActionMenerProjet=' + data[i].code + '" class="btn btn-secondary" style="color: white; width:137px; font-size: 10;"> Paramètre Infrastructure</a></td>';
             row += '</tr>';
             $("#beneficiaire-table-body").append(row);
             // Récupérer les données de la ligne
@@ -653,10 +649,11 @@
         $(document).ready(function() {
         // Gestionnaire de clic pour le bouton "Bénéficiaire"
         $(document).on("click", "a[data-target='#largeModal']", function() {
+
             // Récupérer les données de la ligne
             var numOrdre = $(this).closest("tr").find(".num_ordre_cell").text();
             var codeProjet = $(this).closest("tr").find(".code_projet_cell").text();
-
+            loadBeneficiaires(codeProjet, numOrdre);
             // Remplir les champs du modal avec les données de la ligne
             $("#CodeProjetBene").val(codeProjet);
             $("#numOrdreBene").val(numOrdre);

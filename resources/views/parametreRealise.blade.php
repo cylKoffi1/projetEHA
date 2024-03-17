@@ -104,7 +104,7 @@
                             <div class="tab-pane fade show active" id="caracteristiques" style="background-color:transparent;">
                                 <form class="form" id="personnelForm" method="POST" enctype="multipart/form-data" action="{{ route('enregistrer.Caracteristiques') }}">
                                     @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                    <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                                     <div  class="form-step">
                                         <div class="row">
                                             <div class="col">
@@ -521,7 +521,7 @@
                             <div class="tab-pane fade show active" id="etatAvancement" role="tabpanel" aria-labelledby="etatAvancement-tab" style="background-color: #EAF2F8;">
                                 <form id="etatAvancementForm" method="POST" action="{{ route('enregistrer.niveauAvancement') }}" data-parsley-validate>
                                     @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
 
                                     <div class="form-group">
                                         <div class="row">
@@ -628,7 +628,7 @@ $(document).ready(function () {
     // Extraire les paramètres de l'URL
     var urlParams = new URLSearchParams(window.location.search);
     var codeProjet = urlParams.get('codeProjet');
-    var codeActionMenerProjet = urlParams.get('codeActionMenerProjet');
+    var codeActionMenerProjet = urlParams.get('codeActionMenerProjet')
 
     // Remplir les champs du formulaire avec les valeurs extraites
     $("#code_projet").val(codeProjet);
@@ -641,7 +641,7 @@ $(document).ready(function () {
     // Extraire les paramètres de l'URL
     var urlParams = new URLSearchParams(window.location.search);
     var codeProjet = urlParams.get('codeProjet');
-    var codeActionMenerProjet = urlParams.get('codeActionMenerProjet');
+    var codeActionMenerProjet = urlParams.get('codeActionMenerProjet')
 
     // Remplir les champs du formulaire avec les valeurs extraites
     $("#code_projet").val(codeProjet);

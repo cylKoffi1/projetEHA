@@ -72,7 +72,7 @@
 
                         </h5>
                         @endcan
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -304,7 +304,7 @@
                             <div class="col-md-4 col-12">
                                 <div class="form-group mandatory">
                                     <label class="form-label" for="edit_ordre">Ordre :</label>
-                                    <input type="number" class="form-control" id="edit_ordre" name="edit_ordre" placeholder="Ordre" min="1" required>
+                                    <input type="number" class="form-control" id="edit_ordre" name="edit_ordre" placeholder="Ordre" min="0" required>
                                 </div>
                             </div>
                         </div>

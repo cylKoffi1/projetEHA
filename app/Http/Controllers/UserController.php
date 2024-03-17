@@ -344,7 +344,7 @@ class UserController extends Controller
         $domaines = Domaine::all();
         $sous_domaines = SousDomaine::all();
         $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
-       $ecran = Ecran::find($request->input('ecran_id'));
+        $ecran = Ecran::find($request->input('ecran_id'));
         $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
         $regions = Region::whereHas('district', function ($query) {
             $query->where('id_pays', config('app_settings.id_pays'));
@@ -355,6 +355,12 @@ class UserController extends Controller
         $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
+        // Vérifie si l'utilisateur a sélectionné "Champ d'exercice national"
+        $champExercice = $request->input('niveau_acces_id');
+        if ($champExercice == 'na') {
+            // Ajoute automatiquement la Côte d'Ivoire à la sélection
+            $pays->prepend(Pays::find(110));
+        }
         return view('users.create', compact('ecran','structureRattachement','niveauxAcces', 'domaines', 'sous_domaines', 'bailleurs', 'pays',  'districts', 'regions', 'departements', 'agences', 'ministeres', 'personnes', 'groupe_utilisateur', 'fonctions'));
     }
 
@@ -585,7 +591,7 @@ class UserController extends Controller
         $domaines = Domaine::all();
         $sous_domaines = SousDomaine::all();
         $personnes = Personnel::orderBy('nom', 'asc')->get();
-       $ecran = Ecran::find($request->input('ecran_id'));
+        $ecran = Ecran::find($request->input('ecran_id'));
         $sous_dom = AvoirExpertise::where('code_personnel', $user->code_personnel)->get();
         $dom = UtilisateurDomaine::where('code_personnel', $user->code_personnel)->get();
         return view('users.user-profile', compact('ecran','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));

@@ -2,11 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 
-class MotDePasseUtilisateur extends Model
+class MotDePasseUtilisateur extends Authenticatable implements CanResetPasswordContract, MustVerifyEmail
 {
-    use HasFactory;
-    public $timestamps = false;
+    use Notifiable, CanResetPassword, MustVerifyEmailTrait;
+    protected $table = 'mot_de_passe_utilisateur';
+    protected $fillable = [
+        'code_personnel', 'login', 'password', 'niveau_acces_id', 'email', 'email_verified_at', 'is_active',
+    ];
+
+    protected $hidden = [
+        'password', 'remember_token',
+    ];
 }
