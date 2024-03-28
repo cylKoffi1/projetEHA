@@ -347,7 +347,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     Route::get('admin/users', [UserController::class, 'users'])->name('users.users');
     Route::get('admin/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('admin/users/store', [UserController::class, 'store'])->name('users.store');
+    Route::post('/admin/users/store', [UserController::class, 'store'])->name('users.store');
     Route::get('/check-username', [UserController::class, 'checkUsername']);
     Route::get('/check-email', [UserController::class, 'checkEmail']);
     Route::get('admin/users/get-user/{userId}', [UserController::class, 'getUser'])->name('users.get');
@@ -356,6 +356,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/admin/users/details-user/{userId}', [UserController::class, 'update_auth'])->name('users.update_auth');
     Route::post('/change-password', [UserController::class, 'changePassword'])->name('password.change');
     Route::delete('/admin/delete-user/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
+    Route::get('/getIndicatif/{paysId}', [UserController::class, 'getIndicatif'])->name('getIndicatif');
 
 
      /**************************** GESTION DES HABILITATIONS **********************************/
@@ -416,17 +417,7 @@ Route::get('/reset-password/{token}', [LoginController::class, 'ResetPasswordTok
 
 Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middleware('guest')->name('password.update');
 
-
-Route::post('/password/reset/email', [PasswordResetController::class, 'sendResetLinkEmail'])->name('password.email');
-// Route pour afficher le formulaire de demande de réinitialisation de mot de passe
-Route::post('/forgot-passwords', [PasswordResetController::class, 'forgotPassword'])->name('password.forgot');
-Route::get('/reset-passwords', [PasswordResetController::class, 'showResetForms'])->name('password.show_reset_form');
-
-// Route pour confirmer l'identité de l'utilisateur
-Route::post('/confirm-identity', [PasswordResetController::class, 'confirmIdentity'])->name('password.confirm_identity');
-
-// Route pour afficher le formulaire de réinitialisation du mot de passe
-Route::get('/reset-password', [PasswordResetController::class, 'resetPasswords'])->name('password.reset');
+//Routes changer de mot de passe accueil
 
 //génération du code geojson
 Route::get('/sig/{category?}', [GeoJSONController::class, 'showSIG']);

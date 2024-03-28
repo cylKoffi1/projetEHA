@@ -515,19 +515,35 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                @foreach ($projets as $projet)
+                                    @php
+                                        // Filtrer les statuts pour le projet actuel
+                                        $statutsProjet = $statuts->where('CodeProjet', $projet->CodeProjet);
+                                        // Trouver le statut avec le code '02' pour ce projet
+                                        $statut = $statutsProjet->firstWhere('codeSStatu', '02');
+                                    @endphp
 
+                                    @if ($statut)
 
-                            <tr>
-                                <td></td>
-                                <td>
-
-                                </td>
-                                <td></td>
-                                <td></td>
-                                <td class="formatted-number" style=" text-align: right; float: right; justify-content: right;"></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
+                                        <tr>
+                                            <td>{{ $projet->CodeProjet }}</td>
+                                            <td>
+                                                @if ($projet->Domaine)
+                                                    {{ $projet->Domaine->libelle }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $projet->Date_demarrage_prevue }}</td>
+                                            <td>{{ $projet->date_fin_prevue }}</td>
+                                            <td class="formatted-number" style=" text-align: right; float: right; justify-content: right;">{{ $projet->cout_projet }}</td>
+                                            <td>
+                                                @if ($projet->devise)
+                                                    {{ $projet->devise->code_long }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $statut->statut_libelle }}</td>
+                                        </tr>
+                                    @endif
+                                @endforeach
 
                             </tbody>
                         </table>

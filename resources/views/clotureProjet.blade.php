@@ -537,7 +537,7 @@
                <div id="liste-projets" style="display: none;">
 
                     <div class="card-body" >
-                    <h4>Liste des projets réalisés (En cours)</h4>
+                    <h4>Liste des projets clôturés (Clôturé)</h4>
                         <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="liste-projets-table" >
                             <thead>
                                 <tr>
@@ -551,35 +551,35 @@
                                 </tr>
                             </thead>
                             <tbody>
-                            @foreach ($projets as $projet)
-                        @php
-                            // Filtrer les statuts pour le projet actuel
-                            $statutsProjet = $statuts->where('CodeProjet', $projet->CodeProjet);
-                            // Trouver le statut avec le code '04' pour ce projet
-                            $statut = $statutsProjet->firstWhere('codeSStatu', '04');
-                        @endphp
+                                @foreach ($projets as $projet)
+                                    @php
+                                        // Filtrer les statuts pour le projet actuel
+                                        $statutsProjet = $statuts->where('CodeProjet', $projet->CodeProjet);
+                                        // Trouver le statut avec le code '04' pour ce projet
+                                        $statut = $statutsProjet->firstWhere('codeSStatu', '04');
+                                    @endphp
 
-                        @if ($statut)
+                                    @if ($statut)
 
-                            <tr>
-                                <td>{{ $projet->CodeProjet }}</td>
-                                <td>
-                                    @if ($projet->Domaine)
-                                        {{ $projet->Domaine->libelle }}
+                                        <tr>
+                                            <td>{{ $projet->CodeProjet }}</td>
+                                            <td>
+                                                @if ($projet->Domaine)
+                                                    {{ $projet->Domaine->libelle }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $projet->Date_demarrage_prevue }}</td>
+                                            <td>{{ $projet->date_fin_prevue }}</td>
+                                            <td class="formatted-number" style=" text-align: right; float: right; justify-content: right;">{{ $projet->cout_projet }}</td>
+                                            <td>
+                                                @if ($projet->devise)
+                                                    {{ $projet->devise->code_long }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $statut->statut_libelle }}</td>
+                                        </tr>
                                     @endif
-                                </td>
-                                <td>{{ $projet->Date_demarrage_prevue }}</td>
-                                <td>{{ $projet->date_fin_prevue }}</td>
-                                <td class="formatted-number" style=" text-align: right; float: right; justify-content: right;">{{ $projet->cout_projet }}</td>
-                                <td>
-                                    @if ($projet->devise)
-                                        {{ $projet->devise->code_long }}
-                                    @endif
-                                </td>
-                                <td>{{ $statut->statut_libelle }}</td>
-                            </tr>
-                        @endif
-                        @endforeach
+                                @endforeach
 
                             </tbody>
                         </table>

@@ -83,7 +83,7 @@
                         </h5>
                         @endcan
 
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -147,7 +147,7 @@
                                             <li><a class="dropdown-item" href="/admin/users/get-user/{{ $user->id }}?ecran_id={{ $ecran->id }}"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
                                             @endcan
                                             @can("supprimer_ecran_" . $ecran->id)
-                                            <li><a class="dropdown-item" onclick="deleteUser('{{ $user->id }}')" href="#"><i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
+                                            <a class="dropdown-item" onclick="deleteUser(['{{ $user->id }}'])" href="#"><i class="bi bi-trash3-fill me-3"></i> Supprimer</a>
                                             @endcan
                                             @can("supprimer_ecran_" . $ecran->id)
                                             <li><a class="dropdown-item" href="/admin/users/details-user/{{ $user->id }}?ecran_id={{ $ecran->id }}"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
@@ -172,7 +172,35 @@
 
 
 <script>
+function deleteUser(id) {
+    // Confirmez avec l'utilisateur s'il veut vraiment supprimer les lignes
+    if (!confirm('Voulez-vous vraiment supprimer cet utilisateur ?')) {
+        return;
+    }
+
+    $.ajax({
+        url: '/admin/delete-user/' + id,
+        method: 'DELETE',
+        data: {
+            _token: '{{ csrf_token() }}'
+        },
+        success: function(response) {
+            // Réponse réussie de votre endpoint
+            $('#alertMessage').text("Utilisateur avec le code " + id + " supprimé avec succès.");
+            $('#alertModal').modal('show');
+
+            // Actualiser la page après la suppression
+            location.reload();
+        },
+        error: function(error) {
+            console.error('Erreur lors de la suppression de l\'utilisateur avec le code ' + id + ':', error);
+            // Gérez les erreurs ici
+        }
+    });
+}
+
     $(document).ready(function() {
+
         initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des utilisateurs')
 
 
@@ -229,31 +257,7 @@
             });
         }
 
-        function deleteUser(id) {
 
-            // Confirmez avec l'utilisateur s'il veut vraiment supprimer les lignes
-            if (!confirm('Voulez-vous vraiment supprimer cet utilisateur ?')) {
-                return;
-            }
-
-            $.ajax({
-                url: '/admin/delete-user/' + id, // Remplacez par l'URL correcte de votre endpoint de suppression
-                method: 'DELETE', // Utilisez la méthode HTTP appropriée (peut être POST ou autre en fonction de votre API)
-                data: {
-                    _token: '{{ csrf_token() }}' // Assurez-vous d'envoyer le jeton CSRF
-                }, // Envoyez les données nécessaires pour identifier l'utilisateur à supprimer
-                success: function(response) {
-                    // Réponse réussie de votre endpoint
-                    alert('Utilisateur avec le code ' + id + ' supprimé avec succès.');
-                    // Vous pouvez mettre à jour la table ou effectuer d'autres actions si nécessaire
-                }
-                , error: function(error) {
-                    console.error('Erreur lors de la suppression de l\'utilisateur avec le code ' + code + ':', error);
-                    // Gérez les erreurs ici
-                }
-            });
-
-        }
 
     });
 

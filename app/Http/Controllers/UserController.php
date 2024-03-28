@@ -23,6 +23,7 @@ use App\Models\User;
 use App\Models\NiveauAccesDonnees;
 use App\Models\StructureRattachement;
 use App\Models\UtilisateurDomaine;
+use Faker\Provider\ar_EG\Person;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -327,6 +328,20 @@ class UserController extends Controller
         return view('users.users', compact('ecran','niveauxAcces',  'users', 'groupe_utilisateur', 'fonctions'));
     }
     // Méthode pour afficher le formulaire de création d'utilisateur
+    public function getIndicatif($paysId)
+    {
+        // Récupérer l'indicatif du pays en fonction de son ID depuis la base de données
+        $pays = Pays::find($paysId);
+
+        // Vérifier si le pays existe
+        if ($pays) {
+            // Retourner l'indicatif du pays
+            return response()->json(['indicatif' => $pays->codeTel]);
+        } else {
+            // Si le pays n'existe pas, retourner une réponse d'erreur
+            return response()->json(['error' => 'Pays non trouvé'], 404);
+        }
+    }
     public function create(Request $request)
     {
         $niveauxAcces = NiveauAccesDonnees::all();
@@ -361,8 +376,12 @@ class UserController extends Controller
             // Ajoute automatiquement la Côte d'Ivoire à la sélection
             $pays->prepend(Pays::find(110));
         }
-        return view('users.create', compact('ecran','structureRattachement','niveauxAcces', 'domaines', 'sous_domaines', 'bailleurs', 'pays',  'districts', 'regions', 'departements', 'agences', 'ministeres', 'personnes', 'groupe_utilisateur', 'fonctions'));
+
+
+
+        return view('users.create', compact('ecran', 'structureRattachement', 'niveauxAcces', 'domaines', 'sous_domaines', 'bailleurs', 'pays', 'districts', 'regions', 'departements', 'agences', 'ministeres', 'personnes', 'groupe_utilisateur', 'fonctions'));
     }
+
 
     // Méthode pour traiter la soumission du formulaire et créer un utilisateur
 
@@ -411,26 +430,22 @@ class UserController extends Controller
                 ]);
             }
 
+            $structureRattachement = new StructureRattachement([
+                'code_personnel' => $request->input('personne'),
+                'date' => now(),
+            ]);
 
             if ($request->input('structure') == "bai") {
-                $personne->update([
-                    'code_structure_bailleur' => $request->input('bailleur'),
-                    'code_structure_agence' => null,
-                    'code_structure_ministere' => null,
-                ]);
-            } else if ($request->input('structure') == "age") {
-                $personne->update([
-                    'code_structure_agence' => $request->input('agence'),
-                    'code_structure_bailleur' => null,
-                    'code_structure_ministere' => null,
-                ]);
+                $structureRattachement->code_structure = $request->input('bailleur');
+                $structureRattachement->type_structure = 'bailleurss';
+            } elseif ($request->input('structure') == "age") {
+                $structureRattachement->code_structure = $request->input('agence');
+                $structureRattachement->type_structure = 'agence_execution';
             } else {
-                $personne->update([
-                    'code_structure_ministere' => $request->input('ministere'),
-                    'code_structure_agence' => null,
-                    'code_structure_bailleur' => null,
-                ]);
+                $structureRattachement->code_structure = $request->input('ministere');
+                $structureRattachement->type_structure = 'ministere';
             }
+
             $personne->update(['email' => $request->input('email')]);
 
 
@@ -487,8 +502,8 @@ class UserController extends Controller
                 );
             }
         }
-        return response()->json(['success' => 'Utilisateur créé avec succès !', 'donnees' => $donnees]);
-        //return redirect()->route('users.create')->with('success', 'Utilisateur créé avec succès!');
+        $ecran_id = $request->input('ecran_id');
+        return redirect()->route('users.create',['ecran_id' => $ecran_id])->with('success', 'Utilisateur créé avec succès!');
     }
 
 
@@ -529,24 +544,35 @@ class UserController extends Controller
 
     public function getPersonneInfos(Request $request, $personneId)
     {
+        // Récupérer les informations sur la personne
         $personne = Personnel::with('latestFonction', 'latestRegion')->find($personneId);
 
-        // Ajoutez la structure de rattachement
+        // Récupérer les informations sur la structure rattachée à la personne
         $structureRattachement = StructureRattachement::where('code_personnel', $personneId)->orderBy('date', 'DESC')->first();
-        $personne['structureRattachement'] = $structureRattachement;
 
+        // Ajouter les informations sur la structure rattachée à la personne aux données de la personne
+        $personne->structure = $structureRattachement;
+
+        // Retourner les données de la personne avec les informations sur la structure rattachée
         return response()->json($personne);
     }
+    public function structureRattachement()
+    {
+        return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel');
+    }
+
 
 
     public function getUser(Request $request, $userId)
     {
         $user = User::with('personnel')->find($userId);
 
-        if (!$user) {
+
+        if (!$user && !$users) {
             // Gérer le cas où l'utilisateur n'est pas trouvé
             return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
         }
+        $structureRattachement = StructureRattachement::where('code_personnel', $user->code_personnel)->orderBy('date', 'DESC')->first();
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
         $fonctions = FonctionUtilisateur::all();
@@ -556,7 +582,7 @@ class UserController extends Controller
         $domaines = Domaine::all();
         $sous_domaines = SousDomaine::all();
         $personnes = Personnel::orderBy('nom', 'asc')->get();
-       $ecran = Ecran::find($request->input('ecran_id'));
+        $ecran = Ecran::find($request->input('ecran_id'));
         $sous_dom = AvoirExpertise::where('code_personnel', $user->code_personnel)->get();
         $dom = UtilisateurDomaine::where('code_personnel', $user->code_personnel)->get();
         $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
@@ -570,7 +596,7 @@ class UserController extends Controller
         $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('users.user-update', compact('ecran','regions', 'pays', 'departements','sous_prefectures', 'districts','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
+        return view('users.user-update', compact('ecran','structureRattachement','regions', 'pays', 'departements','sous_prefectures', 'districts','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
     }
 
 
@@ -635,25 +661,42 @@ class UserController extends Controller
         ]);
 
 
-        if ($request->input('structure') == "bai") {
-            $user->personnel->update([
-                'code_structure_bailleur' => $request->input('bailleur'),
-                'code_structure_agence' => null,
-                'code_structure_ministere' => null,
+
+        // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
+        if ($user->personnel && $user->latestFonction && $user->latestFonction->code_fonction != $request->input('code_fonction')) {
+            $structureRattachement = new StructureRattachement([
+                'code_personnel' => $user->personnel->code_personnel,
+                'date' => now(),
             ]);
-        } else if ($request->input('structure') == "age") {
-            $user->personnel->update([
-                'code_structure_agence' => $request->input('agence'),
-                'code_structure_bailleur' => null,
-                'code_structure_ministere' => null,
+
+            if ($request->input('structure') == "bai") {
+                $structureRattachement->code_structure = $request->input('bailleur');
+                $structureRattachement->type_structure = 'bailleurss';
+            } elseif ($request->input('structure') == "age") {
+                $structureRattachement->code_structure = $request->input('agence');
+                $structureRattachement->type_structure = 'agence_execution';
+            } else {
+                $structureRattachement->code_structure = $request->input('ministere');
+                $structureRattachement->type_structure = 'ministere';
+            }
+        }else{
+            $structureRattachement = new StructureRattachement([
+                'code_personnel' => $user->personnel->code_personnel,
+                'date' => now(),
             ]);
-        } else {
-            $user->personnel->update([
-                'code_structure_ministere' => $request->input('ministere'),
-                'code_structure_agence' => null,
-                'code_structure_bailleur' => null,
-            ]);
+
+            if ($request->input('structure') == "bai") {
+                $structureRattachement->code_structure = $request->input('bailleur');
+                $structureRattachement->type_structure = 'bailleurss';
+            } elseif ($request->input('structure') == "age") {
+                $structureRattachement->code_structure = $request->input('agence');
+                $structureRattachement->type_structure = 'agence_execution';
+            } else {
+                $structureRattachement->code_structure = $request->input('ministere');
+                $structureRattachement->type_structure = 'ministere';
+            }
         }
+
 
         $newRoleId = $request->input('group_user'); // Récupérez le nouvel identifiant de rôle depuis la requête
 
@@ -892,7 +935,6 @@ class UserController extends Controller
                 ]
             );
         }
-
         return response()->json(['success' => 'Profile  mis à jour avec succès.']);
         // Rediriger avec un message de succès
     }

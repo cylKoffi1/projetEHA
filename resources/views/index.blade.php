@@ -53,9 +53,9 @@
 
         <div class="container">
             <div class="welcome-hero-txt" >
-                <h2>GERAC-PEHA</h2>
+                <h2>GERAC-EHA</h2>
                 <h2>
-                    GESTION DES REVEUES ANNUELLES CONJOINTES EAU HYGIENE ET ASSAINISSEMENT
+                    GESTION DES REVUES ANNUELLES CONJOINTES EAU HYGIENE ET ASSAINISSEMENT
                 </h2>
 
 

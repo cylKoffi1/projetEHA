@@ -495,7 +495,7 @@
                 <div id="liste-projets" style="display: none;">
 
                     <div class="card-body" >
-                    <h4>Liste des projets réalisés (Prévu)</h4>
+                    <h4>Liste des nouveaux projets (Statut prévu)</h4>
                         <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="liste-projets-table" >
                             <thead>
                                 <tr>

@@ -119,40 +119,42 @@
                                     @enderror
                                 </div>
                                 <div class="col">
-                                <div class="form-group">
-                                    <label for="structure_ratache">Structure :</label>
+                                    <div class="form-group">
+                                        <label for="structure_ratache">Structure:</label>
+                                        <label for="bai">B:</label>
+                                        <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" style="margin-right: 5px;">
+                                        <label for="age">A:</label>
+                                        <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 5px;">
+                                        <label for="min">M:</label>
+                                        <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
 
-                                    <label for="bai">B :</label>
-                                    <input type="radio" value="bai" name="structure" id="bai" onclick="showSelect('bailleur')" style="margin-right: 4px;">
+                                        <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
+                                            <option value="">Selectionner le bailleur</option>
+                                            @foreach($bailleurs as $bailleur)
+                                            <option value="{{ $bailleur->code_bailleur }}">
+                                                {{ $bailleur->libelle_long }}
+                                            </option>
+                                            @endforeach
+                                        </select>
 
-                                    <label for="age">A :</label>
-                                    <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 4px;">
+                                        <select name="agence" id="agence" class="form-select" style="display: none;">
+                                            <option value="">Selectionner l'agence</option>
+                                            @foreach($agences as $agence)
+                                            <option value="{{ $agence->code_agence_execution }}">
+                                                {{ $agence->nom_agence }}
+                                            </option>
+                                            @endforeach
+                                        </select>
 
-                                    <label for="min">M :</label>
-                                    <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
-
-                                    <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
-                                        <option value="">Sélectionner le bailleur</option>
-                                        @foreach($bailleurs as $bailleur)
-                                            <option value="{{ $bailleur->code_bailleur }}">{{ $bailleur->libelle_long }}</option>
-                                        @endforeach
-                                    </select>
-
-                                    <select name="agence" id="agence" class="form-select" style="display: none;">
-                                        <option value="">Sélectionner l'agence</option>
-                                        @foreach($agences as $agence)
-                                            <option value="{{ $agence->code_agence_execution }}">{{ $agence->nom_agence }}</option>
-                                        @endforeach
-                                    </select>
-
-                                    <select name="ministere" id="ministere" class="form-select" style="display: none;">
-                                        <option value="">Sélectionner le ministère</option>
-                                        @foreach($ministeres as $ministere)
-                                            <option value="{{ $ministere->code }}">{{ $ministere->libelle }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
+                                        <select name="ministere" id="ministere" class="form-select" style="display: none;">
+                                            <option value="">Selectionner le ministère</option>
+                                            @foreach($ministeres as $ministere)
+                                            <option value="{{ $ministere->code }}">
+                                                {{ $ministere->libelle }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
 
                             </div>
@@ -227,8 +229,9 @@
                                 </div>
                                 <div class="col">
                                     <label class="form-label">Téléphone</label>
-                                    <div class="form-group position-relative has-icon-left">
-                                        <input type="text" id="tel" class="form-control" name="tel" placeholder="Téléphone" readonly />
+                                    <div class="input-group"> <!-- Utilisation de la classe input-group pour regrouper les éléments -->
+                                        <span class="input-group-text" id="indicatifPays">+XX</span> <!-- Balise span pour afficher l'indicatif du pays -->
+                                        <input type="text" id="tel" class="form-control" name="tel" placeholder="Téléphone" /> <!-- Champ de téléphone -->
                                         <div class="form-control-icon">
                                             <i class="bi bi-phone"></i>
                                         </div>
@@ -237,6 +240,8 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+
+
                                 <div class="col">
                                     <label class="form-label">Adresse</label>
                                     <div class="form-group position-relative has-icon-left">
@@ -354,14 +359,52 @@
             }
         });
     });
+    $(document).ready(function() {
+        // Sélection de l'élément avec l'ID 'na'
+        var paysSelect = document.getElementById('na');
+        console.log("L'élément avec l'ID 'na' :"+paysSelect);
+        // Vérification si l'élément existe
+        if (paysSelect) {
+            // Écoute des changements de sélection dans le champ du pays
+            paysSelect.addEventListener('change', function() {
+                // Récupération de la valeur sélectionnée
+                var selectedPaysId = this.value; // Utilisation de 'this' pour faire référence à l'élément actuel
+
+                // Déterminez l'indicatif du pays sélectionné
+                getIndicatif(selectedPaysId);
+            });
+        } else {
+            console.error("L'élément avec l'ID 'na' n'existe pas.");
+        }
+
+        // Définir l'indicatif par défaut pour l'ID de pays 110
+        var defaultIndicatif = getIndicatif(110);
+        $('#indicatifPays').text(defaultIndicatif); // Mettre à jour le texte de l'indicatif du pays
+    });
+
+// Fonction pour obtenir l'indicatif du pays en fonction de son ID
+function getIndicatif(paysId) {
+    // Effectuer une requête AJAX vers la route qui récupère l'indicatif du pays
+    $.ajax({
+        url: '/getIndicatif/' + paysId,
+        type: 'GET',
+        success: function(response) {
+            // Mettre à jour le texte de l'indicatif avec l'indicatif du pays récupéré
+            $('#indicatifPays').text(response.indicatif);
+        },
+        error: function(xhr, status, error) {
+            console.error(xhr.responseText);
+            // Gérer l'erreur en conséquence
+        }
+    });
+}
+
 </script>
 
 <script>
     $(document).ready(function() {
 
 
-
-        console.log('{{ $personnes }}')
         var domaines = $('#domaine').filterMultiSelect({
 
             // displayed when no options are selected
@@ -449,41 +492,59 @@
 
 
         $('#create-user').on('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault(); // Empêcher la soumission par défaut du formulaire
 
-            // Create FormData object from the form
+            // Créer un objet FormData à partir du formulaire
             var formData = new FormData(this);
 
-            // Add additional data to FormData if needed
+            // Ajouter des données supplémentaires à FormData si nécessaire
             formData.append("sd", sous_dom.getSelectedOptionsAsJson());
             formData.append("domS", domaines.getSelectedOptionsAsJson());
-            // Build the correct URL for the AJAX request
-            var url = '/admin/users/store/';
+
+            // Construire l'URL correcte pour la requête AJAX
+            var url = '/admin/users/store';
 
             $.ajax({
-                url: url
-                , type: 'POST'
-                , data: formData
-                , contentType: false, // Don't set content type (let jQuery handle it)
-                processData: false, // Don't process data (let jQuery handle it)
+                url: url,
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
                 success: function(response) {
-                    showPopup(response.success);
+
                     console.log(response.donnees);
+                    showPopup(response.success);
                     // Rediriger l'utilisateur après une requête réussie
-                    window.location.href = "/admin/users";
-                }
-                , error: function(xhr, status, error) {
+                    window.location.href = "/admin/users?ecran_id=12";
+                },
+                error: function(xhr, status, error) {
                     var err = JSON.parse(xhr.responseText);
-                    console.log(err); // Affichez les détails de l'erreur côté serveur dans la console
+                    console.log(err); // Afficher les détails de l'erreur côté serveur dans la console
                     showPopup('Une erreur est survenue !');
                 }
             });
         });
     });
 
+    $(document).ready(function() {
+        // Masquez les champs de région et affichez uniquement la Côte d'Ivoire dans le champ "Pays"
+        $('#reg, #dis, #dep').hide();
+    });
     function updateEmail(selectElement) {
         var selectedPersonne = selectElement.val();
 
+        $('#dep, #dis, #reg, #na').val('');
+        showSelect_r("");
+        if (selectedPersonne === 'na') { // Si "National" est sélectionné
+            // Masquer tous les champs de région et de pays sauf le champ Pays
+            $('#na').show();
+            $('#reg, #dis, #dep').hide();
+
+        } else {
+            // Afficher les champs de région par défaut
+            $('#na').hide();
+            $('#reg').show();
+        }
         $('niveau_acces_id').val('de');
         $('#dep').val('');
         $('niveau_acces_id').val('di');
@@ -537,27 +598,26 @@
                     $('#fonction').val("");
                     $('#fonction').trigger('change');
                 }
-                // Accédez à la structure de rattachement
-                var structureRattachement = personne.structureRattachement;
+                // Afficher la structure
+                var latestStructure = data.structure;
+                if (latestStructure) {
+                    var structureType = latestStructure.type_structure;
+                    var structureCode = latestStructure.code_structure;
 
-                // Affichez la structure de rattachement dans le formulaire
-                if (structureRattachement) {
-                    var typeStructure = structureRattachement.type_structure;
-
-                    // Cochez le bouton radio correspondant au type de structure
-                    if (typeStructure === 'bailleurss') {
+                    // Mettre à jour les champs en fonction du type de structure
+                    if (structureType === 'bailleur') {
                         $('#bai').prop('checked', true);
+                        $('#bailleur').val(structureCode);
                         showSelect('bailleur');
-                    } else if (typeStructure === 'agence_execution') {
+                    } else if (structureType === 'agence_execution') {
                         $('#age').prop('checked', true);
+                        $('#agence').val(structureCode);
                         showSelect('agence');
-                    } else if (typeStructure === 'ministere') {
+                    } else if (structureType === 'ministere') {
                         $('#min').prop('checked', true);
+                        $('#ministere').val(structureCode);
                         showSelect('ministere');
                     }
-
-                    // Sélectionnez l'option appropriée dans le select
-                    $('#' + typeStructure).val(structureRattachement.code_structure);
                 }
             }
         });

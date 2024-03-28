@@ -97,43 +97,77 @@
                                     </div>
                                 </div>
                                 <div class="col-4 ">
-                                    <div class="form-group">
-                                        <label for="structure_ratache">Structure :</label>
-                                        <label for="bai">B :</label>
-                                        <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" style="margin-right: 5px;">
-                                        <label for="age">A :</label>
-                                        <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 5px;">
-                                        <label for="min">M :</label>
-                                        <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
+                                @if($structureRattachement)
+                                        <div class="form-group">
+                                            <label for="structure_ratache">Structure :</label>
+                                            <label for="bai">B :</label>
+                                            <input type="radio" value="bai" name="structure" id="bai" checked="true" onclick="showSelect('bailleur')" style="margin-right: 15px;">
+                                            <label for="age">A :</label>
+                                            <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 15px;">
+                                            <label for="min">M :</label>
+                                            <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
 
-                                        <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
-                                            <option value="">Selectionner le bailleur</option>
-                                            @foreach($bailleurs as $bailleur)
-                                            <option value="{{ $bailleur->code_bailleur }}" {{ optional($user->personnel)->code_structure_bailleur == $bailleur->code_bailleur ? 'selected' : '' }}>
-                                                {{ $bailleur->libelle_long }}
-                                            </option>
-                                            @endforeach
-                                        </select>
+                                            <select name="bailleur" id="bailleur" class="form-select" style="{{ $structureRattachement->type_structure == 'bailleurss' ? '' : 'display: none;' }}">
+                                                <option value="">Selectionner le bailleur</option>
+                                                @foreach($bailleurs as $bailleur)
+                                                <option value="{{ $bailleur->code_bailleur }}" {{ $structureRattachement->code_structure == $bailleur->code_bailleur ? 'selected' : '' }}>{{ $bailleur->libelle_long }}</option>
+                                                @endforeach
+                                            </select>
 
-                                        <select name="agence" id="agence" class="form-select" style="display: none;">
-                                            <option value="">Selectionner l'agence</option>
-                                            @foreach($agences as $agence)
-                                            <option value="{{ $agence->code_agence_execution }}" {{ optional($user->personnel)->code_agence_execution == $agence->code_agence_execution ? 'selected' : '' }}>
-                                                {{ $agence->nom_agence }}
-                                            </option>
-                                            @endforeach
-                                        </select>
+                                            <select name="agence" id="agence" class="form-select" style="{{ $structureRattachement->type_structure == 'agence_execution' ? '' : 'display: none;' }}">
+                                                <option value="">Selectionner l'agence</option>
+                                                @foreach($agences as $agence)
+                                                <option value="{{ $agence->code_agence_execution }}" {{ $structureRattachement->code_structure == $agence->code_agence_execution ? 'selected' : '' }}>{{ $agence->nom_agence }}</option>
+                                                @endforeach
+                                            </select>
 
-                                        <select name="ministere" id="ministere" class="form-select" style="display: none;">
-                                            <option value="">Selectionner le ministère</option>
-                                            @foreach($ministeres as $ministere)
-                                            <option value="{{ $ministere->code }}" {{ optional($user->personnel)->code_structure_ministere == $ministere->code ? 'selected' : '' }}>
-                                                {{ $ministere->libelle }}
-                                            </option>
-                                            @endforeach
-                                        </select>
+                                            <select name="ministere" id="ministere" class="form-select" style="{{ $structureRattachement->type_structure == 'ministere' ? '' : 'display: none;' }}">
+                                                <option value="">Selectionner le ministère</option>
+                                                @foreach($ministeres as $ministere)
+                                                <option value="{{ $ministere->code }}" {{ $structureRattachement->code_structure == $ministere->code ? 'selected' : '' }}>{{ $ministere->libelle }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    @else
+                                        <div class="form-group">
 
-                                    </div>
+                                            <label for="structure_ratache">Structure :</label>
+                                            <label for="bai">B :</label>
+                                            <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" style="margin-right: 5px;">
+                                            <label for="age">A :</label>
+                                            <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 5px;">
+                                            <label for="min">M :</label>
+                                            <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
+
+                                            <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
+                                                <option value="">Selectionner le bailleur</option>
+                                                @foreach($bailleurs as $bailleur)
+                                                <option value="{{ $bailleur->code_bailleur }}" >
+                                                    {{ $bailleur->libelle_long }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+
+                                            <select name="agence" id="agence" class="form-select" style="display: none;">
+                                                <option value="">Selectionner l'agence</option>
+                                                @foreach($agences as $agence)
+                                                <option value="{{ $agence->code_agence_execution }}">
+                                                    {{ $agence->nom_agence }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+
+                                            <select name="ministere" id="ministere" class="form-select" style="display: none;">
+                                                <option value="">Selectionner le ministère</option>
+                                                @foreach($ministeres as $ministere)
+                                                <option value="{{ $ministere->code }}">
+                                                    {{ $ministere->libelle }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="col">
                                     <div class="form-group">
@@ -361,17 +395,17 @@
         var uid = '{{ $user->id }}';
         var userSD = @json($sous_dom);
         var userD = @json($dom);
-        if ('{{ $user -> personnel -> bailleur ? "true" : "false"}}') {
+        if ('{{ $structureRattachement -> type_structure=="bailleurss"}}') {
             $("#bai").prop("checked", true);
             showSelect('bailleur');
         }
 
-        if ('{{ $user -> personnel -> agence ? "true" : "false"}}') {
+        if ('{{ $structureRattachement -> type_structure=="agence_execution"}}') {
             $("#age").prop("checked", true);
             showSelect('agence');
         }
 
-        if ('{{ $user -> personnel -> ministere ? "true" : "false"}}') {
+        if ('{{ $structureRattachement -> type_structure=="ministere"}}') {
             $("#min").prop("checked", true);
             showSelect('ministere');
         }
@@ -401,7 +435,7 @@
                 console.log(userD);
             }
         @endif
-      
+
 
         $('#bailleur').on('change', function() {
             showSelect_r('na');
@@ -503,15 +537,21 @@
                 , contentType: false, // Don't set content type (let jQuery handle it)
                 processData: false, // Don't process data (let jQuery handle it)
                 success: function(response) {
-                    showPopup(response.success);
-                    console.log(response.donnees);
+
+
+                    $('#alertMessage').text(response.donnees);
+                    $('#alertModal').modal('show');
+                    $('#alertMessage').text(response.success);
+                    $('#alertModal').modal('show');
                     // Rediriger l'utilisateur après une requête réussie
-                    window.location.href = "/admin/users";
+                    window.location.href = "/admin/users?ecran_id=12";
                 }
                 , error: function(xhr, status, error) {
                     var err = JSON.parse(xhr.responseText);
-                    console.log(err); // Affichez les détails de l'erreur côté serveur dans la console
-                    showPopup('Une erreur est survenue !');
+                    $('#alertMessage').text(err);
+                    $('#alertModal').modal('show');
+                    $('#alertMessage').text("Une erreur est survenue");
+                    $('#alertModal').modal('show');
                 }
             });
         });

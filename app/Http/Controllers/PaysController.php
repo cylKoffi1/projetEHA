@@ -51,10 +51,10 @@ class PaysController extends Controller
             $filename = time().'.'.$extension;
             $file->move('armoiries', $filename);
             $pays->armoirie = $filename;
-           
+
         }
         else{
-            
+
             $pays->flag = "";
         }
         if ($request->hasfile('flag')){
@@ -65,7 +65,7 @@ class PaysController extends Controller
             $pays->flag = $filename;
         }
         else {
-            
+
             $pays->flag = "";
         }
 
@@ -84,7 +84,7 @@ class PaysController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
 
-        return view('district', ['districts' => $districts, 'pays' => $pays, 'ecran' => $ecran, ,]);
+        return view('district', ['districts' => $districts, 'pays' => $pays, 'ecran' => $ecran]);
     }
     public function checkDistrictCode(Request $request)
     {
@@ -181,7 +181,7 @@ class PaysController extends Controller
         $regions = Region::whereHas('district', function ($query) {
             $query->where('id_pays', config('app_settings.id_pays'));
         })->get();
-    
+
         return view('region', ['pays' => $pays, 'ecran' => $ecran, 'districts' => $districts, 'regions' => $regions, ]);
     }
     public function getDistricts(Request $request, $pays)
@@ -226,7 +226,7 @@ class PaysController extends Controller
     public function getRegion($code)
     {
         $region = Region::with('district.pays')->find($code);
-       
+
         return response()->json($region);
     }
 
@@ -300,9 +300,9 @@ class PaysController extends Controller
         $departements = Departement::whereHas('region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        
 
-        return view('departement', ['ecran' => $ecran,'departements' => $departements, 'pays' => $pays,, 'districts' => $districts, 'regions' => $regions]);
+
+        return view('departement', ['ecran' => $ecran,'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
     }
 
     public function getRegions(Request $request, $districtId)
@@ -349,14 +349,14 @@ class PaysController extends Controller
     public function getDepartement($code)
     {
         $departement = Departement::with('region.district.pays')->find($code);
-       
+
         return response()->json($departement);
     }
 
 
     public function updateDepartement(Request $request)
     {
-        
+
         $departement = Departement::find($request->input('edit_code'));
 
         if (!$departement) {
@@ -418,7 +418,7 @@ class PaysController extends Controller
         $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('sous_prefecture', ['sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays,, 'districts' => $districts, 'regions' => $regions]);
+        return view('sous_prefecture', ['sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
     }
 
     public function storeSous_prefecture(Request $request)
@@ -462,7 +462,7 @@ class PaysController extends Controller
     public function getSous_prefecture($code)
     {
         $s_p = Sous_prefecture::with('departement.region.district.pays')->find($code);
-       
+
         return response()->json($s_p);
     }
 
@@ -535,7 +535,7 @@ class PaysController extends Controller
         $localites = Localite::whereHas('sous_prefecture.departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('localite', ['localites' => $localites, 'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays,, 'districts' => $districts, 'regions' => $regions]);
+        return view('localite', ['localites' => $localites, 'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
 
     }
 
@@ -617,7 +617,7 @@ class PaysController extends Controller
     public function getLocalite($code)
     {
         $localite = Localite::with('sous_prefecture.departement.region.district.pays')->find($code);
-       
+
         return response()->json($localite);
     }
 

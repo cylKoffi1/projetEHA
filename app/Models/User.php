@@ -12,20 +12,9 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles;
-    //public $timestamps = false;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'mot_de_passe_utilisateur';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
         'code_personnel',
         'login',
@@ -36,26 +25,16 @@ class User extends Authenticatable
         'email_verified_at',
         'created_at',
         'updated_at',
-        'is_active', // Ajout du champ is_active
+        'is_active',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array
-     */
     protected $hidden = [
         'password',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
     protected $casts = [
         'date' => 'date',
-        'is_active' => 'boolean', // Cast is_active en tant que booléen
+        'is_active' => 'boolean',
     ];
 
     public function activate()
@@ -68,13 +47,11 @@ class User extends Authenticatable
         $this->update(['is_active' => false]);
     }
 
-    /**
-     * Get the associated personnel for the user.
-     */
     public function personnel()
     {
         return $this->belongsTo(Personnel::class, 'code_personnel', 'code_personnel');
     }
+
     public function utilisateurDomaines()
     {
         return $this->hasMany(UtilisateurDomaine::class, 'code_personnel', 'code_personnel');
@@ -94,17 +71,11 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Personnel::class, 'domaine_activite', 'code');
     }
-    /**
-     * Get the level of access associated with the user.
-     */
+
     public function niveauAcces()
     {
         return $this->belongsTo(NiveauAccesDonnees::class, 'niveau_acces_id', 'id');
     }
-    /**
-     * Get the latest group assignment for the user.
-     */
-
 
     public function latestFonction()
     {
@@ -125,7 +96,4 @@ class User extends Authenticatable
         $this->reset_token = null;
         $this->save();
     }
-
-   
-
 }
