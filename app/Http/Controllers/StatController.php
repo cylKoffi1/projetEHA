@@ -44,7 +44,7 @@ class StatController extends Controller
         $projets = ProjetEha2::all();
 
         // Récupérer le code région de l'utilisateur
-        $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
+        $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
         $code_region = $region->code_region;
 
         // Déclaration de la variable $personnelAffiche
@@ -66,7 +66,7 @@ class StatController extends Controller
             break;
         case 'dr': // Directeur Régional
             // Récupérer le nom de la région de l'utilisateur
-            $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
+            $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
             if ($region) {
                 // Si la région est trouvée, récupérer son libellé depuis la table Region
                 $regionInfo = Region::where('code', $region->code_region)->first();
@@ -162,7 +162,7 @@ class StatController extends Controller
         $projets = ProjetEha2::all();
 
         // Récupérer le code région de l'utilisateur
-        $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
+        $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
        // $code_region = $region->code_region;
 
         // Déclaration de la variable $personnelAffiche
@@ -184,7 +184,7 @@ class StatController extends Controller
                 break;
             case 'dr': // Directeur Régional
                 // Récupérer le nom de la région de l'utilisateur
-                $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
+                $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
                 if ($region) {
                     // Si la région est trouvée, récupérer son libellé depuis la table Region
                     $regionInfo = Region::where('code', $region->code_region)->first();
