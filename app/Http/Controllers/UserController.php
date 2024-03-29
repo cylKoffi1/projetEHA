@@ -28,7 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
-
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -626,177 +626,204 @@ class UserController extends Controller
     // Mettre à jour l'utilisateur
     public function update(Request $request, $userId)
     {
-        $donnees = $request->all();
-        // Décoder la chaîne JSON des sous-domaines
-        $sousDomaines = json_decode($request->input('sd'), true);
-        $domainesSel = json_decode($request->input('domS'), true);
+        try {
+            $donnees = $request->all();
+            // Décoder la chaîne JSON des sous-domaines
+            $sousDomaines = json_decode($request->input('sd'), true);
+            $domainesSel = json_decode($request->input('domS'), true);
 
-        $request->validate([
-            'group_user' => 'required',
-            'structure' => 'required',
-            'code_fonction' => 'required',
-            'niveau_acces_id' => 'required',
-            'username' => 'required',
-            'email' => 'required|email',
-        ]);
-
-
-        $user = User::find($userId);
-
-        if (!$user || !$user->personnel) {
-
-            return response()->json(['error' => 'Utilisateur non trouvé.'], 404);
-            // Gérer le cas où l'utilisateur n'est pas trouvé
-            //return redirect()->route('users.users', ['userId' => $userId])->with('error', 'Utilisateur non trouvé.');
-        }
-
-
-
-        // Mettez à jour les informations de la personne
-        $user->personnel->update([
-            'nom' => $request->input('nom'),
-            'prenom' => $request->input('prenom'),
-            'email' => $request->input('email'),
-            'telephone' => $request->input('tel'),
-            'addresse' => $request->input('adresse'),
-        ]);
-
-        // Créer une nouvelle instance de CouvrirRegion
-        $newCouvrirRegion = new CouvrirRegion([
-            'code_personnel' => $user->personnel->code_personnel,
-            'date' => now()
-        ]);
-
-        // Définir les champs en fonction du niveau d'accès
-        if ($request->input('niveau_acces_id') == "de") {
-            $newCouvrirRegion->code_departement = $request->input('dep');
-        } elseif ($request->input('niveau_acces_id') == "di") {
-            $newCouvrirRegion->code_district = $request->input('dis');
-        } elseif ($request->input('niveau_acces_id') == "re") {
-            $newCouvrirRegion->code_region = $request->input('reg');
-        } else {
-            $newCouvrirRegion->id_pays = $request->input('na');
-        }
-
-        // Sauvegarder la nouvelle instance de CouvrirRegion
-        $newCouvrirRegion->save();
-
-
-        // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
-            $structureRattachement = new StructureRattachement([
-                'code_personnel' => $user->personnel->code_personnel,
-                'date' => now(),
+            $request->validate([
+                'group_user' => 'required',
+                'structure' => 'required',
+                'code_fonction' => 'required',
+                'niveau_acces_id' => 'required',
+                'username' => 'required',
+                'email' => 'required|email',
             ]);
 
-            if ($request->input('structure') == "bai") {
-                $structureRattachement->code_structure = $request->input('bailleur');
-                $structureRattachement->type_structure = 'bailleurss';
-            } elseif ($request->input('structure') == "age") {
-                $structureRattachement->code_structure = $request->input('agence');
-                $structureRattachement->type_structure = 'agence_execution';
+
+            $user = User::find($userId);
+
+            if (!$user || !$user->personnel) {
+
+                return response()->json(['error' => 'Utilisateur non trouvé.'], 404);
+                // Gérer le cas où l'utilisateur n'est pas trouvé
+                //return redirect()->route('users.users', ['userId' => $userId])->with('error', 'Utilisateur non trouvé.');
+            }
+
+
+
+            // Mettez à jour les informations de la personne
+            $user->personnel->update([
+                'nom' => $request->input('nom'),
+                'prenom' => $request->input('prenom'),
+                'email' => $request->input('email'),
+                'telephone' => $request->input('tel'),
+                'addresse' => $request->input('adresse'),
+            ]);
+
+            // Créer une nouvelle instance de CouvrirRegion
+            $newCouvrirRegion = new CouvrirRegion([
+                'code_personnel' => $user->personnel->code_personnel,
+                'date' => now()
+            ]);
+
+            // Définir les champs en fonction du niveau d'accès
+            if ($request->input('niveau_acces_id') == "de") {
+                $newCouvrirRegion->code_departement = $request->input('dep');
+            } elseif ($request->input('niveau_acces_id') == "di") {
+                $newCouvrirRegion->code_district = $request->input('dis');
+            } elseif ($request->input('niveau_acces_id') == "re") {
+                $newCouvrirRegion->code_region = $request->input('reg');
             } else {
-                $structureRattachement->code_structure = $request->input('ministere');
-                $structureRattachement->type_structure = 'ministere';
+                $newCouvrirRegion->id_pays = $request->input('na');
             }
-            $structureRattachement->save();
+
+            // Sauvegarder la nouvelle instance de CouvrirRegion
+            $newCouvrirRegion->save();
 
 
-        $newRoleId = $request->input('group_user'); // Récupérez le nouvel identifiant de rôle depuis la requête
+            // Vérifiez s'il existe déjà une entrée correspondante dans la base de données
+            $existingStructureRattachement = StructureRattachement::where('code_personnel', $user->personnel->code_personnel)->first();
 
-        if($newRoleId){
-            // Supprimez tous les rôles de l'utilisateur
-            $user->roles()->detach();
-
-            // Assignez le nouveau rôle à l'utilisateur
-            $user->assignRole($newRoleId);
-        }
-
-
-        // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
-        if ($user->personnel && $user->latestFonction && $user->latestFonction->code_fonction != $request->input('code_fonction')) {
-            OccuperFonction::create([
-                'code_personnel' => $user->personnel->code_personnel,
-                'code_fonction' => $request->input('code_fonction'),
-            ]);
-        }else{
-            OccuperFonction::create([
-                'code_personnel' => $user->personnel->code_personnel,
-                'code_fonction' => $request->input('code_fonction'),
-            ]);
-        }
-
-        // Mettez à jour le nom d'utilisateur
-        $user->update([
-            'login' => $request->input('username'),
-            'niveau_acces_id' => $request->input('niveau_acces_id'),
-            'email' => $request->input('email'),
-        ]);
-
-        // Vérifiez si un nouveau fichier photo a été téléchargé
-        if ($request->hasFile('photo')) {
-            // Supprimez l'ancienne photo s'il en existe une
-            if ($user->personnel->photo) {
-                // Assurez-vous que le fichier existe avant de le supprimer
-                $oldPhotoPath = public_path("users/{$user->personnel->photo}");
-                if (file_exists($oldPhotoPath)) {
-                    unlink($oldPhotoPath);
+            if ($existingStructureRattachement) {
+                // Mettez à jour les données existantes
+                $existingStructureRattachement->date = now();
+                if ($request->input('structure') == "bai") {
+                    $existingStructureRattachement->code_structure = $request->input('bailleur');
+                    $existingStructureRattachement->type_structure = 'bailleurss';
+                } elseif ($request->input('structure') == "age") {
+                    $existingStructureRattachement->code_structure = $request->input('agence');
+                    $existingStructureRattachement->type_structure = 'agence_execution';
+                } elseif ($request->input('structure') == "min"){
+                    $existingStructureRattachement->code_structure = $request->input('ministere');
+                    $existingStructureRattachement->type_structure = 'ministere';
                 }
+                $existingStructureRattachement->save();
+            } else {
+                // Créez une nouvelle entrée si aucune entrée correspondante n'existe
+                $newStructureRattachement = new StructureRattachement([
+                    'code_personnel' => $user->personnel->code_personnel,
+                    'date' => now(),
+                ]);
+                if ($request->input('structure') == "bai") {
+                    $newStructureRattachement->code_structure = $request->input('bailleur');
+                    $newStructureRattachement->type_structure = 'bailleurss';
+                } elseif ($request->input('structure') == "age") {
+                    $newStructureRattachement->code_structure = $request->input('agence');
+                    $newStructureRattachement->type_structure = 'agence_execution';
+                } elseif ($request->input('structure') == "min"){
+                    $newStructureRattachement->code_structure = $request->input('ministere');
+                    $newStructureRattachement->type_structure = 'ministere';
+                }
+                $newStructureRattachement->save();
             }
-            //$sous_domaines = SousDomaine::all();
 
-            // Téléchargez et enregistrez la nouvelle photoreturn response()->json(['error' => 'Utilisateur non trouvé.'], 404);
-            $file = $request->file('photo');
-            $extension = $file->getClientOriginalExtension();
-            $filename = time() . '.' . $extension;
-            $file->move('users', $filename);
 
-            // Mettez à jour le champ de la photo dans la base de données
-            $user->personnel->photo = $filename;
-            $user->personnel->save();
-        }
 
-        $sous_dom = AvoirExpertise::where('code_personnel', $user->code_personnel)->get();
-        $sousDomainesSelectionnes = $sousDomaines['sous_domaine'];
-        $dom = UtilisateurDomaine::where('code_personnel', $user->code_personnel)->get();
-        $domSEl = $domainesSel['domaine'];
 
-        $sousDomainesExistants = $sous_dom->pluck('sous_domaine')->toArray();
-        $sousDomainesASupprimer = array_diff($sousDomainesExistants, $sousDomainesSelectionnes);
-        $DomainesExistants = $dom->pluck('code_domaine')->toArray();
-        $DomainesASupprimer = array_diff($DomainesExistants, $domSEl);
+            $newRoleId = $request->input('group_user'); // Récupérez le nouvel identifiant de rôle depuis la requête
 
-        // Supprimez les associations qui ne sont plus sélectionnées
-        AvoirExpertise::where('code_personnel', $user->code_personnel)
-            ->whereIn('sous_domaine', $sousDomainesASupprimer)
-            ->delete();
+            if($newRoleId){
+                // Supprimez tous les rôles de l'utilisateur
+                $user->roles()->detach();
 
-        // Supprimez les associations qui ne sont plus sélectionnées
-        UtilisateurDomaine::where('code_personnel', $user->code_personnel)
-            ->whereIn('code_domaine', $DomainesASupprimer)
-            ->delete();
+                // Assignez le nouveau rôle à l'utilisateur
+                $user->assignRole($newRoleId);
+            }
 
-        // Ajoutez les nouvelles associations sélectionnées
-        foreach ($sousDomainesSelectionnes as $sousDomaine) {
-            AvoirExpertise::updateOrCreate(
-                [
-                    'code_personnel' => $user->code_personnel,
-                    'sous_domaine' => $sousDomaine
-                ]
-            );
-        }
-        // Ajoutez les nouvelles associations sélectionnées
-        foreach ($domSEl as $do) {
-            UtilisateurDomaine::updateOrCreate(
-                [
-                    'code_personnel' => $user->code_personnel,
-                    'code_domaine' => $do
-                ]
-            );
-        }
-        //return response()->json($[sd]);
-        return response()->json(['success' => 'Utilisateur mis à jour avec succès.', 'donnees' => $donnees]);
-        // Rediriger avec un message de succès
-        //return redirect()->route('users.users')->with('success', 'Utilisateur mis à jour avec succès.');
+
+            // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
+            if ($user->personnel && $user->latestFonction && $user->latestFonction->code_fonction != $request->input('code_fonction')) {
+                OccuperFonction::create([
+                    'code_personnel' => $user->personnel->code_personnel,
+                    'code_fonction' => $request->input('code_fonction'),
+                ]);
+            }else{
+                OccuperFonction::create([
+                    'code_personnel' => $user->personnel->code_personnel,
+                    'code_fonction' => $request->input('code_fonction'),
+                ]);
+            }
+
+            // Mettez à jour le nom d'utilisateur
+            $user->update([
+                'login' => $request->input('username'),
+                'niveau_acces_id' => $request->input('niveau_acces_id'),
+                'email' => $request->input('email'),
+            ]);
+
+            // Vérifiez si un nouveau fichier photo a été téléchargé
+            if ($request->hasFile('photo')) {
+                // Supprimez l'ancienne photo s'il en existe une
+                if ($user->personnel->photo) {
+                    // Assurez-vous que le fichier existe avant de le supprimer
+                    $oldPhotoPath = public_path("users/{$user->personnel->photo}");
+                    if (file_exists($oldPhotoPath)) {
+                        unlink($oldPhotoPath);
+                    }
+                }
+                //$sous_domaines = SousDomaine::all();
+
+                // Téléchargez et enregistrez la nouvelle photoreturn response()->json(['error' => 'Utilisateur non trouvé.'], 404);
+                $file = $request->file('photo');
+                $extension = $file->getClientOriginalExtension();
+                $filename = time() . '.' . $extension;
+                $file->move('users', $filename);
+
+                // Mettez à jour le champ de la photo dans la base de données
+                $user->personnel->photo = $filename;
+                $user->personnel->save();
+            }
+
+            $sous_dom = AvoirExpertise::where('code_personnel', $user->code_personnel)->get();
+            $sousDomainesSelectionnes = $sousDomaines['sous_domaine'];
+            $dom = UtilisateurDomaine::where('code_personnel', $user->code_personnel)->get();
+            $domSEl = $domainesSel['domaine'];
+
+            $sousDomainesExistants = $sous_dom->pluck('sous_domaine')->toArray();
+            $sousDomainesASupprimer = array_diff($sousDomainesExistants, $sousDomainesSelectionnes);
+            $DomainesExistants = $dom->pluck('code_domaine')->toArray();
+            $DomainesASupprimer = array_diff($DomainesExistants, $domSEl);
+
+            // Supprimez les associations qui ne sont plus sélectionnées
+            AvoirExpertise::where('code_personnel', $user->code_personnel)
+                ->whereIn('sous_domaine', $sousDomainesASupprimer)
+                ->delete();
+
+            // Supprimez les associations qui ne sont plus sélectionnées
+            UtilisateurDomaine::where('code_personnel', $user->code_personnel)
+                ->whereIn('code_domaine', $DomainesASupprimer)
+                ->delete();
+
+            // Ajoutez les nouvelles associations sélectionnées
+            foreach ($sousDomainesSelectionnes as $sousDomaine) {
+                AvoirExpertise::updateOrCreate(
+                    [
+                        'code_personnel' => $user->code_personnel,
+                        'sous_domaine' => $sousDomaine
+                    ]
+                );
+            }
+            // Ajoutez les nouvelles associations sélectionnées
+            foreach ($domSEl as $do) {
+                UtilisateurDomaine::updateOrCreate(
+                    [
+                        'code_personnel' => $user->code_personnel,
+                        'code_domaine' => $do
+                    ]
+                );
+            }
+            //return response()->json($[sd]);
+            return response()->json(['success' => 'Utilisateur mis à jour avec succès.', 'donnees' => $donnees]);
+        } catch (ValidationException $e) {
+            // Renvoyer les erreurs de validation avec le code de statut 422 (Unprocessable Entity)
+            return response()->json(['error' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            // Renvoyer toute autre exception avec le code de statut 500 (Internal Server Error)
+            return response()->json(['error' => $e->getMessage()], 500);
+        }// Rediriger avec un message de succès
+            //return redirect()->route('users.users')->with('success', 'Utilisateur mis à jour avec succès.');
     }
 
 

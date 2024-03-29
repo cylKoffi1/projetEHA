@@ -97,7 +97,7 @@
                                     </div>
                                 </div>
                                 <div class="col-4 ">
-                                @if($structureRattachement)
+                                    @if($structureRattachement)
                                         <div class="form-group">
                                             <label for="structure_ratache">Structure :</label>
                                             <label for="bai">B :</label>
@@ -497,12 +497,12 @@
 
         $('#bailleur').on('change', function() {
             showSelect_r('na');
-            $("#niveau_acces_id").prop("disabled", true);
+            $("#niveau_acces_id").prop("disabled", false);
             $('#na').val(110);
         });
         $('#agence').on('change', function() {
             showSelect_r('na');
-            $("#niveau_acces_id").prop("disabled", true);
+            $("#niveau_acces_id").prop("disabled", false);
             $('#na').val(110);
         });
         $('#ministere').on('change', function() {
@@ -606,9 +606,7 @@
                 }
                 , error: function(xhr, status, error) {
                     var err = JSON.parse(xhr.responseText);
-                    $('#alertMessage').text(err);
-                    $('#alertModal').modal('show');
-                    $('#alertMessage').text("Une erreur est survenue");
+                    $('#alertMessage').text(xhr.responseText);
                     $('#alertModal').modal('show');
                 }
             });
