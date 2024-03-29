@@ -67,7 +67,7 @@
                         <h5 class="card-title">
 
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                             <div class="alert alert-danger">
                                 <ul>
@@ -85,8 +85,7 @@
                 <div class="card-content">
                     <div class="card-body">
 
-
-                    <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
+                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -112,9 +111,9 @@
                             </thead>
 
                             <tbody>
-                            <tr  class="national-row">
-                                <td>..National</td>
-                                @if($projets_prevus != 0)
+                                <tr class="national-row">
+                                    <td>..National</td>
+                                    @if($projets_prevus != 0)
                                     <td style="text-align: right">{{ number_format($projets_prevus, 0, '.', ' ') }}</td>
                                     @endif
                                     @if($projets_en_cours != 0)
@@ -132,200 +131,196 @@
                                     @if($projets_suspendus != 0)
                                     <td style="text-align: right">{{ number_format($projets_suspendus, 0, '.', ' ') }}</td>
                                     @endif
-                            </tr>
-                            <tr>
-                                <td>.{{ $personnelAffiche }}</td>
-                                @if($projets_prevus != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                </tr>
+                                <tr>
+                                    <td>{{ $personnelAffiche }}</td>
+                                    @if($projets_prevus != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_prevu'] != 0)
-                                            {{ $projets['total_prevu'] }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ $projets['total_prevu'] }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_en_cours != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_en_cours != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_en_cours'] != 0)
-                                            {{ number_format($projets['total_en_cours'], 0, '.', ' ') }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format($projets['total_en_cours'], 0, '.', ' ') }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_cloture != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_cloture != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_cloture'] != 0)
-                                            {{ number_format($projets['total_cloture'], 0, '.', ' ') }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format($projets['total_cloture'], 0, '.', ' ') }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_redemarrer != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_redemarrer != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_redemarre'] != 0)
-                                            {{ number_format($projets['total_redemarre'], 0, '.', ' ') }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format($projets['total_redemarre'], 0, '.', ' ') }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_annulé != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_annulé != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_annule'] != 0)
-                                            {{ number_format($projets['total_annule'], 0, '.', ' ') }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format($projets['total_annule'], 0, '.', ' ') }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_suspendus != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_suspendus != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_suspendu'] != 0)
-                                            {{ number_format($projets['total_suspendu'], 0, '.', ' ') }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format($projets['total_suspendu'], 0, '.', ' ') }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                            </tr>
+                                </tr>
 
-                            <tr>
-                                <td>Ratio (%)</td>
-                                @if($projets_prevus != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                <tr>
+                                    <td>Ratio (%)</td>
+                                    @if($projets_prevus != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_prevu'] != 0)
-                                            {{ number_format(($projets['total_prevu'] / $projets_prevus) * 100, 2) }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format(($projets['total_prevu'] / $projets_prevus) * 100, 2) }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_en_cours != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_en_cours != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_en_cours'] != 0)
-                                            {{ number_format(($projets['total_en_cours'] / $projets_en_cours) * 100, 2) }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format(($projets['total_en_cours'] / $projets_en_cours) * 100, 2) }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_cloture != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_cloture != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_cloture'] != 0)
-                                            {{ number_format(($projets['total_cloture'] / $projets_cloture) * 100, 2) }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format(($projets['total_cloture'] / $projets_cloture) * 100, 2) }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_redemarrer != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_redemarrer != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_redemarre'] != 0)
-                                            {{ number_format(($projets['total_redemarre'] / $projets_redemarrer) * 100, 2) }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format(($projets['total_redemarre'] / $projets_redemarrer) * 100, 2) }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_annulé != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_annulé != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_annule'] != 0)
-                                            {{ number_format(($projets['total_annule'] / $projets_annulé) * 100, 2) }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format(($projets['total_annule'] / $projets_annulé) * 100, 2) }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                                @if($projets_suspendus != 0)
-                                <td style="text-align: right">
-                                    @php $nonZero = false; @endphp
-                                    @foreach($projetsParStatut as $statut => $projets)
+                                    @if($projets_suspendus != 0)
+                                    <td style="text-align: right">
+                                        @php $nonZero = false; @endphp
+                                        @foreach($projetsParStatut as $statut => $projets)
                                         @if(is_array($projets) && $projets['total_suspendu'] != 0)
-                                            {{ number_format(($projets['total_suspendu'] / $projets_suspendus) * 100, 2) }}
-                                            @php $nonZero = true; @endphp
-                                            @break
+                                        {{ number_format(($projets['total_suspendu'] / $projets_suspendus) * 100, 2) }}
+                                        @php $nonZero = true; @endphp
+                                        @break
                                         @endif
-                                    @endforeach
-                                    @if(!$nonZero)
+                                        @endforeach
+                                        @if(!$nonZero)
                                         0
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
-                                @endif
-                            </tr>
-
-
-
+                                </tr>
                             </tbody>
                         </table>
-
 
                     </div>
                 </div>

@@ -6,7 +6,9 @@ use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use App\Models\CouvrirRegion;
+use App\Models\Ministere;
 use App\Models\Region;
+use App\Models\StructureRattachement;
 
 class AddPersonnelAffiche
 {
@@ -25,18 +27,18 @@ class AddPersonnelAffiche
                     $personnelAffiche = 'bailleur';
                     break;
                 case 'dc': // Directeur de cabinet
-                    // Récupérer le nom de la région de l'utilisateur
-                    $ministere = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->first();
+                    // Récupérer le nom du ministère
+                    $ministere = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
                     if ($ministere) {
                         // Si le ministere est trouvée, récupérer son libellé depuis la table Region
-                        $regionInfo = Region::where('code', $ministere->code_region)->first();
-                        $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Ministère';
+                        $ministereInfo = Ministere::where('code', $ministere->code_structure)->first();
+                        $personnelAffiche = $ministereInfo ? $ministereInfo->libelle : '---';
                     }
                     break;
                 case 'dr': // Directeur Régional
                     // Récupérer le nom de la région de l'utilisateur
                     $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
-                   
+
                     if ($region) {
                         // Si la région est trouvée, récupérer son libellé depuis la table Region
                         $regionInfo = Region::where('code', $region->code_region)->first();

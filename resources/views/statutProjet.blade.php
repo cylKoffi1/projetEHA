@@ -71,7 +71,7 @@
               <a  href="#" data-toggle="modal" data-target="#sous-prefecture-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                     @endcan
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>

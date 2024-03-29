@@ -683,7 +683,6 @@ class UserController extends Controller
 
 
         // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
-        if ($user->personnel && $user->latestFonction && $user->latestFonction->code_fonction != $request->input('code_fonction')) {
             $structureRattachement = new StructureRattachement([
                 'code_personnel' => $user->personnel->code_personnel,
                 'date' => now(),
@@ -699,23 +698,7 @@ class UserController extends Controller
                 $structureRattachement->code_structure = $request->input('ministere');
                 $structureRattachement->type_structure = 'ministere';
             }
-        }else{
-            $structureRattachement = new StructureRattachement([
-                'code_personnel' => $user->personnel->code_personnel,
-                'date' => now(),
-            ]);
-
-            if ($request->input('structure') == "bai") {
-                $structureRattachement->code_structure = $request->input('bailleur');
-                $structureRattachement->type_structure = 'bailleurss';
-            } elseif ($request->input('structure') == "age") {
-                $structureRattachement->code_structure = $request->input('agence');
-                $structureRattachement->type_structure = 'agence_execution';
-            } else {
-                $structureRattachement->code_structure = $request->input('ministere');
-                $structureRattachement->type_structure = 'ministere';
-            }
-        }
+            $structureRattachement->save();
 
 
         $newRoleId = $request->input('group_user'); // Récupérez le nouvel identifiant de rôle depuis la requête
