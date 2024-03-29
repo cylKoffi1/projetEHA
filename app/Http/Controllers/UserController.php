@@ -567,6 +567,7 @@ class UserController extends Controller
     {
         $user = User::with('personnel')->find($userId);
 
+        $users =  Personnel::find($userId);
 
         if (!$user && !$users) {
             // Gérer le cas où l'utilisateur n'est pas trouvé
@@ -596,7 +597,7 @@ class UserController extends Controller
         $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('users.user-update', compact('ecran','structureRattachement','regions', 'pays', 'departements','sous_prefectures', 'districts','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
+        return view('users.user-update', compact('ecran','users','structureRattachement','regions', 'pays', 'departements','sous_prefectures', 'districts','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
     }
 
 
@@ -660,6 +661,25 @@ class UserController extends Controller
             'addresse' => $request->input('adresse'),
         ]);
 
+        // Créer une nouvelle instance de CouvrirRegion
+        $newCouvrirRegion = new CouvrirRegion([
+            'code_personnel' => $user->personnel->code_personnel,
+            'date' => now()
+        ]);
+
+        // Définir les champs en fonction du niveau d'accès
+        if ($request->input('niveau_acces_id') == "de") {
+            $newCouvrirRegion->code_departement = $request->input('dep');
+        } elseif ($request->input('niveau_acces_id') == "di") {
+            $newCouvrirRegion->code_district = $request->input('dis');
+        } elseif ($request->input('niveau_acces_id') == "re") {
+            $newCouvrirRegion->code_region = $request->input('reg');
+        } else {
+            $newCouvrirRegion->id_pays = $request->input('na');
+        }
+
+        // Sauvegarder la nouvelle instance de CouvrirRegion
+        $newCouvrirRegion->save();
 
 
         // Vérifiez et mettez à jour la fonction utilisateur si nécessaire

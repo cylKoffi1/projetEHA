@@ -11,7 +11,7 @@ class CouvrirRegion extends Model
 
     public $timestamps = false;
 
-    protected $table = 'couvrir_region'; // Nom de la table   
+    protected $table = 'couvrir_region'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'id';
     protected $fillable = ['code_personnel', 'code_region', 'date', 'code_departement', 'code_district', 'id_pays'];
@@ -21,7 +21,10 @@ class CouvrirRegion extends Model
     {
         return $this->belongsTo(Personnel::class, 'code_personnel', 'code_personnel');
     }
-
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'code_personnel', 'code_personnel');
+    }
     public function region()
     {
         return $this->belongsTo(Region::class, 'code_region', 'code');
@@ -41,5 +44,5 @@ class CouvrirRegion extends Model
     {
         return $this->belongsTo(Pays::class, 'id_pays', 'id');
     }
-    
+
 }

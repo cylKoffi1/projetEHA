@@ -98,6 +98,7 @@
                                     @enderror
                                 </div>
                                 <div class="col">
+                                    @if($structureRattachement)
                                     <div class="form-group">
                                         <label for="structure_ratache">Structure :</label>
                                         <label for="bai">B :</label>
@@ -128,7 +129,38 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    @else
+                                    <div class="form-group">
+                                        <label for="structure_ratache">Structure :</label>
+                                        <label for="bai">B :</label>
+                                        <input type="radio" value="bai" name="structure" id="bai" onclick="showSelect('bailleur')" style="margin-right: 15px;">
+                                        <label for="age">A :</label>
+                                        <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 15px;">
+                                        <label for="min">M :</label>
+                                        <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
 
+                                        <select name="bailleur" id="bailleur" class="form-select" style="display: block;">
+                                            <option value="">Selectionner le bailleur</option>
+                                            @foreach($bailleurs as $bailleur)
+                                            <option value="{{ $bailleur->code_bailleur }}" >{{ $bailleur->libelle_long }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="agence" id="agence" class="form-select" style="display: none;">
+                                            <option value="">Selectionner l'agence</option>
+                                            @foreach($agences as $agence)
+                                            <option value="{{ $agence->code_agence_execution }}" >{{ $agence->nom_agence }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="ministere" id="ministere" class="form-select" style="display: none;">
+                                            <option value="">Selectionner le ministère</option>
+                                            @foreach($ministeres as $ministere)
+                                            <option value="{{ $ministere->code }}" >{{ $ministere->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="row">

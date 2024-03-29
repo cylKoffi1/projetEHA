@@ -539,5 +539,4 @@ class RoleAssignmentController extends Controller
 
         return response()->json(['success' => 'Ecran supprimé avec succès']);
     }
-
 }

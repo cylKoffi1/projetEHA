@@ -96,4 +96,10 @@ class User extends Authenticatable
         $this->reset_token = null;
         $this->save();
     }
+    public function latestRegion()
+    {
+        return $this->hasOne(CouvrirRegion::class, 'code_personnel', 'code_personnel')
+            ->latest('date')
+            ->orderBy('date', 'desc');
+    }
 }

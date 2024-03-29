@@ -391,24 +391,29 @@
 </section>
 
 <script>
+    console.log('{{ $user}}')
     $(document).ready(function() {
         var uid = '{{ $user->id }}';
         var userSD = @json($sous_dom);
         var userD = @json($dom);
-        if ('{{ $structureRattachement -> type_structure=="bailleurss"}}') {
+        if ('{{$structureRattachement && $structureRattachement->type_structure === "bailleurss"}}') {
+            $("#bai").prop("checked", true);
+            showSelect('bailleur');
+        }
+         else if ('{{$structureRattachement && $structureRattachement->type_structure === "agence_execution"}}') {
+            $("#age").prop("checked", true);
+            showSelect('agence');
+        }
+        else if ('{{$structureRattachement && $structureRattachement->type_structure === "ministere"}}') {
+            $("#min").prop("checked", true);
+            showSelect('ministere');
+        }
+        else{
             $("#bai").prop("checked", true);
             showSelect('bailleur');
         }
 
-        if ('{{ $structureRattachement -> type_structure=="agence_execution"}}') {
-            $("#age").prop("checked", true);
-            showSelect('agence');
-        }
 
-        if ('{{ $structureRattachement -> type_structure=="ministere"}}') {
-            $("#min").prop("checked", true);
-            showSelect('ministere');
-        }
 
         $('#domaine').on('change', function() {
             updateSousDomaine($(this));
@@ -501,7 +506,7 @@
             allowEnablingAndDisabling: true,
 
         });
-        console.log(userD);
+
         // Pour parcourir les éléments
         userSD.forEach(function(item) {
             sous_dom.selectOption(item.sous_domaine);

@@ -10,7 +10,7 @@ class Personnel extends Model
     use HasFactory;
     public $timestamps = false;
 
-    protected $table = 'personnel'; // Nom de la table   
+    protected $table = 'personnel'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code_personnel';
     protected $fillable = [
@@ -20,13 +20,15 @@ class Personnel extends Model
         'addresse',
         'telephone',
         'email',
-        'code_structure_bailleur',
-        'code_structure_agence',
-        'code_structure_ministere',
         'domaine_activite',
         'photo',
     ];
 
+    public function lastStructure()
+    {
+        return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel')
+                    ->latest('date', 'desc');
+    }
 
     public function latestFonction()
     {
