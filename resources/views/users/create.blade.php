@@ -382,22 +382,22 @@
         $('#indicatifPays').text(defaultIndicatif); // Mettre à jour le texte de l'indicatif du pays
     });
 
-// Fonction pour obtenir l'indicatif du pays en fonction de son ID
-function getIndicatif(paysId) {
-    // Effectuer une requête AJAX vers la route qui récupère l'indicatif du pays
-    $.ajax({
-        url: '/getIndicatif/' + paysId,
-        type: 'GET',
-        success: function(response) {
-            // Mettre à jour le texte de l'indicatif avec l'indicatif du pays récupéré
-            $('#indicatifPays').text(response.indicatif);
-        },
-        error: function(xhr, status, error) {
-            console.error(xhr.responseText);
-            // Gérer l'erreur en conséquence
-        }
-    });
-}
+    // Fonction pour obtenir l'indicatif du pays en fonction de son ID
+    function getIndicatif(paysId) {
+        // Effectuer une requête AJAX vers la route qui récupère l'indicatif du pays
+        $.ajax({
+            url: '/getIndicatif/' + paysId,
+            type: 'GET',
+            success: function(response) {
+                // Mettre à jour le texte de l'indicatif avec l'indicatif du pays récupéré
+                $('#indicatifPays').text(response.indicatif);
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                // Gérer l'erreur en conséquence
+            }
+        });
+    }
 
 </script>
 

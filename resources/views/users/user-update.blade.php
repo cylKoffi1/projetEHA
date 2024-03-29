@@ -187,24 +187,21 @@
                                 <div class="col">
                                     <div class="form-group">
                                         <label for="niveau_acces_id">Champ d'exercice :</label>
-                                        <select name="niveau_acces_id" class="form-select">
-                                            <option value="">Selectionner un niveau</option>
+                                        <select name="niveau_acces_id" id="niveau_acces_id" class="form-select" required>
+                                            {{-- <option value="">--- ---</option> --}}
                                             @foreach($niveauxAcces as $niveauAcces)
-                                            <option value="{{ $niveauAcces->id }}" {{ $user->niveau_acces_id == $niveauAcces->id ? 'selected' : '' }}>
-                                                {{ $niveauAcces->libelle }}
-                                            </option>
+                                            <option value="{{ $niveauAcces->id }}" {{ $user->niveau_acces_id == $niveauAcces->id ? 'selected' : '' }}>{{ $niveauAcces->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col">
                                     <div class="form-group">
-                                        <label for="niveau_acces_id" id="niveau_acces_id_label">Lieu d'exercice :</label>
+                                        <label for="niveau_acces_id" id="niveau_acces_id_label">Région :</label>
                                         <select name="reg" id="reg" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($regions as $region)
                                             <option value="{{ $region->code }}" {{ optional(optional($user->latestRegion)->region)->code == $region->code ? 'selected' : '' }}>{{ $region->libelle }}</option>
-
                                             @endforeach
                                         </select>
                                         <select name="dis" id="dis" class="form-select" style="display: none;">
@@ -300,11 +297,13 @@
                                 </div>
                                 <div class="col-sm-4">
                                     <label for="city-column" class="form-label">Téléphone</label>
-                                    <div class="form-group position-relative has-icon-left">
-                                        <input type="text" id="tel" class="form-control" required value="{{ $user->personnel->telephone }}" placeholder="Téléphone" name="tel" />
+                                    <div class="input-group position-relative has-icon-right">
                                         <div class="form-control-icon">
-                                            <i class="bi bi-telephone"></i>
+                                            <i class="bi bi-phone"></i>
                                         </div>
+                                        <span class="input-group-text" id="indicatifPays">+XX</span> <!-- Balise span pour afficher l'indicatif du pays -->
+                                        <input type="text" id="tel" class="form-control" required value="{{ $user->personnel->telephone }}" placeholder="Téléphone" name="tel" />
+
                                     </div>
                                     @error('tel')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -391,6 +390,60 @@
 </section>
 
 <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var niveauAccesSelect = document.getElementById("niveau_acces_id");
+        var paysSelect = document.getElementById("na");
+
+        niveauAccesSelect.addEventListener("change", function() {
+            if (niveauAccesSelect.value == "na") {
+                paysSelect.value = "110"; // La valeur de code d'Ivoire
+                paysSelect.disabled = true; // Désactiver la sélection
+            } else {
+                paysSelect.value = ""; // Réinitialiser la valeur du pays si une autre option est sélectionnée
+                paysSelect.disabled = false; // Activer la sélection
+            }
+        });
+    });
+    $(document).ready(function() {
+        // Sélection de l'élément avec l'ID 'na'
+        var paysSelect = document.getElementById('na');
+        console.log("L'élément avec l'ID 'na' :"+paysSelect);
+        // Vérification si l'élément existe
+        if (paysSelect) {
+            // Écoute des changements de sélection dans le champ du pays
+            paysSelect.addEventListener('change', function() {
+                // Récupération de la valeur sélectionnée
+                var selectedPaysId = this.value; // Utilisation de 'this' pour faire référence à l'élément actuel
+
+                // Déterminez l'indicatif du pays sélectionné
+                getIndicatif(selectedPaysId);
+            });
+        } else {
+            console.error("L'élément avec l'ID 'na' n'existe pas.");
+        }
+
+        // Définir l'indicatif par défaut pour l'ID de pays 110
+        var defaultIndicatif = getIndicatif(110);
+        $('#indicatifPays').text(defaultIndicatif); // Mettre à jour le texte de l'indicatif du pays
+    });
+
+    // Fonction pour obtenir l'indicatif du pays en fonction de son ID
+    function getIndicatif(paysId) {
+        // Effectuer une requête AJAX vers la route qui récupère l'indicatif du pays
+        $.ajax({
+            url: '/getIndicatif/' + paysId,
+            type: 'GET',
+            success: function(response) {
+                // Mettre à jour le texte de l'indicatif avec l'indicatif du pays récupéré
+                $('#indicatifPays').text(response.indicatif);
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                // Gérer l'erreur en conséquence
+            }
+        });
+    }
+
     console.log('{{ $user}}')
     $(document).ready(function() {
         var uid = '{{ $user->id }}';
@@ -584,6 +637,7 @@
                 document.getElementById("na").style.display = "block";
                 document.getElementById("niveau_acces_id_label").innerHTML = "Pays";
                 $("#niveau_acces_id").val("na");
+                $('#na').val(110);
             }
             if (selectId === "di") {
                 document.getElementById("reg").style.display = "none";
