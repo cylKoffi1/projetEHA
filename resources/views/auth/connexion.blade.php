@@ -89,7 +89,7 @@
 
                         <div class="text-center p-t-115">
                             <div class="d-flex justify-content-between align-items-top mb-4">
-                                <div><a href="/password/reset" class="small text-right">Mot de passe oublié ?</a></div>
+                                <div><a href="#" class="small text-right">Mot de passe oublié ?</a></div>
                             </div>
                         </div>
                     </form>

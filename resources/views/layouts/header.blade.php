@@ -55,93 +55,7 @@
 
 </style>
 
-@php
-    use App\Models\CouvrirRegion;
-    use App\Models\Region;
-    // Utiliser une requête SQL brute pour obtenir le montant total des projets par statut
-    $resultats = DB::select("SELECT `code_statut_projet`, SUM(`projet_eha2`.`cout_projet`) as montant_total FROM `projet_statut_projet`
-        INNER JOIN `projet_eha2` ON `projet_statut_projet`.`code_projet` = `projet_eha2`.`CodeProjet`
-        GROUP BY `code_statut_projet`");
 
-    // Convertir les résultats en tableau associatif
-    $montantParStatut = [];
-    foreach ($resultats as $resultat) {
-        $montantParStatut[$resultat->code_statut_projet] = $resultat->montant_total;
-    }
-
-    // Récupérer les montants pour chaque statut de projet
-    $projets_prevus = isset($montantParStatut['01']) ? $montantParStatut['01'] : 0;
-    $projets_en_cours = isset($montantParStatut['02']) ? $montantParStatut['02'] : 0;
-    $projets_annulé = isset($montantParStatut['03']) ? $montantParStatut['03'] : 0;
-    $projets_cloture = isset($montantParStatut['04']) ? $montantParStatut['04'] : 0;
-    $projets_suspendus = isset($montantParStatut['05']) ? $montantParStatut['05'] : 0;
-    $projets_redemarrer = isset($montantParStatut['06']) ? $montantParStatut['06'] : 0;
-
-    // Récupérer le code région de l'utilisateur
-$user = auth()->user();
-$region = null;
-
-// Vérifier si la relation personnel existe et est chargée
-if ($user && $user->relationLoaded('personnel') && $user->personnel) {
-    $region = CouvrirRegion::where('code_personnel', $user->personnel->code_personnel)->first();
-}
-
-$code_region = $region ? $region->code_region : null;
-
-// Déclaration de la variable $personnelAffiche
-$personnelAffiche = '';
-
-// Vérifier si la relation latestFonction est définie
-if ($user && $user->latestFonction) {
-    // Vérifier si la relation personnel est définie
-    if ($user->latestFonction->fonctionUtilisateur && $user->latestFonction->fonctionUtilisateur->code === 'ba' && $user->personnel) {
-        // Switch pour déterminer la valeur de $personnelAffiche en fonction du groupe utilisateur
-        switch ($user->latestFonction->fonctionUtilisateur->code) {
-            case 'ad': //admin
-                $personnelAffiche = '';
-                break;
-
-            case 'cp': // Chef de projet
-                $personnelAffiche = 'Personnel';
-                break;
-            case 'ba': // Bailleur
-                // Récupérer les données du bailleur
-                $bailleur = BailleursProjet::where('code_bailleur', $user->personnel->code)->first();
-                $personnelAffiche = $bailleur ? $bailleur->libelle_long : '';
-                break;
-            case 'dc': // Directeur de cabinet
-                // Récupérer le nom de la région de l'utilisateur
-                $ministere = CouvrirRegion::where('code_personnel', $user->personnel->code_personnel)->first();
-                if ($ministere) {
-                    // Si le ministère est trouvé, récupérer son libellé depuis la table Region
-                    $regionInfo = Region::where('code', $region->code_region)->first();
-                    $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Ministère';
-                }
-                break;
-            case 'dr': // Directeur Régional
-                // Récupérer le nom de la région de l'utilisateur
-                $region = CouvrirRegion::where('code_personnel', $user->personnel->code_personnel)->first();
-                if ($region) {
-                    // Si la région est trouvée, récupérer son libellé depuis la table Region
-                    $regionInfo = Region::where('code', $region->code_region)->first();
-                    $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Directeur Régional';
-                }
-                break;
-        }
-    } else {
-        // Gérer le cas où la relation personnel ou fonctionUtilisateur n'est pas définie
-        $personnelAffiche = ''; // Ou une autre valeur par défaut
-    }
-} else {
-    // Gérer le cas où la relation latestFonction n'est pas définie
-    $personnelAffiche = ''; // Ou une autre valeur par défaut
-}
-
-
-
-
-
-@endphp
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000;  width: 100%; height: 90px; background-color: #435ebe;">
     <div class="container-fluid" style="align-items: center;">
         <a class="navbar-brand" href="/" style="color: white;">
@@ -152,7 +66,7 @@ if ($user && $user->latestFonction) {
         <span>{{ auth()->user()?->personnel?->nom }} {{ auth()->user()?->personnel?->prenom }}</span>
 
         @if(auth()->user()?->personnel?->latestFonction)
-            <span>{{ auth()->user()->personnel->latestFonction->fonctionUtilisateur->libelle_fonction ?? "" }} {{ $personnelAffiche }}</span>
+            <span>{{ auth()->user()->personnel->latestFonction->fonctionUtilisateur->libelle_fonction ?? "" }}:  {{ $personnelAffiche }}</span>
         @endif
 
         </span>

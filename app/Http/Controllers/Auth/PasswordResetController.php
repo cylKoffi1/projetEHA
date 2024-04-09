@@ -26,7 +26,7 @@ class PasswordResetController extends Controller
 
             // Afficher le formulaire de confirmation d'identité
             return view('confirm_identity_form');
-        }
+        }       
 
         return redirect()->back()->withErrors(['email' => 'Aucun utilisateur trouvé avec cette adresse e-mail.']);
     }

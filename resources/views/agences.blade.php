@@ -49,27 +49,89 @@
             </div>
         </div>
     </div>
+    @can("ajouter_ecran_" . $ecran->id)
+    <div class="modal-content">
 
+        <div class="modal-body">
+
+            <!-- // Basic multiple Column Form section start -->
+            <section id="multiple-column-form">
+                <div class="row match-height">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+                                    <h5 class="card-title">
+                                    Enregistrement d'une agence
+                                    </h5>
+
+                                    @if (count($errors) > 0)
+                                        <div class="alert alert-danger">
+                                            <ul>
+                                                @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <form class="form" method="POST" action="{{ route('agence.store') }}"data-parsley-validate>
+                                        @csrf
+                                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                        <div class="row">
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="code">Code :</label>
+                                                    <input type="text" class="form-control" id="code" name="code" placeholder="Code de l'agence" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Nom Agence :</label>
+                                                    <input type="text" class="form-control" id="nom_agence" name="nom_agence" placeholder="Nom de l'agence" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Téléphone :</label>
+                                                    <input type="text" class="form-control" id="tel" name="tel" placeholder="Téléphone de l'agence" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Email: :</label>
+                                                    <input type="email" class="form-control" id="email" name="email" placeholder="Email de l'agence" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Addresse :</label>
+                                                    <input type="text" class="form-control" id="addresse" name="addresse" placeholder="Addresse de l'agence" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <br>
+                                        @can("ajouter_ecran_".$ecran->id)
+                                        <div class="d-flex justify-content-end">
+                                        <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerAgences">
+                                        </div>
+                                        @endcan
+                                    </form>
+
+                                </div>
+                            </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    @endcan
     <div class="card">
         <div class="card-header">
-            <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                <h5 class="card-title">
-                    Ajout d'une agence
-                     @can("ajouter_ecran_" . $ecran->id)
-               <a href="#" data-toggle="modal" data-target="#agences-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
-                    @endcan
-                </h5>
-               
-                @if (count($errors) > 0)
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-            </div>
+
             <div style="text-align: center;">
                <h5 class="card-title"> Liste des agences d'exécution</h5>
             </div>
@@ -114,64 +176,6 @@
         </div>
     </div>
 
-
-
-
-    <!-- Modal -->
-    <div class="modal fade" id="agences-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Enregistrement d'une agence</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form class="form" method="POST" action="{{ route('agence.store') }}" data-parsley-validate>
-                        @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                        <div class="row">
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="code">Code :</label>
-                                    <input type="text" class="form-control" id="code" name="code" placeholder="Code de l'agence" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Nom Agence :</label>
-                                    <input type="text" class="form-control" id="nom_agence" name="nom_agence" placeholder="Nom de l'agence" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Téléphone :</label>
-                                    <input type="text" class="form-control" id="tel" name="tel" placeholder="Téléphone de l'agence" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Email: :</label>
-                                    <input type="email" class="form-control" id="email" name="email" placeholder="Email de l'agence" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Addresse :</label>
-                                    <input type="text" class="form-control" id="addresse" name="addresse" placeholder="Addresse de l'agence" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                            <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerAgences">
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal -->
     <div class="modal fade" id="edit-agences-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">

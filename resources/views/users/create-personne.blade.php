@@ -80,6 +80,11 @@
                         </ul>
                     </div>
                     @endif
+                    @if (session('error'))
+                    <div class="alert alert-danger">
+                        {{ session('error') }}
+                    </div>
+                    @endif
 
                 </div>
                 <div class="card-content">
@@ -266,6 +271,7 @@
 </section>
 
 <script>
+
     $(document).ready(function() {
 
 
@@ -358,6 +364,10 @@
                     document.getElementById('email-error').innerText = '';
                     document.getElementById('email').classList.remove('is-invalid');
                 }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+
             }
         });
     });

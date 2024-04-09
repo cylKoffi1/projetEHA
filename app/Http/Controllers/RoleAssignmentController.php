@@ -29,6 +29,7 @@ class RoleAssignmentController extends Controller
 
     public function assignRoles(Request $request)
     {
+        try{
         // Récupérer les données du formulaire
         $role_id = $request->input('role');
         $consulterRubrique = json_decode($request->input('consulterRubrique'));
@@ -226,6 +227,12 @@ class RoleAssignmentController extends Controller
             'message' => 'Données enregistrées avec succès.',
             'donnee' => $permissionsAsupprimer,
         ]);
+    } catch (\Exception $e) {
+        // Gérer les erreurs et retourner une réponse JSON avec l'erreur
+        return response()->json([
+            'error' => $e->getMessage(), // Vous pouvez personnaliser le message d'erreur selon vos besoins
+        ], 500); // Code d'erreur HTTP 500 pour une erreur interne du serveur
+    }
     }
 
     public function habilitations(Request $request)
@@ -280,12 +287,29 @@ class RoleAssignmentController extends Controller
         $rubrique->libelle = $request->input('libelle');
         $rubrique->ordre = $request->input('ordre');
         $rubrique->class_icone = $request->input('class_icone');
-        $rubrique->save();
 
+        // Supprimer les accents et les caractères spéciaux du libellé
+        function removeAccent($string) {
+            return preg_replace('/[^\x20-\x7E]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $string));
+        }
+
+        $libelle = $request->input('libelle');
+        $libelleSansEspaces = preg_replace('/\s+/', '', $libelle);
+        $permissionName = removeAccent(preg_replace('/[^A-Za-z]/', '', $libelleSansEspaces));
+
+        // Créer ou récupérer la permission correspondante
+        $permission = Permission::firstOrCreate(['name' => $permissionName]);
+
+        $rubrique->permission_id = $permission->id; // Assurez-vous que l'attribut correct est utilisé pour l'ID de la permission
+
+        $rubrique->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
         return redirect()->route('rubriques.index', ['ecran_id' => $ecran_id])->with('success', 'Rubrique enregistrée avec succès.');
     }
+
+
+
 
 
     public function getRubrique($code)
@@ -376,8 +400,22 @@ class RoleAssignmentController extends Controller
         $sous_menus->niveau = $request->input('niveau');
         $sous_menus->code_rubrique = $request->input('code_rubrique');
         $sous_menus->sous_menu_parent = $request->input('sous_menu_parent');
-        $sous_menus->save();
 
+        // Supprimer les accents et les caractères spéciaux du libellé
+        function removeAccents($string) {
+            return preg_replace('/[^\x20-\x7E]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $string));
+        }
+
+        $libelle = $request->input('libelle');
+        $libelleSansEspaces = preg_replace('/\s+/', '', $libelle);
+        $permissionName = removeAccents(preg_replace('/[^A-Za-z]/', '', $libelleSansEspaces));
+
+        // Créer ou récupérer la permission correspondante
+        $permission = Permission::firstOrCreate(['name' => $permissionName]);
+
+        $sous_menus->permission_id = $permission->id; // Assurez-vous que l'attribut correct est utilisé pour l'ID de la permission
+
+        $sous_menus->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
         return redirect()->route('sous_menu.index', ['ecran_id' => $ecran_id])->with('success', 'Sous-menu enregistré avec succès.');
@@ -465,14 +503,14 @@ class RoleAssignmentController extends Controller
         $ecran->code_sous_menu = $request->input('code_sous_menu');
         $ecran->code_rubrique = $request->input('code_rubrique');
 
-        $permissionName = 'consulter_ecran_' . $ecran->code;
+        $permissionName = 'consulter_ecran_' . $ecran->id;
         $permission = Permission::findOrCreate($permissionName);
         $ecran->permission_id = $permission->id;
 
         try {
-            Permission::findOrCreate('ajouter_ecran_' . $ecran->code);
-            Permission::findOrCreate('modifier_ecran_' . $ecran->code);
-            Permission::findOrCreate('supprimer_ecran_' . $ecran->code);
+            Permission::findOrCreate('ajouter_ecran_' . $ecran->id);
+            Permission::findOrCreate('modifier_ecran_' . $ecran->id);
+            Permission::findOrCreate('supprimer_ecran_' . $ecran->id);
         } catch (\Throwable $th) {
             //throw $th;
         }

@@ -11,7 +11,7 @@
 .leaflet-image-layer,
 .leaflet-layer {
 	position: absolute;
-	left: 0;
+	left: -36px;
 	top: 0;
 	}
 .leaflet-container {
@@ -87,7 +87,6 @@
 	box-sizing: border-box;
 	z-index: 800;
 	}
-
 .leaflet-pane         { z-index: 400; }
 
 .leaflet-tile-pane    { z-index: 200; }

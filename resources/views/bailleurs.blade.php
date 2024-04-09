@@ -51,24 +51,124 @@
 
 
 <section class="section">
+    @can("ajouter_ecran_" . $ecran->id)
+    <div class="modal-content">
+
+        <div class="modal-body">
+
+            <!-- // Basic multiple Column Form section start -->
+            <section id="multiple-column-form">
+                <div class="row match-height">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+                                    <h5 class="card-title">
+                                    Enregistrement d'un bailleur
+                                    </h5>
+
+                                    @if (count($errors) > 0)
+                                        <div class="alert alert-danger">
+                                            <ul>
+                                                @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <form class="form" method="POST" action="{{ route('bailleur.store') }}"data-parsley-validate>
+                                        @csrf
+                                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                        <div class="row">
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="code">Code :</label>
+                                                    <input type="text" class="form-control" id="code" name="code" placeholder="Code de l'agence" required>
+                                                </div>
+                                            </div>
+                                              <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Nom :</label>
+                                                    <input type="text" class="form-control" id="nom" name="nom" placeholder="Nom du bailleur" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Téléphone :</label>
+                                                    <input type="text" class="form-control" id="tel" name="tel" placeholder="Téléphone du bailleur" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Email: :</label>
+                                                    <input type="email" class="form-control" id="email" name="email" placeholder="Email du bailleur" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="libelle">Adresse :</label>
+                                                    <input type="text" class="form-control" id="addresse" name="addresse" placeholder="Addresse du bailleur" required>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="id_devise">Dévise :</label>
+                                                    <select class="form-select" id="id_devise" name="id_devise" required>
+                                                        <option value="">Sélectionner une dévise</option>
+                                                        @foreach ($devises as $devise)
+                                                        <option value="{{ $devise->code }}">{{ $devise->libelle }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="id_tb">Type bailleur :</label>
+                                                    <select class="form-select" id="id_tb" name="id_tb" required>
+                                                        <option value="">Sélectionner un pays</option>
+                                                        @foreach ($type_bailleurs as $tb)
+                                                        <option value="{{ $tb->code }}">{{ $tb->libelle }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="form-group mandatory">
+                                                    <label class="form-label" for="id_pays">Pays :</label>
+                                                    <select class="form-select" id="id_pays" name="id_pays" required>
+                                                        <option value="">Sélectionner un pays</option>
+                                                        @foreach ($pays as $country)
+                                                        <option value="{{ $country->id }}">{{ $country->nom_fr_fr }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <br>
+                                        @can("ajouter_ecran_".$ecran->id)
+                                        <div class="d-flex justify-content-end">
+                                        <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerBailleur">
+                                        </div>
+                                        @endcan
+                                    </form>
+
+                                </div>
+                            </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    @endcan
     <div class="card">
         <div class="card-header">
-            <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                <h5 class="card-title">
-                    Ajout d'un bailleur
-                    <a href="#" data-toggle="modal" data-target="#bailleur-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
-                </h5>
-               
-                @if (count($errors) > 0)
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-            </div>
+
             <div style="text-align: center;">
                <h5 class="card-title"> Liste des bailleurs</h5>
             </div>
@@ -127,96 +227,6 @@
     </div>
 
 
-
-
-    <!-- Modal -->
-    <div class="modal fade" id="bailleur-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true" >
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Enregistrement d'un bailleur</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form class="form" method="POST" action="{{ route('bailleur.store') }}" data-parsley-validate>
-                        @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                        <div class="row">
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="code">Code :</label>
-                                    <input type="text" class="form-control" id="code" name="code" placeholder="Code de l'agence" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Nom :</label>
-                                    <input type="text" class="form-control" id="nom" name="nom" placeholder="Nom du bailleur" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Téléphone :</label>
-                                    <input type="text" class="form-control" id="tel" name="tel" placeholder="Téléphone du bailleur" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Email: :</label>
-                                    <input type="email" class="form-control" id="email" name="email" placeholder="Email du bailleur" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Adresse :</label>
-                                    <input type="text" class="form-control" id="addresse" name="addresse" placeholder="Addresse du bailleur" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_devise">Dévise :</label>
-                                    <select class="form-select" id="id_devise" name="id_devise" required>
-                                        <option value="">Sélectionner une dévise</option>
-                                        @foreach ($devises as $devise)
-                                        <option value="{{ $devise->code }}">{{ $devise->libelle }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_tb">Type bailleur :</label>
-                                    <select class="form-select" id="id_tb" name="id_tb" required>
-                                        <option value="">Sélectionner un pays</option>
-                                        @foreach ($type_bailleurs as $tb)
-                                        <option value="{{ $tb->code }}">{{ $tb->libelle }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_pays">Pays :</label>
-                                    <select class="form-select" id="id_pays" name="id_pays" required>
-                                        <option value="">Sélectionner un pays</option>
-                                        @foreach ($pays as $country)
-                                        <option value="{{ $country->id }}">{{ $country->nom_fr_fr }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                            <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerBailleur">
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal -->
     <div class="modal fade" id="edit-bailleur-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">

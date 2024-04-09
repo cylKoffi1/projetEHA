@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\cloturerProjetController;
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\SigController;
@@ -194,6 +195,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     //***************** Action à mener ************* */
     Route::get('admin/actionmener', [PlateformeController::class, 'actionMener'])->name('actionMener');
+    Route::get('admin/actionmener/{code}', [PlateformeController::class, 'getActionmener'])->name('actionMener.show');
+    Route::post('admin/actionmener', [PlateformeController::class, 'storeActionmener'])->name('actionMener.store');
+    Route::post('admin/actionmener/update', [PlateformeController::class, 'updateActionmener'])->name('actionMener.update');
+    Route::delete('admin/actionmener/delete/{code}', [PlateformeController::class, 'deleteActionmener'])->name('actionMener.delete');
+    Route::post('/check-actionmener-code', [PlateformeController::class, 'checkActionmenerCode']);
 
     //***************** Acquifère ************* */
     Route::get('admin/acquifere', [PlateformeController::class, 'acquifere'])->name('acquifere');
@@ -284,6 +290,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/enregistrer-formulaire', [ProjetController::class, 'store'])->name('enregistrer.formulaire');
     Route::get('/projet/getTable', [ProjetController::class, 'getTable']);
     Route::get('admin/editionProjet', [ProjetController::class, 'editionProjet']);
+    Route::get('admin/projet/changementChefProjet', [ProjetController::class, 'changementChef']);
+
+    /**************************** GESTION DES EDITIONS **********************************/
+        /**************************** GESTION DES ANNEXE 1 ******************************/
+        Route::get('admin/projet/edition/InfosPrincip', [ProjetController::class, 'InfosPrincip'])->name('projet');
 
 
     //***************** REALISATION ************* */
@@ -338,6 +349,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('admin/personnel', [UserController::class, 'personnel'])->name('users.personnel');
     Route::get('admin/personnel/create', [UserController::class, 'createPersonnel'])->name('personnel.create');
     Route::post('admin/personnel/store', [UserController::class, 'storePersonnel'])->name('personnel.store');
+    Route::delete('/admin/personnel/{code_personnel}', [UserController::class, 'destroy'])->name('utilisateurs.destroy');
+
     Route::get('admin/personnel/details-personne/{personneId}', [UserController::class, 'detailsPersonne'])->name('personnel.details');
     Route::get('admin/personnel/get-personne/{personneId}', [UserController::class, 'getPersonne'])->name('personne.updateForm');
     Route::post('admin/personnel/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
@@ -359,7 +372,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/getIndicatif/{paysId}', [UserController::class, 'getIndicatif'])->name('getIndicatif');
 
 
-     /**************************** GESTION DES HABILITATIONS **********************************/
+    /**************************** GESTION DES HABILITATIONS **********************************/
      Route::get('/admin/habilitations', [RoleAssignmentController::class, 'habilitations'])->name('habilitations.index');
      Route::get('/admin/role-assignment', [RoleAssignmentController::class, 'index'])->name('role-assignment.index');
      Route::post('/admin/role-assignment/assign', [RoleAssignmentController::class, 'assignRoles'])->name('role-assignment.assign');
@@ -385,7 +398,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
      Route::get('/admin/ecran/get-ecran/{id}', [RoleAssignmentController::class, 'getEcran'])->name('ecran.updateForm');
      Route::post('/admin/ecran/update', [RoleAssignmentController::class, 'updateEcran'])->name('ecran.update');
      Route::delete('admin/ecran/delete/{code}', [RoleAssignmentController::class, 'deleteEcran'])->name('ecran.delete');
-});
+
+
+
+
+
+    });
 
 
 

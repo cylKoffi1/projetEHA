@@ -214,6 +214,9 @@ function initMapFina() {
             AEP: district.properties.AEP || 0,
             AD: district.properties.AD || 0,
             HY: district.properties.HY || 0,
+            EHAES: district.properties.EHAEE || 0,
+            EHAEE: district.properties.EHAEE || 0,
+            EHAEEn: district.properties.EHAEEn || 0,
             REE: district.properties.REE || 0,
             RCPE: district.properties.RCPE || 0,
             MONTANT: district.properties.MontantTotal || 0
@@ -221,6 +224,9 @@ function initMapFina() {
             AEP: 0,
             AD: 0,
             HY: 0,
+            EHAES: 0,
+            EHAEE: 0,
+            EHAEEn: 0,
             REE: 0,
             RCPE: 0,
             MONTANT: 0
@@ -235,12 +241,18 @@ function initMapFina() {
             AEP: region.properties.AEP || 0,
             AD: region.properties.AD || 0,
             HY: region.properties.HY || 0,
+            EHAES: region.properties.EHAES || 0,
+            EHAEE: region.properties.EHAEE || 0,
+            EHAEEn: region.properties.EHAEEn || 0,
             REE: region.properties.REE || 0,
             RCPE: region.properties.RCPE || 0,
         } : {
             AEP: 0,
             AD: 0,
             HY: 0,
+            EHAES: 0,
+            EHAEE: 0,
+            EHAEEn: 0,
             REE: 0,
             RCPE: 0,
         };
@@ -264,7 +276,9 @@ function initMapFina() {
         var calculatePercentage = function (value) {
             return (districtInfo.MONTANT !== 0) ? ((value / districtInfo.MONTANT) * 100).toFixed(2) + '%' : '0%';
         };
-
+        var formatNumberWithSpaces =function (value) {
+            return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
         var calculatePercentageR = function (value, total = districtInfo.MONTANT) {
             return (total !== 0) ? ((value / total) * 100).toFixed(2) + '%' : '0%';
         };
@@ -306,18 +320,13 @@ function initMapFina() {
                 </tr>
             </thead>
             <tbody>
-                        <tr>
-                            <th class="row22" style="text-align: right;">Montant total :</th>
-                            <td>${districtInfo.MONTANT}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.MONTANT)}</td>
-                        </tr>
+
                 ${
                     isRegion
                     ? `
                         <tr>
                             <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                            <td>${regionInfo.AEP}</td>
+                            <td>${formatNumberWithSpaces(regionInfo.AEP)}</td>
                             <td></td>
                             <td>${calculatePercentageR(regionInfo.AEP)}</td>
                         </tr>
@@ -325,7 +334,7 @@ function initMapFina() {
                     : `
                         <tr>
                             <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                            <td>${districtInfo.AEP}</td>
+                            <td>${formatNumberWithSpaces(districtInfo.AEP)}</td>
                             <td></td>
                             <td>${calculatePercentage(districtInfo.AEP)}</td>
                         </tr>
@@ -336,7 +345,7 @@ function initMapFina() {
                     ? `
                         <tr>
                             <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                            <td>${regionInfo.AD}</td>
+                            <td>${formatNumberWithSpaces(regionInfo.AD)}</td>
                             <td></td>
                             <td>${calculatePercentageR(regionInfo.AD)}</td>
                         </tr>
@@ -344,7 +353,7 @@ function initMapFina() {
                     : `
                         <tr>
                             <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                            <td>${districtInfo.AD}</td>
+                            <td>${formatNumberWithSpaces(districtInfo.AD)}</td>
                             <td></td>
                             <td>${calculatePercentage(districtInfo.AD)}</td>
                         </tr>
@@ -355,7 +364,7 @@ function initMapFina() {
                     ? `
                         <tr>
                             <th class="row22" style="text-align: right;">Hygiène :</th>
-                            <td>${regionInfo.HY}</td>
+                            <td>${formatNumberWithSpaces(regionInfo.HY)}</td>
                             <td></td>
                             <td>${calculatePercentageR(regionInfo.HY)}</td>
                         </tr>
@@ -363,7 +372,7 @@ function initMapFina() {
                     : `
                         <tr>
                             <th class="row22" style="text-align: right;">Hygiène :</th>
-                            <td>${districtInfo.HY}</td>
+                            <td>${formatNumberWithSpaces(districtInfo.HY)}</td>
                             <td></td>
                             <td>${calculatePercentage(districtInfo.HY)}</td>
                         </tr>
@@ -374,7 +383,7 @@ function initMapFina() {
                     ? `
                         <tr>
                             <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                            <td>${regionInfo.REE}</td>
+                            <td>${formatNumberWithSpaces(regionInfo.REE)}</td>
                             <td></td>
                             <td>${calculatePercentageR(regionInfo.REE)}</td>
                         </tr>
@@ -382,9 +391,66 @@ function initMapFina() {
                     : `
                         <tr>
                             <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                            <td>${districtInfo.REE}</td>
+                            <td>${formatNumberWithSpaces(districtInfo.REE)}</td>
                             <td></td>
                             <td>${calculatePercentage(districtInfo.REE)}</td>
+                        </tr>
+                    `
+                }
+                ${
+                    isRegion
+                    ? `
+                        <tr>
+                            <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
+                            <td>${formatNumberWithSpaces(regionInfo.EHAES)}</td>
+                            <td></td>
+                            <td>${calculatePercentageR(regionInfo.EHAES)}</td>
+                        </tr>
+                    `
+                    : `
+                        <tr>
+                            <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
+                            <td>${formatNumberWithSpaces(districtInfo.EHAES)}</td>
+                            <td></td>
+                            <td>${calculatePercentage(districtInfo.EHAES)}</td>
+                        </tr>
+                    `
+                }
+                ${
+                    isRegion
+                    ? `
+                        <tr>
+                            <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
+                            <td>${formatNumberWithSpaces(regionInfo.EHAEE)}</td>
+                            <td></td>
+                            <td>${calculatePercentageR(regionInfo.EHAEE)}</td>
+                        </tr>
+                    `
+                    : `
+                        <tr>
+                            <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
+                            <td>${formatNumberWithSpaces(districtInfo.EHAEE)}</td>
+                            <td></td>
+                            <td>${calculatePercentage(districtInfo.EHAEE)}</td>
+                        </tr>
+                    `
+                }
+                ${
+                    isRegion
+                    ? `
+                        <tr>
+                            <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
+                            <td>${formatNumberWithSpaces(regionInfo.EHAEEn)}</td>
+                            <td></td>
+                            <td>${calculatePercentageR(regionInfo.EHAEEn)}</td>
+                        </tr>
+                    `
+                    : `
+                        <tr>
+                            <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
+                            <td>${formatNumberWithSpaces(districtInfo.EHAEEn)}</td>
+                            <td></td>
+                            <td>${calculatePercentage(districtInfo.EHAEEn)}</td>
                         </tr>
                     `
                 }
@@ -426,11 +492,6 @@ function initMapFina() {
                 fillOpacity: 0.7
             };
         }
-    // Fonction pour obtenir la couleur en fonction du district
-
-
-
-    // ...
 
     // Fonction pour mettre en surbrillance une région au survol
     function highlightRegion(e) {
@@ -483,31 +544,7 @@ function initMapFina() {
 
 
     // Fonction pour obtenir la couleur en fonction du nombre de projets dans le district
-    function getColorByProjectCount(projectCount) {
-        // Utilisez une échelle de couleurs en fonction du nombre de projets
-        var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8); // Utilise Chroma.js pour créer une échelle de couleurs
-        var colorIndex;
 
-        if (projectCount >= 400000000000) {
-            colorIndex = 7; // 300 et plus rouge
-        } else if (projectCount >= 350000000000) {
-            colorIndex = 6; // 155 à 299 orange
-        } else if (projectCount >= 300000000000) {
-            colorIndex = 5; // 100 à 154 jaune
-        } else if (projectCount >= 250000000000) {
-            colorIndex = 4; // 60 à 99 vert
-        } else if (projectCount >= 150000000000) {
-            colorIndex = 3; // 40 à 59 violet
-        } else if (projectCount >= 100000000000) {
-            colorIndex = 2; // 20 à 39 bleu
-        } else if (projectCount >= 50000000000) {
-            colorIndex = 1; // 1 à 19 beige foncé
-        } else {
-            colorIndex = 0; // 0 beige
-        }
-
-        return colorScale[colorIndex];
-    }
 
 
 
@@ -564,6 +601,32 @@ function initMapFina() {
 
 
     // Ajout de la légende à la carte
+    function getColorByProjectCount(projectCount) {
+        // Utilisez une échelle de couleurs en fonction du nombre de projets
+        var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8); // Utilise Chroma.js pour créer une échelle de couleurs
+        var colorIndex;
+
+        if (projectCount >= 40000000000) {
+            colorIndex = 7; // 300 et plus rouge
+        } else if (projectCount >= 35000000000) {
+            colorIndex = 6; // 155 à 299 orange
+        } else if (projectCount >= 30000000000) {
+            colorIndex = 5; // 100 à 154 jaune
+        } else if (projectCount >= 25000000000) {
+            colorIndex = 4; // 60 à 99 vert
+        } else if (projectCount >= 15000000000) {
+            colorIndex = 3; // 40 à 59 violet
+        } else if (projectCount >= 10000000000) {
+            colorIndex = 2; // 20 à 39 bleu
+        } else if (projectCount >= 5000000000) {
+            colorIndex = 1; // 1 à 19 beige foncé
+        } else {
+            colorIndex = 0; // 0 beige
+        }
+
+        return colorScale[colorIndex];
+    }
+
     function addLegend() {
         var legend = L.control({ position: 'bottomright' });
 
@@ -573,12 +636,12 @@ function initMapFina() {
 
             // Ajouter le titre de la légende
             div.innerHTML += '<h4>LEGENDE</h4>';
-            div.innerHTML += '<p>Coût de projet en milliard</p>';
+            div.innerHTML += '<p>Coût de projet en million</p>';
 
 
             // Ajouter les couleurs et les étiquettes
             var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8); // Utilise Chroma.js pour créer une échelle de couleurs
-            var projectRanges = [' 0 ', ' 50 ', ' 150 ', ' 200 ', ' 250 ', ' 300 ', '350 ', '400 '];
+            var projectRanges = [' 0 ', ' 5 ', ' 15 ', ' 20 ', ' 25 ', ' 30 ', '35 ', '40 '];
 
             for (var i = 0; i < colorScale.length; i++) {
                 div.innerHTML +=
@@ -593,6 +656,7 @@ function initMapFina() {
     }
 
     addLegend();
+
 }
 
 

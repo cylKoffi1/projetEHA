@@ -370,7 +370,7 @@ class ProjetController extends Controller
                     ]);
                 }
 
-                                // Enregistrement des données dans la table ProjetChefProjet
+                // Enregistrement des données dans la table ProjetChefProjet
                 foreach ($request->chefProjet_code as $key => $code_personnel) {
                     ProjetChefProjet::create([
                         'code_projet' => $request->code_projet,
@@ -386,7 +386,6 @@ class ProjetController extends Controller
             } catch (\Exception $e) {
                 // En cas d'erreur, annuler la transaction et renvoyer une réponse d'erreur
                 DB::rollBack();
-
                 return response()->json(['error' => true, 'message' => 'Erreur lors de l\'enregistrement du formulaire. Détails: ' . $e->getMessage()]);
             }
         }
@@ -443,6 +442,18 @@ class ProjetController extends Controller
         }
 
         return response()->json($data);
+    }
+
+
+    public function changementChef(){
+        return view('changementChefProjet');
+    }
+
+    public function InfosPrincip(Request $request){
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $actionMener = ActionMener::orderBy('libelle', 'asc')->get();
+
+        return view('etatInfoPrincipal');
     }
 }
 

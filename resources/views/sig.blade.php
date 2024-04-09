@@ -145,7 +145,7 @@
                                     <div class="col" style="height: 100%;">
                                             {{-- <center> --}}
 
-                                                <div id="map" style="width: 90%; height: 590px;    padding-left: 107%; z-index:1; outline-style: none;"></div>
+                                                <div id="map" style="width: 90%; height: 590px; padding-left: 107%; z-index:1; outline-style: none;"></div>
 
                                             {{-- </center> --}}
                                     </div>

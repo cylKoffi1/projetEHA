@@ -398,6 +398,38 @@
             }
         });
     }
+    if (typeof jQuery === 'undefined') {
+            console.error('jQuery n\'est pas chargé');
+        } else {
+            console.log('jQuery est chargé');
+        }
+
+        // Attacher un gestionnaire d'événement au chargement du document
+        $(document).ready(function() {
+            // Vérifier si jQuery multiselect est chargé
+            if (typeof $.fn.multiselect === 'undefined') {
+                console.error('Le plugin jQuery multiselect n\'est pas chargé');
+                return;
+            }
+
+            // Gestionnaire d'événement pour le changement dans la sélection des sous-domaines
+            $('#sous_domaine').on('change', function() {
+                console.log("Changement détecté dans la sélection des sous-domaines");
+
+                var selectedSousDomaines = $(this).val(); // Obtenez les sous-domaines sélectionnés
+                console.log("Sous-domaines sélectionnés :", selectedSousDomaines);
+
+                // Sélectionnez automatiquement les domaines correspondants
+                $('#domaine').val(selectedSousDomaines.map(function(code) {
+                    // Extraire le code de domaine correspondant au code de sous-domaine
+                    return code.substring(0, 2); // Supposant que les deux premiers chiffres sont le code de domaine
+                }));
+
+                // Rafraîchissez le plugin de sélection multiple pour refléter les changements
+                $('#domaine').multiselect('refresh');
+            });
+        });
+    </script>
 
 </script>
 
@@ -455,6 +487,7 @@
             allowEnablingAndDisabling: true,
 
         });
+
 
 
         $("#bai").prop("checked", true);

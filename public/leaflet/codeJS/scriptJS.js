@@ -238,6 +238,9 @@ function initMapJS() {
                     AEP: district.properties.AEP || 0,
                     AD: district.properties.AD || 0,
                     HY: district.properties.HY || 0,
+                    EHAES: district.properties.EHAEE || 0,
+                    EHAEE: district.properties.EHAEE || 0,
+                    EHAEEn: district.properties.EHAEEn || 0,
                     REE: district.properties.REE || 0,
                     RCPE: district.properties.RCPE || 0,
                     PROJET_NUM: district.properties.PROJET_NUM || 0
@@ -245,6 +248,9 @@ function initMapJS() {
                     AEP: 0,
                     AD: 0,
                     HY: 0,
+                    EHAES: 0,
+                    EHAEE: 0,
+                    EHAEEn: 0,
                     REE: 0,
                     RCPE: 0,
                     PROJET_NUM: 0
@@ -259,6 +265,9 @@ function initMapJS() {
                     AEP: region.properties.AEP || 0,
                     AD: region.properties.AD || 0,
                     HY: region.properties.HY || 0,
+                    EHAES: region.properties.EHAES || 0,
+                    EHAEE: region.properties.EHAEE || 0,
+                    EHAEEn: region.properties.EHAEEn || 0,
                     REE: region.properties.REE || 0,
                     RCPE: region.properties.RCPE || 0,
                     PROJET_NUM: region.properties.PROJET_NUM || 0
@@ -266,6 +275,9 @@ function initMapJS() {
                     AEP: 0,
                     AD: 0,
                     HY: 0,
+                    EHAES: 0,
+                    EHAEE: 0,
+                    EHAEEn: 0,
                     REE: 0,
                     RCPE: 0,
                     PROJET_NUM: 0
@@ -395,6 +407,57 @@ function initMapJS() {
                                     <th class="row22" style="text-align: right;">Ressource en eau :</th>
                                     <td>${districtInfo.REE}</td>
                                     <td>${calculatePercentage(districtInfo.REE)}</td>
+                                </tr>
+                            `
+                        }
+                        ${
+                            isRegion
+                            ? `
+                                <tr>
+                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
+                                    <td>${regionInfo.EHAES}/${districtInfo.EHAES}</td>
+                                    <td>${calculatePercentageR(regionInfo.EHAES, districtInfo.EHAES)}</td>
+                                </tr>
+                            `
+                            : `
+                                <tr>
+                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
+                                    <td>${districtInfo.EHAES}</td>
+                                    <td>${calculatePercentage(districtInfo.EHAES)}</td>
+                                </tr>
+                            `
+                        }
+                        ${
+                            isRegion
+                            ? `
+                                <tr>
+                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
+                                    <td>${regionInfo.EHAEE}/${districtInfo.EHAEE}</td>
+                                    <td>${calculatePercentageR(regionInfo.EHAEE, districtInfo.EHAEE)}</td>
+                                </tr>
+                            `
+                            : `
+                                <tr>
+                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
+                                    <td>${districtInfo.EHAEE}</td>
+                                    <td>${calculatePercentage(districtInfo.EHAEE)}</td>
+                                </tr>
+                            `
+                        }
+                        ${
+                            isRegion
+                            ? `
+                                <tr>
+                                    <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
+                                    <td>${regionInfo.EHAEEn}/${districtInfo.EHAEEn}</td>
+                                    <td>${calculatePercentageR(regionInfo.EHAEEn, districtInfo.EHAEEn)}</td>
+                                </tr>
+                            `
+                            : `
+                                <tr>
+                                    <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
+                                    <td>${districtInfo.EHAEEn}</td>
+                                    <td>${calculatePercentage(districtInfo.EHAEEn)}</td>
                                 </tr>
                             `
                         }

@@ -61,6 +61,77 @@
         </div>
     </div>
     <div class="row match-height">
+        <div class="modal-content">
+
+             <div class="modal-body">
+
+                 <!-- // Basic multiple Column Form section start -->
+                 <section id="multiple-column-form">
+                     <div class="row match-height">
+                         <div class="col-12">
+                             <div class="card">
+                                    <div class="card-header">
+                                        <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+                                            <h5 class="card-title">
+                                            Enregistrement d'un sous-domaine
+                                            </h5>
+
+                                            @if (count($errors) > 0)
+                                                <div class="alert alert-danger">
+                                                    <ul>
+                                                        @foreach ($errors->all() as $error)
+                                                        <li>{{ $error }}</li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                 <div class="card-content">
+                                     <div class="card-body">
+                                         <form class="form" method="POST" action="{{ route('sous_domaines.store') }}"data-parsley-validate>
+                                             @csrf
+                                             <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                             <div class="row">
+                                                    <div class="col">
+                                                        <label class="form-label" for="code">domaine :</label>
+                                                       <select class="form-select" name="domaine" id="domaine">
+                                                            <option value="">Selectionnez un domaine</option>
+                                                            @foreach ($domaines as $domaine)
+                                                                <option value="{{ $codeDomaine = $domaine->code }}">{{ $domaine->libelle }}</option>
+                                                            @endforeach
+                                                       </select>
+                                                    </div>
+                                                     <div class="col">
+                                                         <label class="form-label" for="code">Code domaine:</label>
+                                                         <input type="text" class="form-control" id="code" name="code" placeholder="Code domaine" readonly required>
+                                                     </div>
+                                                     <div class="col">
+                                                         <label class="form-label" for="code">Code sous-domaine:</label>
+                                                         <input type="text" class="form-control" id="codeSousdomaine" name="code" placeholder="Code sous-domaine" required>
+                                                     </div>
+                                                     <div class="col">
+                                                         <label class="form-label" for="libelle">Libelle sous-domaine:</label>
+                                                         <input type="text" class="form-control" id="libelle"
+                                                             name="libelle" placeholder="Libelle" required>
+                                                     </div>
+                                             </div>
+                                            <br>
+                                            @can("ajouter_ecran_".$ecran->id)
+                                             <div class="d-flex justify-content-end">
+                                                 <input type="submit" class="btn btn-primary" style="" value="Enregistrer" id="enregistrerSousDomaine">
+                                             </div>
+                                             @endcan
+                                         </form>
+
+                                     </div>
+                                 </div>
+                         </div>
+                     </div>
+                 </section>
+             </div>
+        </div>
+
         <div class="col-12">
             <div class="card">
             <div class="card-header">
@@ -69,7 +140,7 @@
                         Ajout d'un sous-domaine
                         <a href="#" data-toggle="modal" data-target="#sous-domaine-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                     </h5>
-                   
+
                     @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -83,7 +154,7 @@
                 <div style="text-align: center;">
                    <h5 class="card-title"> Liste des sous-domaines</h5>
                 </div>
-            </div>
+            </div>
                 <div class="card-content">
                     <div class="card-body">
 
@@ -130,82 +201,7 @@
 
 
      <!-- Modal Enregistrement -->
-     <div class="modal fade" id="sous-domaine-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle"
-     aria-hidden="true">
-     <div class="modal-dialog" role="document">
-         <div class="modal-content">
-             <div class="modal-header">
-                 <h5 class="modal-title" id="modalTitle">Enregistrement d'un sous-domaine</h5>
-                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                     <span aria-hidden="true">&times;</span>
-                 </button>
-             </div>
-             <div class="modal-body">
 
-                 <!-- // Basic multiple Column Form section start -->
-                 <section id="multiple-column-form">
-                     <div class="row match-height">
-                         <div class="col-12">
-                             <div class="card">
-                                 <div class="card-content">
-                                     <div class="card-body">
-                                         <form class="form" method="POST" action="{{ route('sous_domaines.store') }}"
-                                             data-parsley-validate>
-                                             @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                                             <div class="row">
-                                                <div class="col-md-6 col-12">
-                                                    <div class="form-group mandatory">
-                                                        <label class="form-label" for="code">domaine :</label>
-                                                       <select class="form-select" name="domaine" id="domaine">
-                                                            <option value="">Selectionnez un domaine</option>
-                                                            @foreach ($domaines as $domaine)
-                                                                <option value="{{ $codeDomaine = $domaine->code }}">{{ $domaine->libelle }}</option>
-                                                            @endforeach
-                                                       </select>
-                                                    </div>
-                                                </div>
-                                                 <div class="col-md-6 col-12">
-                                                     <div class="form-group mandatory">
-                                                         <label class="form-label" for="code">Code domaine:</label>
-                                                         <input type="text" class="form-control" id="code" name="code" placeholder="Code domaine" readonly required>
-                                                     </div>
-                                                 </div>
-                                                 <div class="col-md-6 col-12">
-                                                     <div class="form-group mandatory">
-                                                         <label class="form-label" for="code">Code sous-domaine:</label>
-                                                         <input type="text" class="form-control" id="codeSousdomaine" name="code" placeholder="Code sous-domaine" required>
-                                                     </div>
-                                                 </div>
-
-                                                 <div class="col-md-6 col-12">
-                                                     <div class="form-group mandatory">
-                                                         <label class="form-label" for="libelle">Libelle sous-domaine:</label>
-                                                         <input type="text" class="form-control" id="libelle"
-                                                             name="libelle" placeholder="Libelle" required>
-                                                     </div>
-                                                 </div>
-                                             </div>
-
-                                             <div class="modal-footer">
-                                                 <button type="button" class="btn btn-secondary"
-                                                     data-dismiss="modal">Fermer</button>
-                                                 <input type="submit" class="btn btn-primary" value="Enregistrer"
-                                                     id="enregistrerSousDomaine">
-                                             </div>
-                                         </form>
-
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </section>
-                 <!-- // Basic multiple Column Form section end -->
-             </div>
-         </div>
-     </div>
- </div>
 
  <!-- Modal Modification -->
  <div class="modal fade" id="sous-domaine-modal-edit" tabindex="-1" role="dialog" aria-labelledby="modalTitle"

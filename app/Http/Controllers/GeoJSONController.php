@@ -36,7 +36,10 @@ class GeoJSONController extends Controller
                     DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN 1 ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage'),
                     DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN 1 ELSE 0 END) AS UNSIGNED) AS Hygiène'),
                     DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN 1 ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau'),
-                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN 1 ELSE 0 END) AS UNSIGNED) AS Renforcement_des_capacités_et_Planification_Etudes')
+                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé'),
+                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités')
+
                 )
                 ->leftJoin('region', 'region.code_district', '=', 'district.code')
                 ->leftJoin('projet_eha2', 'region.code', '=', 'projet_eha2.code_region')
@@ -68,7 +71,9 @@ class GeoJSONController extends Controller
                         'AD' => (int) $district->Assainissement_et_Drainage,
                         'HY' => (int) $district->Hygiène,
                         'REE' => (int) $district->Ressources_en_Eau,
-                        'RCPE' => (int) $district->Renforcement_des_capacités_et_Planification_Etudes,
+                        'EHAES' => (int) $district->EHA_dans_les_Etablissements_de_Santé,
+                        'EHAEE' => (int) $district->EHA_dans_les_Etablissements_d_Enseignement,
+                        'EHAEEn' => (int) $district->EHA_dans_les_autres_Entités,
                     ],
                     'geometry' => [
                         'type' => 'MultiPolygon',  // Remplissez les coordonnées ici
@@ -100,7 +105,10 @@ class GeoJSONController extends Controller
                     DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN 1 ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage'),
                     DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN 1 ELSE 0 END) AS UNSIGNED) AS Hygiène'),
                     DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN 1 ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau'),
-                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN 1 ELSE 0 END) AS UNSIGNED) AS Renforcement_des_capacités_et_Planification_Etudes')
+                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé'),
+                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                    DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités')
+
                 )
                 ->leftJoin('district', 'region.code_district', '=', 'district.code')
                 ->leftJoin('projet_eha2', 'region.code', '=', 'projet_eha2.code_region')
@@ -139,8 +147,9 @@ class GeoJSONController extends Controller
                         'AD' => (int) $region->Assainissement_et_Drainage,
                         'HY' => (int) $region->Hygiène,
                         'REE' => (int) $region->Ressources_en_Eau,
-                        'RCPE' => (int) $region->Renforcement_des_capacités_et_Planification_Etudes,
-                        // Ajoutez d'autres propriétés au besoin
+                        'EHAES' => (int) $region->EHA_dans_les_Etablissements_de_Santé,
+                        'EHAEE' => (int) $region->EHA_dans_les_Etablissements_d_Enseignement,
+                        'EHAEEn' => (int) $region->EHA_dans_les_autres_Entités,
                     ],
                     'geometry' => [
                         'type' => 'MultiPolygon',  // Vous devrez remplir les coordonnées ici
@@ -171,7 +180,11 @@ class GeoJSONController extends Controller
                     DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS Alimentation_en_Eau_Potable'),
                     DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS Assainissement_et_Drainage'),
                     DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS Hygiène'),
-                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS Ressources_en_Eau')
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS Ressources_en_Eau'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS EHA_dans_les_Etablissements_de_Santé'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS EHA_dans_les_autres_Entités')
+
                 )
                 ->join('region', 'region.code', '=', 'projet_eha2.code_region')
                 ->join('district', 'district.code', '=', 'region.code_district')
@@ -209,6 +222,9 @@ class GeoJSONController extends Controller
                         'AD' =>  $montantD->Assainissement_et_Drainage,
                         'HY' => $montantD->Hygiène,
                         'REE' => $montantD->Ressources_en_Eau,
+                        'EHAES' => $montantD->EHA_dans_les_Etablissements_de_Santé,
+                        'EHAEE' => $montantD->EHA_dans_les_Etablissements_d_Enseignement,
+                        'EHAEEn' => $montantD->EHA_dans_les_autres_Entités,
                     ],
                 ];
 
@@ -237,9 +253,13 @@ class GeoJSONController extends Controller
                     'district.libelle AS nomDistrict',
                     'region.libelle AS nomRegion',
                     DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS Alimentation_en_Eau_Potable'),
-                    DB::raw('SUM(CASE                     WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS Assainissement_et_Drainage'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS Assainissement_et_Drainage'),
                     DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS Hygiène'),
-                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS Ressources_en_Eau')
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS Ressources_en_Eau'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS EHA_dans_les_Etablissements_de_Santé'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                    DB::raw('SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS EHA_dans_les_autres_Entités')
+
                 )
                 ->groupBy('district.libelle', 'region.libelle')
                 ->get();
@@ -276,6 +296,9 @@ class GeoJSONController extends Controller
                         'AD' =>  $montantR->Assainissement_et_Drainage,
                         'HY' => $montantR->Hygiène,
                         'REE' => $montantR->Ressources_en_Eau,
+                        'EHAES' => $montantR->EHA_dans_les_Etablissements_de_Santé,
+                        'EHAEE' => $montantR->EHA_dans_les_Etablissements_d_Enseignement,
+                        'EHAEEn' => $montantR->EHA_dans_les_autres_Entités,
                     ],
                 ];
 

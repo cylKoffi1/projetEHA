@@ -1,4 +1,4 @@
-<!-- resources/views/users/create.blade.php -->
+
 
 @extends('layouts.app')
 
@@ -72,7 +72,7 @@
                         </h5>
                         @endcan
 
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -197,7 +197,7 @@
                 <div class="modal-body">
                     <form class="form" method="POST" action="{{ route('rubrique.update') }}" data-parsley-validate>
                         @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required> 
+                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                         <input type="hidden" class="form-control" id="edit_code" name="edit_code" required>
                         <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                         <div class="row">
@@ -226,7 +226,7 @@
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
                         </div>
                         @endcan
-                        
+
                     </form>
                 </div>
             </div>

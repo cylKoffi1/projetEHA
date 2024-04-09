@@ -586,13 +586,7 @@ class PlateformeController extends Controller
 
         return response()->json(['exists' => $exists]);
     }
-    //***************** Action à mener ************* */
-    public function actionMener(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $acquifere = ActionMener::orderBy('libelle', 'asc')->get();
-        return view('actionMener', ['acquifere' => $acquifere, ]);
-    }
+
     //***************** ACQUIFERE ************* */
     public function acquifere(Request $request)
     {
@@ -671,6 +665,85 @@ class PlateformeController extends Controller
 
         return response()->json(['exists' => $exists]);
     }
+
+        //***************** ACQUIFERE ************* */
+        public function actionMener(Request $request)
+        {
+           $ecran = Ecran::find($request->input('ecran_id'));
+            $actionMener = ActionMener::orderBy('libelle', 'asc')->get();
+            return view('actionMener', ['actionMener' => $actionMener,  'ecran' => $ecran]);
+        }
+
+
+        public function getActionMener($code)
+        {
+            $actionMener = ActionMener::find($code);
+
+            if (!$actionMener) {
+                return response()->json(['error' => 'Action à mener non trouvé'], 404);
+            }
+
+            return response()->json($actionMener);
+        }
+
+        public function storeActionMener(Request $request)
+        {
+            // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
+
+            // Créez un nouveau district dans la base de données.
+            $actionMener = new ActionMener;
+            $actionMener->code = $request->input('code');
+            $actionMener->libelle = $request->input('libelle');
+
+            $actionMener->save();
+            $ecran_id = $request->input('ecran_id');
+
+            // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
+            return redirect()->route('actionMener', ['ecran_id' => $ecran_id])->with('success', 'Action  à mener enregistré avec succès.');
+        }
+        public function updateActionMener(Request $request)
+        {
+            $actionMener = ActionMener::find($request->input('code_edit'));
+
+            if (!$actionMener) {
+                return response()->json(['error' => 'Acton à mener non trouvé'], 404);
+            }
+
+            $actionMener->libelle = $request->input('libelle_edit');
+
+
+            $actionMener->save();
+            $ecran_id = $request->input('ecran_id');
+            // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
+            return redirect()->route('actionMener', ['ecran_id' => $ecran_id])->with('success', 'Action à mener mis à jour avec succès.');
+        }
+
+        public function deleteActionMener($code)
+        {
+            $actionMener = ActionMener::find($code);
+
+            if (!$actionMener) {
+                return response()->json(['error' => 'Action à mener non trouvé'], 404);
+            }
+            //$projet = ProjetEha2::where('code_domaine', $code)->first();
+
+            // if ($projet) {
+            //     return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
+            // }
+            $actionMener->delete();
+
+            return response()->json(['success' => 'Action à mener supprimé avec succès']);
+        }
+
+        public function checkActionMenerCode(Request $request)
+        {
+            $code = $request->input('code');
+
+            // Check if a district with the provided code already exists in your database
+            $exists = ActionMener::where('code', $code)->exists();
+
+            return response()->json(['exists' => $exists]);
+        }
 
     //***************** BASSIN ************* */
     public function bassin(Request $request)

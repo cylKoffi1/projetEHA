@@ -53,29 +53,74 @@ class LoginController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
      */
-    public function login(Request $request)
-    {
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $request->validate([
-            'login' => 'required|string',
-            'password' => 'required|string',
-        ]);
 
-        $credentials = $request->only('login', 'password');
+// Ajouter un utilisateur à la liste des utilisateurs connectés avec un token
+protected function addUserToConnectedUsers($user)
+{
+    $token = Str::random(60); // Génère un token unique
+    $user->update(['api_token' => hash('sha256', $token)]); // Stocke le token dans la base de données
+}
 
-        if (Auth::attempt($credentials)) {
-            // Authentication passed
-            $user = Auth::user();
-            $personnel = $user->personnel;
-            $domaines = $personnel->domaines;
-            $groupesUtilisateur = $personnel->groupesUtilisateur;
-            $expertises = $personnel->expertises;
-            return redirect()->intended('/admin');
-        }
+// Vérifie si l'utilisateur est déjà connecté
+protected function isUserAlreadyLoggedIn($login)
+{
+    $user = User::where('login', $login)->first();
+    return $user && $user->api_token !== null;
+}
 
-        // Authentication failed
-        return redirect()->route('login',['ecran' => $ecran,])->withErrors(['login' => 'Login ou mot de passe incorrect']);
+public function login(Request $request)
+{
+    $ecran = Ecran::find($request->input('ecran_id'));
+    $request->validate([
+        'login' => 'required|string',
+        'password' => 'required|string',
+    ]);
+
+    $credentials = $request->only('login', 'password');
+
+    // Vérifie si l'utilisateur est déjà connecté avec les mêmes identifiants
+    if ($this->isUserAlreadyLoggedIn($credentials['login'])) {
+        return redirect()->route('login', ['ecran' => $ecran])->withErrors(['login' => 'Cet utilisateur est déjà connecté.']);
     }
+
+    if (Auth::attempt($credentials)) {
+        // Authentication passed
+        $user = Auth::user();
+        $personnel = $user->personnel;
+        $domaines = $personnel->domaines;
+        $groupesUtilisateur = $personnel->groupesUtilisateur;
+        $expertises = $personnel->expertises;
+
+        // Ajoute l'utilisateur à la liste des utilisateurs connectés avec un token
+        $this->addUserToConnectedUsers($user);
+
+        return redirect()->intended('/admin');
+    }
+
+    // Authentication failed
+    return redirect()->route('login', ['ecran' => $ecran])->withErrors(['login' => 'Login ou mot de passe incorrect']);
+}
+
+// Fonction de déconnexion
+public function logout(Request $request)
+{
+    $user = Auth::user();
+
+    // Supprimer le token de l'utilisateur lors de la déconnexion
+    $user->update(['api_token' => null]);
+
+    Auth::logout();
+
+    $request->session()->invalidate();
+
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login')->with('succes', 'Vous êtes déconnecté.');
+}
+
+
+
+
 
     /**
      * Log the user out of the application.
@@ -83,17 +128,7 @@ class LoginController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
      */
-    public function logout()
-    {
-        Auth::logout();
 
-        request()->session()->invalidate();
-
-        request()->session()->regenerateToken();
-
-        return redirect()->route('login')->with('succes', 'Vous êtes déconnecté.');
-
-    }
 
     public function postResetForm(Request $request)
     {

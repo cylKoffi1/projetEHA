@@ -1,4 +1,4 @@
-<!-- resources/views/users/create.blade.php -->
+
 
 @extends('layouts.app')
 
@@ -72,7 +72,7 @@
                         </h5>
                          @endcan
 
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -211,7 +211,7 @@
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
                         </div>
                          @endcan
-                        
+
                     </form>
                 </div>
             </div>
@@ -287,7 +287,7 @@
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
                         </div>
                          @endcan
-                        
+
                     </form>
                 </div>
             </div>

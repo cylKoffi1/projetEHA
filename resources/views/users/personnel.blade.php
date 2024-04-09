@@ -134,7 +134,7 @@
                                         {{ $user->latestFonction->fonctionUtilisateur->libelle_fonction }}
                                     @endif
                                 </td>
-                                
+
                                 <td>
                                     @foreach ($structureRattachement as $structure)
                                         @if ($structure->code_personnel == $user->code_personnel)
@@ -182,6 +182,30 @@
 
 
 <script>
+    function deleteUser(code_personnel) {
+        if (confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
+            // Envoyer une requête AJAX pour supprimer l'utilisateur
+            $.ajax({
+                url: '/admin/personnel/' + code_personnel, // Correction de l'URL de la requête
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                     // Réponse réussie de votre endpoint
+                    $('#alertMessage').text("Utilisateur avec le code " + code_personnel + " supprimé avec succès.");
+                    $('#alertModal').modal('show');
+
+                    // Actualiser la page après la suppression
+                    location.reload();
+                },
+                error: function(error) {
+                    console.error('Erreur lors de la suppression de l\'utilisateur avec le code ' + code_personnel + ':', error);
+                    // Gérez les erreurs ici
+                }
+            });
+        }
+    }
+
     function getBase64Image(imgUrl) {
         return new Promise((resolve, reject) => {
             var img = new Image();

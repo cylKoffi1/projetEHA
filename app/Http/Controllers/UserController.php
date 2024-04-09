@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\CodeGenerator;
 use App\Models\AgenceExecution;
+use App\Models\ApartenirGroupeUtilisateur;
 use App\Models\AvoirExpertise;
 use App\Models\Bailleur;
 use App\Models\CouvrirRegion;
@@ -25,6 +26,7 @@ use App\Models\StructureRattachement;
 use App\Models\UtilisateurDomaine;
 use Faker\Provider\ar_EG\Person;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
@@ -79,79 +81,71 @@ class UserController extends Controller
     public function storePersonnel(Request $request)
     {
 
-        // $requestData = $request->all();
-        // dump($requestData);
+        try{
+            $code = CodeGenerator::generateCode();
 
-        // $validator = Validator::make($request->json()->all(), [
-        //     'tel' => 'required|string|max:20',
-        //     'adresse' => 'required|string|max:150',
-        //     'email' => 'required|email|unique:personnel,email',
-        //     'fonction' => 'required|exists:fonction_utilisateur,code',
-        // ]);
+            Personnel::create([
+                'code_personnel' => $code,
+                'nom' => $request->input('nom'),
+                'prenom' => $request->input('prenom'),
+                'addresse' => $request->input('adresse'),
+                'telephone' => $request->input('tel'),
+                'email' => $request->input('email'),
+            ]);
+            $structureRattachement = new StructureRattachement([
+                'code_personnel' => $code,
+                'date' => now(),
+            ]);
+            if ($request->input('structure') == "bai") {
+                $structureRattachement = StructureRattachement::create([
+                    'code_structure' => $request->input('bailleur'),
+                    'type_structure' => 'bailleurss'
+                ]);
+            } elseif ($request->input('structure') == "age") {
+                $structureRattachement = StructureRattachement::create([
+                    'code_structure' => $request->input('agence'),
+                    'type_structure' => 'agence_execution'
+                ]);
+            } else {
+                $structureRattachement = StructureRattachement::create([
+                    'code_structure' => $request->input('ministere'),
+                    'type_structure' => 'ministere'
+                ]);
+            }
+            if ($request->input('niveau_acces_id') == "de") {
+                CouvrirRegion::create([
+                    'code_personnel' => $code,
+                    'code_departement' => $request->input('dep'),
+                ]);
 
-
-        // if ($validator->fails()) {
-        //     // Rediriger avec les erreurs de validation
-        //     return redirect()->route('personnel.create')->withErrors($validator)->withInput();
-        // }
-
-        $code = CodeGenerator::generateCode();
-
-        Personnel::create([
-            'code_personnel' => $code,
-            'nom' => $request->input('nom'),
-            'prenom' => $request->input('prenom'),
-            'addresse' => $request->input('adresse'),
-            'telephone' => $request->input('tel'),
-            'email' => $request->input('email'),
-        ]);
-
-        $structureRattachement = new StructureRattachement([
-            'code_personnel' => $code,
-            'date' => now(),
-        ]);
-
-        if ($request->input('structure') == "bai") {
-            $structureRattachement->code_structure = $request->input('bailleur');
-            $structureRattachement->type_structure = 'bailleurss';
-        } elseif ($request->input('structure') == "age") {
-            $structureRattachement->code_structure = $request->input('agence');
-            $structureRattachement->type_structure = 'agence_execution';
-        } else {
-            $structureRattachement->code_structure = $request->input('ministere');
-            $structureRattachement->type_structure = 'ministere';
+            } else if ($request->input('niveau_acces_id') == "di") {
+                CouvrirRegion::create([
+                    'code_personnel' => $code,
+                    'code_district' => $request->input('dis'),
+                ]);
+            } else if ($request->input('niveau_acces_id') == "re") {
+                CouvrirRegion::create([
+                    'code_personnel' => $code,
+                    'code_region' => $request->input('reg'),
+                ]);
+            } else {
+                CouvrirRegion::create([
+                    'code_personnel' => $code,
+                    'id_pays' => $request->input('na'),
+                ]);
+            }
+            OccuperFonction::create([
+                'code_personnel' => $code,
+                'code_fonction' => $request->input('fonction'),
+            ]);
+            $ecran_id = $request->input('ecran_id');
+            return redirect()->route('personnel.create', ['ecran_id' => $ecran_id])->with('success', 'Personne créée avec succès.');
+        } catch (\Exception $e) {
+            // En cas d'erreur, retourner la redirection avec un message d'erreur
+            $ecran_id = $request->input('ecran_id');
+            return redirect()->route('personnel.create', ['ecran_id' => $ecran_id])->with('error', 'Erreur lors de l\'enregistrement du formulaire. Remplissez tous les champs.');
         }
 
-        $structureRattachement->save();
-
-        if ($request->input('niveau_acces_id') == "de") {
-            CouvrirRegion::create([
-                'code_personnel' => $code,
-                'code_departement' => $request->input('dep'),
-            ]);
-
-        } else if ($request->input('niveau_acces_id') == "di") {
-            CouvrirRegion::create([
-                'code_personnel' => $code,
-                'code_district' => $request->input('dis'),
-            ]);
-        } else if ($request->input('niveau_acces_id') == "re") {
-            CouvrirRegion::create([
-                'code_personnel' => $code,
-                'code_region' => $request->input('reg'),
-            ]);
-        } else {
-            CouvrirRegion::create([
-                'code_personnel' => $code,
-                'id_pays' => $request->input('na'),
-            ]);
-        }
-        OccuperFonction::create([
-            'code_personnel' => $code,
-            'code_fonction' => $request->input('fonction'),
-        ]);
-        $ecran_id = $request->input('ecran_id');
-        return redirect()->route('personnel.create', ['ecran_id' => $ecran_id])->with('success', 'Personne crée avec succès.');
 
     }
 
@@ -1010,6 +1004,22 @@ class UserController extends Controller
             return response()->json(['message' => 'Utilisateur supprimé avec succès.']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erreur lors de la suppression de l\'utilisateur.', 'error' => $e->getMessage()], 500);
+        }
+    }
+    public function destroy($code_personnel)
+    {
+        try {
+            // Supprimer les références dans la table appartenir_groupe_utilisateur
+            ApartenirGroupeUtilisateur::where('code_personnel', $code_personnel)->delete();
+
+            // Supprimer l'utilisateur
+            $user = Personnel::findOrFail($code_personnel);
+            $user->delete();
+
+            return redirect()->route('users.personnel')->with('success', 'Utilisateur supprimé avec succès.');
+        } catch (\Exception $e) {
+            // Gérer les erreurs
+            return redirect()->back()->with('error', 'Une erreur est survenue lors de la suppression de l\'utilisateur.');
         }
     }
 }
