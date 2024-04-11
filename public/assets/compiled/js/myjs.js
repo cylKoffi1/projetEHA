@@ -1,150 +1,284 @@
 function initDataTable(userNameReplace, table, title) {
-    var logo =
-        "http://localhost:8000/betsa/assets/images/ehaImages/armoirie.png";
-    var now = new Date();
-    var dateTime = now.toLocaleString("fr-FR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-    });
-    var userName = userNameReplace;
-    $("#" + table).DataTable({
-        fixedColumns: true,
-        language: {
-            processing: "Traitement en cours...",
-            search: "",
-            searchPlaceholder: "Rechercher",
-            lengthMenu: "Afficher _MENU_ lignes",
-            info: "Affichage de l'&eacute;lement _START_ &agrave; _END_ sur _TOTAL_ &eacute;l&eacute;ments",
-            infoEmpty:
-                "Affichage de l'&eacute;lement 0 &agrave; 0 sur 0 &eacute;l&eacute;ments",
-            infoFiltered:
-                "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
-            infoPostFix: "",
-            loadingRecords: "Chargement en cours...",
-            zeroRecords: "Aucun &eacute;l&eacute;ment &agrave; afficher",
-            emptyTable: "Aucune donnée disponible dans le tableau",
-            paginate: {
-                first: "Premier",
-                previous: "Pr&eacute;c&eacute;dent",
-                next: "Suivant",
-                last: "Dernier",
-            },
-            aria: {
-                sortAscending:
-                    ": activer pour trier la colonne par ordre croissant",
-                sortDescending:
-                    ": activer pour trier la colonne par ordre décroissant",
-            },
-        },
-        select: {
-            items: "cell",
-            info: false,
-        },
-        scrollX: true,
-        dom: "Bfrtip",
-        lengthMenu: [
-            [10, 25, 50, -1],
-            ["10", "25", "50", "Tout"],
-        ],
+    // Chemin de l'image
+    var imagePath;
 
-        buttons: [
-            {
-                extend: "pageLength",
-                text(text) {
-                    return "Afficher les lignes";
-                },
-            },
-            {
-                extend: "excelHtml5",
-                text: "Exporter",
-                title: title,
+    // Effectuer une requête AJAX pour récupérer le chemin de l'image encodée en base64
+    $.ajax({
+        url: '/getBase64Image',
+        type: 'GET',
+        async: false, // Attendre la réponse avant de continuer
+        success: function(response) {
+            imagePath = "data:image/png;base64," + response.base64Image;
+        },
+        error: function(xhr, status, error) {
+            console.error(error);
+        }
+    });
+
+    var logo ="http://localhost:8000/betsa/assets/images/ehaImages/armoirie.png";
+    var now = new Date();
+    var dateTime = now.toLocaleString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+    });
+    var lastColumnAction = $("#" + table + " thead tr:first-child th:last-child").text().trim() === "Action";
+
+    var userName = userNameReplace;
+    $("#" + table).DataTable({
+        fixedColumns: true,
+        language: {
+            processing: "Traitement en cours...",
+            search: "",
+            searchPlaceholder: "Rechercher",
+            lengthMenu: "Afficher _MENU_ lignes",
+            info: "Affichage de l'&eacute;lement _START_ &agrave; _END_ sur _TOTAL_ &eacute;l&eacute;ments",
+            infoEmpty:
+                "Affichage de l'&eacute;lement 0 &agrave; 0 sur 0 &eacute;l&eacute;ments",
+            infoFiltered:
+                "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
+            infoPostFix: "",
+            loadingRecords: "Chargement en cours...",
+            zeroRecords: "Aucun &eacute;l&eacute;ment &agrave; afficher",
+            emptyTable: "Aucune donnée disponible dans le tableau",
+            paginate: {
+                first: "Premier",
+                previous: "Pr&eacute;c&eacute;dent",
+                next: "Suivant",
+                last: "Dernier",
+            },
+            aria: {
+                sortAscending:
+                    ": activer pour trier la colonne par ordre croissant",
+                sortDescending:
+                    ": activer pour trier la colonne par ordre décroissant",
+            },
+        },
+        select: {
+            items: "cell",
+            info: false,
+        },
+        scrollX: true,
+        dom: "Bfrtip",
+        lengthMenu: [
+            [10, 25, 50, -1],
+            ["10", "25", "50", "Tout"],
+        ],
+
+        buttons: [
+            {
+                extend: "pageLength",
+                text(text) {
+                    return "Afficher les lignes";
+                },
+            },
+            {
+                extend: "excelHtml5",
+                text: "Exporter",
+                title: title,
+                exportOptions: {
+                        columns: lastColumnAction ? ":not(:last-child)" : "",// Exclure la dernière colonne de l'exportation
+                },
+            },
+            {
+                extend: "print",
+                title: "",
+                text: "Imprimer",
+                orientation: "portrait",
+                pageSize: "A4",
+                exportOptions: {
+                        columns: lastColumnAction ? ":not(:last-child)" : "", // Exclure la dernière colonne de l'impression
+                },
+                customize: function (win) {
+                    // Récupérer le nombre de colonnes
+                    var numColumns = $("#" + table)
+                        .DataTable()
+                        .columns()
+                        .header().length;
+                    $(win.document.body).append('<style>@page { size: portrait; }</style>');
+                    // Changer l'orientation si le nombre de colonnes est supérieur à 6
+                    var pageSize = numColumns > 6 ? 'A3' : 'A4';
+
+                    // Chemin de l'image
+                    var imagePath = logo;
+
+                    // Générer dynamiquement l'en-tête
+                    var header =
+                        "<tr><th colspan='" + numColumns + "'>" +
+                        "<div class='container'>" +
+                        "<div class='row'>" +
+                        "<div class='col text-left'>" +
+                        "<img src='" + imagePath + "' style='width: 70px; height: 50px; border-radius: 50px;' alt='Logo'>" +
+                        "</div>" +
+                        "<div class='col text-right'>" +
+                        "<h>Impression le </h>" +
+                        dateTime +
+                        "</div>" +
+                        "</div>" +
+
+                        "<div class='row'>" +
+                        "<div class='col text-center'>" +
+                        "<h3>" + title + "</h3>" +
+                        "</div>" +
+                        "</div>" +
+
+                        "<div class='row'>" +
+                        "<div class='col text-left'>" +
+                        "<p>GERAC-EHA</p>" +
+                        "</div>" +
+                        "<div class='col text-right'>" +
+                        "<p>Imprimé par: " + userName + "</p>" +
+                        "</div>" +
+                        "</div>" +
+                        "</div></th></tr>";
+                    //Ajouter l'en-tête personnalisé
+                    $(win.document.body).find("thead").prepend(header);
+
+
+                    //Personnaliser le pied de page
+
+                    var footer =
+                        '<div style="text-align:right; margin-top: 10px;">' +
+                        '<p style="font-size: 12px; margin: 0;">Date impression: ' +
+                        dateTime +
+                        "</p>" +
+                        '<p style="font-size: 12px; margin: 0;">Imprimé par: ' +
+                        userName +
+                        "</p>" +
+                        "</div>";
+                        // Ajouter la numérotation des pages
+
+                    // Ajouter le pied de page personnalisé
+                    $(win.document.body).find("tfoot").html(footer);
+
+                    // Appliquer l'orientation et la taille de la page
+                    $(win.document.body).css({
+                        'orientation': 'landscape',
+                        'pageSize': pageSize
+                    });
+                },
+            },
+            {
+                extend: "pdfHtml5",
+                text: "PDF",
+                orientation: 'landscape',
+                title: "",
+                filename: title,
                 exportOptions: {
-                    columns: ":not(:last-child)", // Exclure la dernière colonne de l'exportation
+                    columns: function (index, data, node) {
+                        // Vérifier si la dernière colonne est "Action"
+                        var lastColumnAction = $("#" + table + " thead tr:first-child th").last().text().trim() === "Action";
+                        // Exclure la dernière colonne si "Action" est présente
+                        if (lastColumnAction && index === $(node).closest('tr').find('th').length - 1) {
+                            return false;
+                        }
+                        return true;
+                    }
                 },
-            },
-            {
-                extend: "print",
-                title: "",
-                text: "Imprimer",
-                orientation: "portrait",
-                pageSize: "A4",
-                exportOptions: {
-                    columns: ":not(:last-child)", // Exclure la dernière colonne de l'impression
-                },
-                customize: function (win) {
-                    // Récupérer le nombre de colonnes
-                    var numColumns = $("#" + table)
-                        .DataTable()
-                        .columns()
-                        .header().length;
-                    $(win.document.body).append('<style>@page { size: portrait; }</style>');
-                    // Changer l'orientation si le nombre de colonnes est supérieur à 6
-                    var pageSize = numColumns > 6 ? 'A3' : 'A4';
+                customize: function (doc) {
+                    var headerHeight = 20; // Hauteur du header en pourcentage
+                    var footerHeight = 10; // Hauteur du footer en pourcentage
+                    var bodyHeight = 70; // Hauteur du contenu principal en pourcentage
 
-                    // Chemin de l'image
-                    var imagePath = logo;
+                    var headerMargin = [30, 30]; // Marge du header
+                    var bodyMargin = [0, 0]; // Marge du contenu principal
+                    var footerMargin = [10, 0]; // Marge du footer
 
-                    // Générer dynamiquement l'en-tête
-                    var header =
-                        "<tr><th colspan='" + numColumns + "'>" +
-                        "<div class='container'>" +
-                        "<div class='row'>" +
-                        "<div class='col text-left'>" +
-                        "<img src='" + imagePath + "' style='width: 70px; height: 50px; border-radius: 50px;' alt='Logo'>" +
-                        "</div>" +
-                        "<div class='col text-right'>" +
-                        "<h>Impression le </h>" +
-                        dateTime +
-                        "</div>" +
-                        "</div>" +
+                    var totalHeight = 100; // Hauteur totale de la page
 
-                        "<div class='row'>" +
-                        "<div class='col text-center'>" +
-                        "<h3>" + title + "</h3>" +
-                        "</div>" +
-                        "</div>" +
+                    // Calculer les hauteurs en points
+                    var headerHeightPoints = (headerHeight / totalHeight) * 100;
+                    var bodyHeightPoints = (bodyHeight / totalHeight) * 100;
+                    var footerHeightPoints = (footerHeight / totalHeight) * 100;
+                    /*text: [
+                        'Image \n',
+                            { text: ' \n ', fontSize: 9 },
+                            { text: 'GERAC-EHA', fontSize: 9 }
+                        ],*/
+                        function htmlDecode(input) {
+                            var doc = new DOMParser().parseFromString(input, "text/html");
+                            return doc.documentElement.textContent;
+                          }
 
-                        "<div class='row'>" +
-                        "<div class='col text-left'>" +
-                        "<p>GERAC-EHA</p>" +
-                        "</div>" +
-                        "<div class='col text-right'>" +
-                        "<p>Imprimé par: " + userName + "</p>" +
-                        "</div>" +
-                        "</div>" +
-                        "</div></th></tr>";
-                    //Ajouter l'en-tête personnalisé
-                    $(win.document.body).find("thead").prepend(header);
+                    // Ajuster les marges pour correspondre aux hauteurs
+                    headerMargin[1] = headerHeightPoints;
+                    bodyMargin[1] = bodyHeightPoints;
+                    footerMargin[1] = footerHeightPoints;
+                    // Définir le header avec les marges ajustées
+                    doc['header'] = function() {
+                        return {
+                            columns: [
+                                {
+                                    alignment: 'center',
+                                    table: {
+                                        widths: ['33.33%', '33.33%', '33.33%'],hLineWidth: 0,
+                                        border: [false,false,false],
+                                        vLineWidth: 0,
+                                        body: [
+                                            // Première ligne
+                                            [
+                                                {
+                                                    alignment: 'left',hLineWidth: 0,
+                                                    border: false,
+                                                    vLineWidth: 0,
+                                                    stack: [
+                                                        {
+                                                            image: imagePath, // chemin de l'image
+                                                            width: 25 // largeur de l'image en pourcentage
+                                                        },
+                                                        {
+                                                            text: 'GERAC-EHA', // texte à afficher à côté de l'image
+                                                            fontSize: 9 // taille de la police du texte
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    text: [{ text: '\n' }, { text: title.toUpperCase(), bold: true, fontSize: 12 }],
+                                                    alignment: 'center',hLineWidth: 0,
+                                                    border: false,
+                                                    vLineWidth: 0
+                                                },
+                                                {
+                                                    text: [
+                                                        'Impression le ' + dateTime,
+                                                        { text: '\n' },
+                                                        { text: '\nImprimé par: ' + htmlDecode(userName), fontSize: 9 }
+                                                    ],
+                                                    alignment: 'right',hLineWidth: 0,
+                                                    border: false,
+                                                    vLineWidth: 0
+                                                },
+                                            ]
+                                        ],
+                                    },hLineWidth: 0,
+                                    border: false,
+                                    vLineWidth: 0
+                                },
+                            ],
+                        };
+                    };
 
 
-                    //Personnaliser le pied de page
 
-                    var footer =
-                        '<div style="text-align:right; margin-top: 10px;">' +
-                        '<p style="font-size: 12px; margin: 0;">Date impression: ' +
-                        dateTime +
-                        "</p>" +
-                        '<p style="font-size: 12px; margin: 0;">Imprimé par: ' +
-                        userName +
-                        "</p>" +
-                        "</div>";
-                        // Ajouter la numérotation des pages
-
-                    // Ajouter le pied de page personnalisé
-                    $(win.document.body).find("tfoot").html(footer);
-
-                    // Appliquer l'orientation et la taille de la page
-                    $(win.document.body).css({
-                        'orientation': 'landscape',
-                        'pageSize': pageSize
-                    });
-                },
-            },
-        ],
-    });
+                    // Définir le footer avec les marges ajustées
+                    doc['footer'] = function(page, pages) {
+                        return {
+                            columns: [
+                                {
+                                    // This is the right column
+                                    alignment: 'right',
+                                    text: ['page ', { text: page.toString() },  ' sur ', { text: pages.toString() }]
+                                }
+                            ],
+                            margin: footerMargin
+                        };
+                    };
+                },
+            },
+        ],
+    });
 }
 
 function goBack() {
