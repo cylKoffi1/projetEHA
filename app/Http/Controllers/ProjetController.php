@@ -449,11 +449,6 @@ class ProjetController extends Controller
         return view('changementChefProjet');
     }
 
-    public function InfosPrincip(Request $request){
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $actionMener = ActionMener::orderBy('libelle', 'asc')->get();
 
-        return view('etatInfoPrincipal');
-    }
 }
 

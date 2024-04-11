@@ -8,6 +8,7 @@ use App\Models\Ecran;
 use App\Models\Pays;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Annexe1Controller;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -294,7 +295,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     /**************************** GESTION DES EDITIONS **********************************/
         /**************************** GESTION DES ANNEXE 1 ******************************/
-        Route::get('admin/projet/edition/InfosPrincip', [ProjetController::class, 'InfosPrincip'])->name('projet');
+        Route::get('admin/projet/edition/InfosPrincip', [Annexe1Controller::class, 'InfosPrincip'])->name('projet.InfosPrincip');
+        Route::get('admin/projet/edition/InfosSecond', [Annexe1Controller::class, 'InfosSecond'])->name('projet.InfosSecond');
+        Route::get('admin/projet/edition/InfosTert', [Annexe1Controller::class, 'InfosTert'])->name('projet.InfosTert');
 
 
     //***************** REALISATION ************* */
@@ -411,6 +414,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 // MAP
 Route::get('/map', function () {
     return view('map');
+});
+Route::get('/getBase64Image', function () {
+    $imagePath = public_path('betsa/assets/images/ehaImages/armoirie.png');
+    $imageData = file_get_contents($imagePath);
+    $base64Image = base64_encode($imageData);
+
+    return response()->json(['base64Image' => $base64Image]);
 });
 
 route::get('/geojson', function () {
