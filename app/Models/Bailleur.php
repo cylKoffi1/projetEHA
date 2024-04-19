@@ -14,7 +14,7 @@ class Bailleur extends Model
     protected $table = 'bailleurss'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code_bailleur';
-
+    protected $fillable = [ 'libelle_long', 'libelle_court'];
 
     public function pays()
     {

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DomPDFPDF;
 
-class Annexe1Controller extends Controller
+class AnnexeController extends Controller
 {
     public function InfosPrincip(Request $request){
         $ecran = Ecran::find($request->input('ecran_id'));
@@ -133,6 +133,34 @@ class Annexe1Controller extends Controller
         ->get();
         return view('etatInfoTert',compact('ecran', 'projets'));
     }
+    public function FicheCollecte(Request $request){
 
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $projets = ProjetEha2::all();
+        return view('ficheCollecte', compact('ecran', 'projets'));
+    }
+    public function getProjectDetails(Request $request) {
+        $codeProjet = $request->input('code_projet');
+        $projectDetails = ProjetEha2::with([
+            'actionBeneficiaires',
+            'projetActionAMener',
+            'dateDebutEffective',
+            'dateFinEffective',
+            'projetAgence.agenceExecution',
+            'bailleursProjets.Bailleurss',
+            'projetChefProjet.Personne',
+            'domaine',
+            'sous_domaine',
+            'devise',
+            'ministereProjet.ministere',
+            'projetStatutProjet.statut'
+        ])
+        ->where('CodeProjet', $codeProjet)
+        ->get();
+
+
+        // Retourner les détails du projet au format JSON
+        return response()->json($projectDetails);
+    }
 
 }

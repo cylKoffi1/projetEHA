@@ -39,7 +39,14 @@
     color: #000;
     font-weight: bold;
     }
-
+    .avec-infrastructures {
+        background-color: yellow;
+        color:white; /* Couleur pour les projets avec au moins une infrastructure */
+    }
+    .plusieurs-actions {
+        background-color: #435ebe; /* Changez la couleur selon votre préférence */
+        color: white;
+    }
 </style>
 @section('content')
 
@@ -123,8 +130,17 @@
                                                 <label for="code_projet">Code du projet</label>
                                                 <select name="code_projet" id="code_projet" class="form-select col-35" onchange="checkProjectDetails()" oninput="updateCodeProjetValue()">
                                                     <option value=""></option>
-                                                    @foreach ($statutProjetStatut as $statutProjetStatu)
-                                                            <option value="{{$statutProjetStatu->CodeProjet }}">{{ $statutProjetStatu->CodeProjet}}</option>
+                                                    @foreach ($tousLesProjets as $projet)
+                                                    <option value="{{ $projet }}" 
+                                                            @if(in_array($projet, $projetsPlusieursActions)) 
+                                                                class="plusieurs-actions" 
+                                                            @elseif(in_array($projet, $projetsNonTrouves)) 
+                                                                class="non-trouves" 
+                                                            @elseif(in_array($projet, $projetsAvecInfrastructures))
+                                                                class="avec-infrastructures"
+                                                            @endif>
+                                                            {{ $projet }}
+                                                        </option>
                                                     @endforeach
                                                 </select>
                                             </div>

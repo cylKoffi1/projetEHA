@@ -105,7 +105,17 @@ class RealiseProjetController extends Controller
         $projets = ProjetEha2::all();
         $statutProjetStatut = ProjetStatutProjet::all();
         $natureTravaux = NatureTravaux::all();
-
+        $projetsNonTrouves = DB::table('projet_eha2')
+            ->leftJoin('projet_action_a_mener', 'projet_eha2.CodeProjet', '=', 'projet_action_a_mener.CodeProjet')
+            ->whereNull('projet_action_a_mener.CodeProjet')
+            ->pluck('projet_eha2.CodeProjet')
+            ->toArray();
+        // Sélectionner tous les CodeProjet
+        $tousLesProjets = DB::table('projet_statut_projet')
+            ->where('code_statut_projet', 1)
+            ->distinct()
+            ->pluck('code_projet')
+            ->toArray();
         // Ajoutez la récupération des actions ici (remplacez par votre propre logique)
         $actions = ProjetActionAMener::all();
         // Définissez la variable $beneficiairesActions
@@ -126,6 +136,8 @@ class RealiseProjetController extends Controller
 
         return view('realise', [
             'ecran' => $ecran,
+            'projetsNonTrouves'=>$projetsNonTrouves,
+            'tousLesProjets'=>$tousLesProjets,
             'projets' => $projets,
             'statuts' => $statuts,
             'actions' => $actions,
@@ -202,7 +214,7 @@ class RealiseProjetController extends Controller
         ->select('nom_famille')
         ->distinct()
         ->first();
-        
+
         $libelleFamilleInfrastructure = $libelleFamilleInfrastructureData->nom_famille;
 
 
@@ -477,12 +489,35 @@ class RealiseProjetController extends Controller
         ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
         ->select('projet_statut_projet.code', 'projet_eha2.CodeProjet', 'projet_statut_projet.code_statut_projet as codeSStatu', 'projet_statut_projet.date', 'statut_projet.libelle as statut_libelle')
         ->get();
-        $statutProjetStatut = DB::table('projet_action_a_mener as paam')
-        ->join('projet_statut_projet as psp', 'psp.code_projet', '=', 'paam.CodeProjet')
-        ->where('psp.code_statut_projet', 2)
-        ->select('paam.CodeProjet')
-        ->distinct()
-        ->get();
+        // Sélectionner les CodeProjet qui ont plus d'une Action_mener
+            $projetsPlusieursActions = DB::table('projet_action_a_mener')
+            ->select('CodeProjet')
+            ->groupBy('CodeProjet')
+            ->havingRaw('COUNT(Action_mener) > 1')
+            ->pluck('CodeProjet')
+            ->toArray();
+
+        $projetsNonTrouves = DB::table('projet_eha2')
+            ->leftJoin('projet_action_a_mener', 'projet_eha2.CodeProjet', '=', 'projet_action_a_mener.CodeProjet')
+            ->whereNull('projet_action_a_mener.CodeProjet')
+            ->pluck('projet_eha2.CodeProjet')
+            ->toArray();
+        // Sélectionner tous les CodeProjet
+        $tousLesProjets = DB::table('projet_statut_projet')
+            ->where('code_statut_projet', 2)
+            ->distinct()
+            ->pluck('code_projet')
+            ->toArray();
+        $projetsAvecInfrastructures = DB::table('projet_statut_projet')
+            ->where('code_statut_projet', 2)
+            ->whereIn('code_projet', function($query) {
+                $query->select('CodeProjet')
+                      ->from('caracteristique')
+                      ->distinct();
+            })
+            ->distinct()
+            ->pluck('code_projet')
+            ->toArray();
         $localite = Localite::all();
         $etablissements = Etablissement::all();
         $codeProjet = $request->input('code_projet');
@@ -492,7 +527,8 @@ class RealiseProjetController extends Controller
         $regions = Region::all();
         $beneficiairesActions = ActionBeneficiairesProjet::where('CodeProjet', $codeProjet)->get();
        $ecran = Ecran::find($request->input('ecran_id'));
-        return view('etatAvancement', ['ecran' => $ecran,'projets'=>$projets,'sous_prefecture'=>$sous_prefecture,'regions'=>$regions,'departements'=>$departements,'etablissements'=>$etablissements,'districts'=>$districts, 'localite'=>$localite,'beneficiairesActions'=>$beneficiairesActions,'statutProjetStatut'=>$statutProjetStatut,'statuts'=>$statuts]);
+        return view('etatAvancement', ['ecran' => $ecran,'projets'=>$projets,'sous_prefecture'=>$sous_prefecture,'regions'=>$regions,'departements'=>$departements,'etablissements'=>$etablissements,'districts'=>$districts, 'localite'=>$localite,'beneficiairesActions'=>$beneficiairesActions,'projetsPlusieursActions' => $projetsPlusieursActions,
+        'tousLesProjets' => $tousLesProjets,'projetsAvecInfrastructures'=>$projetsAvecInfrastructures,'projetsNonTrouves'=>$projetsNonTrouves,'statuts'=>$statuts]);
     }
     //existance de code projet
     public function checkCodeProjet(Request $request)

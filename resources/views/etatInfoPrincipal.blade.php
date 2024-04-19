@@ -81,13 +81,13 @@
                         <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
-                                    <th>Code </th>
-                                    <th>Domaine</th>
-                                    <th>Sous-domaine</th>
-                                    <th>District</th>
-                                    <th>Region</th>
-                                    <th>Cout projet</th>
-                                    <th>Devise</th>
+                                    <th style="width: 20%;">Code </th>
+                                    <th style="width: 20%;">Domaine</th>
+                                    <th style="width: 25%;">Sous-domaine</th>
+                                    <th style="width: 10%;">District</th>
+                                    <th style="width: 10%;">Region</th>
+                                    <th style="width: 40%; ">Cout projet</th>
+                                    <th style="width: 10%;">Devise</th>
                                 </tr>
                             </thead>
 
@@ -99,7 +99,7 @@
                                     <td>{{ $projets->sous_domaine_libelle }}</td>
                                     <td>{{ $projets->district_libelle }}</td>
                                     <td>{{ $projets->region_libelle }}</td>
-                                    <td>{{  number_format($projets->cout_projet, 0, ',', ' ') }}</td>
+                                    <td style="float: right;">{{  number_format($projets->cout_projet, 0, ',', ' ') }}</td>
                                     <td>{{$projets->devise->code_long ?? ''}}</td>
                                 </tr>
                                 @endforeach

@@ -14,5 +14,8 @@ class ProjetStatutProjet extends Model
         'date',
     ];
     protected $primaryKey = 'code'; // Specify the primary key column
-
+    public function statut()
+    {
+        return $this->hasMany(StatutProjet::class, 'code', 'code_statut_projet');
+    }
 }

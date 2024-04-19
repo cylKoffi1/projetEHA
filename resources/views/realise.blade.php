@@ -39,7 +39,9 @@
     color: #000;
     font-weight: bold;
     }
-
+    .non-trouves {
+        background-color: orange; /* Couleur pour les projets non trouvés */
+    }
 </style>
 @section('content')
 
@@ -114,12 +116,14 @@
                                                 <label for="code_projet">Code du projet</label>
                                                 <select name="code_projet" id="code_projet" class="form-select col-35" onchange="checkProjectDetails()" oninput="updateCodeProjetValue()">
                                                     <option value=""></option>
-                                                    @foreach ($statutProjetStatut as $statutProjetStatu)
-                                                        @if ($statutProjetStatu->code_statut_projet == 01)
-                                                            <option value="{{$statutProjetStatu->code_projet }}">{{ $statutProjetStatu->code_projet}}</option>
-                                                        @endif
+                                                    @foreach ($tousLesProjets as $projet)
+                                                        <option value="{{ $projet }}" 
+                                                            @if(in_array($projet, $projetsNonTrouves)) 
+                                                                class="non-trouves" 
+                                                            @endif>
+                                                            {{ $projet }}       
+                                                        </option>
                                                     @endforeach
-
                                                 </select>
                                             </div>
                                             <div class="col-2" style="width: 15%;">

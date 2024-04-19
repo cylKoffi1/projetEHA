@@ -31,6 +31,7 @@ class ProjetEha2 extends Model
     {
         return $this->belongsTo(Domaine::class, 'code_domaine', 'code');
     }
+
     public function devise()
     {
         return $this->belongsTo(Devise::class, 'code_devise', 'code');
@@ -40,10 +41,41 @@ class ProjetEha2 extends Model
     {
         return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code');
     }
-
-    public function statuts()
+    public function ministereProjet()
     {
-        return $this->belongsToMany(ProjetStatutProjet::class, 'projet_statut_projet', 'code_projet', 'code_statut_projet');
+        return $this->hasMany(MinistereProjet::class, 'codeProjet', 'CodeProjet');
+    }
+    public function projetStatutProjet()
+    {
+        return $this->hasMany(ProjetStatutProjet::class, 'code_projet', 'CodeProjet');
+    }
+    public function actionBeneficiaires()
+    {
+        return $this->hasMany(ActionBeneficiairesProjet::class, 'CodeProjet', 'CodeProjet');
+    }
+    public function projetActionAMener()
+    {
+        return $this->hasMany(ProjetActionAMener::class, 'CodeProjet', 'CodeProjet');
+    }
+    public function dateDebutEffective()
+    {
+        return $this->hasMany(DateDebutEffective::class, 'code_projet', 'CodeProjet');
+    }
+    public function dateFinEffective()
+    {
+        return $this->hasMany(DateFinEffective::class, 'code_projet', 'CodeProjet');
+    }
+    public function projetAgence()
+    {
+        return $this->hasMany(ProjetAgence::class, 'code_projet', 'CodeProjet');
+    }
+    public function bailleursProjets()
+    {
+        return $this->hasMany(BailleursProjet::class, 'code_projet', 'CodeProjet');
+    }
+    public function projetChefProjet()
+    {
+        return $this->hasMany(ProjetChefProjet::class, 'code_projet', 'CodeProjet');
     }
 
     public function latestStatutProjet()

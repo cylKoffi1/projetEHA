@@ -83,86 +83,8 @@ function initDataTable(userNameReplace, table, title) {
                 },
             },
             {
-                extend: "print",
-                title: "",
-                text: "Imprimer",
-                orientation: "portrait",
-                pageSize: "A4",
-                exportOptions: {
-                        columns: lastColumnAction ? ":not(:last-child)" : "", // Exclure la dernière colonne de l'impression
-                },
-                customize: function (win) {
-                    // Récupérer le nombre de colonnes
-                    var numColumns = $("#" + table)
-                        .DataTable()
-                        .columns()
-                        .header().length;
-                    $(win.document.body).append('<style>@page { size: portrait; }</style>');
-                    // Changer l'orientation si le nombre de colonnes est supérieur à 6
-                    var pageSize = numColumns > 6 ? 'A3' : 'A4';
-
-                    // Chemin de l'image
-                    var imagePath = logo;
-
-                    // Générer dynamiquement l'en-tête
-                    var header =
-                        "<tr><th colspan='" + numColumns + "'>" +
-                        "<div class='container'>" +
-                        "<div class='row'>" +
-                        "<div class='col text-left'>" +
-                        "<img src='" + imagePath + "' style='width: 70px; height: 50px; border-radius: 50px;' alt='Logo'>" +
-                        "</div>" +
-                        "<div class='col text-right'>" +
-                        "<h>Impression le </h>" +
-                        dateTime +
-                        "</div>" +
-                        "</div>" +
-
-                        "<div class='row'>" +
-                        "<div class='col text-center'>" +
-                        "<h3>" + title + "</h3>" +
-                        "</div>" +
-                        "</div>" +
-
-                        "<div class='row'>" +
-                        "<div class='col text-left'>" +
-                        "<p>GERAC-EHA</p>" +
-                        "</div>" +
-                        "<div class='col text-right'>" +
-                        "<p>Imprimé par: " + userName + "</p>" +
-                        "</div>" +
-                        "</div>" +
-                        "</div></th></tr>";
-                    //Ajouter l'en-tête personnalisé
-                    $(win.document.body).find("thead").prepend(header);
-
-
-                    //Personnaliser le pied de page
-
-                    var footer =
-                        '<div style="text-align:right; margin-top: 10px;">' +
-                        '<p style="font-size: 12px; margin: 0;">Date impression: ' +
-                        dateTime +
-                        "</p>" +
-                        '<p style="font-size: 12px; margin: 0;">Imprimé par: ' +
-                        userName +
-                        "</p>" +
-                        "</div>";
-                        // Ajouter la numérotation des pages
-
-                    // Ajouter le pied de page personnalisé
-                    $(win.document.body).find("tfoot").html(footer);
-
-                    // Appliquer l'orientation et la taille de la page
-                    $(win.document.body).css({
-                        'orientation': 'landscape',
-                        'pageSize': pageSize
-                    });
-                },
-            },
-            {
                 extend: "pdfHtml5",
-                text: "PDF",
+                text: "Imprimer",
                 orientation: 'landscape',
                 title: "",
                 filename: title,

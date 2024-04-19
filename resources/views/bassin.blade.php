@@ -69,7 +69,7 @@
                             Ajout d'un bassin
                             <a href="#" data-toggle="modal" data-target="#bassin-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                             <div class="alert alert-danger">
                                 <ul>

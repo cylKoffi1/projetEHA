@@ -73,7 +73,6 @@ class ProjetController extends Controller
         $actionMener = ActionMener::all();
         $unite_mesure = UniteMesure::all();
         $unite_volume = uniteVolume::all();
-        $beneficiare = Beneficiaire::all();
         $sous_prefecture = Sous_prefecture::all();
         $beneficiairesActions = ActionBeneficiairesProjet::where('CodeProjet', $codeProjet)->get();
         $infrastructure = Infrastructure::all();
@@ -89,7 +88,7 @@ class ProjetController extends Controller
         return view('projet', ['sous_prefecture'=>$sous_prefecture,'beneficiairesActions'=>$beneficiairesActions,'users' => $users,'ecran' => $ecran,'projets'=>$projet,'domaines' => $domaines,        'etablissements'=>$etablissement, 'natureTravaux' => $natureTravaux, 'types_etablissement' => $types_etablissement,
         'devises' => $devises,'sous_domaines' => $sous_domaines, 'bailleurs' => $bailleurs,'localites' => $localites,
         'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts,
-        'regions' => $regions, 'actionMener' => $actionMener, 'unite_mesure' => $unite_mesure, 'uniteVol' => $unite_volume, 'beneficaire'=> $beneficiare,
+        'regions' => $regions, 'actionMener' => $actionMener, 'unite_mesure' => $unite_mesure, 'uniteVol' => $unite_volume, 
         'infrastruc' => $infrastructure, 'agence' => $agence, 'ministere' => $ministere, 'collectivite'=>$collectivite, 'localite'=> $localite, 'personnel' => $personnel, 'courEau' => $courEau, 'financements'=>$financements]);
     }
 

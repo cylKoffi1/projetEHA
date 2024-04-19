@@ -8,7 +8,7 @@ use App\Models\Ecran;
 use App\Models\Pays;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Annexe1Controller;
+use App\Http\Controllers\AnnexeController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -295,10 +295,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     /**************************** GESTION DES EDITIONS **********************************/
         /**************************** GESTION DES ANNEXE 1 ******************************/
-        Route::get('admin/projet/edition/InfosPrincip', [Annexe1Controller::class, 'InfosPrincip'])->name('projet.InfosPrincip');
-        Route::get('admin/projet/edition/InfosSecond', [Annexe1Controller::class, 'InfosSecond'])->name('projet.InfosSecond');
-        Route::get('admin/projet/edition/InfosTert', [Annexe1Controller::class, 'InfosTert'])->name('projet.InfosTert');
+        Route::get('admin/projet/edition/InfosPrincip', [AnnexeController::class, 'InfosPrincip'])->name('projet.InfosPrincip');
+        Route::get('admin/projet/edition/InfosSecond', [AnnexeController::class, 'InfosSecond'])->name('projet.InfosSecond');
+        Route::get('admin/projet/edition/InfosTert', [AnnexeController::class, 'InfosTert'])->name('projet.InfosTert');
 
+        /**************************** GESTION DES ANNEXE 2 ******************************/
+        Route::get('admin/projet/edition/ficheCollecte', [AnnexeController::class, 'FicheCollecte'])->name('projet.InfosTert');
+        Route::get('/getProjectDetails', [AnnexeController::class, 'getProjectDetails']);
 
     //***************** REALISATION ************* */
     Route::get('admin/realise/PramatreRealise', [RealiseProjetController::class, 'PramatreRealise']);

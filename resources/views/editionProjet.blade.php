@@ -190,63 +190,127 @@
                             },
                             {
                                 extend: 'excelHtml5',
-                                text: 'Export CSV',
+                                text: 'Exporter',
                                 title: 'Liste des ' + type.replace('_', ' '),
 
                             },
                             {
-                                extend: 'print',
-                                text: 'Imprimer',
-                                footer: true,
-                                title: ' ',
+                extend: "pdfHtml5",
+                text: "Imprimer",
+                orientation: 'landscape',
+                title: "",
+                filename: 'Liste des ' + type.replace('_', ' '),
+                exportOptions: {
+                    columns: function (index, data, node) {
+                        // Vérifier si la dernière colonne est "Action"
+                        var lastColumnAction = $("#" + table + " thead tr:first-child th").last().text().trim() === "Action";
+                        // Exclure la dernière colonne si "Action" est présente
+                        if (lastColumnAction && index === $(node).closest('tr').find('th').length - 1) {
+                            return false;
+                        }
+                        return true;
+                    }
+                },
+                customize: function (doc) {
+                    var headerHeight = 20; // Hauteur du header en pourcentage
+                    var footerHeight = 10; // Hauteur du footer en pourcentage
+                    var bodyHeight = 70; // Hauteur du contenu principal en pourcentage
 
-                                customize: function (win) {
+                    var headerMargin = [30, 30]; // Marge du header
+                    var bodyMargin = [0, 0]; // Marge du contenu principal
+                    var footerMargin = [10, 0]; // Marge du footer
 
-                                    // Récupérer le nombre de colonnes
-                                    var numColumns = $("#table1")
-                                        .DataTable()
-                                        .columns()
-                                        .header().length;
+                    var totalHeight = 100; // Hauteur totale de la page
 
-                                    // Générer dynamiquement l'en-tête
-                                    var header =
-                                        "<tr><th colspan='" + numColumns + "'>" +
-                                        "<div class='container'>" +
-                                        "<div class='row'>" +
-                                        "<div class='col text-left'>" +
-                                        "<img src='" + imagePath + "' style='width: 70px; height: 50px; border-radius: 50px;' alt='Logo'>" +
-                                        "</div>" +
-                                        "<div class='col text-right'>" +
-                                        "<h>Impression le </h>" +
-                                        dateTime +
-                                        "</div>" +
-                                        "</div>" +
+                    // Calculer les hauteurs en points
+                    var headerHeightPoints = (headerHeight / totalHeight) * 100;
+                    var bodyHeightPoints = (bodyHeight / totalHeight) * 100;
+                    var footerHeightPoints = (footerHeight / totalHeight) * 100;
+                    /*text: [
+                        'Image \n',
+                            { text: ' \n ', fontSize: 9 },
+                            { text: 'GERAC-EHA', fontSize: 9 }
+                        ],*/
+                        function htmlDecode(input) {
+                            var doc = new DOMParser().parseFromString(input, "text/html");
+                            return doc.documentElement.textContent;
+                          }
 
-                                        "<div class='row'>" +
-                                        "<div class='col text-center'>" +
-                                        "<h3>Liste des " + type.replace('_', ' ') + "</h3>" +
-                                        "</div>" +
-                                        "</div>" +
+                    // Ajuster les marges pour correspondre aux hauteurs
+                    headerMargin[1] = headerHeightPoints;
+                    bodyMargin[1] = bodyHeightPoints;
+                    footerMargin[1] = footerHeightPoints;
+                    // Définir le header avec les marges ajustées
+                    doc['header'] = function() {
+                        return {
+                            columns: [
+                                {
+                                    alignment: 'center',
+                                    table: {
+                                        widths: ['33.33%', '33.33%', '33.33%'],hLineWidth: 0,
+                                        border: [false,false,false],
+                                        vLineWidth: 0,
+                                        body: [
+                                            // Première ligne
+                                            [
+                                                {
+                                                    alignment: 'left',hLineWidth: 0,
+                                                    border: false,
+                                                    vLineWidth: 0,
+                                                    stack: [
+                                                        {
+                                                            image: imagePath, // chemin de l'image
+                                                            width: 25 // largeur de l'image en pourcentage
+                                                        },
+                                                        {
+                                                            text: 'GERAC-EHA', // texte à afficher à côté de l'image
+                                                            fontSize: 9 // taille de la police du texte
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    text: [{ text: '\n' }, { text: title.toUpperCase(), bold: true, fontSize: 12 }],
+                                                    alignment: 'center',hLineWidth: 0,
+                                                    border: false,
+                                                    vLineWidth: 0
+                                                },
+                                                {
+                                                    text: [
+                                                        'Impression le ' + dateTime,
+                                                        { text: '\n' },
+                                                        { text: '\nImprimé par: ' + htmlDecode(userName), fontSize: 9 }
+                                                    ],
+                                                    alignment: 'right',hLineWidth: 0,
+                                                    border: false,
+                                                    vLineWidth: 0
+                                                },
+                                            ]
+                                        ],
+                                    },hLineWidth: 0,
+                                    border: false,
+                                    vLineWidth: 0
+                                },
+                            ],
+                        };
+                    };
 
-                                        "<div class='row'>" +
-                                        "<div class='col text-left'>" +
-                                        "<p>GERAC-EHA</p>" +
-                                        "</div>" +
-                                        "<div class='col text-right'>" +
-                                        "<p>Imprimé par: " + userName + "</p>" +
-                                        "</div>" +
-                                        "</div>" +
-                                        "</div></th></tr>";
-
-                                    // Ajouter l'en-tête personnalisé
-                                    $(win.document.body).find('thead').prepend(header);
 
 
-
-                                },
-
-
-                            },
+                    // Définir le footer avec les marges ajustées
+                    doc['footer'] = function(page, pages) {
+                        return {
+                            columns: [
+                                {
+                                    // This is the right column
+                                    alignment: 'right',
+                                    text: ['page ', { text: page.toString() },  ' sur ', { text: pages.toString() }]
+                                }
+                            ],
+                            margin: footerMargin
+                        };
+                    };
+                },
+            },
 
                         ]
 

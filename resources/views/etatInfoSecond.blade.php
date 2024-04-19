@@ -102,7 +102,7 @@
                                 <td>{{ $projet->Bailleurs }}</td>
                                 <td>{{ $projet->Ministere_ou_collectivite_territoriale }}</td>
                                 <td>{{ $projet->nom }} {{ $projet->prenom }}</td>
-                                <td>{{ $projet->telephone }}</td>
+                                <td style="float: right;">{{ $projet->telephone }}</td>
                                 <td>{{ $projet->email }}</td>
                                 <td>{{ $projet->addresse }}</td>
 

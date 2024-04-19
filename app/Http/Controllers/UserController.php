@@ -53,12 +53,17 @@ class UserController extends Controller
     {
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
-        $fonctions = FonctionUtilisateur::all();
         $bailleurs = Bailleur::orderBy('libelle_long', 'asc')->get();
         $agences = AgenceExecution::orderBy('nom_agence', 'asc')->get();
         $ministeres = Ministere::orderBy('libelle', 'asc')->get();
         $domaines = Domaine::all();
         $sous_domaines = [];
+        $fonctions = DB::table('fonction_utilisateur')
+            ->join('fonction_structure', 'fonction_utilisateur.code', '=', 'fonction_structure.code_fonction')
+            ->select('code', 'libelle_fonction','code_structure')
+            ->distinct()
+            ->get();
+
         if (!auth()->user()->personnel->domaine) {
             $sous_domaines = SousDomaine::all();
         } else {
@@ -153,7 +158,7 @@ class UserController extends Controller
     public function detailsPersonne(Request $request, $personneId)
     {
         $personne = Personnel::find($personneId);
-
+        $user = User::find($personneId);
         if (!$personne) {
             // Gérer le cas où l'utilisateur n'est pas trouvé
             return redirect()->route('users.personnel')->with('error', 'Personne non trouvée.');
@@ -162,7 +167,7 @@ class UserController extends Controller
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
         $fonctions = FonctionUtilisateur::all();
-        return view('users.personne-profile', compact('ecran','niveauxAcces', 'personne', 'groupe_utilisateur', 'fonctions'));
+        return view('users.personne-profile', compact('ecran','user','niveauxAcces', 'personne', 'groupe_utilisateur', 'fonctions'));
     }
 
     public function getPersonne(Request $request, $personneId)

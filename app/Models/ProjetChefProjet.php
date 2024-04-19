@@ -16,4 +16,8 @@ class ProjetChefProjet extends Model
         'code_personnel',
         'date'
     ];
+    public function Personne()
+    {
+        return $this->hasMany(Personnel::class, 'code_personnel', 'code_personnel');
+    }
 }

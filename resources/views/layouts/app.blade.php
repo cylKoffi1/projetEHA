@@ -46,7 +46,7 @@
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/iconly.css') }}">
     {{-- <link rel="stylesheet" href="{{ asset('assets/extensions/choices.js/public/assets/styles/choices.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/extensions/choices.js/public/assets/styles/choices.min.js') }}"> --}}
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 </head>
 
 <body>
@@ -60,7 +60,7 @@
     <div id="app">
         @include('layouts.header')
         @include('layouts.sidebar')
-        
+
 
         <div id="main" style="margin-top: 93px;">
             @yield('content')

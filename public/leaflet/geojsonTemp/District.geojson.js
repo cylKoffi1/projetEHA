@@ -10,7 +10,9 @@ var statesDataDistrictsBD = {
                 "AD": 0,
                 "HY": 0,
                 "REE": 79,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -25,7 +27,9 @@ var statesDataDistrictsBD = {
                 "AD": 3,
                 "HY": 0,
                 "REE": 2,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -40,7 +44,9 @@ var statesDataDistrictsBD = {
                 "AD": 1,
                 "HY": 0,
                 "REE": 0,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -50,12 +56,14 @@ var statesDataDistrictsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Denguélé",
-                "PROJET_NUM": 111,
+                "PROJET_NUM": 110,
                 "AEP": 100,
                 "AD": 3,
-                "HY": 2,
+                "HY": 0,
                 "REE": 6,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 1,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -70,7 +78,9 @@ var statesDataDistrictsBD = {
                 "AD": 2,
                 "HY": 0,
                 "REE": 0,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -85,7 +95,9 @@ var statesDataDistrictsBD = {
                 "AD": 3,
                 "HY": 0,
                 "REE": 1,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -100,7 +112,9 @@ var statesDataDistrictsBD = {
                 "AD": 2,
                 "HY": 0,
                 "REE": 3,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -113,9 +127,11 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM": 59,
                 "AEP": 50,
                 "AD": 5,
-                "HY": 2,
+                "HY": 1,
                 "REE": 2,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 1,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -130,7 +146,9 @@ var statesDataDistrictsBD = {
                 "AD": 3,
                 "HY": 0,
                 "REE": 0,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -145,7 +163,9 @@ var statesDataDistrictsBD = {
                 "AD": 4,
                 "HY": 0,
                 "REE": 8,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -160,7 +180,9 @@ var statesDataDistrictsBD = {
                 "AD": 2,
                 "HY": 0,
                 "REE": 9,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -175,7 +197,9 @@ var statesDataDistrictsBD = {
                 "AD": 2,
                 "HY": 0,
                 "REE": 5,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -190,7 +214,9 @@ var statesDataDistrictsBD = {
                 "AD": 1,
                 "HY": 0,
                 "REE": 0,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -205,7 +231,9 @@ var statesDataDistrictsBD = {
                 "AD": 2,
                 "HY": 0,
                 "REE": 0,
-                "RCPE": 3
+                "EHAES": 3,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"
@@ -220,7 +248,9 @@ var statesDataDistrictsBD = {
                 "AD": 0,
                 "HY": 0,
                 "REE": 0,
-                "RCPE": 0
+                "EHAES": 0,
+                "EHAEE": 0,
+                "EHAEEn": 0
             },
             "geometry": {
                 "type": "MultiPolygon"

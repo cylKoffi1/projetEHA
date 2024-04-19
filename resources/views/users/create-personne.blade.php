@@ -129,21 +129,21 @@
                                             <label for="min">M :</label>
                                             <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
 
-                                            <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
+                                            <select name="bailleur" id="bailleur" class="form-select" onclick="filterOptions('bailleurss')"  style="display: none;">
                                                 <option value="">Selectionner le bailleur</option>
                                                 @foreach($bailleurs as $bailleur)
                                                 <option value="{{ $bailleur->code_bailleur }}">{{ $bailleur->libelle_long }}</option>
                                                 @endforeach
                                             </select>
 
-                                            <select name="agence" id="agence" class="form-select" style="display: none;">
+                                            <select name="agence" id="agence" class="form-select" onclick="filterOptions('ministere')" style="display: none;">
                                                 <option value="">Selectionner l'agence</option>
                                                 @foreach($agences as $agence)
                                                 <option value="{{ $agence->code_agence_execution }}">{{ $agence->nom_agence }}</option>
                                                 @endforeach
                                             </select>
 
-                                            <select name="ministere" id="ministere" class="form-select" style="display: none;">
+                                            <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('agence_execution')" style="display: none;">
                                                 <option value="">Selectionner le ministère</option>
                                                 @foreach($ministeres as $ministere)
                                                 <option value="{{ $ministere->code }}">{{ $ministere->libelle }}</option>
@@ -157,9 +157,9 @@
                                     <div class="form-group">
                                         <label for="fonction">Fonction :</label>
                                         <select name="fonction" id="fonction" class="form-select" required>
-                                            {{-- <option value="">--- ---</option> --}}
+                                            <option value="">--- ---</option>
                                             @foreach($fonctions as $fonction)
-                                            <option value="{{ $fonction->code }}">{{ $fonction->libelle_fonction }}</option>
+                                                <option value="{{ $fonction->code }}" data-structure="{{ $fonction->code_structure }}">{{ $fonction->libelle_fonction }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -271,7 +271,25 @@
 </section>
 
 <script>
+    function filterOptions(structure) {
+        var select = document.getElementById('fonction');
+        var options = select.options;
+        var selectedStructure = structure.toLowerCase();
 
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            var optionStructure = option.getAttribute('data-structure');
+
+            if (optionStructure === selectedStructure || !selectedStructure) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    }
+
+    // Appel initial pour afficher les données de bailleur par défaut
+    filterOptions('bailleurss');
     $(document).ready(function() {
 
 
@@ -313,9 +331,6 @@
         //     });
         // });
 
-
-
-
         $("#bai").prop("checked", true);
         showSelect('bailleur');
 
@@ -324,6 +339,8 @@
         });
         $('#niveau_acces_id').on('change', function() {
             showSelect_r($(this).val());
+            $('#na').val(110);
+            $("#na").prop("disabled", true);
         });
         $('#niveau_acces_id').trigger('change');
 
@@ -333,9 +350,7 @@
             $('#na').val(110);
         });
         $('#agence').on('change', function () {
-            showSelect_r('na');
-            $("#niveau_acces_id").prop("disabled", true);
-            $('#na').val(110);
+            $("#niveau_acces_id").prop("disabled", false);
         });
         $('#ministere').on('change', function () {
             $("#niveau_acces_id").prop("disabled", false);
