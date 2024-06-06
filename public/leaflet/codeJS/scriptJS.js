@@ -47,28 +47,7 @@ function initMapJS() {
             }
 
             // Utilisation de setSizeIcon dans cette fonction
-            var statesDataDistrictsProd = L.geoJson(statesDataDistricts, {
-                pointToLayer: function (feature, latlng) {
-                    var radius = setSizeIcon(feature.properties.nb_prod);
-                    return L.circleMarker(latlng, {
-                        radius: radius,
-                        color: '#fff',
-                        fillOpacity: 1,
-                        fillColor: getColorBystatesDataDistricts(feature.properties.NAME_1)
-                    });
-                }
-            }).addTo(map);
-            var labelsLayer = L.geoJson(statesDataDistricts, {
-                pointToLayer: function (feature, latlng) {
-                    return L.marker(latlng, {
-                        icon: L.divIcon({
-                            className: 'district-label',
-                            html: feature.properties.NAME_1,
-                            iconSize: [100, 40], // Ajustez la taille du label selon vos besoins
-                        })
-                    });
-                }
-            }).addTo(map);
+
             // Actions au survol de la souris
             var statesDataDistrictsGeoJs = L.geoJson(statesDataDistricts, {
                 pointToLayer: function (feature, latlng) {
@@ -243,7 +222,17 @@ function initMapJS() {
                     EHAEEn: district.properties.EHAEEn || 0,
                     REE: district.properties.REE || 0,
                     RCPE: district.properties.RCPE || 0,
-                    PROJET_NUM: district.properties.PROJET_NUM || 0
+                    PROJET_NUM: district.properties.PROJET_NUM || 0,
+                    // Ajout des valeurs totales
+                    AEP_T: district.properties.AEP_T || 0,
+                    AD_T: district.properties.AD_T || 0,
+                    HY_T: district.properties.HY_T || 0,
+                    EHAES_T: district.properties.EHAES_T || 0,
+                    EHAEE_T: district.properties.EHAEE_T || 0,
+                    EHAEEn_T: district.properties.EHAEEn_T || 0,
+                    REE_T: district.properties.REE_T || 0,
+                    RCPE_T: district.properties.RCPE_T || 0,
+                    PROJET_NUM_T: district.properties.PROJET_NUM_T || 0
                 } : {
                     AEP: 0,
                     AD: 0,
@@ -253,8 +242,19 @@ function initMapJS() {
                     EHAEEn: 0,
                     REE: 0,
                     RCPE: 0,
-                    PROJET_NUM: 0
+                    PROJET_NUM: 0,
+                    // Valeurs totales par défaut
+                    AEP_T: 0,
+                    AD_T: 0,
+                    HY_T: 0,
+                    EHAES_T: 0,
+                    EHAEE_T: 0,
+                    EHAEEn_T: 0,
+                    REE_T: 0,
+                    RCPE_T: 0,
+                    PROJET_NUM_T: 0
                 };
+
             }
             function getRegionInfo(regionCode) {
                 var region = statesDataRegionsBD.features.find(function (feature) {
@@ -284,6 +284,55 @@ function initMapJS() {
                 };
             }
 
+            function getDepartmentInfo(ddepartmentName) {
+                var department = statesDataDepartmentsBD.features.find(function (feature) {
+                    return feature.properties.NAME_3=== departmentName;
+                });
+
+                return department ? {
+                    AEP: department.properties.AEP || 0,
+                    AD: department.properties.AD || 0,
+                    HY: department.properties.HY || 0,
+                    EHAES: department.properties.EHAEE || 0,
+                    EHAEE: department.properties.EHAEE || 0,
+                    EHAEEn: department.properties.EHAEEn || 0,
+                    REE: department.properties.REE || 0,
+                    RCPE: department.properties.RCPE || 0,
+                    PROJET_NUM: department.properties.PROJET_NUM || 0,
+                    // Ajout des valeurs totales
+                    AEP_T: department.properties.AEP_T || 0,
+                    AD_T: department.properties.AD_T || 0,
+                    HY_T: department.properties.HY_T || 0,
+                    EHAES_T: department.properties.EHAES_T || 0,
+                    EHAEE_T: department.properties.EHAEE_T || 0,
+                    EHAEEn_T: department.properties.EHAEEn_T || 0,
+                    REE_T: department.properties.REE_T || 0,
+                    RCPE_T: department.properties.RCPE_T || 0,
+                    PROJET_NUM_T: department.properties.PROJET_NUM_T || 0
+                } : {
+                    AEP: 0,
+                    AD: 0,
+                    HY: 0,
+                    EHAES: 0,
+                    EHAEE: 0,
+                    EHAEEn: 0,
+                    REE: 0,
+                    RCPE: 0,
+                    PROJET_NUM: 0,
+                    // Valeurs totales par défaut
+                    AEP_T: 0,
+                    AD_T: 0,
+                    HY_T: 0,
+                    EHAES_T: 0,
+                    EHAEE_T: 0,
+                    EHAEEn_T: 0,
+                    REE_T: 0,
+                    RCPE_T: 0,
+                    PROJET_NUM_T: 0
+                };
+
+            }
+
             // Fonction pour mettre à jour les données de la région
             function updateRegionInfo(regionCode) {
                 // Utilisez la couche des régions pour obtenir les informations de la région
@@ -299,170 +348,296 @@ function initMapJS() {
                 var districtInfo = getDistrictInfo(props ? props.NAME_1 : '');
                 var regionInfo = getRegionInfo(props ? props.NAME_2:'');
 
-                var calculatePercentage = function (value) {
-                    return (districtInfo.PROJET_NUM !== 0) ? ((value / districtInfo.PROJET_NUM) * 100).toFixed(2) + '%' : '0%';
-                };
+
+
+
 
                 var calculatePercentageR = function (value, total ) {
-                    return (total !== 0) ? ((value / total) * 100).toFixed(2) + '%' : '0%';
+                    return (total !== 0) ? ((value / total) * 100).toFixed(2) : '-';
                 };
+                function displayValue(value) {
+                    // Vérifie si la valeur est égale à 0 ou à 0.00
+                    if (value === 0 || value === 0.00) {
+                        return '-';
+                    } else {
+                        return value;
+                    }
+                }
                 // Condition pour déterminer si c'est une région ou un district
                 var isRegion = props && props.NAME_2;
+                var isDepaterment = props && props.NAME_3;
 
                 this._div.innerHTML = `
                 <table>
                     <thead>
                         <tr>
-                            <th style="text-align: right;"></th>
+                            <th style="text-align: left;"></th>
                             <td></td>
                         </tr>
                         <tr>
-                            <th style="text-align: right;">District: </th>
+                            <th style="text-align: left;">District: </th>
                             <td>${props ? props.NAME_1 : '---'}</td>
                         </tr>
                         <tr>
-                            <th style="text-align: right;">Region :</th>
+                            <th style="text-align: left;">Region :</th>
                             <td>${props ? props.NAME_2 : '---'}</td>
                         </tr>
                         <tr>
-                            <th style="text-align: right;">Département :</th>
+                            <th style="text-align: left;">Département :</th>
                             <td>${props ? props.NAME_3 : '---'}</td>
                         </tr>
                     </thead>
                 </table>
-                <table>
+            <table style="border-collapse: collapse; width: 100%;">
+                <thead>
+                <tr>
+                        <th ></th>
+                        <th ></th>
+                        <th colspan="3" style="border: 1px solid black; text-align: center;">%</th>
 
+                    </tr>
+                    <tr>
+                        <th class="col" style=""></th>
+                        <th class="col" style="border: 1px solid black; font-size:12px; text-align: center; width:40px;">Nbr</th>
+                        <th class="col" style="border: 1px solid black; text-align: center; font-size:12px;  width:50px;">District</th>
+                        <th class="col" style="border: 1px solid black; text-align: center; font-size:12px; width:50px;">Région</th>
+                        <th class="col" style="border: 1px solid black; text-align: center; font-size:12px;  width:50px;">Départ</th>
+                    </tr>
 
+                </thead>
+                <tbody>
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(0)}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                            </tr>
 
-                    <thead>
+                        `
+                        : isRegion
+                        ?`
                         <tr>
-                            <th class="col"></th>
-                            <th class="col">N° de projets </th>
-                            <th class="col" style="text-align: right;"> % </th>
+                            <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
+                            <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.AEP || '-'}</th>
+                            <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AEP, districtInfo.AEP_T) || '-'}</th>
+                            <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AEP, districtInfo.AEP) || '-'}</th>
+                            <th class="col" style="border: 1px solid black; text-align: center;">-</th>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                                    <td>${regionInfo.AEP}/${districtInfo.AEP}</td>
-                                    <td>${calculatePercentageR(regionInfo.AEP, districtInfo.AEP)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                                    <td>${districtInfo.AEP}</td>
-                                    <td>${calculatePercentage(districtInfo.AEP)}</td>
-                                </tr>
-                            `
-                        }
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                                    <td>${regionInfo.AD}/${districtInfo.AD}</td>
-                                    <td>${calculatePercentageR(regionInfo.AD, districtInfo.AD)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                                    <td>${districtInfo.AD}</td>
-                                    <td>${calculatePercentage(districtInfo.AD)}</td>
-                                </tr>
-                            `
-                        }
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Hygiène :</th>
-                                    <td>${regionInfo.HY}/${districtInfo.HY}</td>
-                                    <td>${calculatePercentageR(regionInfo.HY, districtInfo.HY)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Hygiène :</th>
-                                    <td>${districtInfo.HY}</td>
-                                    <td>${calculatePercentage(districtInfo.HY)}</td>
-                                </tr>
-                            `
-                        }
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                                    <td>${regionInfo.REE}/${districtInfo.REE}</td>
-                                    <td>${calculatePercentageR(regionInfo.REE, districtInfo.REE)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                                    <td>${districtInfo.REE}</td>
-                                    <td>${calculatePercentage(districtInfo.REE)}</td>
-                                </tr>
-                            `
-                        }
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
-                                    <td>${regionInfo.EHAES}/${districtInfo.EHAES}</td>
-                                    <td>${calculatePercentageR(regionInfo.EHAES, districtInfo.EHAES)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
-                                    <td>${districtInfo.EHAES}</td>
-                                    <td>${calculatePercentage(districtInfo.EHAES)}</td>
-                                </tr>
-                            `
-                        }
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
-                                    <td>${regionInfo.EHAEE}/${districtInfo.EHAEE}</td>
-                                    <td>${calculatePercentageR(regionInfo.EHAEE, districtInfo.EHAEE)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
-                                    <td>${districtInfo.EHAEE}</td>
-                                    <td>${calculatePercentage(districtInfo.EHAEE)}</td>
-                                </tr>
-                            `
-                        }
-                        ${
-                            isRegion
-                            ? `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
-                                    <td>${regionInfo.EHAEEn}/${districtInfo.EHAEEn}</td>
-                                    <td>${calculatePercentageR(regionInfo.EHAEEn, districtInfo.EHAEEn)}</td>
-                                </tr>
-                            `
-                            : `
-                                <tr>
-                                    <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
-                                    <td>${districtInfo.EHAEEn}</td>
-                                    <td>${calculatePercentage(districtInfo.EHAEEn)}</td>
-                                </tr>
-                            `
-                        }
-                    </tbody>
-                </table>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.AEP || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.AEP, districtInfo.AEP_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.AD_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.AD) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.AD) || '-'}</th>
+                            </tr>
+
+                        `
+                        : isRegion
+                        ?`
+                            <tr>
+                                <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.AD || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AD, districtInfo.AD_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AD, districtInfo.AD) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.AD || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.AD, districtInfo.AD_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Hygiène :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.HY_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.HY) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.HY) || '-'}</th>
+                            </tr>
+
+                        `
+                        : isRegion
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Hygiène :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.HY || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.HY, districtInfo.HY_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.HY, districtInfo.HY) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Hygiène :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.HY || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.HY, districtInfo.HY_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Ressource en eau :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.REE_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.REE) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.REE) || '-'}</th>
+                            </tr>
+
+                        `
+                        : isRegion
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Ressource en eau :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.REE || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.REE, districtInfo.REE_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.REE, districtInfo.REE) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">Ressource en eau :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.REE || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.REE, districtInfo.REE_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA établissement de Santé :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAES_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAES) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAES) || '-'}</th>
+                            </tr>
+
+                        `
+                        : isRegion
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA établissement de Santé :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.EHAES || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAES, districtInfo.EHAES_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAES, districtInfo.EHAES) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA établissement de Santé :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.EHAES || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.EHAES, districtInfo.EHAES_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA établissemet d’Enseignement :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEE_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEE) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEE) || '-'}</th>
+                            </tr>
+
+                        `
+                        : isRegion
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA établissement d’Enseignement :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.EHAEE || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEE, districtInfo.EHAEE_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEE, districtInfo.EHAEE) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA établissemet d’Enseignement :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.EHAEE || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.EHAEE, districtInfo.EHAEE_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+
+                    ${
+                        isDepaterment
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA autres Entités :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEEn_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEEn) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEEn) || '-'}</th>
+                            </tr>
+
+                        `
+                        : isRegion
+                        ? `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA autres Entités :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${regionInfo.EHAEEn || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEEn, districtInfo.EHAEEn_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEEn, districtInfo.EHAEEn) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                        : `
+                            <tr>
+                                <th class="row22" style="text-align: right;">EHA autres Entités :</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${districtInfo.EHAEEn || '-'}  </th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.EHAEEn, districtInfo.EHAEEn_T) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                            </tr>
+                        `
+                    }
+
+
+                </tbody>
+            </table>
+
             `;
 
             // Ajoutez du style CSS pour aligner les ":" à droite
@@ -499,11 +674,6 @@ function initMapJS() {
                         fillOpacity: 0.7
                     };
                 }
-            // Fonction pour obtenir la couleur en fonction du district
-
-
-
-            // ...
 
             // Fonction pour mettre en surbrillance une région au survol
             function highlightRegion(e) {
@@ -582,8 +752,6 @@ function initMapJS() {
                 return colorScale[colorIndex];
             }
 
-
-
             // Fonction de style pour les districts en utilisant le dégradé de couleurs
             function styleDist(feature) {
                 var isHighlighted = feature.properties.highlighted; // Vérifiez si le district est en surbrillance
@@ -609,13 +777,6 @@ function initMapJS() {
                     };
                 }
             }
-            // Fonction pour réinitialiser la surbrillance du district
-            function resetDistrictHighlight() {
-                statesDataDistrictsGeoJs.eachLayer(function (layer) {
-                    layer.feature.properties.highlighted = false;
-                    statesDataDistrictsGeoJs.resetStyle(layer);
-                });
-            }
 
 
             // à supprimer
@@ -626,23 +787,6 @@ function initMapJS() {
 
                 return district ? district.properties.PROJET_NUM : 0; // Retourne 0 s'il n'y a pas de projet
             }
-
-            // Fonction générique pour obtenir le nombre de projets d'une entité à partir d'une couche de données géospatiales
-            function getProjectCountFromLayer(layer, entityName, entityType) {
-                var entity = layer.features.find(function (feature) {
-                    if (entityType === 'district') {
-                        return feature.properties.NAME_1 === entityName;
-                    } else if (entityType === 'region') {
-                        return feature.properties.NAME_2 === entityName;
-                    } else {
-                        return false;
-                    }
-                });
-
-                return entity ? entity.properties.PROJET_NUM : 0; // Retourne 0 s'il n'y a pas de projet
-            }
-
-
 
             // Ajout de la légende à la carte
             function addLegend() {

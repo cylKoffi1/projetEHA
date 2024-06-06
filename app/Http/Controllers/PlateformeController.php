@@ -329,7 +329,7 @@ class PlateformeController extends Controller
         // Créez un tableau d'options pour les districts
         $niveauxOptions = [];
         foreach ($niveaux as $niveau) {
-            $niveauxOptions[$niveau->code] = $niveau->libelle_long;
+            $niveauxOptions[$niveau->code] = $niveau->libelle_long;     
         }
 
         return response()->json(['niveaux' => $niveauxOptions]);

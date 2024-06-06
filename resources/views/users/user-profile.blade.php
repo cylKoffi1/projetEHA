@@ -195,7 +195,7 @@
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Téléphone</p>
-                                                                    <p class="mb-0">(+225) {{ $user->personnel->telephone }}</p>
+                                                                    <p class="mb-0"> {{ $user->personnel->telephone }}</p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Email</p>
@@ -219,11 +219,38 @@
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Niveaux Accès</p>
-                                                                    <p class="mb-0">{{ $user->niveauAcces->libelle ?? "" }}</p>
+                                                                    <p class="mb-0">
+                                                                        @if($user)
+                                                                            @if ($user->latestRegion)
+                                                                                @if ($user->latestRegion->region)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->region->libelle }}
+                                                                                @elseif ($user->latestRegion->departement)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->departement->libelle }}
+                                                                                @elseif ($user->latestRegion->district)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->district->libelle }}
+                                                                                @elseif ($user->latestRegion->pays)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->pays->nom_fr_fr }}
+                                                                                @else
+                                                                                @endif
+                                                                            @endif
+                                                                        @endif</p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Structure de rattachement</p>
-                                                                    <p class="mb-0">{{ $user->personnel->prenom }}</p>
+                                                                    <p class="mb-0">
+                                                                        @if ($user)
+                                                                            @if($user->structureRattachement)
+                                                                                @if ($user->structureRattachement->agence)
+                                                                                    Agence : {{ $user->structureRattachement->agence->nom_agence }}
+                                                                                @elseif ($user->structureRattachement->ministere)
+                                                                                    Ministère : {{ $user->structureRattachement->ministere->libelle }}
+                                                                                @elseif ($user->structureRattachement->bailleur)
+                                                                                    Bailleur : {{ $user->structureRattachement->bailleur->libelle_long }}
+                                                                                @endif
+                                                                            @endif
+                                                                        @else
+                                                                            Aucune Structure de rattachement
+                                                                        @endif</p>
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -239,7 +266,7 @@
                                 </div>
                                 <div class="tab-pane" id="profile-2" role="tabpanel" aria-labelledby="profile-tab-2">
                                     <div class="row">
-                                        <form class="row" style="align-items: center;" id="update-user" action="{{ route("users.update_auth", ['userId' => $user->id]) }}" method="post" enctype="multipart/form-data">
+                                        <form class="row" style="align-items: center;" id="update-user" action="{{ route('users.update_auth', ['userId' => $user->id]) }}" method="post" enctype="multipart/form-data">
                                             @csrf
                                             <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
                                             <div class="col-lg-12">
@@ -249,59 +276,55 @@
                                                     </div>
                                                     <div class="card-body">
                                                         <div class="row">
+
+                                                            <div class="col-3 ">
+                                                            @if($structureRattachement)
+                                                                <div class="form-group">
+                                                                    <label for="structure_ratache">Structure :</label>
+                                                                    <label for="bai">B :</label>
+                                                                    <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" {{ $structureRattachement->type_structure == 'bailleurss' ? 'checked' : '' }} style="margin-right: 5px;">
+                                                                    <label for="age">A :</label>
+                                                                    <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" {{ $structureRattachement->type_structure == 'agence_execution' ? 'checked' : '' }} style="margin-right: 5px;">
+                                                                    <label for="min">M :</label>
+                                                                    <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')" {{ $structureRattachement->type_structure == 'ministere' ? 'checked' : '' }}>
+
+                                                                    <select name="bailleur" id="bailleur" class="form-select" style="display: none;" onclick="filterOptions('bailleurss')">
+                                                                        <option value="">Selectionner le bailleur</option>
+                                                                        @foreach($bailleurs as $bailleur)
+                                                                        <option value="{{ $bailleur->code_bailleur }}" {{ $structureRattachement->code_structure == $bailleur->code_bailleur ? 'selected' : '' }}>{{ $bailleur->libelle_long }}</option>
+                                                                        @endforeach
+                                                                    </select>
+
+                                                                    <select name="agence" id="agence" class="form-select" style="display: none;"   onclick="filterOptions('agence_execution')">
+                                                                        <option value="">Selectionner l'agence</option>
+                                                                        @foreach($agences as $agence)
+                                                                        <option value="{{ $agence->code_agence_execution }}" {{ $structureRattachement->code_structure == $agence->code_agence_execution ? 'selected' : '' }}>{{ $agence->nom_agence }}</option>
+                                                                        @endforeach
+                                                                    </select>
+
+                                                                    <select name="ministere" id="ministere" class="form-select" style="display: none;" onclick="filterOptions('ministere')">
+                                                                        <option value="">Selectionner le ministère</option>
+                                                                        @foreach($ministeres as $ministere)
+                                                                        <option value="{{ $ministere->code }}" {{ $structureRattachement->code_structure == $ministere->code ? 'selected' : '' }}>{{ $ministere->libelle }}</option>
+                                                                        @endforeach
+                                                                    </select>
+
+                                                                </div>
+                                                            @endif
+                                                            </div>
                                                             <div class="col-3">
                                                                 <div class="form-group">
                                                                     <label for="fonction">Fonction :</label>
                                                                     <select name="fonction" id="fonction" class="form-select" required>
                                                                         <option value="">Selectionner une fonction</option>
                                                                         @foreach($fonctions as $fonction)
-                                                                        <option value="{{ $fonction->code }}" {{ optional($user->latestFonction)->code_fonction == $fonction->code ? 'selected' : '' }}>
+                                                                        <option value="{{ $fonction->code }}" data-structure="{{ $fonction->code_structure }}" {{ optional($user->latestFonction)->code_fonction == $fonction->code ? 'selected' : '' }}>
                                                                             {{ $fonction->libelle_fonction }}
                                                                         </option>
                                                                         @endforeach
                                                                     </select>
                                                                 </div>
                                                             </div>
-                                                            <div class="col-3 ">
-                                                                <div class="form-group">
-                                                                    <label for="structure_ratache">Structure :</label>
-                                                                    <label for="bai">B :</label>
-                                                                    <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" style="margin-right: 5px;">
-                                                                    <label for="age">A :</label>
-                                                                    <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 5px;">
-                                                                    <label for="min">M :</label>
-                                                                    <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
-
-                                                                    <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
-                                                                        <option value="">Selectionner le bailleur</option>
-                                                                        @foreach($bailleurs as $bailleur)
-                                                                        <option value="{{ $bailleur->code_bailleur }}" {{ optional($user->personnel)->code_structure_bailleur == $bailleur->code_bailleur ? 'selected' : '' }}>
-                                                                            {{ $bailleur->libelle_long }}
-                                                                        </option>
-                                                                        @endforeach
-                                                                    </select>
-
-                                                                    <select name="agence" id="agence" class="form-select" style="display: none;">
-                                                                        <option value="">Selectionner l'agence</option>
-                                                                        @foreach($agences as $agence)
-                                                                        <option value="{{ $agence->code_agence_execution }}" {{ optional($user->personnel)->code_agence_execution == $agence->code_agence_execution ? 'selected' : '' }}>
-                                                                            {{ $agence->nom_agence }}
-                                                                        </option>
-                                                                        @endforeach
-                                                                    </select>
-
-                                                                    <select name="ministere" id="ministere" class="form-select" style="display: none;">
-                                                                        <option value="">Selectionner le ministère</option>
-                                                                        @foreach($ministeres as $ministere)
-                                                                        <option value="{{ $ministere->code }}" {{ optional($user->personnel)->code_structure_ministere == $ministere->code ? 'selected' : '' }}>
-                                                                            {{ $ministere->libelle }}
-                                                                        </option>
-                                                                        @endforeach
-                                                                    </select>
-
-                                                                </div>
-                                                            </div>
-
                                                             @role('Admin')
                                                             <div class="col-3">
                                                                 <div class="form-group">
@@ -328,6 +351,7 @@
                                                                             {{ $niveauAcces->libelle }}
                                                                         </option>
                                                                         @endforeach
+
                                                                     </select>
                                                                 </div>
                                                             </div>
@@ -488,7 +512,24 @@
     </div>
 </section>
 
+<script>
+    function filterOptions(structure) {
+        var select = document.getElementById('fonction');
+        var options = select.options;
+        var selectedStructure = structure.toLowerCase();
 
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            var optionStructure = option.getAttribute('data-structure');
+
+            if (optionStructure === selectedStructure || !selectedStructure) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    }
+</script>
 <script>
     $('#table1').DataTable({
         language: {
@@ -627,7 +668,7 @@
                     showPopup(response.success);
 
                     // Rediriger l'utilisateur après une requête réussie
-                    window.location.href = "/admin/users/details-user/" + userId;
+                    window.location.href = "/admin/users/details-user/" + userId+"?ecran_id="+response.ecran;
                 }
                 , error: function(xhr, status, error) {
                     var err = JSON.parse(xhr.responseText);

@@ -99,7 +99,7 @@
                                     <td>{{ $projets->sous_domaine_libelle }}</td>
                                     <td>{{ $projets->district_libelle }}</td>
                                     <td>{{ $projets->region_libelle }}</td>
-                                    <td style="float: right;">{{  number_format($projets->cout_projet, 0, ',', ' ') }}</td>
+                                    <td style="text-align: right;">{{  number_format($projets->cout_projet, 0, ',', ' ') }}</td>
                                     <td>{{$projets->devise->code_long ?? ''}}</td>
                                 </tr>
                                 @endforeach

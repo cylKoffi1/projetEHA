@@ -1,4 +1,4 @@
-    <!doctype html>
+<!doctype html>
     <html class="no-js" lang="en">
 
     <head>
@@ -72,19 +72,30 @@
                                     <div class="col" >
                                         <h class="col-md-3 col-sm-19" style="margin-left:-160px;"><input type="radio" id="radioButton2" name="radioButtons" value="effectives" /><label for=""> effectives</label></h>
                                     </div>
+                                    <div class="col" >
+                                        <h class="col-md-3 col-sm-19" style="margin-left:400px;"><input type="radio" id="radioButton3" name="radioButtons" value="Tous" /><label for="">Afficher toutes les données</label></h>
+                                    </div>
                                 </div>
 
                                 <div class="col-md-2 col-sm-12">
                                     <h style="color: yellow;">début</h>
                                     <div >
-                                        <input type="date" name="" id="">
+                                        <input type="date" class="form-control" name="start_date" id="start_date">
                                     </div>
                                 </div>
                                 <div class="col-md-2 col-sm-12">
                                     <h style="color: yellow;"> fin</h>
                                     <div >
-                                        <input type="date" name="" id="">
+                                        <input type="date" class="form-control" name="end_date" id="end_date">
                                     </div>
+
+                                </div>
+                                <div class="col-md-2 col-sm-12">
+                                    <h style="color: yellow;"> fin</h>
+                                    <div >
+                                        <input type="date" class="form-control" name="end_date" id="end_date">
+                                    </div>
+
                                 </div>
                             </div>
                     </div>
@@ -92,29 +103,30 @@
 
                             <h style="color: yellow;">Bailleur</h><br>
                             <div>
-                                <select class="form-contro" style=" height: 30px; width: 150px;">
-                                    <option value="default">model</option>
-                                    <option value="kia-rio">kia-rio</option>
-                                    <option value="mitsubishi">mitsubishi</option>
-                                    <option value="ford">ford</option>
+                                <select class="form-contro" id="bailleur" style=" height: 30px; width: 150px;">
+                                    <option value="">Select bailleur</option>
+                                    @foreach ($bailleur as $bail)
+                                        <option value="{{ $bail->code_bailleur}}">{{$bail->libelle_long}}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-2 col-sm-12">
                             <h style="color: yellow;">Statut</h><br>
                             <div>
-                                <select class="form-contro" style=" height: 30px; width: 150px;">
-                                    <option value="default">Cloturé</option>
-                                    <option value="sedan">En cours</option>
-                                    <option value="van">Annulé</option>
-                                    <option value="roadster">Prévu</option>
+                                <select class="form-contro" id="status" style=" height: 30px; width: 150px;">
+                                        <option value="">Select Status</option>
+                                    @foreach ($statut as $stat)
+                                        <option value="{{ $stat->code}}">{{$stat->libelle}}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
 
                         <div class="col-md-29 col-sm-2">
                             <div class="single-model-search text-center">
-                                <button class="welcome-btnn model-search-btn" onclick="window.location.href='#'">
+
+                                <button class="welcome-btnn model-search-btn" id="filterButton" onclick="window.location.href='#'">
                                     Filtrer
                                 </button>
                             </div>
@@ -143,11 +155,9 @@
 
 
                                     <div class="col" style="height: 100%;">
-                                            {{-- <center> --}}
 
                                                 <div id="map" style="width: 90%; height: 590px; padding-left: 107%; z-index:1; outline-style: none;"></div>
 
-                                            {{-- </center> --}}
                                     </div>
                             </div>
 
@@ -155,68 +165,206 @@
                     </div>
                 </section><!--/.service-->
                 <!--service end-->
+<script  type="text/javascript"  src="{{ asset('leaflet/geojsonTemp/Department.geojson.js') }}"></script>
                 <!-- Ajoutez cette balise script dans votre fichier HTML -->
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
+<script>
+    // Récupérez les éléments d'entrée
+    var startDateInput = document.getElementById('start_date');
+    var endDateInput = document.getElementById('end_date');
+    var statusInput = document.getElementById('status');
+    var bailleurInput = document.getElementById('bailleur');
 
-                <script src="{{ asset('leaflet/leaflet.js')}}" ></script>
-                <script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
-                <script type="text/javascript" src="{{ asset('leaflet/geojson/regions.geojson.js')}}"></script>
-                <script type="text/javascript" src="{{ asset('leaflet/geojson/departements.geojson.js')}}"></script>
 
-                <!-- contenu des données de la bd à afficher sur la carte-->
-                <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District.geojson.js')}}"></script>
-                <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
-                <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
-                <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
 
-                <script>
-                    function filterMap(checkedCheckbox, uncheckedCheckbox) {
-                        // Désactivez l'autre case à cocher
-                        document.getElementById(uncheckedCheckbox).checked = false;
+    endDateInput.addEventListener('change', function() {
+        // Assurez-vous que la date de fin ne peut pas être antérieure à la date de début
+        if (endDateInput.value < startDateInput.value) {
+            $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
+            $('#alertModal').modal('show');
+            endDateInput.value = startDateInput.value; // Réinitialisez la date de fin à la date de début
+        }
+    });
+    var filterApplied = false;
 
-                        // Appelez la fonction pour changer la couche en fonction de la sélection de l'utilisateur
-                        changeMapLayerJS();
-                    }
-                    const radioButton1 = document.getElementById("radioButton1");
-                    const radioButton2 = document.getElementById("radioButton2");
+// Function to load the default geoJSON files
+function loadDefaultGeoJSON() {
+    var scripts = [
+        "{{ asset('leaflet/geojsonTemp/District.geojson.js') }}",
+        "{{ asset('leaflet/geojsonTemp/Region.geojson.js') }}",
+        "{{ asset('leaflet/geojsonTemp/Cout.geojson.js') }}",
+        "{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js') }}"
+    ];
+    loadScriptsSequentially(scripts);
+}
 
-                    radioButton1.addEventListener("change", () => {
-                    radioButton2.disabled = !radioButton1.checked;
-                    });
+// Function to load the filtered geoJSON files
+function loadFilteredGeoJSON() {
+    var scripts = [
+        "{{ asset('leaflet/geojsonTemp/District_temp.geojson.js') }}",
+        "{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js') }}",
+        "{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js') }}",
+        "{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js') }}"
+    ];
+    loadScriptsSequentially(scripts);
+    window.location.reload();
+}
 
-                    radioButton2.addEventListener("change", () => {
-                    radioButton1.disabled = !radioButton2.checked;
-                    });
-                </script>
-                <script>
-                    // Appeler initMapJS au chargement de la page
-                    document.addEventListener('DOMContentLoaded', function () {
-                        initMapJS();
-                    });
+// Helper function to load scripts sequentially
+function loadScriptsSequentially(scripts) {
+    if (scripts.length === 0) {
+        return;
+    }
 
-                    // Fonction pour changer la couche en fonction de la checkbox sélectionnée
-                    function handleCheckboxChange(checkboxId, layerType) {
-                        var checkbox = document.getElementById(checkboxId);
+    var script = document.createElement('script');
+    script.src = scripts[0];
+    script.onload = function() {
+        scripts.shift();
+        loadScriptsSequentially(scripts);
+    };
+    document.body.appendChild(script);
+}
 
-                        // Désactivez tous les autres checkboxes
-                        var checkboxes = document.querySelectorAll('input[type="checkbox"]');
-                        checkboxes.forEach(function (cb) {
-                            if (cb.id !== checkboxId) {
-                                cb.checked = false;
-                            }
-                        });
+// Function to clear current layers
+function clearMapLayers() {
+    // Assuming you have a reference to your map instance in a variable `map`
+    map.eachLayer(function (layer) {
+        if (layer instanceof L.GeoJSON) {
+            map.removeLayer(layer);
+        }
+    });
+}
+document.getElementById('filterButton').addEventListener('click', function() {
+    var startDate = startDateInput.value;
+    var endDate = endDateInput.value;
+    var status = statusInput.value;
+    var bailleur = bailleurInput.value;
+    var dateType = document.querySelector('input[name="radioButtons"]:checked');
 
-                        // Appelez la fonction pour changer la couche en fonction de la sélection de l'utilisateur
-                        if (checkbox.checked) {
-                            changeMapLayerJS(layerType);
-                        } else {
-                            // Traitez le cas où le checkbox est décoché si nécessaire
-                        }
-                    }
-                </script>
-                <!--Les codes js des deux cartes -->
-                <script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
-                <script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
+    if (!dateType) {
+        $('#alertMessage').text('Veuillez sélectionner une option de date (prévisionnelles ou effectives) ou le sans filtre.');
+        $('#alertModal').modal('show');
+        return;
+    }
 
+    dateType = dateType.value;
+
+    var formData = {
+        startDate: startDate,
+        endDate: endDate,
+        status: status,
+        bailleur: bailleur,
+        dateType: dateType
+    };
+    localStorage.setItem('formData', JSON.stringify(formData));
+
+    // Append a random query string to the URL to bypass cache
+    var randomQueryString = `&_=${new Date().getTime()}`;
+
+    fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
+        headers: {
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        updateMap(data);
+        filterApplied = true;
+        clearMapLayers();
+        loadFilteredGeoJSON();
+    })
+    .catch(error => console.error('Error:', error));
+});
+    function clearCacheAndReload() {
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            }).then(function() {
+                localStorage.removeItem('filtersApplied');
+                window.location.reload(true);
+            });
+        } else {
+            window.location.reload(true);
+        }
+    }
+
+        // Chargez les valeurs précédentes des champs de formulaire depuis le stockage local (s'il y en a)
+        window.addEventListener('DOMContentLoaded', function() {
+            // Vérifiez s'il y a des données sauvegardées dans le stockage local
+            if (localStorage.getItem('formData')) {
+                // Parsez les données sauvegardées depuis le stockage local
+                var formData = JSON.parse(localStorage.getItem('formData'));
+
+                // Si l'option "Sans filtre" est sélectionnée, ne remplissez pas les champs de formulaire avec les données sauvegardées
+                var sansFiltreRadio = document.getElementById('radioButton3');
+                if (sansFiltreRadio && sansFiltreRadio.checked) {
+                    localStorage.removeItem('formData'); // Supprimez les données sauvegardées
+                } else {
+                    // Remplissez les champs de formulaire avec les données sauvegardées
+                    startDateInput.value = formData.startDate || '';
+                    endDateInput.value = formData.endDate || '';
+                    statusInput.value = formData.status || '';
+                    bailleurInput.value = formData.bailleur || '';
+
+                    // Effacez les données après un certain délai (1 minute)
+                    var delayInMilliseconds = 1 * 60 * 1000; // 1 minute en millisecondes
+                    setTimeout(function() {
+                        localStorage.removeItem('formData');
+                    }, delayInMilliseconds);
+                }
+            }
+        });
+
+
+
+
+
+    function updateMap(data) {
+        // Implement the logic to update your map with the filtered data
+        console.log(data);
+    }
+    loadDefaultGeoJSON();
+    // Call initMapJS on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        loadDefaultGeoJSON();
+        initMapJS();
+    });
+
+    function handleCheckboxChange(checkboxId, layerType) {
+        var checkbox = document.getElementById(checkboxId);
+
+        // Uncheck all other checkboxes
+        var checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(function (cb) {
+            if (cb.id !== checkboxId) {
+                cb.checked = false;
+            }
+        });
+
+        // Call the function to change the layer based on the user's selection
+        if (checkbox.checked) {
+            changeMapLayerJS(layerType);
+        } else {
+            // Handle the case where the checkbox is unchecked if necessary
+        }
+    }
+</script>
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
+<script src="{{ asset('leaflet/leaflet.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojson/regions.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojson/departements.geojson.js')}}"></script>
+
+<script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
+<script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
 
     </body>

@@ -174,7 +174,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     //***************** Fonction groupes ************* */
     Route::get('admin/fonctionGroupe', [PlateformeController::class, 'fonctionGroupe'])->name('fonctionGroupe');
-    Route::post('admin/fg/store', [PlateformeController::class, 'storeFonctionGroupe'])->name('fg.store');
+    Route::post('/admin/fg/store/', [PlateformeController::class, 'storeFonctionGroupe'])->name('fg.store');
     Route::delete('admin/fonctionGroupe/delete/{code}', [PlateformeController::class, 'deleteFonctionGroupe'])->name('fg.delete');
 
 
@@ -257,7 +257,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     //***************** BAILLEURS ************* */
     Route::get('admin/bailleurs', [PlateformeController::class, 'bailleurs'])->name('bailleurs');
-    Route::get('admin/bailleur/{code}', [PlateformeController::class, 'getBailleur'])->name('bailleur.show');
+    Route::get('/admin/bailleur/{code}', [PlateformeController::class, 'getBailleur'])->name('bailleur.show');
     Route::delete('admin/bailleur/delete/{code}', [PlateformeController::class, 'deleteBailleur'])->name('bailleur.delete');
     Route::post('/check-bailleur-code', [PlateformeController::class, 'checkBailleurCode']);
     Route::post('admin/bailleur', [PlateformeController::class, 'storeBailleur'])->name('bailleur.store');
@@ -301,6 +301,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
         /**************************** GESTION DES ANNEXE 2 ******************************/
         Route::get('admin/projet/edition/ficheCollecte', [AnnexeController::class, 'FicheCollecte'])->name('projet.InfosTert');
+        Route::get('admin/projet/edition/ficheImprimer/{code}',[AnnexeController::class, 'FicheCollecteImprimer'])->name('Annexe2.FicheCollecte');
         Route::get('/getProjectDetails', [AnnexeController::class, 'getProjectDetails']);
 
     //***************** REALISATION ************* */
@@ -339,6 +340,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     //***************** GESTION SIG ************* */
     Route::get('admin/carte', [sigAdminController::class, 'carte']);
 
+    Route::get('/filter-map', [GeoJSONController::class, 'filter'])->name('filter.map');
+
 
     Route::get('/get-projet-data', 'ProjetController@getProjetData');
 
@@ -347,7 +350,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     })->name('dash');
 
 
-/**************************** GESTION DES STATISTIQUES **********************************/
+    /**************************** GESTION DES STATISTIQUES **********************************/
     Route::get('admin/stat_nombre_projet', [StatController::class, 'statNombreProjet']);
     Route::get('admin/stat-finance', [StatController::class, 'statFinance']);
 
@@ -359,13 +362,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     Route::get('admin/personnel/details-personne/{personneId}', [UserController::class, 'detailsPersonne'])->name('personnel.details');
     Route::get('admin/personnel/get-personne/{personneId}', [UserController::class, 'getPersonne'])->name('personne.updateForm');
-    Route::post('admin/personnel/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
+    Route::post('admin/personnel/update/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
     Route::get('/check-email-personne', [UserController::class, 'checkEmail_personne']);
     Route::get('admin/get-personne-email/{personnelId}', [UserController::class, 'getPersonneInfos'])->name('personne.get');
     Route::post('/SousDomaine_Domaine-ajax', [UserController::class, 'getDomaines']);
 
     Route::get('admin/users', [UserController::class, 'users'])->name('users.users');
     Route::get('admin/users/create', [UserController::class, 'create'])->name('users.create');
+    Route::post('/fetch-sous-domaine', [UserController::class, 'fetchSousDomaine'])->name('fetch.sous_domaine');
     Route::post('/admin/users/store', [UserController::class, 'store'])->name('users.store');
     Route::get('/check-username', [UserController::class, 'checkUsername']);
     Route::get('/check-email', [UserController::class, 'checkEmail']);
@@ -377,7 +381,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::delete('/admin/delete-user/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
     Route::get('/getIndicatif/{paysId}', [UserController::class, 'getIndicatif'])->name('getIndicatif');
 
-
+    Route::get('RecupererDonneesUser/{userId}', [ProjetController::class, 'getDonneUser'])->name('GetDonneeUser');
     /**************************** GESTION DES HABILITATIONS **********************************/
      Route::get('/admin/habilitations', [RoleAssignmentController::class, 'habilitations'])->name('habilitations.index');
      Route::get('/admin/role-assignment', [RoleAssignmentController::class, 'index'])->name('role-assignment.index');
@@ -451,4 +455,5 @@ Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middl
 //Routes changer de mot de passe accueil
 
 //génération du code geojson
-Route::get('/sig/{category?}', [GeoJSONController::class, 'showSIG']);
+Route::get('/sig', [GeoJSONController::class, 'showSIG'])->name('carte.sig');;
+Route::get('/filter-maps', [GeoJSONController::class, 'filter'])->name('filter.maps');

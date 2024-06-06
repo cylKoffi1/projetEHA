@@ -113,7 +113,7 @@
                         </thead>
 
                         <tbody>
-                            @foreach ($users as $user)
+                            @foreach ($users as $user )
                             <tr>
                                 <td>
                                     <div class="form-check">
@@ -123,11 +123,14 @@
                                     </div>
                                 </td>
                                 <td>
-                                    @if ($user->personnel->photo)
-                                    <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/".$user->personnel->photo) }}" alt="Photo">
-                                    @else
-                                    <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/user.png") }}" alt="Photo">
-                                    @endif
+                                        @if ($user->personnel)
+                                            @if($user->personnel->photo)
+                                            <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/".$user->personnel->photo) }}" alt="Photo">
+                                            @else
+                                            <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/user.png") }}" alt="Photo">
+                                            @endif
+                                        @endif
+
                                 </td>
                                 <td>{{ $user->login }}</td>
                                 @if ($user->latestFonction && $user->latestFonction->fonctionUtilisateur)
@@ -135,8 +138,8 @@
                                 @else
                                 <td></td>
                                 @endif
-                                <td>{{ $user->personnel->email }}</td>
-                                <td>{{ $user->personnel->telephone }}</td>
+                                <td>{{ $user->email }}</td>
+                                <td>@if($user->personnel && $user->personnel->telephone){{ $user->personnel->telephone }} @endif</td>
                                 <td>
                                     <div class="dropdown">
                                         <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">

@@ -263,21 +263,24 @@
                                         <input type="hidden" name="code_statut" class="form-control" id="codeStatutInput">
                                     </div>
                                 </div><br>
+
                                 <div class="row">
                                     <div class="col">
                                         <label for="district">District:</label>
                                         <select id="district" class="form-select" name="district" >
                                             <option value="">Sélectionner un district</option>
                                             @foreach ($districts as $district)
-                                            <option value="{{ $district->code }}">{{ $district->libelle }}</option>
+                                                <option value="{{ $district->code }}">{{ $district->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col">
                                         <label for="region">Région:</label>
                                         <select id="region" class="form-select" name="region">
-                                            <option value="">Sélectionner une région</option>
-
+                                        <option value="">Sélectionner une region</option>
+                                        @foreach ($regions as $region)
+                                            <option value="{{ $region->code }}">{{ $region->libelle }}</option>
+                                        @endforeach
                                         </select>
                                     </div>
 
@@ -287,7 +290,7 @@
                                             <label for="domaine">Domaine:</label>
                                             <select id="domaine" class="form-select" name="domaine">
                                                 <option value="">Sélectionner un domaine</option>
-                                                @foreach ($domaines as $domaine)
+                                                @foreach ($domaine_Info as $domaine)
                                                 <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
                                                 @endforeach
                                             </select>
@@ -296,6 +299,9 @@
                                         <label for="sous_domaine">Sous-domaine:</label>
                                         <select id="sous_domaine" name="sous_domaine" class="form-select">
                                             <option value="">Sélectionner un sous-domaine</option>
+                                            @foreach ($sous_domaine_Info as $sous_dom)
+                                            <option value="{{$sous_dom->code}}">{{$sous_dom->libelle}}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                 </div>
@@ -949,6 +955,7 @@
 <script src="{{ asset('assets/compiled/js/projet.js')}}"></script>
 <!--code js pour les dates systèmes-->
 <script>
+
     function formatCurrency(inputId) {
         // Récupérer la valeur actuelle du champ
         var inputValue = document.getElementById(inputId).value;
@@ -966,54 +973,10 @@
 
     ///////////////////////////DEFINITION DE PROJET ///////////////////
         // Script JavaScript pour la mise à jour dynamique des régions en fonction des districts
-        $(document).ready(function () {
-            $('#district').change(function () {
-                var districtCode = $(this).val();
 
-                // Requête AJAX pour obtenir les régions en fonction du district sélectionné
-                $.ajax({
-                    url: '/get-regions/' + districtCode,
-                    type: 'GET',
-                    success: function (data) {
-                        // Effacez les anciennes options de la liste des régions
-                        $('#region').empty();
-
-                        // Ajoutez l'option "Sélectionner une région" une seule fois
-                        $('#region').append('<option value="">Sélectionner une région</option>');
-
-                        // Ajoutez les nouvelles options basées sur les données reçues
-                        $.each(data, function (key, value) {
-                            $('#region').append('<option value="' + value.code + '">' + value.libelle + '</option>');
-                        });
-                    }
-                });
-            });
-        });
 
         // Script JavaScript pour la mise à jour dynamique des sous-domaines en fonction du domaine
-        $(document).ready(function () {
-            $('#domaine').change(function () {
-                var domaineCode = $(this).val();
 
-                // Requête AJAX pour obtenir les sous-domaines en fonction du domaine sélectionné
-                $.ajax({
-                    url: '/get-sous-domaines/' + domaineCode,
-                    type: 'GET',
-                    success: function (data) {
-                        // Effacez les anciennes options de la liste des sous-domaines
-                        $('#sous_domaine').empty();
-
-                        // Ajoutez l'option "Sélectionner un sous-domaine" une seule fois
-                        $('#sous_domaine').append('<option value="">Sélectionner un sous-domaine</option>');
-
-                        // Ajoutez les nouvelles options basées sur les données reçues
-                        $.each(data, function (key, value) {
-                            $('#sous_domaine').append('<option value="' + value.code + '">' + value.libelle + '</option>');
-                        });
-                    }
-                });
-            });
-        });
 
 
         $(document).ready(function() {

@@ -135,16 +135,12 @@ function initDataTable(userNameReplace, table, title) {
                                 {
                                     alignment: 'center',
                                     table: {
-                                        widths: ['33.33%', '33.33%', '33.33%'],hLineWidth: 0,
-                                        border: [false,false,false],
-                                        vLineWidth: 0,
+                                        widths: ['33.33%', '33.33%', '33.33%'],
                                         body: [
                                             // Première ligne
                                             [
                                                 {
-                                                    alignment: 'left',hLineWidth: 0,
-                                                    border: false,
-                                                    vLineWidth: 0,
+                                                    alignment: 'left',
                                                     stack: [
                                                         {
                                                             image: imagePath, // chemin de l'image

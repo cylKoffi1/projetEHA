@@ -84,6 +84,11 @@
                     <div class="alert alert-danger">
                         {{ session('error') }}
                     </div>
+                    @elseif (session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
+
                     @endif
 
                 </div>
@@ -136,14 +141,14 @@
                                                 @endforeach
                                             </select>
 
-                                            <select name="agence" id="agence" class="form-select" onclick="filterOptions('ministere')" style="display: none;">
+                                            <select name="agence" id="agence" class="form-select" onclick="filterOptions('agence_execution')" style="display: none;">
                                                 <option value="">Selectionner l'agence</option>
                                                 @foreach($agences as $agence)
                                                 <option value="{{ $agence->code_agence_execution }}">{{ $agence->nom_agence }}</option>
                                                 @endforeach
                                             </select>
 
-                                            <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('agence_execution')" style="display: none;">
+                                            <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('ministere')" style="display: none;">
                                                 <option value="">Selectionner le ministère</option>
                                                 @foreach($ministeres as $ministere)
                                                 <option value="{{ $ministere->code }}">{{ $ministere->libelle }}</option>
@@ -171,7 +176,7 @@
                                     <div class="form-group">
                                         <label for="niveau_acces_id">Champ d'exercice :</label>
                                         <select name="niveau_acces_id" id="niveau_acces_id" class="form-select" required>
-                                            {{-- <option value="">--- ---</option> --}}
+                                            <option value="">--- ---</option>
                                             @foreach($niveauxAcces as $niveauAcces)
                                             <option value="{{ $niveauAcces->id }}">{{ $niveauAcces->libelle }}</option>
                                             @endforeach
@@ -180,11 +185,12 @@
                                 </div>
                                 <div class="col">
                                     <div class="form-group">
-                                        <label for="niveau_acces_id" id="niveau_acces_id_label">Région :</label>
+                                        <label for="niveau_acces_id" id="niveau_acces_id_label">Lieu d'exercice :</label>
                                         <select name="reg" id="reg" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($regions as $region)
                                             <option value="{{ $region->code }}">{{ $region->libelle }}</option>
+
                                             @endforeach
                                         </select>
                                         <select name="dis" id="dis" class="form-select" style="display: none;">
@@ -196,7 +202,7 @@
                                         <select name="dep" id="dep" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($departements as $dep)
-                                            <option value="{{ $dep->code }}">{{ $dep->libelle }}</option>
+                                            <option value="{{ $dep->code }}" >{{ $dep->libelle }}</option>
                                             @endforeach
                                         </select>
                                         <select name="na" id="na" class="form-select" style="display: none;">
@@ -294,42 +300,7 @@
 
 
 
-        // $('#personnelFormn').on('submit', function(event) {
-        //     event.preventDefault();
-        //     // var data = $('#personnelForm').serialize();
-        //     // var expertises = sous_dom.getSelectedOptionsAsJson(); // Correction ici
 
-        //     // Récupérer les données du formulaire
-        //     var formData = $('#personnelForm').serializeArray();
-
-
-        //     // Créer un objet JavaScript avec les données
-        //     var requestData = {
-        //         'data': formData
-        //     };
-
-        //     // Convertir l'objet JavaScript en chaîne JSON
-        //     var jsonData = JSON.stringify(requestData);
-        //     console.log(jsonData);
-        //     $.ajax({
-        //         type: 'post'
-        //         , url: "{{ route('personnel.store') }}"
-        //         , contentType: 'application/json', // Indiquer que vous envoyez du JSON
-        //         data: jsonData
-        //         , headers: {
-        //             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        //         }
-        //         , beforeSend: function() {
-        //             $('#create_new').html('....Please wait');
-        //         }
-        //         , success: function(response) {
-        //             alert(response.success);
-        //         }
-        //         , complete: function(response) {
-        //             $('#create_new').html('Create New');
-        //         }
-        //     });
-        // });
 
         $("#bai").prop("checked", true);
         showSelect('bailleur');
@@ -340,13 +311,13 @@
         $('#niveau_acces_id').on('change', function() {
             showSelect_r($(this).val());
             $('#na').val(110);
-            $("#na").prop("disabled", true);
+            $("#na").prop("disabled", false);
         });
         $('#niveau_acces_id').trigger('change');
 
         $('#bailleur').on('change', function () {
             showSelect_r('na');
-            $("#niveau_acces_id").prop("disabled", true);
+            $("#niveau_acces_id").prop("disabled", false);
             $('#na').val(110);
         });
         $('#agence').on('change', function () {

@@ -186,21 +186,20 @@
         if (confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
             // Envoyer une requête AJAX pour supprimer l'utilisateur
             $.ajax({
-                url: '/admin/personnel/' + code_personnel, // Correction de l'URL de la requête
-                data: {
-                    _token: '{{ csrf_token() }}'
+                type: 'DELETE',
+                url: '/admin/personnel/' + code_personnel,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function(response) {
-                     // Réponse réussie de votre endpoint
+                    // Rediriger vers une autre page ou rafraîchir la page actuelle si nécessaire
                     $('#alertMessage').text("Utilisateur avec le code " + code_personnel + " supprimé avec succès.");
                     $('#alertModal').modal('show');
-
-                    // Actualiser la page après la suppression
-                    location.reload();
+                    window.location.reload();
                 },
-                error: function(error) {
-                    console.error('Erreur lors de la suppression de l\'utilisateur avec le code ' + code_personnel + ':', error);
-                    // Gérez les erreurs ici
+                error: function(xhr, status, error) {
+                    console.error(xhr.responseText);
+                    alert('Une erreur s\'est produite lors de la suppression de l\'utilisateur.');
                 }
             });
         }

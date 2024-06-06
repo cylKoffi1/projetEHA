@@ -167,7 +167,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Vallée du Bandama",
-                "NAME_2": "Gbêkê",
+                "NAME_2": "Gbeke",
                 "PROJET_NUM": 6,
                 "AEP": 0,
                 "AD": 1,
@@ -185,7 +185,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Bas-Sassandra",
-                "NAME_2": "Gbôklé",
+                "NAME_2": "Gbôkle",
                 "PROJET_NUM": 31,
                 "AEP": 30,
                 "AD": 1,
@@ -221,7 +221,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Zanzan",
-                "NAME_2": "Gontougou",
+                "NAME_2": "Gontougo",
                 "PROJET_NUM": 18,
                 "AEP": 13,
                 "AD": 2,
@@ -239,7 +239,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lagunes",
-                "NAME_2": "Grands-Ponts",
+                "NAME_2": "Grands Ponts",
                 "PROJET_NUM": 1,
                 "AEP": 0,
                 "AD": 1,
@@ -401,7 +401,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lagunes",
-                "NAME_2": "Mé",
+                "NAME_2": "La Mé",
                 "PROJET_NUM": 12,
                 "AEP": 11,
                 "AD": 1,
@@ -455,7 +455,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lacs",
-                "NAME_2": "N'Zi",
+                "NAME_2": "N'zi",
                 "PROJET_NUM": 34,
                 "AEP": 34,
                 "AD": 0,
@@ -491,7 +491,7 @@ var statesDataRegionsBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Comoé",
-                "NAME_2": "Sud-Comoé",
+                "NAME_2": "Sud Comoé",
                 "PROJET_NUM": 27,
                 "AEP": 27,
                 "AD": 0,

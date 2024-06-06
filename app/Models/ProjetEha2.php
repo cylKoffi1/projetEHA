@@ -27,6 +27,20 @@ class ProjetEha2 extends Model
         'code_devise',
         'code_district'
     ];
+    public function agences()
+    {
+        return $this->hasMany(ProjetAgence::class, 'code_projet', 'CodeProjet');
+    }
+
+
+    public function district()
+    {
+        return $this->belongsTo(District::class, 'code_district', 'code');
+    }
+    public function region()
+    {
+        return $this->belongsTo(Region::class, 'code_region', 'code');
+    }
     public function domaine()
     {
         return $this->belongsTo(Domaine::class, 'code_domaine', 'code');
@@ -80,7 +94,7 @@ class ProjetEha2 extends Model
 
     public function latestStatutProjet()
     {
-        return $this->hasOne(ProjetStatutProjet::class, 'code_projet')
+        return $this->hasMany(ProjetStatutProjet::class, 'code_projet')
             ->latest('date')
             ->orderBy('date', 'desc');
     }

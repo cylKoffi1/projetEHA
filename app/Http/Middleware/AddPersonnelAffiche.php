@@ -105,7 +105,12 @@ class AddPersonnelAffiche
 
                     break;
                 case 'mr': // Maire
-                    $personnelAffiche='';
+                    $maire = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                    if ($maire) {
+                        // Si le ministere est trouvée, récupérer son libellé depuis la table Region
+                        $maireInfo = Bailleur::where('code_bailleur', $maire->code_structure)->first();
+                        $personnelAffiche = $maireInfo ? $maireInfo->libelle_long : '---';
+                    }
                     break;
                 case 'pr': // Président
                     $personnelAffiche='';

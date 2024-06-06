@@ -46,6 +46,10 @@ class User extends Authenticatable
     {
         $this->update(['is_active' => false]);
     }
+    public function structureRattachement()
+    {
+        return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel');
+    }
 
     public function personnel()
     {

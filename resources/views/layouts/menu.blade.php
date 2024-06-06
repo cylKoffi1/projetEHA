@@ -21,15 +21,15 @@
 				            <!-- Collect the nav links, forms, and other content for toggling -->
 				            <div class="collapse navbar-collapse menu-ui-design" id="navbar-menu">
 				                <ul class="nav navbar-nav navbar-right" data-in="fadeInDown" data-out="fadeOutUp">
-				                    <li ><a href="/sig/{category?}">SIG-EHA</a></li>
+				                    <li ><a href="{{ url('/sig') }} ">SIG-EHA</a></li>
                                     <li class="dropdown">
                                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">Projets &dtrif;</a>
                                         <ul class="dropdown-menu">
-                                            <li><a href="/projetDistricts">Districts</a></li>
+                                            <li><a href="{{ url('/projetDistricts')}}">Districts</a></li>
                                             <li><a href="#">Régions</a></li>
                                         </ul>
                                     </li>
-				                    <li ><a href="/connexion">Connexion</a></li>
+				                    <li ><a href="{{ url('/connexion') }}">Connexion</a></li>
 
 
 				                </ul><!--/.nav -->

@@ -11,6 +11,7 @@ class BailleursProjet extends Model
     protected $primaryKey = 'id';
     public $timestamps = false; // Si vos tables n'ont pas de colonnes
     protected $fillable = [ 'code_bailleur', 'code_projet', 'code_devise', 'montant','commentaire','partie','type_financement','Num_ordre'];
+
     public function bailleurss()
     {
         return $this->hasMany(Bailleur::class, 'code_bailleur', 'code_bailleur');

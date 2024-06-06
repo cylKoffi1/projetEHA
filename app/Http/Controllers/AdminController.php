@@ -7,6 +7,7 @@ use App\Models\Ecran;
 use App\Models\ProjetEha2;
 use App\Models\ProjetStatutProjet;
 use App\Models\Rubriques;
+use App\Models\StatutProjet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
@@ -16,7 +17,7 @@ class AdminController extends Controller
 
     public function index()
     {
-        $depenses = DepenseRealisee::all();
+
         $projets = ProjetEha2::all();
         $projets_prevus = ProjetStatutProjet::where("code_statut_projet", "01")->get();
         $projets_en_cours = ProjetStatutProjet::where("code_statut_projet", "02")->get();
@@ -24,24 +25,14 @@ class AdminController extends Controller
         $projets_cloture = ProjetStatutProjet::where("code_statut_projet", "04")->get();
         $projets_suspendus = ProjetStatutProjet::where("code_statut_projet", "05")->get();
         $projets_redemarrer = ProjetStatutProjet::where("code_statut_projet", "06")->get();
-        $categories = $depenses->pluck('annee')->toArray();
 
-        $dataTotalEHA = [];
-        $dataExterieurEHA = [];
-        $dataTresorCIVEHA = [];
-        $depensesPrevueTresor = $depenses->pluck('depense_prevue_tresor')->toArray();
-        $depensesPrevueExt = $depenses->pluck('depense_prevue_ext')->toArray();
-        $totalDepensesPrevue = [];
-        foreach ($depenses as $depense) {
-            $dataTotalEHA[] = $depense->depense_realisee_tresor + $depense->depense_realisee_ext;
-            $totalDepensesPrevue[] = $depense->depense_prevue_tresor + $depense->depense_prevue_ext;
-            $dataExterieurEHA[] = $depense->depense_realisee_ext;
-            $dataTresorCIVEHA[] = $depense->depense_realisee_tresor;
-        }
+
+        $statuts = StatutProjet::all();
+
 
         $ecran = Ecran::find(29);
         $ecrans = Ecran::all();
-        return view('dash', compact('categories', 'ecran', 'ecrans', 'projets_prevus', 'projets_en_cours', 'projets_annulé', 'projets_cloture', 'projets_suspendus', 'projets_redemarrer', 'projets', 'dataTotalEHA', 'dataExterieurEHA', 'dataTresorCIVEHA', 'depensesPrevueTresor', 'depensesPrevueExt', 'totalDepensesPrevue'));
+        return view('dash', compact( 'ecran', 'ecrans','statuts', 'projets_prevus', 'projets_en_cours', 'projets_annulé', 'projets_cloture', 'projets_suspendus', 'projets_redemarrer', 'projets'));
     }
 
 

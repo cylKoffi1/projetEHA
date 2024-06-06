@@ -58,7 +58,7 @@
 
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000;  width: 100%; height: 90px; background-color: #435ebe;">
     <div class="container-fluid" style="align-items: center;">
-        <a class="navbar-brand" href="/" style="color: white;">
+        <a class="navbar-brand" href="{{ url('/')}}" style="color: white;">
             <img src="{{ asset('betsa/assets/images/ehaImages/armoirie.png')}}" style="width: 40px; height: auto; margin-right: 15px;" alt="" />GERAC-EHA
         </a>
         <span style="color: #F1C40F; display: flex; flex-direction: column; align-items: center;">
@@ -73,7 +73,7 @@
 
 
         <header class="mb-3 navbar-toggler">
-            <a href="#" class="burger-btn d-block d-xl-none">
+            <a href="{{ url('#')}}" class="burger-btn d-block d-xl-none">
                 {{-- <i class="bi bi-justify fs-3"></i> --}}
                 <span class="navbar-toggler-icon"></span>
             </a>
@@ -82,7 +82,7 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         {{-- <div class="sidebar-toggler  x">
-            <a href="#" class="sidebar-hide d-xl-none d-block"><i class="bi bi-x bi-middle"></i></a>
+            <a href="{{ url('#')}}" class="sidebar-hide d-xl-none d-block"><i class="bi bi-x bi-middle"></i></a>
         </div> --}}
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -93,11 +93,11 @@
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 profile-menu" style="align-items: center">
 
                 <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="/admin">Accueil</a>
+                    <a class="nav-link" style="color: white;" href="{{ url('/admin')}}">Accueil</a>
                 </li>
 
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" style="display: flex; align-items: center;" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" href="{{ url('#')}}" id="navbarDropdown" style="display: flex; align-items: center;" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 
 
 
@@ -121,13 +121,13 @@
                         <!--  <i class="fas fa-user"></i> -->
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="/admin/users/details-user/{{ auth()->user()->id }}?ecran_id={{ $ecran->id }}"><i class="fas fa-sliders-h fa-fw"></i> Mon compte</a></li>
-                        <li><a class="dropdown-item" href="/admin/users/details-user/{{ auth()->user()->id }}?ecran_id={{ $ecran->id }}"><i class="fas fa-cog fa-fw"></i> Réglages</a></li>
+                        <li><a class="dropdown-item" href="{{ url('/admin/users/details-user/' . auth()->user()->id . '?ecran_id=' . $ecran->id) }}"><i class="fas fa-sliders-h fa-fw"></i> Mon compte</a></li>
+                        <li><a class="dropdown-item" href="{{ url('/admin/users/details-user/' . auth()->user()->id . '?ecran_id=' . $ecran->id) }}"><i class="fas fa-cog fa-fw"></i> Réglages</a></li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
                         <li class="sidebar-item  ">
-                            <a class="dropdown-item" href="#" onclick="logout('logout-form')">
+                            <a class="dropdown-item" href="{{ url('#')}}" onclick="logout('logout-form')">
                                 <i class="bi bi-box-arrow-left"></i> Déconnexion
                             </a>
                             <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
@@ -142,13 +142,13 @@
             @else
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 profile-menu" style="align-items: center">
                 <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="/sig">SIG-EHA</a>
+                    <a class="nav-link" style="color: white;" href="{{ url('/sig')}}">SIG-EHA</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="/">Accueil</a>
+                    <a class="nav-link" style="color: white;" href="{{ url('/')}}">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="/connexion">Connexion</a>
+                    <a class="nav-link" style="color: white;" href="{{ url('/connexion')}}">Connexion</a>
                 </li>
             </ul>
             @endif

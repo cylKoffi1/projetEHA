@@ -23,7 +23,10 @@ class Personnel extends Model
         'domaine_activite',
         'photo',
     ];
-
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'code_personnel', 'code_personnel');
+    }
     public function lastStructure()
     {
         return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel')

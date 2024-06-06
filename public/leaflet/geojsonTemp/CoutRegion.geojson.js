@@ -50,7 +50,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Bas-Sassandra",
-                "NAME_2": "Gbôklé",
+                "NAME_2": "Gbôkle",
                 "MontantTotal": "13466179532",
                 "AEP": "13195440092",
                 "AD": "270739440",
@@ -110,7 +110,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Comoé",
-                "NAME_2": "Sud-Comoé",
+                "NAME_2": "Sud Comoé",
                 "MontantTotal": "9357105428",
                 "AEP": "9357105428",
                 "AD": "0",
@@ -230,7 +230,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lacs",
-                "NAME_2": "N'Zi",
+                "NAME_2": "N'zi",
                 "MontantTotal": "30007851684",
                 "AEP": "30007851684",
                 "AD": "0",
@@ -275,7 +275,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Vallée du Bandama",
-                "NAME_2": "Gbêkê",
+                "NAME_2": "Gbeke",
                 "MontantTotal": "214248957",
                 "AEP": "0",
                 "AD": "179955116",
@@ -290,7 +290,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lagunes",
-                "NAME_2": "Grands-Ponts",
+                "NAME_2": "Grands Ponts",
                 "MontantTotal": "79949730",
                 "AEP": "0",
                 "AD": "79949730",
@@ -305,7 +305,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lagunes",
-                "NAME_2": "Mé",
+                "NAME_2": "La Mé",
                 "MontantTotal": "6855739539",
                 "AEP": "6748073007",
                 "AD": "107666532",
@@ -485,7 +485,7 @@ var montantRegion = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Zanzan",
-                "NAME_2": "Gontougou",
+                "NAME_2": "Gontougo",
                 "MontantTotal": "277173320",
                 "AEP": "0",
                 "AD": "277173320",

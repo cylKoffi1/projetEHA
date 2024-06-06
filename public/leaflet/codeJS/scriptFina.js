@@ -44,7 +44,6 @@ function initMapFina() {
 
     }
 
-
     // Actions au survol de la souris
     var statesDataDistrictsGeoJs = L.geoJson(statesDataDistricts, {
         pointToLayer: function (feature, latlng) {
@@ -53,7 +52,7 @@ function initMapFina() {
                 radius: radius,
                 color: '#fff',
                 fillOpacity: 1,
-                fillColor: getColorBystatesDataDistricts(feature.properties.MontantTotal)
+                fillColor: getColorBystatesDataDistricts(feature.properties.NAME_1)
             });
         },
         style: styleDist,
@@ -219,7 +218,17 @@ function initMapFina() {
             EHAEEn: district.properties.EHAEEn || 0,
             REE: district.properties.REE || 0,
             RCPE: district.properties.RCPE || 0,
-            MONTANT: district.properties.MontantTotal || 0
+            MontantTotal: district.properties.MontantTotal || 0,
+            CoutProjet: district.properties.CoutProjet || 0,
+            AEP_T: district.properties.AEP_T || 0,
+            AD_T: district.properties.AD_T || 0,
+            HY_T: district.properties.HY_T || 0,
+            EHAES_T: district.properties.EHAES_T || 0,
+            EHAEE_T: district.properties.EHAEE_T || 0,
+            EHAEEn_T: district.properties.EHAEEn_T || 0,
+            REE_T: district.properties.REE_T || 0,
+            RCPE_T: district.properties.RCPE_T || 0,
+            MontantTotal_T: district.properties.MontantTotal_T || 0
         } : {
             AEP: 0,
             AD: 0,
@@ -229,7 +238,17 @@ function initMapFina() {
             EHAEEn: 0,
             REE: 0,
             RCPE: 0,
-            MONTANT: 0
+            MontantTotal: 0,
+            CoutProjet: 0,
+            AEP_T: 0,
+            AD_T: 0,
+            HY_T: 0,
+            EHAES_T: 0,
+            EHAEE_T: 0,
+            EHAEEn_T: 0,
+            REE_T: 0,
+            RCPE_T: 0,
+            MontantTotal_T: 0
         };
     }
     function getRegionInfo(regionCode) {
@@ -246,6 +265,7 @@ function initMapFina() {
             EHAEEn: region.properties.EHAEEn || 0,
             REE: region.properties.REE || 0,
             RCPE: region.properties.RCPE || 0,
+            MontantTotal: region.properties.MontantTotal || 0,
         } : {
             AEP: 0,
             AD: 0,
@@ -255,6 +275,7 @@ function initMapFina() {
             EHAEEn: 0,
             REE: 0,
             RCPE: 0,
+            MontantTotal: 0
         };
     }
 
@@ -269,193 +290,299 @@ function initMapFina() {
         info.update(region.properties);
     }
 
+
     info.update = function (props) {
         var districtInfo = getDistrictInfo(props ? props.NAME_1 : '');
         var regionInfo = getRegionInfo(props ? props.NAME_2:'');
-
-        var calculatePercentage = function (value) {
-            return (districtInfo.MONTANT !== 0) ? ((value / districtInfo.MONTANT) * 100).toFixed(2) + '%' : '0%';
-        };
         var formatNumberWithSpaces =function (value) {
             return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         }
-        var calculatePercentageR = function (value, total = districtInfo.MONTANT) {
-            return (total !== 0) ? ((value / total) * 100).toFixed(2) + '%' : '0%';
+        function displayValue(value) {
+            // Vérifie si la valeur est égale à 0 ou à 0.00
+            if (value === 0 || value === 0.00) {
+                return '-';
+            } else {
+                return value;
+            }
+        }
+        var calculatePercentageR = function (value, total ) {
+            return (total !== 0) ? ((value / total) * 100).toFixed(2) + '' : '-';
         };
-
         // Condition pour déterminer si c'est une région ou un district
         var isRegion = props && props.NAME_2;
+        var isDepaterment = props && props.NAME_3;
 
         this._div.innerHTML = `
+
         <table>
             <thead>
                 <tr>
-                    <th style="text-align: right;"></th>
+                    <th style="text-align: left;"></th>
                     <td></td>
                 </tr>
                 <tr>
-                    <th style="text-align: right;">District: </th>
+                    <th style="text-align: left;">District: </th>
                     <td>${props ? props.NAME_1 : '---'}</td>
                 </tr>
                 <tr>
-                    <th style="text-align: right;">Region :</th>
+                    <th style="text-align: left;">Region :</th>
                     <td>${props ? props.NAME_2 : '---'}</td>
                 </tr>
                 <tr>
-                    <th style="text-align: right;">Département :</th>
+                    <th style="text-align: left;">Département :</th>
                     <td>${props ? props.NAME_3 : '---'}</td>
                 </tr>
             </thead>
         </table>
-        <table>
+    <table style="border-collapse: collapse; width: 100%;">
+        <thead>
+        <tr>
+                <th ></th>
+                <th ></th>
+                <th colspan="3" style="border: 1px solid black; text-align: center;">%</th>
 
+            </tr>
+            <tr>
+                <th class="col" style=""></th>
+                <th  class="wide-column" style="border: 1px solid black; text-align: center; font-size:12px; width: 105px;"">Coût (million)</th>
+                <th class="col" style="border: 1px solid black; text-align: center; font-size:12px;  width:50px;"">District</th>
+                <th class="col" style="border: 1px solid black; text-align: center;  font-size:12px; width:50px;"">Région</th>
+                <th class="col" style="border: 1px solid black; text-align: center; font-size:12px;  width:50px;"">Départ</th>
+            </tr>
 
+        </thead>
+        <tbody>
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
 
-            <thead>
-                <tr>
-                    <th class="col"></th>
-                    <th class="col">Cout Projet </th>
-                    <th class="col">'  '</th>
-                    <th class="col" style="text-align: right;"> % </th>
-                </tr>
-            </thead>
-            <tbody>
+                `
+                : isRegion
+                ? `
+                    <tr>    
+                        <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.AEP/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AEP, districtInfo.AEP_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AEP, districtInfo.AEP)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.AEP/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.AEP, districtInfo.AEP_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
 
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                            <td>${formatNumberWithSpaces(regionInfo.AEP)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.AEP)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                            <td>${formatNumberWithSpaces(districtInfo.AEP)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.AEP)}</td>
-                        </tr>
-                    `
-                }
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                            <td>${formatNumberWithSpaces(regionInfo.AD)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.AD)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                            <td>${formatNumberWithSpaces(districtInfo.AD)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.AD)}</td>
-                        </tr>
-                    `
-                }
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Hygiène :</th>
-                            <td>${formatNumberWithSpaces(regionInfo.HY)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.HY)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Hygiène :</th>
-                            <td>${formatNumberWithSpaces(districtInfo.HY)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.HY)}</td>
-                        </tr>
-                    `
-                }
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                            <td>${formatNumberWithSpaces(regionInfo.REE)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.REE)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                            <td>${formatNumberWithSpaces(districtInfo.REE)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.REE)}</td>
-                        </tr>
-                    `
-                }
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
-                            <td>${formatNumberWithSpaces(regionInfo.EHAES)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.EHAES)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">EHA dans les Etablissements de Santé :</th>
-                            <td>${formatNumberWithSpaces(districtInfo.EHAES)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.EHAES)}</td>
-                        </tr>
-                    `
-                }
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
-                            <td>${formatNumberWithSpaces(regionInfo.EHAEE)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.EHAEE)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">EHA dans les Etablissements d’Enseignement :</th>
-                            <td>${formatNumberWithSpaces(districtInfo.EHAEE)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.EHAEE)}</td>
-                        </tr>
-                    `
-                }
-                ${
-                    isRegion
-                    ? `
-                        <tr>
-                            <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
-                            <td>${formatNumberWithSpaces(regionInfo.EHAEEn)}</td>
-                            <td></td>
-                            <td>${calculatePercentageR(regionInfo.EHAEEn)}</td>
-                        </tr>
-                    `
-                    : `
-                        <tr>
-                            <th class="row22" style="text-align: right;">EHA dans les autres Entités :</th>
-                            <td>${formatNumberWithSpaces(districtInfo.EHAEEn)}</td>
-                            <td></td>
-                            <td>${calculatePercentage(districtInfo.EHAEEn)}</td>
-                        </tr>
-                    `
-                }
-            </tbody>
-        </table>
+                `
+                : isRegion
+                ?  `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
+                        <th  class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.AD/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AD, districtInfo.AD_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AD, districtInfo.AD)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.AD/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.AD, districtInfo.AD_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Hygiène :</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
+
+                `
+                : isRegion
+                ?  `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Hygiène :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.HY/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.HY, districtInfo.HY_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.HY, districtInfo.HY)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Hygiène :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.HY/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.HY, districtInfo.HY_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Ressource en eau :</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
+
+                `
+                : isRegion
+                ?  `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Ressource en eau :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.REE/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.REE, districtInfo.REE_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.REE, districtInfo.REE)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">Ressource en eau :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.REE/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.REE, districtInfo.REE_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA Etb de Santé :</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
+
+                `
+                : isRegion
+                ?  `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA Etb de Santé :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.EHAES/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAES, districtInfo.EHAES_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAES, districtInfo.EHAES)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA Etb de Santé :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.EHAES/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.EHAES, districtInfo.EHAES_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA Etb d’Enseignement :</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
+
+                `
+                : isRegion
+                ?  `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA Etb d’Enseignement :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.EHAEE/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEE, districtInfo.EHAEE_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEE, districtInfo.EHAEE)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA Etb d’Enseignement :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.EHAEE/1000000).toFixed(3)  || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.EHAEE, districtInfo.EHAEE_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+
+            ${
+                isDepaterment
+                ? `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA autres Entités :</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                    </tr>
+
+                `
+                : isRegion
+                ?  `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA autres Entités :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.EHAEEn/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEEn, districtInfo.EHAEEn_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.EHAEEn, districtInfo.EHAEEn)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+                : `
+                    <tr>
+                        <th class="row22" style="text-align: right;">EHA autres Entités :</th>
+                        <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((districtInfo.EHAEEn/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(districtInfo.EHAEEn, districtInfo.EHAEEn_T)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">-</th>
+                    </tr>
+                `
+            }
+
+        </tbody>
+    </table>
+
     `;
 
     // Ajoutez du style CSS pour aligner les ":" à droite
@@ -466,8 +593,6 @@ function initMapFina() {
 
 
     info.addTo(mapFina);
-
-
 
 
     // Fonction de style pour les régions
@@ -542,16 +667,37 @@ function initMapFina() {
         updateDepartementsLayer(selectedRegionCode);
     }
 
+// Fonction pour déterminer la couleur en fonction du nombre de projets
+function getColorByProjectCount(projectCount) {
+    // Utilisez une échelle de couleurs en fonction du nombre de projets
+    var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8); // Utilise Chroma.js pour créer une échelle de couleurs
+    var colorIndex;
 
-    // Fonction pour obtenir la couleur en fonction du nombre de projets dans le district
+    if (projectCount >= 40000000000) {
+        colorIndex = 7; // Montant très élevé (rouge)
+    } else if (projectCount >= 20000000000) {
+        colorIndex = 6; // Montant élevé (orange)
+    } else if (projectCount >= 10000000000) {
+        colorIndex = 5; // Montant important (jaune)
+    } else if (projectCount >= 5000000000) {
+        colorIndex = 4; // Montant moyen à élevé (vert)
+    } else if (projectCount >= 2000000000) {
+        colorIndex = 3; // Montant moyen (violet)
+    } else if (projectCount >= 1000000000) {
+        colorIndex = 2; // Montant bas à moyen (bleu)
+    } else if (projectCount >= 10000000) {
+        colorIndex = 1; // Montant bas (beige foncé)
+    } else {
+        colorIndex = 0; // Aucun montant (beige)
+    }
 
 
+    return colorScale[colorIndex];
+}
 
-
-
-    // Fonction de style pour les districts en utilisant le dégradé de couleurs
-    function styleDist(feature) {
-        var isHighlighted = feature.properties.highlighted;
+// Fonction pour styliser les districts sur la carte
+function styleDist(feature) {
+    var isHighlighted = feature.properties.highlighted;
 
         if (isHighlighted) {
             // Couleur fixe pour les districts en surbrillance
@@ -576,92 +722,62 @@ function initMapFina() {
     }
 
 
-    // Fonction pour réinitialiser la surbrillance du district
-    function resetDistrictHighlight() {
-        statesDataDistrictsGeoJs.eachLayer(function (layer) {
-            layer.feature.properties.highlighted = false;
-            statesDataDistrictsGeoJs.resetStyle(layer);
-        });
-    }
+// Fonction pour réinitialiser la surbrillance du district
+function resetDistrictHighlight() {
+    statesDataDistrictsGeoJs.eachLayer(function (layer) {
+        layer.feature.properties.highlighted = false;
+        statesDataDistrictsGeoJs.resetStyle(layer);
+    });
+}
 
+// Fonction pour obtenir le nombre de projets dans un district donné
+function getProjectCount(districtName) {
+    var district = montantBD.features.find(function (feature) {
+        return feature.properties.NAME_1 === districtName;
+    });
 
-    // à supprimer
-    function getProjectCount(districtName) {
-        var district = montantBD.features.find(function (feature) {
-            return feature.properties.NAME_1 === districtName;
-        });
+    var projectCount = district ? district.properties.CoutProjet : 0;
+    return projectCount;
+}
+// Fonction pour ajouter une légende à la carte
+var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8);
 
-        var projectCount = district ? district.properties.MontantTotal : 0;
-        return projectCount;
-    }
+function addLegend() {
+    var legend = L.control({ position: 'bottomright' });
 
+    legend.onAdd = function (map) {
+        var div = L.DomUtil.create('div', 'legend');
+        var labels = [];
 
+        // Ajouter le titre de la légende
+        div.innerHTML += '<h4>LEGENDE</h4>';
+        div.innerHTML += '<p>Coût de projet en (million)</p>';
 
+        // Ajouter les couleurs et les étiquettes
+        var projectRanges = ['0', '5', '10', '20', '25', '30', '35', '40'];
 
-
-
-    // Ajout de la légende à la carte
-    function getColorByProjectCount(projectCount) {
-        // Utilisez une échelle de couleurs en fonction du nombre de projets
-        var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8); // Utilise Chroma.js pour créer une échelle de couleurs
-        var colorIndex;
-
-        if (projectCount >= 40000000000) {
-            colorIndex = 7; // 300 et plus rouge
-        } else if (projectCount >= 35000000000) {
-            colorIndex = 6; // 155 à 299 orange
-        } else if (projectCount >= 30000000000) {
-            colorIndex = 5; // 100 à 154 jaune
-        } else if (projectCount >= 25000000000) {
-            colorIndex = 4; // 60 à 99 vert
-        } else if (projectCount >= 15000000000) {
-            colorIndex = 3; // 40 à 59 violet
-        } else if (projectCount >= 10000000000) {
-            colorIndex = 2; // 20 à 39 bleu
-        } else if (projectCount >= 5000000000) {
-            colorIndex = 1; // 1 à 19 beige foncé
-        } else {
-            colorIndex = 0; // 0 beige
+        for (var i = 0; i < colorScale.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + colorScale[i] + '"></i> ' +
+                projectRanges[i] + (projectRanges[i + 1] ? '&ndash;' + projectRanges[i + 1] + '<br>' : '+');
         }
 
-        return colorScale[colorIndex];
-    }
+        return div;
+    };
 
-    function addLegend() {
-        var legend = L.control({ position: 'bottomright' });
-
-        legend.onAdd = function (mapFina) {
-            var div = L.DomUtil.create('div', 'legend');
-            var labels = [];
-
-            // Ajouter le titre de la légende
-            div.innerHTML += '<h4>LEGENDE</h4>';
-            div.innerHTML += '<p>Coût de projet en million</p>';
+    legend.addTo(mapFina);
+}
 
 
-            // Ajouter les couleurs et les étiquettes
-            var colorScale = chroma.scale(['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000']).mode('lch').colors(8); // Utilise Chroma.js pour créer une échelle de couleurs
-            var projectRanges = [' 0 ', ' 5 ', ' 15 ', ' 20 ', ' 25 ', ' 30 ', '35 ', '40 '];
 
-            for (var i = 0; i < colorScale.length; i++) {
-                div.innerHTML +=
-                    '<i style="background:' + colorScale[i] + '"></i> ' +
-                    projectRanges[i] + (projectRanges[i + 1] ? '&ndash;' + projectRanges[i + 1] + '<br>' : '+');
-            }
-
-            return div;
-        };
-
-        legend.addTo(mapFina);
-    }
-
-    addLegend();
+// Appeler la fonction pour ajouter la légende à la carte
+addLegend();
 
 }
 
 
 // Ajoutez une variable globale pour stocker le layer actuel
-var currentLayer = 'Nombre';
+var currentLayer = 'Finance';
 
 // Fonction pour changer la couche en fonction de la sélection de l'utilisateur
 function changeMapLayerJS(layerType) {
@@ -669,9 +785,9 @@ function changeMapLayerJS(layerType) {
     currentLayer = layerType;
 
     // Supprimez toutes les couches existantes sauf la carte
-    map.eachLayer(function (layerType) {
-        if (layerType !== map) {
-            map.removeLayer(layerType);
+    mapFina.eachLayer(function (layerType) {
+        if (layerType !== mapFina) {
+            mapFina.removeLayer(layerType);
         }
     });
 

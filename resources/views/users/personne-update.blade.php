@@ -75,8 +75,8 @@
                 </div>
                 <div class="card-content">
                     <div class="card-body">
-                        <form class="form" method="POST" enctype="multipart/form-data" action="{{ route('personne.update', ['personnelId' => $personne->code_personnel]) }}">
-                            @csrf
+                    <form class="form" method="POST" enctype="multipart/form-data" action="{{ route('personne.update', ['personnelId' => $personne->code_personnel]) }}">
+                        @csrf
                         <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                             <div class="row">
                                 <div class="col">
@@ -108,21 +108,21 @@
                                         <label for="min">M :</label>
                                         <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')" {{ $structureRattachement->type_structure == 'ministere' ? 'checked' : '' }}>
 
-                                        <select name="bailleur" id="bailleur" class="form-select" style="{{ $structureRattachement->type_structure == 'bailleurss' ? '' : 'display: none;' }}">
+                                        <select name="bailleur" id="bailleur" class="form-select"  onclick="filterOptions('bailleurss')" style="{{ $structureRattachement->type_structure == 'bailleurss' ? '' : 'display: none;' }}">
                                             <option value="">Selectionner le bailleur</option>
                                             @foreach($bailleurs as $bailleur)
                                             <option value="{{ $bailleur->code_bailleur }}" {{ $structureRattachement->code_structure == $bailleur->code_bailleur ? 'selected' : '' }}>{{ $bailleur->libelle_long }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="agence" id="agence" class="form-select" style="{{ $structureRattachement->type_structure == 'agence_execution' ? '' : 'display: none;' }}">
+                                        <select name="agence" id="agence" class="form-select" onclick="filterOptions('agence_execution')" style="{{ $structureRattachement->type_structure == 'agence_execution' ? '' : 'display: none;' }}">
                                             <option value="">Selectionner l'agence</option>
                                             @foreach($agences as $agence)
                                             <option value="{{ $agence->code_agence_execution }}" {{ $structureRattachement->code_structure == $agence->code_agence_execution ? 'selected' : '' }}>{{ $agence->nom_agence }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="ministere" id="ministere" class="form-select" style="{{ $structureRattachement->type_structure == 'ministere' ? '' : 'display: none;' }}">
+                                        <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('ministere')" style="{{ $structureRattachement->type_structure == 'ministere' ? '' : 'display: none;' }}">
                                             <option value="">Selectionner le ministère</option>
                                             @foreach($ministeres as $ministere)
                                             <option value="{{ $ministere->code }}" {{ $structureRattachement->code_structure == $ministere->code ? 'selected' : '' }}>{{ $ministere->libelle }}</option>
@@ -139,21 +139,21 @@
                                         <label for="min">M :</label>
                                         <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
 
-                                        <select name="bailleur" id="bailleur" class="form-select" style="display: block;">
+                                        <select name="bailleur" id="bailleur" class="form-select" style="display: block;" onclick="filterOptions('bailleurss')">
                                             <option value="">Selectionner le bailleur</option>
                                             @foreach($bailleurs as $bailleur)
                                             <option value="{{ $bailleur->code_bailleur }}" >{{ $bailleur->libelle_long }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="agence" id="agence" class="form-select" style="display: none;">
+                                        <select name="agence" id="agence" class="form-select" style="display: none;" onclick="filterOptions('agence_execution')">
                                             <option value="">Selectionner l'agence</option>
                                             @foreach($agences as $agence)
                                             <option value="{{ $agence->code_agence_execution }}" >{{ $agence->nom_agence }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="ministere" id="ministere" class="form-select" style="display: none;">
+                                        <select name="ministere" id="ministere" class="form-select" style="display: none;" onclick="filterOptions('ministere')">
                                             <option value="">Selectionner le ministère</option>
                                             @foreach($ministeres as $ministere)
                                             <option value="{{ $ministere->code }}" >{{ $ministere->libelle }}</option>
@@ -171,9 +171,9 @@
                                         <select name="fonction" id="fonction" class="form-select" required>
                                             <option value="">Selectionner une fonction</option>
                                             @foreach($fonctions as $fonction)
-                                            <option value="{{ $fonction->code }}" {{ optional($personne->latestFonction)->code_fonction == $fonction->code ? 'selected' : '' }}>
-                                                {{ $fonction->libelle_fonction }}
-                                            </option>
+                                                <option value="{{ $fonction->code }}"  data-structure="{{ $fonction->code_structure }}" {{ optional($personne->latestFonction)->code_fonction == $fonction->code ? 'selected' : '' }}>
+                                                    {{ $fonction->libelle_fonction }}
+                                                </option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -306,6 +306,29 @@
 </section>
 
 <script>
+    function filterOptions(structure) {
+        var select = document.getElementById('fonction');
+        var options = select.options;
+        var selectedStructure = structure.toLowerCase();
+
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            var optionStructure = option.getAttribute('data-structure');
+
+            if (optionStructure === selectedStructure || !selectedStructure) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    }
+
+    // Appel initial pour afficher les données de bailleur par défaut
+    filterOptions('bailleurss');
+
+    // Appelez filterOptions lors du chargement de la page pour filtrer les options du sélecteur de fonctions
+
+
     document.getElementById('email').addEventListener('keyup', function() {
         var email = this.value;
 
@@ -366,12 +389,11 @@
         $('#bailleur').on('change', function () {
             showSelect_r('na');
             $("#niveau_acces_id").prop("disabled", true);
+            $("#na").prop("disabled", true);
             $('#na').val(110);
         });
         $('#agence').on('change', function () {
-            showSelect_r('na');
-            $("#niveau_acces_id").prop("disabled", true);
-            $('#na').val(110);
+            $("#niveau_acces_id").prop("disabled", false);
         });
         $('#ministere').on('change', function () {
             $("#niveau_acces_id").prop("disabled", false);
@@ -384,6 +406,7 @@
 
         $('#niveau_acces_id').on('change', function() {
             showSelect_r($(this).val());
+            $('#na').val(110);
         });
         $('#niveau_acces_id').trigger('change');
         var sous_dom = $('#sous_domaine').filterMultiSelect({

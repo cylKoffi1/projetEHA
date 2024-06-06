@@ -69,7 +69,7 @@
                             Ajout d'un projet
                             <a href="{{ route('projet') }}"  style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                             <div class="alert alert-danger">
                                 <ul>
@@ -121,7 +121,7 @@
                                 <td>{{ $projet->sous_domaine_libelle }}</td>
                                 <td>{{ date('d-m-Y', strtotime($projet->Date_demarrage_prevue)) }}</td>
                                 <td>{{ date('d-m-Y', strtotime($projet->date_fin_prevue)) }}</td>
-                                <td style="width: 12%">{{ number_format($projet->cout_projet, 0, ',', ' ') }}</td>
+                                <td style="width: 12%; text-align: right;">{{ number_format($projet->cout_projet, 0, ',', ' ') }}</td>
                                 <td>{{ $projet->devise->code_long ?? '' }}</td>
                                 <td>
                                     <div class="dropdown">

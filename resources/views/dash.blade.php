@@ -123,144 +123,19 @@
                                 EHA
                             </h4>
                             <div class="card-body">
-                            <select id="chartTypeSelect" onchange="updateChart()">
-                                <option value="bar">Graphique à Barres</option>
-                                <option value="area">Graphique en Aires</option>
-                                <option value="multi-axis">Graphique à Axes Multiples</option>
-                            <!-- <option value="pie">Graphique Circulaire</option>-->
-                            </select>
+                                <select id="chartTypeSelect" onchange="updateChart()">
+                                    <option value="bar">Graphique à Barres</option>
+                                    <option value="area">Graphique en Aires</option>
+                                    <option value="multi-axis">Graphique à Axes Multiples</option>
+                                <!-- <option value="pie">Graphique Circulaire</option>-->
+                                </select>
 
-            <!-- Conteneur pour le graphique -->
-            <div id="chartContainer"></div>
-
-            <script>
-                // Fonction pour mettre à jour le graphique en fonction du type sélectionné
-                function updateChart() {
-                    // Nettoyer le conteneur du graphique précédent
-                    document.getElementById("chartContainer").innerHTML = "";
-
-                    // Récupérer la valeur sélectionnée dans le select
-                    var selectedChartType = document.getElementById("chartTypeSelect").value;
-
-                    // Configuration commune aux deux types de graphiques
-                    var commonOptions = {
-                        xaxis: {
-                            categories: {!! json_encode($categories) !!}
-                        },
-                        yaxis: {
-                            reversed: false,
-                            title: {
-                                text: 'Montant en XOF'
-                            }
-                        }
-                    };
-
-                    // Configurations spécifiques à chaque type de graphique
-                    var chartOptions = {};
-                    if (selectedChartType === 'bar') {
-                        chartOptions = {
-                            chart: {
-                                type: 'bar'
-                            },
-                            series: [
-                                {
-                                    name: 'DP Total EHA',
-                                    data: {!! json_encode($totalDepensesPrevue) !!}
-                                },
-                                {
-                                    name: 'DP Extérieur EHA',
-                                    data: {!! json_encode($depensesPrevueExt) !!}
-                                },
-                                {
-                                    name: 'DP Trésor CIV EHA',
-                                    data: {!! json_encode($depensesPrevueTresor) !!}
-                                }
-                            ],
-                            plotOptions: {
-                                            bar: {
-                                                dataLabels: {
-                                                    position: 'center',
-                                                    orientation: 'vertical',
-                                                    textAnchor: 'middle',
-                                                }
-                                            }
-                                        }
-                        };
-                    } else if (selectedChartType === 'area') {
-
-                        chartOptions = {
-                            chart: {
-                                type: 'area'
-                            },
-                            series: [
-                                {
-                                    name: 'DP Total EHA',
-                                    data: {!! json_encode($totalDepensesPrevue) !!}
-                                },
-                                {
-                                    name: 'DP Extérieur EHA',
-                                    data: {!! json_encode($depensesPrevueExt) !!}
-                                },
-                                {
-                                    name: 'DP Trésor CIV EHA',
-                                    data: {!! json_encode($depensesPrevueTresor) !!}
-                                }
-                            ]
-                        };
-                    }
-
-                    else if(selectedChartType === 'multi-axis') {
-                        chartOptions = {
-                chart: {
-                    type: 'line',
-                },
-                series: [
-                    {
-                        name: 'DP Total EHA',
-                        data: {!! json_encode($totalDepensesPrevue) !!}
-                    },
-                    {
-                        name: 'DP Extérieur EHA',
-                        data: {!! json_encode($depensesPrevueExt) !!}
-                    },
-                    {
-                        name: 'DP Trésor CIV EHA',
-                        data: {!! json_encode($depensesPrevueTresor) !!}
-                    }
-                ],
-                yaxis: [
-                    {
-                        title: {
-                            text: 'Montant DP Total EHA',
-                        },
-                    },
-                    {
-                        title: {
-                            text: 'Montant DP Extérieur EHA',
-                        },
-                    },
-                    {
-                        opposite: true,
-                        title: {
-                            text: 'Montant DP Trésor CIV EHA',
-                        },
-                    },
-                ],
-            };
-                        }
+                                <!-- Conteneur pour le graphique -->
+                                <div>
+                                    <canvas id="myChart" width="400" height="400"></canvas>
+                                </div>
 
 
-                    // Fusionner les options communes et spécifiques
-                    var options = { ...commonOptions, ...chartOptions };
-
-                    // Créer et rendre le graphique
-                    var chart = new ApexCharts(document.querySelector("#chartContainer"), options);
-                    chart.render();
-                }
-
-                // Appeler la fonction pour afficher initialement le graphique à barres
-                updateChart();
-            </script>
                             </div>
                         </div>
                     </div>
@@ -269,225 +144,10 @@
 
 
 
-                 <!--debut chart bar
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h4>Dépenses Prévues Secteur
-                                    EHA</h4>
-                            </div>
-                            <div class="card-body">
-
-                                <div id="chart_prevue"></div>
-                                <script>
-                                    var options = {
-                                        chart: {
-                                            type: 'bar',
-
-                                        },
-                                        series: [
-                                             {
-                                            name: 'DP Total EHA',
-                                            data: {!! json_encode($totalDepensesPrevue) !!}
-                                        },
-                                        {
-                                            name: 'DP Extérieur EHA',
-                                            data: {!! json_encode($depensesPrevueExt) !!}
-                                        },
-                                        {
-                                            name: 'DP Trésor CIV EHA',
-                                            data: {!! json_encode($depensesPrevueTresor) !!}
-                                        }
-                                        ],
-                                        xaxis: {
-                                            categories: {!! json_encode($categories) !!}
-                                        },
-                                        yaxis: {
-                                            reversed: false,
-                                            title: {
-                                                text: 'Montant en XOF'
-                                            }
-                                        },
-                                        plotOptions: {
-                                            bar: {
-                                                dataLabels: {
-                                                    position: 'center',
-                                                    orientation: 'vertical',
-                                                    textAnchor: 'middle',
-                                                }
-                                            }
-                                        }
-                                    };
-
-                                    var chart = new ApexCharts(document.querySelector("#chart_prevue"), options);
-                                    chart.render();
-                                </script>
-
-
-                                </body>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-                 fin chart bar -->
-
-                 <!-- FIN DES GRAPHES DE PROSPECTION -->
 
 
 
-                <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Dépenses réalisées Secteur
-                                EHA
-                            </h4>
-                            <div class="card-body">
 
-                 <select id="chartTypeSelect_dr" onchange="updateChart_dr()">
-                    <option value="bar">Graphique à Barres</option>
-                    <option value="area">Graphique en Aires</option>
-                    <option value="multi-axis">Graphique à Axes Multiples</option>
-
-                </select>
-
-            <!-- Conteneur pour le graphique -->
-            <div id="chartContainer_dr"></div>
-                 <script>
-                function updateChart_dr() {
-                    // Nettoyer le conteneur du graphique précédent
-                    document.getElementById("chartContainer_dr").innerHTML = "";
-
-                    // Récupérer la valeur sélectionnée dans le select
-                    var selectedChartType = document.getElementById("chartTypeSelect_dr").value;
-
-                    // Configuration commune aux deux types de graphiques
-                    var commonOptions = {
-                        xaxis: {
-                            categories: {!! json_encode($categories) !!}
-                        },
-                        yaxis: {
-                            reversed: false,
-                            title: {
-                                text: 'Montant en XOF'
-                            }
-                        }
-                    };
-
-                    // Configurations spécifiques à chaque type de graphique
-                    var chartOptions = {};
-                    if (selectedChartType === 'bar') {
-                        chartOptions = {
-                            chart: {
-                                type: 'bar'
-                            },
-                            series: [
-                                {
-                                    name: 'DP Total EHA',
-                                    data: {!! json_encode($totalDepensesPrevue) !!}
-                                },
-                                {
-                                    name: 'DP Extérieur EHA',
-                                    data: {!! json_encode($depensesPrevueExt) !!}
-                                },
-                                {
-                                    name: 'DP Trésor CIV EHA',
-                                    data: {!! json_encode($depensesPrevueTresor) !!}
-                                }
-                            ],
-                            plotOptions: {
-                                            bar: {
-                                                dataLabels: {
-                                                    position: 'center',
-                                                    orientation: 'vertical',
-                                                    textAnchor: 'middle',
-                                                }
-                                            }
-                                        }
-                        };
-                    } else if (selectedChartType === 'area') {
-
-                        chartOptions = {
-                            chart: {
-                                type: 'area'
-                            },
-                            series: [
-                                {
-                                    name: 'DP Total EHA',
-                                    data: {!! json_encode($totalDepensesPrevue) !!}
-                                },
-                                {
-                                    name: 'DP Extérieur EHA',
-                                    data: {!! json_encode($depensesPrevueExt) !!}
-                                },
-                                {
-                                    name: 'DP Trésor CIV EHA',
-                                    data: {!! json_encode($depensesPrevueTresor) !!}
-                                }
-                            ]
-                        };
-                    }
-
-                    else if(selectedChartType === 'multi-axis') {
-                        chartOptions = {
-                chart: {
-                    type: 'line',
-                },
-                series: [
-                    {
-                        name: 'DP Total EHA',
-                        data: {!! json_encode($dataTotalEHA) !!}
-                    },
-                    {
-                        name: 'DP Extérieur EHA',
-                        data: {!! json_encode($dataExterieurEHA) !!}
-                    },
-                    {
-                        name: 'DP Trésor CIV EHA',
-                        data: {!! json_encode($dataTresorCIVEHA) !!}
-                    }
-                ],
-                yaxis: [
-                    {
-                        title: {
-                            text: 'Montant DP Total EHA',
-                        },
-                    },
-                    {
-                        title: {
-                            text: 'Montant DP Extérieur EHA',
-                        },
-                    },
-                    {
-                        opposite: true,
-                        title: {
-                            text: 'Montant DP Trésor CIV EHA',
-                        },
-                    },
-                ],
-            };
-                        }
-
-
-                    // Fusionner les options communes et spécifiques
-                    var options = { ...commonOptions, ...chartOptions };
-
-                    // Créer et rendre le graphique
-                    var chart = new ApexCharts(document.querySelector("#chartContainer_dr"), options);
-                    chart.render();
-                }
-
-                // Appeler la fonction pour afficher initialement le graphique à barres
-                updateChart_dr();
-            </script>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             </section>
     </section>
@@ -503,4 +163,49 @@
         </div>
     </div>
 </footer>
+<script>
+        // Récupérer les données des projets et des statuts depuis le contrôleur
+        const projets = {!! json_encode($projets) !!};
+        const statuts = {!! json_encode($statuts) !!};
+
+        // Initialiser les tableaux de données pour les graphiques
+        const labels = [];
+        const data = [];
+
+        // Préparer les données pour le graphique
+        statuts.forEach(statut => {
+            labels.push(statut.libelle);
+            // Calculer le coût total pour chaque statut
+            const coutTotal = projets.reduce((total, projet) => {
+                if (projet.code_statut_projet === statut.code) {
+                    return total + projet.cout_projet;
+                }
+                return total;
+            }, 0);
+            data.push(coutTotal);
+        });
+
+        // Créer le graphique
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Coût total par statut',
+                    data: data,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
 @endsection

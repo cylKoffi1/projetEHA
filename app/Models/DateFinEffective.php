@@ -11,7 +11,6 @@ class DateFinEffective extends Model
 
     public $timestamps = false;
     protected $table = 'date_fin_effective';
-    protected $primaryKey = 'date';
 
 
     protected $fillable = ['date', 'code_projet', 'commentaire', 'cout_effectif', 'devise'];

@@ -131,11 +131,11 @@
                                                 <select name="code_projet" id="code_projet" class="form-select col-35" onchange="checkProjectDetails()" oninput="updateCodeProjetValue()">
                                                     <option value=""></option>
                                                     @foreach ($tousLesProjets as $projet)
-                                                    <option value="{{ $projet }}" 
-                                                            @if(in_array($projet, $projetsPlusieursActions)) 
-                                                                class="plusieurs-actions" 
-                                                            @elseif(in_array($projet, $projetsNonTrouves)) 
-                                                                class="non-trouves" 
+                                                    <option value="{{ $projet }}"
+                                                            @if(in_array($projet, $projetsPlusieursActions))
+                                                                class="plusieurs-actions"
+                                                            @elseif(in_array($projet, $projetsNonTrouves))
+                                                                class="non-trouves"
                                                             @elseif(in_array($projet, $projetsAvecInfrastructures))
                                                                 class="avec-infrastructures"
                                                             @endif>
@@ -550,7 +550,7 @@
                                             </td>
                                             <td>{{ $projet->Date_demarrage_prevue }}</td>
                                             <td>{{ $projet->date_fin_prevue }}</td>
-                                            <td class="formatted-number" style=" text-align: right; float: right; justify-content: right;">{{ $projet->cout_projet }}</td>
+                                            <td class="formatted-number" style="text-align: right;">{{ $projet->cout_projet }}</td>
                                             <td>
                                                 @if ($projet->devise)
                                                     {{ $projet->devise->code_long }}

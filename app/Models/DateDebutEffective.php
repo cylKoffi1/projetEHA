@@ -11,7 +11,6 @@ class DateDebutEffective extends Model
 
     public $timestamps = false;
     protected $table = 'date_debut_effective';
-    protected $primaryKey = 'date';
     protected $fillable = ['date', 'code_projet', 'commentaire'];
 
 }

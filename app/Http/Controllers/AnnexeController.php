@@ -139,6 +139,13 @@ class AnnexeController extends Controller
         $projets = ProjetEha2::all();
         return view('ficheCollecte', compact('ecran', 'projets'));
     }
+
+    public function FicheCollecteImprimer($code){
+        // Utilisez le code pour récupérer les données de votre base de données
+        $donnees = ProjetEha2::where('CodeProjet', $code)->first();
+
+        return view('ImprimerFiche', compact('donnees'));
+    }
     public function getProjectDetails(Request $request) {
         $codeProjet = $request->input('code_projet');
         $projectDetails = ProjetEha2::with([

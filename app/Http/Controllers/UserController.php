@@ -24,6 +24,7 @@ use App\Models\User;
 use App\Models\NiveauAccesDonnees;
 use App\Models\StructureRattachement;
 use App\Models\UtilisateurDomaine;
+use Exception;
 use Faker\Provider\ar_EG\Person;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -97,61 +98,69 @@ class UserController extends Controller
                 'telephone' => $request->input('tel'),
                 'email' => $request->input('email'),
             ]);
-            $structureRattachement = new StructureRattachement([
-                'code_personnel' => $code,
-                'date' => now(),
-            ]);
+            // Déterminer la valeur de 'code_structure' et 'type_structure' en fonction de la structure sélectionnée
             if ($request->input('structure') == "bai") {
-                $structureRattachement = StructureRattachement::create([
+                StructureRattachement::create([
+                    'code_personnel' => $code,
                     'code_structure' => $request->input('bailleur'),
-                    'type_structure' => 'bailleurss'
+                    'type_structure' => 'bailleurss',
+                    'date' => now(),
                 ]);
             } elseif ($request->input('structure') == "age") {
-                $structureRattachement = StructureRattachement::create([
+                StructureRattachement::create([
+                    'code_personnel' => $code,
                     'code_structure' => $request->input('agence'),
-                    'type_structure' => 'agence_execution'
+                    'type_structure' => 'agence_execution',
+                    'date' => now(),
                 ]);
             } else {
-                $structureRattachement = StructureRattachement::create([
+                StructureRattachement::create([
+                    'code_personnel' => $code,
                     'code_structure' => $request->input('ministere'),
-                    'type_structure' => 'ministere'
+                    'type_structure' => 'ministere',
+                    'date' => now(),
                 ]);
             }
             if ($request->input('niveau_acces_id') == "de") {
                 CouvrirRegion::create([
                     'code_personnel' => $code,
                     'code_departement' => $request->input('dep'),
+                    'date' => now(),
                 ]);
 
             } else if ($request->input('niveau_acces_id') == "di") {
                 CouvrirRegion::create([
                     'code_personnel' => $code,
                     'code_district' => $request->input('dis'),
+                    'date' => now(),
                 ]);
             } else if ($request->input('niveau_acces_id') == "re") {
                 CouvrirRegion::create([
                     'code_personnel' => $code,
                     'code_region' => $request->input('reg'),
+                    'date' => now(),
                 ]);
             } else {
                 CouvrirRegion::create([
                     'code_personnel' => $code,
                     'id_pays' => $request->input('na'),
+                    'date' => now(),
                 ]);
             }
             OccuperFonction::create([
                 'code_personnel' => $code,
                 'code_fonction' => $request->input('fonction'),
+                'date' => now(),
             ]);
-            $ecran_id = $request->input('ecran_id');
-            return redirect()->route('personnel.create', ['ecran_id' => $ecran_id])->with('success', 'Personne créée avec succès.');
+
+
+                return redirect()->route('personnel.create', ['ecran_id' => $request->input('ecran_id')])
+                ->with('success', 'Personne créée avec succès.');
         } catch (\Exception $e) {
             // En cas d'erreur, retourner la redirection avec un message d'erreur
-            $ecran_id = $request->input('ecran_id');
-            return redirect()->route('personnel.create', ['ecran_id' => $ecran_id])->with('error', 'Erreur lors de l\'enregistrement du formulaire. Remplissez tous les champs.');
+            return redirect()->route('personnel.create', ['ecran_id' => $request->input('ecran_id')])
+                ->with('error', 'Erreur lors de l\'enregistrement du formulaire.');
         }
-
-
     }
 
 
@@ -163,7 +172,7 @@ class UserController extends Controller
             // Gérer le cas où l'utilisateur n'est pas trouvé
             return redirect()->route('users.personnel')->with('error', 'Personne non trouvée.');
         }
-       $ecran = Ecran::find($request->input('ecran_id'));
+        $ecran = Ecran::find($request->input('ecran_id'));
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
         $fonctions = FonctionUtilisateur::all();
@@ -180,7 +189,11 @@ class UserController extends Controller
         }
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
-        $fonctions = FonctionUtilisateur::all();
+        $fonctions = DB::table('fonction_utilisateur')
+            ->join('fonction_structure', 'fonction_utilisateur.code', '=', 'fonction_structure.code_fonction')
+            ->select('code', 'libelle_fonction','code_structure')
+            ->distinct()
+            ->get();
         $structureRattachement = StructureRattachement::where('code_personnel', $personneId)->orderBy('date', 'DESC')->first();
 
         $bailleurs = Bailleur::orderBy('libelle_long', 'asc')->get();
@@ -217,6 +230,8 @@ class UserController extends Controller
             'tel' => 'required',
             // 'adresse' => 'required',
         ]);
+        try{
+
 
         // Mettez à jour les informations de l'utilisateur
         $personne = Personnel::find($personnelId);
@@ -239,51 +254,78 @@ class UserController extends Controller
             CouvrirRegion::create([
                 'code_personnel' => $personnelId,
                 'code_departement' => $request->input('dep'),
+                'date' => now(),
             ]);
 
         } else if ($request->input('niveau_acces_id') == "di") {
             CouvrirRegion::create([
                 'code_personnel' => $personnelId,
                 'code_district' => $request->input('dis'),
+                'date' => now(),
             ]);
         } else if ($request->input('niveau_acces_id') == "re") {
             CouvrirRegion::create([
                 'code_personnel' => $personnelId,
                 'code_region' => $request->input('reg'),
+                'date' => now(),
             ]);
         } else {
             CouvrirRegion::create([
                 'code_personnel' => $personnelId,
                 'id_pays' => $request->input('na'),
+                'date' => now(),
             ]);
         }
 
-
         // Récupérez d'abord l'objet StructureRattachement à partir de la base de données
-        $structureRattachement = StructureRattachement::where('code_personnel', $personnelId)->firstOrFail();
+        $structureRattachement = StructureRattachement::where('code_personnel', $personnelId)->first();
 
-        // Vérifiez si la structure est "bai", "age" ou "min"
-        if ($request->input('structure') == "bai") {
-            $structureRattachement->update([
-                'code_structure' => $request->input('bailleur'),
-                'type_structure' => 'bailleurss',
-            ]);
-        } elseif ($request->input('structure') == "age") {
-            $structureRattachement->update([
-                'code_structure' => $request->input('agence'),
-                'type_structure' => 'agence_execution',
-            ]);
+        // Vérifiez si un enregistrement a été trouvé
+        if ($structureRattachement) {
+            // Si un enregistrement existe, mettez à jour les informations en fonction de la structure
+            if ($request->input('structure') == "bai") {
+                $structureRattachement->update([
+                    'code_structure' => $request->input('bailleur'),
+                    'type_structure' => 'bailleurss',
+                ]);
+            } elseif ($request->input('structure') == "age") {
+                $structureRattachement->update([
+                    'code_structure' => $request->input('agence'),
+                    'type_structure' => 'agence_execution',
+                ]);
+            } else {
+                $structureRattachement->update([
+                    'code_structure' => $request->input('ministere'),
+                    'type_structure' => 'ministere',
+                ]);
+            }
         } else {
-            $structureRattachement->update([
-                'code_structure' => $request->input('ministere'),
-                'type_structure' => 'ministere',
+            // Si aucun enregistrement n'a été trouvé, créez un nouvel objet StructureRattachement et attribuez-lui les valeurs appropriées
+            $structureRattachement = new StructureRattachement([
+                'code_personnel' => $personnelId,
+                'date' => now(),
             ]);
+
+            if ($request->input('structure') == "bai") {
+                $structureRattachement->code_structure = $request->input('bailleur');
+                $structureRattachement->type_structure = 'bailleurss';
+            } elseif ($request->input('structure') == "age") {
+                $structureRattachement->code_structure = $request->input('agence');
+                $structureRattachement->type_structure = 'agence_execution';
+            } else {
+                $structureRattachement->code_structure = $request->input('ministere');
+                $structureRattachement->type_structure = 'ministere';
+            }
+
+            // Enregistrez le nouvel objet StructureRattachement
+            $structureRattachement->save();
         }
 
 
         OccuperFonction::create([
             'code_personnel' => $personnelId,
             'code_fonction' => $request->input('fonction'),
+            'date'=> now()
         ]);
 
         // Vérifiez si un nouveau fichier photo a été téléchargé
@@ -309,7 +351,10 @@ class UserController extends Controller
         }
         $ecran_id = $request->input('ecran_id');
         // Rediriger avec un message de succès
-        return redirect()->route('users.personnel',['ecran_id' => $ecran_id])->with('success', 'Personne mise à jour avec succès.');
+        return redirect()->route('users.personnel', ['ecran_id' => $ecran_id])->with('success', 'Personne mise à jour avec succès.');
+        }catch(\Exception $e){
+            return response()->json(['message' => 'Une erreur est survenue lors de la modification.', 'error' => $e->getMessage()], 500);
+        }
     }
 
     /*********************************** FIN  PERSONNES  *******************************/
@@ -345,9 +390,21 @@ class UserController extends Controller
     {
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
-        $fonctions = FonctionUtilisateur::all();
+        $fonctions = DB::table('fonction_utilisateur')
+            ->join('fonction_structure', 'fonction_utilisateur.code', '=', 'fonction_structure.code_fonction')
+            ->select('code', 'libelle_fonction','code_structure')
+            ->distinct()
+            ->get();
 
-        $personnes = Personnel::orderBy('nom', 'asc')->whereNotIn('code_personnel', User::pluck('code_personnel')->toArray())->get();
+        $personnes = Personnel::orderBy('nom', 'asc')
+        ->whereNotIn('code_personnel', User::pluck('code_personnel')->toArray())
+        ->orWhere(function ($query) {
+            $query->whereHas('user', function ($query) {
+                $query->where('is_active', 0);
+            });
+        })
+        ->get();
+
         $personneId = $request->input('personne');
 
         $structureRattachement = StructureRattachement::where('code_personnel', $personneId)->orderBy('date', 'DESC')->first();
@@ -378,132 +435,152 @@ class UserController extends Controller
 
 
 
-        return view('users.create', compact('ecran', 'structureRattachement', 'niveauxAcces', 'domaines', 'sous_domaines', 'bailleurs', 'pays', 'districts', 'regions', 'departements', 'agences', 'ministeres', 'personnes', 'groupe_utilisateur', 'fonctions'));
+        return view('users.create', compact('personneId','ecran', 'structureRattachement', 'niveauxAcces', 'domaines', 'sous_domaines', 'bailleurs', 'pays', 'districts', 'regions', 'departements', 'agences', 'ministeres', 'personnes', 'groupe_utilisateur', 'fonctions'));
     }
-
+    public function fetchSousDomaine(Request $request)
+    {
+        if($request->has('selected')) {
+            // Récupérez les identifiants des domaines sélectionnés
+            $selectedDomaines = $request->input('selected');
+            // Requête pour récupérer les sous-domaines associés aux domaines sélectionnés
+            $sousDomaines = SousDomaine::whereIn('code_domaine', $selectedDomaines)->get();
+            // Retournez les sous-domaines sous forme de réponse JSON
+            return response()->json($sousDomaines);
+        }
+        // Si aucune valeur sélectionnée n'est trouvée, retournez une réponse vide
+        return response()->json([]);
+    }
 
     // Méthode pour traiter la soumission du formulaire et créer un utilisateur
 
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255|unique:mot_de_passe_utilisateur,login',
-            'email' => 'required|email',
-            'niveau_acces_id' => 'required|exists:niveau_acces_donnees,id',
-            'group_user' => 'required|exists:groupe_utilisateur,code',
-            'personne' => 'required|exists:personnel,code_personnel',
-            // 'sous_domaine' => 'required|exists:sous_domaine,code',
-        ]);
-
-        // if ($validator->fails()) {
-        //     // Redirect with validation errors
-        //     return redirect()->route('users.create')->withErrors($validator)->withInput();
-        // }
-        $donnees = $request->all();
-        $sousDomaines = json_decode($request->input('sd'), true);
-        $domainesSel = json_decode($request->input('domS'), true);
-        $personne = Personnel::find($request->input('personne'));
-
-        if ($personne) {
-
-            if ($request->input('niveau_acces_id') == "de") {
-                CouvrirRegion::create([
-                    'code_personnel' => $request->input('personne'),
-                    'code_departement' => $request->input('dep'),
-                ]);
-
-            } else if ($request->input('niveau_acces_id') == "di") {
-                CouvrirRegion::create([
-                    'code_personnel' => $request->input('personne'),
-                    'code_district' => $request->input('dis'),
-                ]);
-            } else if ($request->input('niveau_acces_id') == "re") {
-                CouvrirRegion::create([
-                    'code_personnel' => $request->input('personne'),
-                    'code_region' => $request->input('reg'),
-                ]);
-            } else {
-                CouvrirRegion::create([
-                    'code_personnel' => $request->input('personne'),
-                    'id_pays' => $request->input('na'),
-                ]);
-            }
-
-            $structureRattachement = new StructureRattachement([
-                'code_personnel' => $request->input('personne'),
-                'date' => now(),
+        public function store(Request $request)
+        {
+            $validator = Validator::make($request->all(), [
+                'username' => 'required|string|max:255|unique:mot_de_passe_utilisateur,login',
+                'email' => 'required|email',
+                'niveau_acces_id' => 'required|exists:niveau_acces_donnees,id',
+                'group_user' => 'required|exists:groupe_utilisateur,code',
+                'personne' => 'required|exists:personnel,code_personnel',
+                'sous_domaine' => 'required|array', // Assurez-vous que 'sous_domaine' est un tableau
+                'domaine' => 'required|array'
             ]);
 
-            if ($request->input('structure') == "bai") {
-                $structureRattachement->code_structure = $request->input('bailleur');
-                $structureRattachement->type_structure = 'bailleurss';
-            } elseif ($request->input('structure') == "age") {
-                $structureRattachement->code_structure = $request->input('agence');
-                $structureRattachement->type_structure = 'agence_execution';
-            } else {
-                $structureRattachement->code_structure = $request->input('ministere');
-                $structureRattachement->type_structure = 'ministere';
-            }
+            $data = $request->all();
+            $personne = Personnel::find($request->input('personne'));
 
-            $personne->update(['email' => $request->input('email')]);
+            if ($personne) {
 
+                if ($request->input('niveau_acces_id') == "de") {
+                    CouvrirRegion::create([
+                        'code_personnel' => $request->input('personne'),
+                        'code_departement' => $request->input('dep'),
+                        'date' => now(),
+                    ]);
 
-            OccuperFonction::create([
-                'code_personnel' => $request->input('personne'),
-                'code_fonction' => $request->input('fonction'),
-            ]);
-            $role = Role::find($request->input('group_user'));
-            $user = User::create([
-                'code_personnel' => $request->input('personne'),
-                'login' => $request->input('username'),
-                'password' => Hash::make(config('app_settings.default_password')),
-                'niveau_acces_id' => $request->input('niveau_acces_id'),
-                'email' => $request->input('email'),
-            ]);
-            $user->assignRole($role);
+                } else if ($request->input('niveau_acces_id') == "di") {
+                    CouvrirRegion::create([
+                        'code_personnel' => $request->input('personne'),
+                        'code_district' => $request->input('dis'),
+                        'date' => now(),
+                    ]);
+                } else if ($request->input('niveau_acces_id') == "re") {
+                    CouvrirRegion::create([
+                        'code_personnel' => $request->input('personne'),
+                        'code_region' => $request->input('reg'),
+                        'date' => now(),
+                    ]);
+                } else {
+                    CouvrirRegion::create([
+                        'code_personnel' => $request->input('personne'),
+                        'id_pays' => $request->input('na'),
+                        'date' => now(),
+                    ]);
+                }
 
-            $sous_dom = AvoirExpertise::where('code_personnel', $personne->code_personnel)->get();
-            $sousDomainesSelectionnes = $sousDomaines['sous_domaine'];
-            $dom = UtilisateurDomaine::where('code_personnel', $personne->code_personnel)->get();
-            $domSEl = $domainesSel['domaine'];
+                $structureRattachement = new StructureRattachement([
+                    'code_personnel' => $request->input('personne'),
+                    'date' => now(),
+                ]);
 
-            $sousDomainesExistants = $sous_dom->pluck('sous_domaine')->toArray();
-            $sousDomainesASupprimer = array_diff($sousDomainesExistants, $sousDomainesSelectionnes);
-            $DomainesExistants = $dom->pluck('code_domaine')->toArray();
-            $DomainesASupprimer = array_diff($DomainesExistants, $domSEl);
+                if ($request->input('structure') == "bai") {
+                    $structureRattachement->code_structure = $request->input('bailleur');
+                    $structureRattachement->type_structure = 'bailleurss';
+                } elseif ($request->input('structure') == "age") {
+                    $structureRattachement->code_structure = $request->input('agence');
+                    $structureRattachement->type_structure = 'agence_execution';
+                } else {
+                    $structureRattachement->code_structure = $request->input('ministere');
+                    $structureRattachement->type_structure = 'ministere';
+                }
 
-            // Supprimez les associations qui ne sont plus sélectionnées
-            AvoirExpertise::where('code_personnel', $personne->code_personnel)
-                ->whereIn('sous_domaine', $sousDomainesASupprimer)
-                ->delete();
+                $personne->update(['email' => $request->input('email')]);
 
-            // Supprimez les associations qui ne sont plus sélectionnées
-            UtilisateurDomaine::where('code_personnel', $personne->code_personnel)
-                ->whereIn('code_domaine', $DomainesASupprimer)
-                ->delete();
+                OccuperFonction::create([
+                    'code_personnel' => $request->input('personne'),
+                    'code_fonction' => $request->input('fonction'),
+                    'date'=>now()
+                ]);
+                $role = Role::find($request->input('group_user'));
+                $user = User::create([
+                    'code_personnel' => $request->input('personne'),
+                    'login' => $request->input('username'),
+                    'password' => Hash::make(config('app_settings.default_password')),
+                    'niveau_acces_id' => $request->input('niveau_acces_id'),
+                    'email' => $request->input('email'),
+                ]);
+                $user->assignRole($role);
 
-            // Ajoutez les nouvelles associations sélectionnées
-            foreach ($sousDomainesSelectionnes as $sousDomaine) {
-                AvoirExpertise::updateOrCreate(
-                    [
+                $sous_dom = AvoirExpertise::where('code_personnel', $personne->code_personnel)->get();
+                $sousDomainesSelectionnes = json_decode($request->input('sous_domaine', []));
+
+                $dom = UtilisateurDomaine::where('code_personnel', $personne->code_personnel)->get();
+                $domSEl = json_decode($request->input('domaine', []));
+
+                // Assurez-vous que $sousDomainesSelectionnes et $domSEl sont des tableaux
+                if (!is_array($sousDomainesSelectionnes)) {
+                    $sousDomainesSelectionnes = [$sousDomainesSelectionnes];
+                }
+                if (!is_array($domSEl)) {
+                    $domSEl = [$domSEl];
+                }
+
+                $sousDomainesExistants = $sous_dom->pluck('sous_domaine')->toArray();
+                $sousDomainesASupprimer = array_diff($sousDomainesExistants, $sousDomainesSelectionnes);
+                $DomainesExistants = $dom->pluck('code_domaine')->toArray();
+                $DomainesASupprimer = array_diff($DomainesExistants, $domSEl);
+
+                // Supprimez les associations qui ne sont plus sélectionnées
+                AvoirExpertise::where('code_personnel', $personne->code_personnel)
+                    ->whereIn('sous_domaine', $sousDomainesASupprimer)
+                    ->delete();
+
+                // Supprimez les associations qui ne sont plus sélectionnées
+                UtilisateurDomaine::where('code_personnel', $personne->code_personnel)
+                    ->whereIn('code_domaine', $DomainesASupprimer)
+                    ->delete();
+
+                // Ajoutez les nouvelles associations sélectionnées
+                foreach ((array) $sousDomainesSelectionnes as $sousDomaine) {
+                    AvoirExpertise::create([
                         'code_personnel' => $personne->code_personnel,
                         'sous_domaine' => $sousDomaine
-                    ]
-                );
+                    ]);
+                }
+
+
+                // Ajoutez les nouvelles associations sélectionnées
+                foreach ($domSEl as $do) {
+                    UtilisateurDomaine::updateOrCreate(
+                        [
+                            'code_personnel' => $personne->code_personnel,
+                            'code_domaine' => $do
+                        ]
+                    );
+                }
             }
-            // Ajoutez les nouvelles associations sélectionnées
-            foreach ($domSEl as $do) {
-                UtilisateurDomaine::updateOrCreate(
-                    [
-                        'code_personnel' => $personne->code_personnel,
-                        'code_domaine' => $do
-                    ]
-                );
-            }
+            $ecran_id = $request->input('ecran_id');
+            return redirect()->route('users.create',['ecran_id' => $ecran_id])->with('success', 'Utilisateur créé avec succès!');
         }
-        $ecran_id = $request->input('ecran_id');
-        return redirect()->route('users.create',['ecran_id' => $ecran_id])->with('success', 'Utilisateur créé avec succès!');
-    }
 
 
     // UserController.php
@@ -564,18 +641,22 @@ class UserController extends Controller
 
     public function getUser(Request $request, $userId)
     {
-        $user = User::with('personnel')->find($userId);
+        $users = User::with('personnel')->find($userId);
 
-        $users =  Personnel::find($userId);
+        $user =  Personnel::find($userId);
 
         if (!$user && !$users) {
             // Gérer le cas où l'utilisateur n'est pas trouvé
             return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
         }
-        $structureRattachement = StructureRattachement::where('code_personnel', $user->code_personnel)->orderBy('date', 'DESC')->first();
+        $structureRattachement = StructureRattachement::where('code_personnel', $users->code_personnel)->orderBy('date', 'DESC')->first();
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
-        $fonctions = FonctionUtilisateur::all();
+        $fonctions = DB::table('fonction_utilisateur')
+            ->join('fonction_structure', 'fonction_utilisateur.code', '=', 'fonction_structure.code_fonction')
+            ->select('code', 'libelle_fonction','code_structure')
+            ->distinct()
+            ->get();
         $bailleurs = Bailleur::orderBy('libelle_long', 'asc')->get();
         $agences = AgenceExecution::orderBy('nom_agence', 'asc')->get();
         $ministeres = Ministere::orderBy('libelle', 'asc')->get();
@@ -583,8 +664,8 @@ class UserController extends Controller
         $sous_domaines = SousDomaine::all();
         $personnes = Personnel::orderBy('nom', 'asc')->get();
         $ecran = Ecran::find($request->input('ecran_id'));
-        $sous_dom = AvoirExpertise::where('code_personnel', $user->code_personnel)->get();
-        $dom = UtilisateurDomaine::where('code_personnel', $user->code_personnel)->get();
+        $sous_dom = AvoirExpertise::where('code_personnel', $users->code_personnel)->get();
+        $dom = UtilisateurDomaine::where('code_personnel', $users->code_personnel)->get();
         $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
         $regions = Region::whereHas('district', function ($query) {
             $query->where('id_pays', config('app_settings.id_pays'));
@@ -596,7 +677,7 @@ class UserController extends Controller
         $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('users.user-update', compact('ecran','users','structureRattachement','regions', 'pays', 'departements','sous_prefectures', 'districts','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
+        return view('users.user-update', compact('ecran','users','user','structureRattachement','regions', 'pays', 'departements','sous_prefectures', 'districts','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
     }
 
 
@@ -610,7 +691,13 @@ class UserController extends Controller
         }
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
-        $fonctions = FonctionUtilisateur::all();
+        $fonctions = DB::table('fonction_utilisateur')
+            ->join('fonction_structure', 'fonction_utilisateur.code', '=', 'fonction_structure.code_fonction')
+            ->select('code', 'libelle_fonction','code_structure')
+            ->distinct()
+            ->get();
+        $structureRattachement = StructureRattachement::where('code_personnel', $user->code_personnel)->orderBy('date', 'DESC')->first();
+
         $bailleurs = Bailleur::orderBy('libelle_long', 'asc')->get();
         $agences = AgenceExecution::orderBy('nom_agence', 'asc')->get();
         $ministeres = Ministere::orderBy('libelle', 'asc')->get();
@@ -620,7 +707,7 @@ class UserController extends Controller
         $ecran = Ecran::find($request->input('ecran_id'));
         $sous_dom = AvoirExpertise::where('code_personnel', $user->code_personnel)->get();
         $dom = UtilisateurDomaine::where('code_personnel', $user->code_personnel)->get();
-        return view('users.user-profile', compact('ecran','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
+        return view('users.user-profile', compact('ecran','structureRattachement','niveauxAcces', 'domaines', 'personnes', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'user', 'groupe_utilisateur', 'fonctions', 'sous_dom', 'dom'));
     }
     // Mettre à jour l'utilisateur
     public function update(Request $request, $userId)
@@ -634,7 +721,7 @@ class UserController extends Controller
             $request->validate([
                 'group_user' => 'required',
                 'structure' => 'required',
-                'code_fonction' => 'required',
+                'fonction' => 'required',
                 'niveau_acces_id' => 'required',
                 'username' => 'required',
                 'email' => 'required|email',
@@ -720,28 +807,41 @@ class UserController extends Controller
 
 
 
-
             $newRoleId = $request->input('group_user'); // Récupérez le nouvel identifiant de rôle depuis la requête
 
             if($newRoleId){
-                // Supprimez tous les rôles de l'utilisateur
-                $user->roles()->detach();
+                // Vérifiez si le rôle existe
+                $role = Role::find($newRoleId);
+                if($role){
+                    // Supprimez tous les rôles de l'utilisateur
+                    $user->roles()->detach();
 
-                // Assignez le nouveau rôle à l'utilisateur
-                $user->assignRole($newRoleId);
+                    // Assignez le nouveau rôle à l'utilisateur
+                    $user->assignRole($role);
+                }else{
+                    // Assignez le nouveau rôle à l'utilisateur
+
+                    $user->assignRole($role);
+                    //return response()->json(['error' => 'Le rôle spécifié n\'existe pas.']);
+                }
+            }else{
+                 // Aucun rôle spécifié dans la requête, vous pouvez gérer cela en conséquence
             }
 
 
+
             // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
-            if ($user->personnel && $user->latestFonction && $user->latestFonction->code_fonction != $request->input('code_fonction')) {
-                OccuperFonction::create([
+            if ($user->personnel && $user->latestFonction && $user->latestFonction->code_fonction != $request->input('fonction')) {
+                OccuperFonction::updateOrCreate([
                     'code_personnel' => $user->personnel->code_personnel,
-                    'code_fonction' => $request->input('code_fonction'),
+                    'code_fonction' => $request->input('fonction'),
+                    'date'=>now()
                 ]);
             }else{
-                OccuperFonction::create([
+                OccuperFonction::updateOrCreate([
                     'code_personnel' => $user->personnel->code_personnel,
-                    'code_fonction' => $request->input('code_fonction'),
+                    'code_fonction' => $request->input('fonction'),
+                    'date'=>now()
                 ]);
             }
 
@@ -882,11 +982,22 @@ class UserController extends Controller
         $newRoleId = $request->input('group_user'); // Récupérez le nouvel identifiant de rôle depuis la requête
 
         if($newRoleId){
-            // Supprimez tous les rôles de l'utilisateur
-            $user->roles()->detach();
+            // Vérifiez si le rôle existe
+            $role = Role::find($newRoleId);
+            if($role){
+                // Supprimez tous les rôles de l'utilisateur
+                $user->roles()->detach();
 
-            // Assignez le nouveau rôle à l'utilisateur
-            $user->assignRole($newRoleId);
+                // Assignez le nouveau rôle à l'utilisateur
+                $user->assignRole($role);
+            }else{
+                // Assignez le nouveau rôle à l'utilisateur
+
+                $user->assignRole($role);
+                //return response()->json(['error' => 'Le rôle spécifié n\'existe pas.']);
+            }
+        }else{
+             // Aucun rôle spécifié dans la requête, vous pouvez gérer cela en conséquence
         }
 
         // Vérifiez et mettez à jour la fonction utilisateur si nécessaire
@@ -894,6 +1005,7 @@ class UserController extends Controller
             OccuperFonction::create([
                 'code_personnel' => $user->personnel->code_personnel,
                 'code_fonction' => $request->input('fonction'),
+                'date'=>now()
             ]);
         }
 
@@ -964,7 +1076,8 @@ class UserController extends Controller
                 ]
             );
         }
-        return response()->json(['success' => 'Profile  mis à jour avec succès.']);
+        $ecran_id = $request->input('ecran_id');
+        return response()->json(['success' => 'Profile  mis à jour avec succès.','ecran_id'=>$ecran_id]);
         // Rediriger avec un message de succès
     }
 
@@ -988,8 +1101,8 @@ class UserController extends Controller
         $user->update([
             'password' => Hash::make($request->new),
         ]);
-
-        return redirect()->route('users.details', ['userId' => $user->id])->with('success', 'Mot de passe modifié avec succès.');
+        $ecran_id = $request->input('ecran_id');
+        return redirect()->route('users.details', ['userId' => $user->id,'ecran_id' => $ecran_id])->with('success', 'Mot de passe modifié avec succès.');
     }
 
     public function deleteUser($id)
@@ -1011,6 +1124,7 @@ class UserController extends Controller
             return response()->json(['message' => 'Erreur lors de la suppression de l\'utilisateur.', 'error' => $e->getMessage()], 500);
         }
     }
+
     public function destroy($code_personnel)
     {
         try {
@@ -1021,10 +1135,11 @@ class UserController extends Controller
             $user = Personnel::findOrFail($code_personnel);
             $user->delete();
 
-            return redirect()->route('users.personnel')->with('success', 'Utilisateur supprimé avec succès.');
+            return response()->json(['message' => 'Utilisateur supprimé avec succès.'], 200);
         } catch (\Exception $e) {
             // Gérer les erreurs
-            return redirect()->back()->with('error', 'Une erreur est survenue lors de la suppression de l\'utilisateur.');
+            return response()->json(['message' => 'Une erreur est survenue lors de la suppression de l\'utilisateur.'], 500);
         }
     }
+
 }

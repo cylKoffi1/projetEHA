@@ -1,5 +1,8 @@
-<!-- resources/views/users/create.blade.php -->
+<link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
 
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
 @extends('layouts.app')
 
 @section('content')
@@ -119,42 +122,69 @@
                                     @enderror
                                 </div>
                                 <div class="col">
+                                    @if($structureRattachement)
                                     <div class="form-group">
-                                        <label for="structure_ratache">Structure:</label>
-                                        <label for="bai">B:</label>
-                                        <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" style="margin-right: 5px;">
-                                        <label for="age">A:</label>
-                                        <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 5px;">
-                                        <label for="min">M:</label>
-                                        <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
+                                        <label for="structure_ratache">Structure :</label>
+                                        <label for="bai">B :</label>
+                                        <input type="radio" value="bai" name="structure" id="bai" onclick="showSelect('bailleur')" {{ $structureRattachement->type_structure == 'bailleurss' ? 'checked' : '' }} style="margin-right: 15px;">
+                                        <label for="age">A :</label>
+                                        <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" {{ $structureRattachement->type_structure == 'agence_execution' ? 'checked' : '' }} style="margin-right: 15px;">
+                                        <label for="min">M :</label>
+                                        <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')" {{ $structureRattachement->type_structure == 'ministere' ? 'checked' : '' }}>
 
-                                        <select name="bailleur" id="bailleur" class="form-select" style="display: none;">
+                                        <select name="bailleur" id="bailleur" class="form-select"  onclick="filterOptions('bailleurss')" style="{{ $structureRattachement->type_structure == 'bailleurss' ? '' : 'display: none;' }}">
                                             <option value="">Selectionner le bailleur</option>
                                             @foreach($bailleurs as $bailleur)
-                                            <option value="{{ $bailleur->code_bailleur }}">
-                                                {{ $bailleur->libelle_long }}
-                                            </option>
+                                            <option value="{{ $bailleur->code_bailleur }}" {{ $structureRattachement->code_structure == $bailleur->code_bailleur ? 'selected' : '' }}>{{ $bailleur->libelle_long }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="agence" id="agence" class="form-select" style="display: none;">
+                                        <select name="agence" id="agence" class="form-select" onclick="filterOptions('agence_execution')" style="{{ $structureRattachement->type_structure == 'agence_execution' ? '' : 'display: none;' }}">
                                             <option value="">Selectionner l'agence</option>
                                             @foreach($agences as $agence)
-                                            <option value="{{ $agence->code_agence_execution }}">
-                                                {{ $agence->nom_agence }}
-                                            </option>
+                                            <option value="{{ $agence->code_agence_execution }}" {{ $structureRattachement->code_structure == $agence->code_agence_execution ? 'selected' : '' }}>{{ $agence->nom_agence }}</option>
                                             @endforeach
                                         </select>
 
-                                        <select name="ministere" id="ministere" class="form-select" style="display: none;">
+                                        <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('ministere')" style="{{ $structureRattachement->type_structure == 'ministere' ? '' : 'display: none;' }}">
                                             <option value="">Selectionner le ministère</option>
                                             @foreach($ministeres as $ministere)
-                                            <option value="{{ $ministere->code }}">
-                                                {{ $ministere->libelle }}
-                                            </option>
+                                            <option value="{{ $ministere->code }}" {{ $structureRattachement->code_structure == $ministere->code ? 'selected' : '' }}>{{ $ministere->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
+                                    @else
+                                    <div class="form-group">
+                                        <label for="structure_ratache">Structure :</label>
+                                        <label for="bai">B :</label>
+                                        <input type="radio" value="bai" name="structure" id="bai" onclick="showSelect('bailleur')" style="margin-right: 15px;">
+                                        <label for="age">A :</label>
+                                        <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 15px;">
+                                        <label for="min">M :</label>
+                                        <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
+
+                                        <select name="bailleur" id="bailleur" class="form-select" style="display: block;" onclick="filterOptions('bailleurss')">
+                                            <option value="">Selectionner le bailleur</option>
+                                            @foreach($bailleurs as $bailleur)
+                                            <option value="{{ $bailleur->code_bailleur }}" >{{ $bailleur->libelle_long }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="agence" id="agence" class="form-select" style="display: none;" onclick="filterOptions('agence_execution')">
+                                            <option value="">Selectionner l'agence</option>
+                                            @foreach($agences as $agence)
+                                            <option value="{{ $agence->code_agence_execution }}" >{{ $agence->nom_agence }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="ministere" id="ministere" class="form-select" style="display: none;" onclick="filterOptions('ministere')">
+                                            <option value="">Selectionner le ministère</option>
+                                            @foreach($ministeres as $ministere)
+                                            <option value="{{ $ministere->code }}" >{{ $ministere->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @endif
                                 </div>
 
                             </div>
@@ -164,10 +194,9 @@
                                         <label for="fonction">Fonction :</label>
                                         <select name="fonction" id="fonction" class="form-select" required>
                                             <option value="">Selectionner une fonction</option>
+
                                             @foreach($fonctions as $fonction)
-                                            <option value="{{ $fonction->code }}">
-                                                {{ $fonction->libelle_fonction }}
-                                            </option>
+                                                <option value="{{ $fonction->code }}" data-structure="{{ $fonction->code_structure }}">{{ $fonction->libelle_fonction }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -267,32 +296,27 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
-                                        <label for="sous_domaine">Sous domaines autorisés :</label>
-                                        <select id="sous_domaine" name="sous_domaine" multiple>
-                                            @foreach ($sous_domaines as $sd)
-                                            <option value="{{ $sd->code }}">{{ $sd->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="form-group">
-                                        <label for="domaine">Domaine:</label>
-                                        <select id="domaine" class="form-control" name="domaine" multiple>
-
+                                        <label class="form-label select-label">Domaine</label>
+                                        <select id="domaine" name="domaine[]" class="form-select js-select2" multiple="multiple">
                                             @foreach ($domaines as $domaine)
-                                            <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
+                                            <option value="{{ $domaine->code }}" data-badge="">{{ $domaine->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label>Sous-Domaine</label><br />
+                                        <select id="sous_domaine" name="sous_domaine[]" class="form-select js-select2" multiple="multiple" data-mdb-select-init multiple >
 
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row">
-
                                 <div class="col">
                                     <label>Nom utilisateur</label>
                                     <div class="form-group position-relative has-icon-left">
@@ -344,7 +368,33 @@
         <h4><a href="{{ route('users.personnel') }}?ecran_id={{ $ecran->id }}">Voir la liste</a></h4>
     </div>
 </section>
+
+    <script src="{{ asset('betsa/js/jquery.min.js')}} "></script>
+    <script src="{{ asset('betsa/js/popper.js')}} "></script>
+    <script src="{{ asset('betsa/js/bootstrap.min.js')}} "></script>
+    <script src="{{ asset('betsa/js/main.js')}} "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.min.js"></script>
+
 <script>
+    function filterOptions(structure) {
+        var select = document.getElementById('fonction');
+        var options = select.options;
+        var selectedStructure = structure.toLowerCase();
+
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            var optionStructure = option.getAttribute('data-structure');
+
+            if (optionStructure === selectedStructure || !selectedStructure) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    }
+
+    // Appel initial pour afficher les données de bailleur par défaut
+    filterOptions('bailleurss');
     document.addEventListener("DOMContentLoaded", function() {
         var niveauAccesSelect = document.getElementById("niveau_acces_id");
         var paysSelect = document.getElementById("na");
@@ -404,98 +454,16 @@
             console.log('jQuery est chargé');
         }
 
-        // Attacher un gestionnaire d'événement au chargement du document
-        $(document).ready(function() {
-            // Vérifier si jQuery multiselect est chargé
-            if (typeof $.fn.multiselect === 'undefined') {
-                console.error('Le plugin jQuery multiselect n\'est pas chargé');
-                return;
-            }
 
-            // Gestionnaire d'événement pour le changement dans la sélection des sous-domaines
-            $('#sous_domaine').on('change', function() {
-                console.log("Changement détecté dans la sélection des sous-domaines");
-
-                var selectedSousDomaines = $(this).val(); // Obtenez les sous-domaines sélectionnés
-                console.log("Sous-domaines sélectionnés :", selectedSousDomaines);
-
-                // Sélectionnez automatiquement les domaines correspondants
-                $('#domaine').val(selectedSousDomaines.map(function(code) {
-                    // Extraire le code de domaine correspondant au code de sous-domaine
-                    return code.substring(0, 2); // Supposant que les deux premiers chiffres sont le code de domaine
-                }));
-
-                // Rafraîchissez le plugin de sélection multiple pour refléter les changements
-                $('#domaine').multiselect('refresh');
-            });
-        });
     </script>
-
-</script>
 
 <script>
     $(document).ready(function() {
 
-
-        var domaines = $('#domaine').filterMultiSelect({
-
-            // displayed when no options are selected
-            placeholderText: "0 sélection",
-
-            // placeholder for search field
-            filterText: "Filtrer",
-
-            // Select All text
-            selectAllText: "Tout sélectionner",
-
-            // Label text
-            labelText: "",
-
-            // the number of items able to be selected
-            // 0 means no limit
-            selectionLimit: 0,
-
-            // determine if is case sensitive
-            caseSensitive: false,
-
-            // allows the user to disable and enable options programmatically
-            allowEnablingAndDisabling: true,
-
-        });
-        var sous_dom = $('#sous_domaine').filterMultiSelect({
-
-            // displayed when no options are selected
-            placeholderText: "0 sélection",
-
-            // placeholder for search field
-            filterText: "Filtrer",
-
-            // Select All text
-            selectAllText: "Tout sélectionner",
-
-            // Label text
-            labelText: "",
-
-            // the number of items able to be selected
-            // 0 means no limit
-            selectionLimit: 0,
-
-            // determine if is case sensitive
-            caseSensitive: false,
-
-            // allows the user to disable and enable options programmatically
-            allowEnablingAndDisabling: true,
-
-        });
-
-
-
         $("#bai").prop("checked", true);
         showSelect('bailleur');
 
-        $('#domaine').on('change', function() {
-            updateSousDomaine($(this));
-        });
+
 
         $('#personne').on('change', function() {
             updateEmail($(this));
@@ -505,6 +473,8 @@
         })
         $('#niveau_acces_id').on('change', function() {
             showSelect_r($(this).val());
+            $("#na").prop("disabled", true);
+            $('#na').val(110);
         });
         $('#niveau_acces_id').trigger('change');
 
@@ -515,46 +485,100 @@
             $('#na').val(110);
         });
         $('#agence').on('change', function() {
-            showSelect_r('na');
-            $("#niveau_acces_id").prop("disabled", true);
-            $('#na').val(110);
+
+            $("#niveau_acces_id").prop("disabled", false);
+
         });
         $('#ministere').on('change', function() {
             $("#niveau_acces_id").prop("disabled", false);
         });
+        // Méthode pour récupérer les options sélectionnées du champ de sélection des sous-domaines sous forme de JSON
 
+        var domaine_select = $('#domaine').select2({
+            rounded: true,
+            shadow: true,
+		    placeholder: "Clique pour selectionne les domaines",
+            tagColor: {
+                textColor: '#327b2c',
+                borderColor: '#92e681',
+                bgColor: '#eaffe6',
+            },
+            onChange: function(values) {
+                console.log(values)
+            }
+	    });
+        var sous_domaine_select =  $('#sous_domaine').select2({
+            rounded: true,
+            shadow: true,
+		    placeholder: "Clique pour selectionne les sous-domaines",
+            tagColor: {
+                textColor: '#327b2c',
+                borderColor: '#92e681',
+                bgColor: '#eaffe6',
+            },
+            onChange: function(values) {
+                console.log(values)
+            }
+	    });
+        $('#domaine').change(function() {
+            var selected = $(this).val();
+            $.ajax({
+                url: "/fetch-sous-domaine",
+                method: 'POST',
+                data: {
+                    selected: selected,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    var options = '';
+                    $.each(response, function(index, sousDomaine) {
+                        options += '<option value="' + sousDomaine.code + '" data-badge="">' + sousDomaine.libelle + '</option>';
+                    });
+                    $('#sous_domaine').html(options);
+
+                    // Vérifiez si l'élément '#sous_domaine' utilise Select2 avant d'appeler la méthode 'destroy'
+                    if ($('#sous_domaine').data('select2')) {
+                        $('#sous_domaine').select2('destroy');
+                    }
+
+                    $('#sous_domaine').select2();
+                }
+            });
+        });
+        $.fn.getSelectedOptionsAsJson = function() {
+            var selectedOptions = [];
+            $(this).find('option:selected').each(function() {
+                selectedOptions.push($(this).val());
+            });
+            return JSON.stringify(selectedOptions);
+        };
 
         $('#create-user').on('submit', function(event) {
-            event.preventDefault(); // Empêcher la soumission par défaut du formulaire
+            event.preventDefault();
 
-            // Créer un objet FormData à partir du formulaire
             var formData = new FormData(this);
 
-            // Ajouter des données supplémentaires à FormData si nécessaire
-            formData.append("sd", sous_dom.getSelectedOptionsAsJson());
-            formData.append("domS", domaines.getSelectedOptionsAsJson());
 
-            // Construire l'URL correcte pour la requête AJAX
+            formData.append("sous_domaine", sous_domaine_select.getSelectedOptionsAsJson());
+            formData.append("domaine", domaine_select.getSelectedOptionsAsJson());
+
             var url = '/admin/users/store';
 
             $.ajax({
                 url: url,
                 type: 'POST',
                 data: formData,
-                contentType: false,
                 processData: false,
+                contentType: false,
                 success: function(response) {
-
-                    console.log(response.donnees);
+                    console.log(response);
                     showPopup(response.success);
-                    // Rediriger l'utilisateur après une requête réussie
                     window.location.href = "/admin/users?ecran_id=12";
                 },
                 error: function(xhr, status, error) {
-                    var err = JSON.parse(xhr.responseText);
-                    console.log(err); // Afficher les détails de l'erreur côté serveur dans la console
-                    showPopup('Une erreur est survenue !');
+                    showPopup('Une erreur est survenue ! Veuillez consulter la console pour plus de détails.');
                 }
+
             });
         });
     });
@@ -638,7 +662,7 @@
                     var structureCode = latestStructure.code_structure;
 
                     // Mettre à jour les champs en fonction du type de structure
-                    if (structureType === 'bailleur') {
+                    if (structureType === 'bailleurss') {
                         $('#bai').prop('checked', true);
                         $('#bailleur').val(structureCode);
                         showSelect('bailleur');
@@ -709,31 +733,7 @@
         }
     }
 
-    function updateSousDomaine(selectElement) {
-        var selectedDomaine = selectElement.val();
 
-        // Effectuez une requête AJAX pour obtenir les sous-domaines
-        $.ajax({
-            type: 'GET'
-            , url: '/admin/get-sous_domaines/' + selectedDomaine
-            , success: function(data) {
-                console.log(data);
-                var sousDomainesSelect = $('#sous_domaine'); // Correction: Utilisation de l'ID directement
-
-                sousDomainesSelect.empty(); // Effacez les options précédentes
-
-                // Ajoutez les options des sous-domaines récupérés
-                $.each(data.sous_domaines, function(key, value) {
-                    sousDomainesSelect.append($('<option>', {
-                        value: key
-                        , text: value
-                    }));
-                });
-
-                sousDomainesSelect.trigger('change');
-            }
-        });
-    }
 
     function getGroupeUserByFonctionId(selectElement) {
         var selectedFonction = selectElement.val();

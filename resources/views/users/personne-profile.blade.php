@@ -181,11 +181,28 @@
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Groupe</p>
-                                                                    <p class="mb-0">{{ $user->roles->first()->name ?? ''}}</p>
+                                                                    <p class="mb-0">
+                                                                        @if($user)
+                                                                            {{ $user->roles->first()->name ?? '' }}
+                                                                        @else
+                                                                            Aucun groupe
+                                                                        @endif
+                                                                    </p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Fonction</p>
-                                                                    <p class="mb-0">{{ $user->latestFonction->fonctionUtilisateur->libelle_fonction }}</p>
+                                                                    <p class="mb-0">
+                                                                        @if($user)
+                                                                            {{ $user->latestFonction->fonctionUtilisateur->libelle_fonction }}
+                                                                        @elseif ($personne)
+                                                                            @if ( $personne->latestFonction)
+                                                                                {{ $personne->latestFonction->fonctionUtilisateur->libelle_fonction }}
+                                                                            @endif
+
+                                                                        @else
+                                                                            Aucune fonction
+                                                                        @endif
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -193,11 +210,67 @@
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Niveaux Accès</p>
-                                                                    <p class="mb-0">{{ $user->niveauAcces->libelle }}</p>
+                                                                    <p class="mb-0">
+
+                                                                        @if($user)
+                                                                            @if ($user->latestRegion)
+                                                                                @if ($user->latestRegion->region)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->region->libelle }}
+                                                                                @elseif ($user->latestRegion->departement)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->departement->libelle }}
+                                                                                @elseif ($user->latestRegion->district)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->district->libelle }}
+                                                                                @elseif ($user->latestRegion->pays)
+                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->pays->nom_fr_fr }}
+                                                                                @else
+                                                                                @endif
+                                                                            @endif
+                                                                        @elseif($personne)
+                                                                            @if ($personne->latestRegion)
+                                                                                @if ($personne->latestRegion->region)
+                                                                                    Region : {{ $personne->latestRegion->region->libelle }}
+                                                                                @elseif ($personne->latestRegion->departement)
+                                                                                    Département : {{ $personne->latestRegion->departement->libelle }}
+                                                                                @elseif ($personne->latestRegion->district)
+                                                                                    District : {{ $personne->latestRegion->district->libelle }}
+                                                                                @elseif ($personne->latestRegion->pays)
+                                                                                    Pays : {{ $personne->latestRegion->pays->nom_fr_fr }}
+                                                                                @else
+                                                                            @endif
+
+                                                                            @endif
+                                                                        @else
+                                                                            Aucune fonction
+                                                                        @endif
+                                                                    </p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Structure de rattachement</p>
-                                                                    <p class="mb-0">{{ $user->personnel->prenom }}</p>
+                                                                    <p class="mb-0">
+                                                                        @if ($personne)
+                                                                            @if($personne->lastStructure)
+                                                                                @if ($personne->lastStructure->agence)
+                                                                                    Agence : {{ $personne->lastStructure->agence->nom_agence }}
+                                                                                @elseif ($personne->lastStructure->ministere)
+                                                                                    Ministère : {{ $personne->lastStructure->ministere->libelle }}
+                                                                                @elseif ($personne->lastStructure->bailleur)
+                                                                                    Bailleur : {{ $personne->lastStructure->bailleur->libelle_long }}
+                                                                                @endif
+                                                                            @endif
+                                                                        @elseif ($user)
+                                                                            @if($user->lastStructure)
+                                                                                @if ($user->lastStructure->agence)
+                                                                                    Agence : {{ $user->lastStructure->agence->nom_agence }}
+                                                                                @elseif ($user->lastStructure->ministere)
+                                                                                    Ministère : {{ $user->lastStructure->ministere->libelle }}
+                                                                                @elseif ($user->lastStructure->bailleur)
+                                                                                    Bailleur : {{ $user->lastStructure->bailleur->libelle_long }}
+                                                                                @endif
+                                                                            @endif
+                                                                        @else
+                                                                            Aucune Structure de rattachement
+                                                                        @endif
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </li>

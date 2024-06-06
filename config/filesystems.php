@@ -21,7 +21,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may configure as many filesystem "disks" as you wish, and you
-    | may even configure multiple disks of the same driver. Defaults have
+    | maya even configure multiple disks of the same driver. Defaults have
     | been set up for each driver as an example of the required values.
     |
     | Supported Drivers: "local", "ftp", "sftp", "s3"
@@ -43,6 +43,14 @@ return [
             'visibility' => 'public',
             'throw' => false,
         ],
+        'geojson' => [
+            'driver' => 'local',
+            'root' => storage_path('../public/leaflet/geojsonTemp'),
+            'url' => env('APP_URL').'../public/leaflet/geojsonTemp',
+            'visibility' => 'public',
+            'throw' => false,
+        ],
+
 
         's3' => [
             'driver' => 's3',

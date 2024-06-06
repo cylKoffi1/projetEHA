@@ -12,7 +12,7 @@ class Ministere extends Model
 
     public $timestamps = false;
 
-    protected $table = 'ministere'; // Nom de la table   
+    protected $table = 'ministere'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
-}
+}   

@@ -6,6 +6,7 @@ use App\Models\ActionBeneficiairesProjet;
 use App\Models\ActionMener;
 use App\Models\ActionMenerFinancier;
 use App\Models\AgenceExecution;
+use App\Models\AvoirExpertise;
 use App\Models\Bailleur;
 use App\Models\BailleursProjet;
 use App\Models\Beneficiaire;
@@ -14,6 +15,7 @@ use App\Models\Devise;
 use App\Models\District;
 use App\Models\Domaine;
 use App\Models\CourDeau;
+use App\Models\CouvrirRegion;
 use App\Models\Ecran;
 use App\Models\Etablissement;
 use App\Models\Infrastructure;
@@ -21,6 +23,7 @@ use App\Models\Localite;
 use App\Models\Ministere;
 use App\Models\MinistereProjet;
 use App\Models\NatureTravaux;
+use App\Models\NiveauAccesDonnees;
 use App\Models\Pays;
 use App\Models\Personnel;
 use App\Models\ProjetActionAMener;
@@ -37,6 +40,7 @@ use App\Models\TypeFinancement;
 use App\Models\UniteMesure;
 use App\Models\uniteVolume;
 use App\Models\User;
+use App\Models\UtilisateurDomaine;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,15 +50,80 @@ class ProjetController extends Controller
 
     public function projet(Request $request)
     {
+        // Récupérer l'utilisateur actuellement connecté
+        $user = auth()->user();
+
+        // Récupérer les données de l'utilisateur à partir de son code_personnel
+        $userData = User::with('personnel')->where('code_personnel', $user->code_personnel)->first();
+
+        // Vérifier si l'utilisateur existe
+        if (!$userData) {
+            // Gérer le cas où l'utilisateur n'est pas trouvé
+            return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
+        }
+
+        // Récupérer le niveau d'accès de l'utilisateur
+        $niveauAcces = NiveauAccesDonnees::find($userData->niveau_acces_id);
+
+        // Initialiser les variables pour les régions et les districts
+        $regions = [];
+        $districts = [];
+        // Récupérer les données des régions, des districts, etc. en fonction du niveau d'accès
+        if ($niveauAcces->id == 'na') {
+            // Cas où le niveau d'accès est 'NA', donc afficher tous les districts et toutes les régions
+            $districts = District::all();
+            $regions = Region::all();
+        } elseif ($niveauAcces->id == 'di') {
+            // Cas où le niveau d'accès est 'DI', donc récupérer le district de l'utilisateur
+            $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+
+            if ($lastCouvrirRegion) {
+                $codeDistrict = $lastCouvrirRegion->code_district;
+                // Récupérer les régions associées à ce district
+                $regions = Region::where('code_district', $codeDistrict)->get();
+                $districts = District::where('code', $codeDistrict)->get();
+            } else {
+                // Gérer le cas où aucune entrée correspondante n'est trouvée
+            }
+        } elseif ($niveauAcces->id == 're') {
+            $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+            if ($lastCouvrirRegion) {
+                $codeRegions =$lastCouvrirRegion->code_region;
+                // Récupérer le district associé à cette région
+                
+                $codeDistrict = Region::where('code', $codeRegions)->value('code_district');
+                // Récupérer la région et le district
+                $regions = Region::where('code', $codeRegions)->get();
+                $districts = District::where('code', $codeDistrict)->get();
+            }
+
+        } elseif ($niveauAcces->id == 'de') {
+
+            // Cas où le niveau d'accès est 'DE', donc récupérer le département de l'utilisateur
+            $codeDepartement = CouvrirRegion::where('code_personnel', $user->code_personnel)
+            ->latest('date', 'DESC')
+                ->first();
+
+            // Récupérer la région et le district associés à ce département
+            $codeRegion = Departement::where('code', $codeDepartement->code_departement)->first();
+
+                $codeDistrict = Region::where('code', $codeRegion->code_region)->first();
+                   // Récupérer la région et le district
+                $regions = Region::where('code', $codeRegion->code_region)->get();
+                 $districts = District::where('code', $codeDistrict->code_district)->get();
+
+
+        }
+
         $codeProjet = $request->input('code_projet');
         $users = User::all();
         $projet = ProjetEha2::all();
         $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
        $ecran = Ecran::find($request->input('ecran_id'));
-        $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
-        $regions = Region::whereHas('district', function ($query) {
-            $query->where('id_pays', config('app_settings.id_pays'));
-        })->get();
         $departements = Departement::whereHas('region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
@@ -84,11 +153,22 @@ class ProjetController extends Controller
         $localite = Localite::all();
         $personnel = Personnel::all();
         $financements = TypeFinancement::all();
+        $user = User::where('code_personnel',auth()->user()->code_personnel);
 
-        return view('projet', ['sous_prefecture'=>$sous_prefecture,'beneficiairesActions'=>$beneficiairesActions,'users' => $users,'ecran' => $ecran,'projets'=>$projet,'domaines' => $domaines,        'etablissements'=>$etablissement, 'natureTravaux' => $natureTravaux, 'types_etablissement' => $types_etablissement,
+        $sous_domaine_Info = AvoirExpertise::where('code_personnel', auth()->user()->code_personnel )
+        ->join('sous_domaine', 'sous_domaine.code', '=', 'avoir_expertise.sous_domaine')
+        ->select('libelle', 'code')
+        ->get();
+
+        $domaine_Info = UtilisateurDomaine::where('code_personnel', auth()->user()->code_personnel )
+        ->join('domaine_intervention', 'domaine_intervention.code', '=', 'utilisateur_domaine.code_domaine')
+        ->select('libelle', 'code')
+        ->get();
+
+        return view('projet', ['sous_domaine_Info'=>$sous_domaine_Info,'domaine_Info'=>$domaine_Info,'domaine_Info'=>$domaine_Info,'sous_domaine_Info'=>$sous_domaine_Info,'users'=>$users,'niveauAcces'=>$niveauAcces,'sous_prefecture'=>$sous_prefecture,'beneficiairesActions'=>$beneficiairesActions,'users' => $users,'ecran' => $ecran,'projets'=>$projet,'domaines' => $domaines,        'etablissements'=>$etablissement, 'natureTravaux' => $natureTravaux, 'types_etablissement' => $types_etablissement,
         'devises' => $devises,'sous_domaines' => $sous_domaines, 'bailleurs' => $bailleurs,'localites' => $localites,
         'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts,
-        'regions' => $regions, 'actionMener' => $actionMener, 'unite_mesure' => $unite_mesure, 'uniteVol' => $unite_volume, 
+        'regions' => $regions, 'actionMener' => $actionMener, 'unite_mesure' => $unite_mesure, 'uniteVol' => $unite_volume,
         'infrastruc' => $infrastructure, 'agence' => $agence, 'ministere' => $ministere, 'collectivite'=>$collectivite, 'localite'=> $localite, 'personnel' => $personnel, 'courEau' => $courEau, 'financements'=>$financements]);
     }
 

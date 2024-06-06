@@ -68,7 +68,7 @@
                     Ajout d'un district
                     <a  href="#" data-toggle="modal" data-target="#district-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                 </h5>
-               
+
                 @if (count($errors) > 0)
                 <div class="alert alert-danger">
                     <ul>
@@ -95,7 +95,7 @@
                 </thead>
 
                 <tbody>
-                    @foreach ($districts as $district)
+            @foreach ($districts as $district)
                     <tr>
                         <td>{{ $district->code }}</td>
                         <td>{{ $district->libelle }}</td>

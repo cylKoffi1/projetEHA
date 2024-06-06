@@ -17,6 +17,6 @@ class ProjetAgence extends Model
     ];
     public function agenceExecution()
     {
-        return $this->hasMany(AgenceExecution::class, 'code_agence_execution', 'code_agence');
+        return $this->belongsTo(AgenceExecution::class, 'code_agence', 'code_agence_execution');
     }
 }

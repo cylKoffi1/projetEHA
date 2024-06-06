@@ -79,24 +79,11 @@
                 </div>
                 <div class="card-content">
                     <div class="card-body">
-                        <form class="form" enctype="multipart/form-data" id="update-user" action="{{ route('users.update', ['userId' => $user->id]) }}" method="POST">
+                        <form class="form" enctype="multipart/form-data" id="update-user" action="{{ route('users.update', ['userId' => $users->id]) }}" method="POST">
                             @csrf
                         <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                             <div class="row">
-                                <div class="col-3">
-                                    <div class="form-group">
-                                        <label for="fonction">Fonction :</label>
-                                        <select name="code_fonction" id="code_fonction" class="form-select" required>
-                                            <option value="">Selectionner une fonction</option>
-                                            @foreach($fonctions as $fonction)
-                                            <option value="{{ $fonction->code }}" {{ optional($user->latestFonction)->code_fonction == $fonction->code ? 'selected' : '' }}>
-                                                {{ $fonction->libelle_fonction }}
-                                            </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-4 ">
+                                                                <div class="col-4 ">
                                     @if($structureRattachement)
                                         <div class="form-group">
                                             <label for="structure_ratache">Structure :</label>
@@ -107,21 +94,21 @@
                                             <label for="min">M :</label>
                                             <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
 
-                                            <select name="bailleur" id="bailleur" class="form-select" style="{{ $structureRattachement->type_structure == 'bailleurss' ? '' : 'display: none;' }}">
+                                            <select name="bailleur" id="bailleur" class="form-select" onclick="filterOptions('bailleurss')" style="{{ $structureRattachement->type_structure == 'bailleurss' ? '' : 'display: none;' }}">
                                                 <option value="">Selectionner le bailleur</option>
                                                 @foreach($bailleurs as $bailleur)
                                                 <option value="{{ $bailleur->code_bailleur }}" {{ $structureRattachement->code_structure == $bailleur->code_bailleur ? 'selected' : '' }}>{{ $bailleur->libelle_long }}</option>
                                                 @endforeach
                                             </select>
 
-                                            <select name="agence" id="agence" class="form-select" style="{{ $structureRattachement->type_structure == 'agence_execution' ? '' : 'display: none;' }}">
+                                            <select name="agence" id="agence" class="form-select" onclick="filterOptions('agence_execution')" style="{{ $structureRattachement->type_structure == 'agence_execution' ? '' : 'display: none;' }}">
                                                 <option value="">Selectionner l'agence</option>
                                                 @foreach($agences as $agence)
                                                 <option value="{{ $agence->code_agence_execution }}" {{ $structureRattachement->code_structure == $agence->code_agence_execution ? 'selected' : '' }}>{{ $agence->nom_agence }}</option>
                                                 @endforeach
                                             </select>
 
-                                            <select name="ministere" id="ministere" class="form-select" style="{{ $structureRattachement->type_structure == 'ministere' ? '' : 'display: none;' }}">
+                                            <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('ministere')" style="{{ $structureRattachement->type_structure == 'ministere' ? '' : 'display: none;' }}">
                                                 <option value="">Selectionner le ministère</option>
                                                 @foreach($ministeres as $ministere)
                                                 <option value="{{ $ministere->code }}" {{ $structureRattachement->code_structure == $ministere->code ? 'selected' : '' }}>{{ $ministere->libelle }}</option>
@@ -169,13 +156,26 @@
                                         </div>
                                     @endif
                                 </div>
+                                <div class="col-3">
+                                    <div class="form-group">
+                                        <label for="fonction">Fonction :</label>
+                                        <select name="fonction" id="fonction" class="form-select" required>
+                                            <option value="">Selectionner une fonction</option>
+                                            @foreach($fonctions as $fonction)
+                                            <option value="{{ $fonction->code }}" data-structure="{{ $fonction->code_structure }}" {{ optional($users->latestFonction)->code_fonction == $fonction->code ? 'selected' : '' }}>
+                                                {{ $fonction->libelle_fonction }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
                                 <div class="col">
                                     <div class="form-group">
                                         <label for="group_user">Groupe utilisateur :</label>
                                         <select name="group_user" id="group_user" class="form-select" required>
                                             <option value="">Selectionner un groupe</option>
                                             @foreach($groupe_utilisateur as $groupe)
-                                            <option value="{{  $groupe->name }}" {{  optional($user->roles->first())->id == $groupe->id ? 'selected' : '' }}>
+                                            <option value="{{  $groupe->name }}" {{  optional($users->roles->first())->id == $groupe->id ? 'selected' : '' }}>
                                                 {{ $groupe->name }}
                                             </option>
                                             @endforeach
@@ -190,7 +190,7 @@
                                         <select name="niveau_acces_id" id="niveau_acces_id" class="form-select" required>
                                             {{-- <option value="">--- ---</option> --}}
                                             @foreach($niveauxAcces as $niveauAcces)
-                                            <option value="{{ $niveauAcces->id }}" {{ $user->niveau_acces_id == $niveauAcces->id ? 'selected' : '' }}>{{ $niveauAcces->libelle }}</option>
+                                            <option value="{{ $niveauAcces->id }}" {{ $users->niveau_acces_id == $niveauAcces->id ? 'selected' : '' }}>{{ $niveauAcces->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -201,25 +201,25 @@
                                         <select name="reg" id="reg" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($regions as $region)
-                                            <option value="{{ $region->code }}" {{ optional(optional($user->latestRegion)->region)->code == $region->code ? 'selected' : '' }}>{{ $region->libelle }}</option>
+                                            <option value="{{ $region->code }}" {{ optional(optional($users->latestRegion)->region)->code == $region->code ? 'selected' : '' }}>{{ $region->libelle }}</option>
                                             @endforeach
                                         </select>
                                         <select name="dis" id="dis" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($districts as $district)
-                                            <option value="{{ $district->code }}" {{ optional(optional($user->latestRegion)->district)->code == $district->code ? 'selected' : '' }}>{{ $district->libelle }}</option>
+                                            <option value="{{ $district->code }}" {{ optional(optional($users->latestRegion)->district)->code == $district->code ? 'selected' : '' }}>{{ $district->libelle }}</option>
                                             @endforeach
                                         </select>
                                         <select name="dep" id="dep" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($departements as $dep)
-                                            <option value="{{ $dep->code }}" {{ optional(optional($user->latestRegion)->departement)->code == $dep->code ? 'selected' : '' }}>{{ $dep->libelle }}</option>
+                                            <option value="{{ $dep->code }}" {{ optional(optional($users->latestRegion)->departement)->code == $dep->code ? 'selected' : '' }}>{{ $dep->libelle }}</option>
                                             @endforeach
                                         </select>
                                         <select name="na" id="na" class="form-select" style="display: none;">
                                             <option value="">--- ---</option>
                                             @foreach($pays as $ppay)
-                                            <option value="{{ $ppay->id }}" {{ optional(optional($user->latestRegion)->pays)->id == $ppay->id ? 'selected' : '' }}>{{ $ppay->nom_fr_fr }}</option>
+                                            <option value="{{ $ppay->id }}" {{ optional(optional($users->latestRegion)->pays)->id == $ppay->id ? 'selected' : '' }}>{{ $ppay->nom_fr_fr }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -252,7 +252,7 @@
                                 <div class="col-sm-4">
                                     <label>Nom utilisateur</label>
                                     <div class="form-group position-relative has-icon-left">
-                                        <input type="text" id="username" name="username" value="{{ $user->login }}" class="form-control" placeholder="Nom utilisateur">
+                                        <input type="text" id="username" name="username" value="{{ $users->login }}" class="form-control" placeholder="Nom utilisateur">
                                         <div class="form-control-icon">
                                             <i class="bi bi-person"></i>
                                         </div>
@@ -265,7 +265,7 @@
                                 <div class="col">
                                     <div class="form-group">
                                         <label for="nom" class="form-label">Nom</label>
-                                        <input type="text" id="nom" class="form-control" required value="{{ $user->personnel->nom }}" placeholder="Nom" name="nom" />
+                                        <input type="text" id="nom" class="form-control" required value="{{ $users->personnel->nom }}" placeholder="Nom" name="nom" />
                                     </div>
                                     @error('nom')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -274,7 +274,7 @@
                                 <div class="col">
                                     <div class="form-group">
                                         <label for="prenom" class="form-label">Prénom</label>
-                                        <input type="text" id="prenom" class="form-control" value="{{ $user->personnel->prenom }}" required placeholder="Prénom" name="prenom" />
+                                        <input type="text" id="prenom" class="form-control" value="{{ $users->personnel->prenom }}" required placeholder="Prénom" name="prenom" />
                                     </div>
                                     @error('prenom')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -285,7 +285,7 @@
                                 <div class="col-sm-4">
                                     <label for="email-id-column" class="form-label">Email</label>
                                     <div class="form-group position-relative has-icon-left">
-                                        <input type="email" id="email" class="form-control" name="email" value="{{ $user->personnel->email }}" required placeholder="Email" />
+                                        <input type="email" id="email" class="form-control" name="email" value="{{ $users->personnel->email }}" required placeholder="Email" />
                                         <div class="form-control-icon">
                                             <i class="bi bi-envelope"></i>
                                         </div>
@@ -302,7 +302,7 @@
                                             <i class="bi bi-phone"></i>
                                         </div>
                                         <span class="input-group-text" id="indicatifPays">+XX</span> <!-- Balise span pour afficher l'indicatif du pays -->
-                                        <input type="text" id="tel" class="form-control" required value="{{ $user->personnel->telephone }}" placeholder="Téléphone" name="tel" />
+                                        <input type="text" id="tel" class="form-control" required value="{{ $users->personnel->telephone }}" placeholder="Téléphone" name="tel" />
 
                                     </div>
                                     @error('tel')
@@ -312,7 +312,7 @@
                                 <div class="col-sm-4">
                                     <label for="country-floating" class="form-label">Adresse</label>
                                     <div class="form-group position-relative has-icon-left">
-                                        <input type="text" id="adresse" class="form-control" name="adresse" value="{{ $user->personnel->addresse }}" placeholder="Adresse" />
+                                        <input type="text" id="adresse" class="form-control" name="adresse" value="{{ $users->personnel->addresse }}" placeholder="Adresse" />
                                         <div class="form-control-icon">
                                             <i class="bi bi-house"></i>
                                         </div>
@@ -338,8 +338,8 @@
                                 <div class="col-sm-4">
                                     <label for="photo" class="form-label">Photo actuelle</label>
                                     <div class="form-group">
-                                        @if ($user->personnel->photo)
-                                        <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/".$user->personnel->photo) }}" alt="Photo">
+                                        @if ($users->personnel->photo)
+                                        <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/".$users->personnel->photo) }}" alt="Photo">
                                         @else
                                         <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/user.png") }}" alt="Photo">
                                         @endif
@@ -388,7 +388,24 @@
         <h4><a href="/admin/users">Voir la liste</a></h4>
     </div>
 </section>
+<script>
+    function filterOptions(structure) {
+        var select = document.getElementById('fonction');
+        var options = select.options;
+        var selectedStructure = structure.toLowerCase();
 
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            var optionStructure = option.getAttribute('data-structure');
+
+            if (optionStructure === selectedStructure || !selectedStructure) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    }
+</script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         var niveauAccesSelect = document.getElementById("niveau_acces_id");
@@ -446,7 +463,7 @@
 
     console.log('{{ $user}}')
     $(document).ready(function() {
-        var uid = '{{ $user->id }}';
+        var uid = '{{ $users->id }}';
         var userSD = @json($sous_dom);
         var userD = @json($dom);
         if ('{{$structureRattachement && $structureRattachement->type_structure === "bailleurss"}}') {
@@ -475,20 +492,20 @@
             getGroupeUserByFonctionId($(this));
         })
 
-        @if($user->personnel->latestRegion)
-            if ('{{ $user->personnel->latestRegion->region }}') {
+        @if($users->personnel->latestRegion)
+            if ('{{ $users->personnel->latestRegion->region }}') {
                 showSelect_r('re');
                 console.log(userD);
             }
-            if ('{{ $user->personnel->latestRegion->pays }}') {
+            if ('{{ $users->personnel->latestRegion->pays }}') {
                 showSelect_r('na');
                 console.log(userD);
             }
-            if ('{{ $user->personnel->latestRegion->district }}') {
+            if ('{{ $users->personnel->latestRegion->district }}') {
                 showSelect_r('di');
                 console.log(userD);
             }
-            if ('{{ $user->personnel->latestRegion->departement }}') {
+            if ('{{ $users->personnel->latestRegion->departement }}') {
                 showSelect_r('de');
                 console.log(userD);
             }
@@ -673,7 +690,7 @@
             // Effectuez une requête AJAX pour obtenir les sous-domaines
             $.ajax({
                 type: "GET"
-                , url: "/admin/get-sous_domaines/" + selectedDomaine
+                , url: "/cc" + selectedDomaine
                 , success: function(data) {
                     console.log(data);
                     var sousDomainesSelect = $("#sous_domaine"); // Correction: Utilisation de l'ID directement

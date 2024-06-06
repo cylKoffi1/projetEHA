@@ -212,8 +212,8 @@
                                     <span style="color: white"></span>
                                 </a>
                                 <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" onclick="showEditBailleur('{{ $p->code }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
-                                    <li><a class="dropdown-item" onclick="deleteBailleur('{{ $p->code }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
+                                    <li><a class="dropdown-item" onclick="showEditBailleur('{{ $p->code_bailleur }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
+                                    <li><a class="dropdown-item" onclick="deleteBailleur('{{ $p->code_bailleur }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
                                     <li><a class="dropdown-item" href="#"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
                                 </ul>
                             </div>
@@ -298,10 +298,10 @@
                             <div class="col-md-6 col-12">
                                 <div class="form-group mandatory">
                                     <label class="form-label" for="edit_id_pays">Pays :</label>
-                                    <select class="form-select" id="id_pays" name="edit_id_pays" required>
+                                    <select class="form-select" id="edit_id_pays" name="edit_id_pays" required>
                                         <option value="">Sélectionner un pays</option>
-                                        @foreach ($pays as $country)
-                                        <option value="{{ $country->id }}">{{ $country->nom_fr_fr }}</option>
+                                        @foreach ($pays as $pay)
+                                        <option value="{{ $pay->id }}">{{ $pay->nom_fr_fr }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -340,19 +340,20 @@
     function showEditBailleur(code) {
         $('#edit-bailleur-modal').modal('show');
         $.ajax({
-            type: 'GET'
-            , url: '/admin/bailleur/' + code
-            , success: function(data) {
+            type: 'GET',
+            url: '/admin/bailleur/' + code,
+            success: function(data) {
                 console.log(data);
-                // Remplir le formulaire modal avec les données du district
-                $('#edit_code').val(data.code); // Utilisez l'ID du champ d'édition
-                $('#edit_nom').val(data.nom);
+                // Remplir le formulaire modal avec les données du bailleur
+                $('#edit_ecran_id').val(data.ecran_id); // Utilisez l'ID du champ d'édition
+                $('#edit_code').val(data.code_bailleur);
+                $('#edit_nom').val(data.libelle_long);
                 $('#edit_tel').val(data.telephone);
                 $('#edit_email').val(data.email);
-                $('#edit_addresse').val(data.addresse);
-                $('#edit_id_devise').val(data.code_devise);
+                $('#edit_addresse').val(data.adresse);
+                $('#edit_id_devise').val(data.devise);
                 $('#edit_id_tb').val(data.code_type_bailleur);
-                $('#edit_id_pays').val(data.code_pays);
+                $('#edit_id_pays').val(data.id_pays);
             }
         });
     }

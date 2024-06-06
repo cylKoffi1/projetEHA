@@ -14,6 +14,7 @@ use App\Models\CaractReseau;
 use App\Models\CaractReseauCollect;
 use App\Models\CaractReservoir;
 use App\Models\CaractUniteTraitement;
+use App\Models\CouvrirRegion;
 use App\Models\DateDebutEffective;
 use App\Models\DateFinEffective;
 use App\Models\FamilleInfrastructure;
@@ -30,6 +31,7 @@ use App\Models\Region;
 use App\Models\Sous_prefecture;
 use App\Models\Pays;
 use App\Models\Ecran;
+use App\Models\NiveauAccesDonnees;
 use App\Models\ProjetActionAMener;
 use App\Models\ProjetEha2;
 use App\Models\ProjetStatutProjet;
@@ -37,6 +39,7 @@ use App\Models\typeCaptage;
 use App\Models\TypeInstrument;
 use App\Models\TypeResaux;
 use App\Models\UniteTraitement;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -102,7 +105,7 @@ class RealiseProjetController extends Controller
     public function VoirListe(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
-        $projets = ProjetEha2::all();
+
         $statutProjetStatut = ProjetStatutProjet::all();
         $natureTravaux = NatureTravaux::all();
         $projetsNonTrouves = DB::table('projet_eha2')
@@ -111,11 +114,85 @@ class RealiseProjetController extends Controller
             ->pluck('projet_eha2.CodeProjet')
             ->toArray();
         // Sélectionner tous les CodeProjet
+        // Récupérer l'utilisateur actuellement connecté
+        $user = auth()->user();
+
+        // Récupérer les données de l'utilisateur à partir de son code_personnel
+        $userData = User::with('personnel')->where('code_personnel', $user->code_personnel)->first();
+
+        // Vérifier si l'utilisateur existe
+        if (!$userData) {
+            // Gérer le cas où l'utilisateur n'est pas trouvé
+            return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
+        }
+
+        // Récupérer le niveau d'accès de l'utilisateur
+        $niveauAcces = NiveauAccesDonnees::find($userData->niveau_acces_id);
+
+        // Initialiser les variables pour les régions et les districts
+        $regions = [];
+        $districts = [];
+
+        // Récupérer les données des régions, des districts, etc. en fonction du niveau d'accès
+        if ($niveauAcces->id == 'na') {
+            // Cas où le niveau d'accès est 'NA', donc afficher tous les districts et toutes les régions
+            $districts = District::all();
+            $regions = Region::all();
+        } elseif ($niveauAcces->id == 'di') {
+            // Cas où le niveau d'accès est 'DI', donc récupérer le district de l'utilisateur
+            $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+
+            if ($lastCouvrirRegion) {
+                $codeDistrict = $lastCouvrirRegion->code_district;
+                // Récupérer les régions associées à ce district
+                $regions = Region::where('code_district', $codeDistrict)->get();
+                $districts = District::where('code', $codeDistrict)->get();
+            } else {
+                // Gérer le cas où aucune entrée correspondante n'est trouvée
+            }
+        } elseif ($niveauAcces->id == 're') {
+            $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+            if ($lastCouvrirRegion) {
+                $codeRegions = $lastCouvrirRegion->code_region;
+                // Récupérer le district associé à cette région
+                $codeDistrict = Region::where('code', $codeRegions)->value('code_district');
+                // Récupérer la région et le district
+                $regions = Region::where('code', $codeRegions)->get();
+                $districts = District::where('code', $codeDistrict)->get();
+            }
+
+        } elseif ($niveauAcces->id == 'de') {
+
+            // Cas où le niveau d'accès est 'DE', donc récupérer le département de l'utilisateur
+            $codeDepartement = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+
+            // Récupérer la région et le district associés à ce département
+            $codeRegion = Departement::where('code', $codeDepartement->code_departement)->first();
+
+            $codeDistrict = Region::where('code', $codeRegion->code_region)->first();
+            // Récupérer la région et le district
+            $regions = Region::where('code', $codeRegion->code_region)->get();
+            $districts = District::where('code', $codeDistrict->code_district)->get();
+        }
+
+        // Utiliser les régions et les districts récupérés pour filtrer les projets
         $tousLesProjets = DB::table('projet_statut_projet')
+            ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
             ->where('code_statut_projet', 1)
+            ->whereIn('projet_eha2.code_district', $districts->pluck('code')->toArray())
+            ->whereIn('projet_eha2.code_region', $regions->pluck('code')->toArray())
             ->distinct()
             ->pluck('code_projet')
             ->toArray();
+        $projets =  ProjetEha2::whereIn('code_district', $districts->pluck('code')->toArray())
+        ->whereIn('code_region', $regions->pluck('code')->toArray())
+        ->get();
         // Ajoutez la récupération des actions ici (remplacez par votre propre logique)
         $actions = ProjetActionAMener::all();
         // Définissez la variable $beneficiairesActions
@@ -483,7 +560,7 @@ class RealiseProjetController extends Controller
 
     ///////////////////ETAT D'AVANCEMENT////////////
     public function etatAvancement(Request $request){
-        $projets = ProjetEha2::all();
+
         $statuts = DB::table('projet_statut_projet')
         ->join('statut_projet', 'statut_projet.code', '=', 'projet_statut_projet.code_statut_projet')
         ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
@@ -503,8 +580,79 @@ class RealiseProjetController extends Controller
             ->pluck('projet_eha2.CodeProjet')
             ->toArray();
         // Sélectionner tous les CodeProjet
+        // Récupérer l'utilisateur actuellement connecté
+        $user = auth()->user();
+
+        // Récupérer les données de l'utilisateur à partir de son code_personnel
+        $userData = User::with('personnel')->where('code_personnel', $user->code_personnel)->first();
+
+        // Vérifier si l'utilisateur existe
+        if (!$userData) {
+            // Gérer le cas où l'utilisateur n'est pas trouvé
+            return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
+        }
+
+        // Récupérer le niveau d'accès de l'utilisateur
+        $niveauAcces = NiveauAccesDonnees::find($userData->niveau_acces_id);
+
+        // Initialiser les variables pour les régions et les districts
+        $regions = [];
+        $districts = [];
+
+        // Récupérer les données des régions, des districts, etc. en fonction du niveau d'accès
+        if ($niveauAcces->id == 'na') {
+            // Cas où le niveau d'accès est 'NA', donc afficher tous les districts et toutes les régions
+            $districts = District::all();
+            $regions = Region::all();
+        } elseif ($niveauAcces->id == 'di') {
+            // Cas où le niveau d'accès est 'DI', donc récupérer le district de l'utilisateur
+            $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+
+            if ($lastCouvrirRegion) {
+                $codeDistrict = $lastCouvrirRegion->code_district;
+                // Récupérer les régions associées à ce district
+                $regions = Region::where('code_district', $codeDistrict)->get();
+                $districts = District::where('code', $codeDistrict)->get();
+            } else {
+                // Gérer le cas où aucune entrée correspondante n'est trouvée
+            }
+        } elseif ($niveauAcces->id == 're') {
+            $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+            if ($lastCouvrirRegion) {
+                $codeRegions = $lastCouvrirRegion->code_region;
+                // Récupérer le district associé à cette région
+                $codeDistrict = Region::where('code', $codeRegions)->value('code_district');
+                // Récupérer la région et le district
+                $regions = Region::where('code', $codeRegions)->get();
+                $districts = District::where('code', $codeDistrict)->get();
+            }
+
+        } elseif ($niveauAcces->id == 'de') {
+
+            // Cas où le niveau d'accès est 'DE', donc récupérer le département de l'utilisateur
+            $codeDepartement = CouvrirRegion::where('code_personnel', $user->code_personnel)
+                ->latest('date', 'DESC')
+                ->first();
+
+            // Récupérer la région et le district associés à ce département
+            $codeRegion = Departement::where('code', $codeDepartement->code_departement)->first();
+
+            $codeDistrict = Region::where('code', $codeRegion->code_region)->first();
+            // Récupérer la région et le district
+            $regions = Region::where('code', $codeRegion->code_region)->get();
+            $districts = District::where('code', $codeDistrict->code_district)->get();
+        }
+
+        // Utiliser les régions et les districts récupérés pour filtrer les projets
         $tousLesProjets = DB::table('projet_statut_projet')
+            ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
             ->where('code_statut_projet', 2)
+            ->whereIn('projet_eha2.code_district', $districts->pluck('code')->toArray())
+            ->whereIn('projet_eha2.code_region', $regions->pluck('code')->toArray())
             ->distinct()
             ->pluck('code_projet')
             ->toArray();
@@ -518,6 +666,9 @@ class RealiseProjetController extends Controller
             ->distinct()
             ->pluck('code_projet')
             ->toArray();
+        $projets = ProjetEha2::whereIn('code_district', $districts->pluck('code')->toArray())
+        ->whereIn('code_region', $regions->pluck('code')->toArray())
+        ->get();
         $localite = Localite::all();
         $etablissements = Etablissement::all();
         $codeProjet = $request->input('code_projet');

@@ -95,7 +95,7 @@
         justify-content: space-between;
     }
 
-    
+
     .bi{
         width: auto;
         height: auto;
@@ -103,7 +103,7 @@
         margin-bottom: 7px;
         padding-right: 15px;
     }
-    
+
 
 </style>
 
@@ -116,12 +116,12 @@
             @if($rubrique->permission)
             @can($rubrique->permission->name)
             <li class="nav-item">
-                {{-- <a href="#" class='nav-link nav-link-collapse' data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}" aria-expanded="false">
+                {{-- <a href="{{ url('#')}}" class='nav-link nav-link-collapse' data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}" aria-expanded="false">
                 <i class="bi bi-people-fill md-2"></i>
                 <span>{{ $rubrique->libelle }}</span>
                 </a> --}}
 
-                <a href="#" class='nav-link nav-link-collapse' data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}" aria-expanded="false">
+                <a href="{{ url('#')}}" class='nav-link nav-link-collapse' data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}" aria-expanded="false">
                     <div class="nav-link-content">
                         <i class="{{ $rubrique->class_icone ?? 'bi-gear' }}"></i>
                         <span>{{ $rubrique->libelle }}</span>
@@ -134,7 +134,7 @@
                     @if($sousMenu->permission)
                     @can($sousMenu->permission->name)
                     <li class="nav-item">
-                        <a href="#" class="nav-link nav-link-collapse" id="hasSubItems" data-toggle="collapse" data-target="#sous_menu{{ $sousMenu->code }}" aria-controls="sous_menu{{ $sousMenu->code }}" aria-expanded="false">{{ $sousMenu->libelle }}</a>
+                        <a href="{{ url('#')}}" class="nav-link nav-link-collapse" id="hasSubItems" data-toggle="collapse" data-target="#sous_menu{{ $sousMenu->code }}" aria-controls="sous_menu{{ $sousMenu->code }}" aria-expanded="false">{{ $sousMenu->libelle }}</a>
                         <ul class="nav-second-level collapse " id="sous_menu{{ $sousMenu->code }}">
                             @include('partials.submenu', ['sousMenus' => $sousMenu->sousSousMenus, 'id_parent'=>$sousMenu->code])
 
@@ -142,7 +142,7 @@
                             @if($ecran->permission)
                             @can($ecran->permission->name)
                             <li class="nav-item">
-                                <a href="/admin/{{ $ecran->path }}?ecran_id={{ $ecran->id }}" class="nav-link">{{ $ecran->libelle }}</a>
+                                <a href="{{ url('/admin/' . $ecran->path . '?ecran_id=' . $ecran->id) }}" class="nav-link">{{ $ecran->libelle }}</a>
                             </li>
                             @endcan
                             @endif
@@ -156,7 +156,7 @@
                     @if($ecran->permission)
                     @can($ecran->permission->name)
                     <li class="nav-item">
-                        <a href="/admin/{{ $ecran->path }}?ecran_id={{ $ecran->id }}" class="nav-link">{{ $ecran->libelle }}</a>
+                        <a href="{{ url('/admin/' . $ecran->path . '?ecran_id=' . $ecran->id) }}" class="nav-link">{{ $ecran->libelle }}</a>
                     </li>
                     @endcan
                     @endif
@@ -167,7 +167,7 @@
             @endif
             @endforeach
             <li class="nav-link" onclick="logout('logout-form_side')" style="padding-bottom: 150px;">
-                <a href="#" class='nav-link' onclick="logout('logout-form_side')">
+                <a href="{{ url('#')}}" class='nav-link' onclick="logout('logout-form_side')">
                     <i class="bi bi-box-arrow-left" style="color: red;"></i>
                     <span style="color: red;">Déconnexion</span>
                 </a>

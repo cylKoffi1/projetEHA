@@ -80,6 +80,12 @@
 
     <!-- Multiple select -->
     <script src="{{ asset('assets/multiSelect/filter-multi-select-bundle.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
 
     <script src="{{ asset('assets/multiSelect/filter-multi-select-bundle.min.js') }}"></script>
     {{-- <script src="{{ asset('assets/multiSelect/filter-multi-select.js') }}"></script> --}}
@@ -90,6 +96,7 @@
     <script src="{{ asset('assets/extensions/apexcharts/apexcharts.min.js')}}"></script>
     {{-- <script src="{{ asset('assets/static/js/pages/dashboard.js')}}"></script>
     <script src="{{ asset('assets/static/js/pages/ui-apexchart.js')}}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ asset('assets/static/js/pages/ui-chartjs.js')}}"></script>
     <script src="{{ asset('assets/static/js/pages/date-picker.js')}}"></script> --}}
     <script src="{{ asset('assets/extensions/choices.js/public/assets/scripts/choices.js') }}"></script>
@@ -107,16 +114,11 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="alertModalLabel" style="color: red;">Message</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
             </div>
             <div class="modal-body">
                 <p id="alertMessage"></p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-            </div>
+
         </div>
     </div>
 </div>
