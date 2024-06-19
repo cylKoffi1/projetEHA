@@ -6,8 +6,6 @@
         <title>EHA_Projet</title>
 
 
-        <!-- For favicon png -->
-		<link rel="shortcut icon" type="image/icon" href="assets/logo/favicon.png"/>
 
         <!--font-awesome.min.css-->
         <link rel="stylesheet" href="{{ asset('betsa/assets/css/font-awesome.min.css')}}">
@@ -47,5 +45,5 @@
 		<link rel="stylesheet" href="{{ asset('betsa/assets/css/menu.css')}}">
 		<link href="https://fonts.googleapis.com/css?family=Arvo&display=swap" rel="stylesheet">
 
-        
+
         <link src="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">

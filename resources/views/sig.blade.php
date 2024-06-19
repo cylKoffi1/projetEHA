@@ -9,7 +9,65 @@
 
         @include('layouts.lurl')
         <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css')}}" />
-    <style>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Sélectionnez le bouton "Afficher toutes les données"
+                var tousButton = document.getElementById('radioButton3');
+
+                // Vérifiez si le bouton existe
+                if (tousButton) {
+                    // Appliquer le filtre par défaut lorsque le bouton est sélectionné
+                    applyDefaultFilter();
+                }
+            });
+
+            function applyDefaultFilter() {
+               // Récupérez les éléments du formulaire
+                var startDateInput = document.getElementById('start_date');
+                var endDateInput = document.getElementById('end_date');
+                var statusInput = document.getElementById('status');
+                var bailleurInput = document.getElementById('bailleur');
+
+                // Réinitialisez les valeurs des champs à null (ou chaîne vide '')
+                startDateInput.value = '';
+                endDateInput.value = '';
+                statusInput.value = '';
+                bailleurInput.value = '';
+
+                // Créez l'objet formData avec les valeurs mises à null
+                var formData = {
+                    startDate: startDateInput.value,
+                    endDate: endDateInput.value,
+                    status: statusInput.value,
+                    bailleur: bailleurInput.value,
+                    dateType: 'Tous'
+                };
+
+                // Append a random query string to the URL to bypass cache
+                var randomQueryString = `&_=${new Date().getTime()}`;
+
+                fetch(`{{ route('filter.maps') }}?start_date=${startDateInput}&end_date=${endDateInput}&status=${statusInput}&bailleur=${bailleurInput}&date_type=Tous${randomQueryString}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    //window.location.reload();
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+
+        </script>
+
+
+  <style>
 
             .info {
                 padding: 6px 8px;
@@ -163,17 +221,15 @@
 
                     </div>
                     </div>
-                </section><!--/.service-->
-                <!--service end-->
-<script  type="text/javascript"  src="{{ asset('leaflet/geojsonTemp/Department.geojson.js') }}"></script>
-                <!-- Ajoutez cette balise script dans votre fichier HTML -->
+                </section>
+
+
 <script>
     // Récupérez les éléments d'entrée
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
     var statusInput = document.getElementById('status');
     var bailleurInput = document.getElementById('bailleur');
-
 
 
     endDateInput.addEventListener('change', function() {
@@ -184,101 +240,53 @@
             endDateInput.value = startDateInput.value; // Réinitialisez la date de fin à la date de début
         }
     });
-    var filterApplied = false;
+    // Écoutez les changements dans les champs de formulaire pour sauvegarder les données dans le stockage local
 
-// Function to load the default geoJSON files
-function loadDefaultGeoJSON() {
-    var scripts = [
-        "{{ asset('leaflet/geojsonTemp/District.geojson.js') }}",
-        "{{ asset('leaflet/geojsonTemp/Region.geojson.js') }}",
-        "{{ asset('leaflet/geojsonTemp/Cout.geojson.js') }}",
-        "{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js') }}"
-    ];
-    loadScriptsSequentially(scripts);
-}
+    document.getElementById('filterButton').addEventListener('click', function() {
+        var startDate = startDateInput.value;
+        var endDate = endDateInput.value;
+        var status = statusInput.value;
+        var bailleur = bailleurInput.value;
+        var dateType = document.querySelector('input[name="radioButtons"]:checked');
 
-// Function to load the filtered geoJSON files
-function loadFilteredGeoJSON() {
-    var scripts = [
-        "{{ asset('leaflet/geojsonTemp/District_temp.geojson.js') }}",
-        "{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js') }}",
-        "{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js') }}",
-        "{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js') }}"
-    ];
-    loadScriptsSequentially(scripts);
-    window.location.reload();
-}
-
-// Helper function to load scripts sequentially
-function loadScriptsSequentially(scripts) {
-    if (scripts.length === 0) {
-        return;
-    }
-
-    var script = document.createElement('script');
-    script.src = scripts[0];
-    script.onload = function() {
-        scripts.shift();
-        loadScriptsSequentially(scripts);
-    };
-    document.body.appendChild(script);
-}
-
-// Function to clear current layers
-function clearMapLayers() {
-    // Assuming you have a reference to your map instance in a variable `map`
-    map.eachLayer(function (layer) {
-        if (layer instanceof L.GeoJSON) {
-            map.removeLayer(layer);
+        if (!dateType) {
+            $('#alertMessage').text('Veuillez sélectionner une option de date (prévisionnelles ou effectives) ou le sans filtre.');
+            $('#alertModal').modal('show');
+            return;
         }
+
+        dateType = dateType.value;
+
+        var formData = {
+            startDate: startDate,
+            endDate: endDate,
+            status: status,
+            bailleur: bailleur,
+            dateType: dateType
+        };
+        localStorage.setItem('formData', JSON.stringify(formData));
+
+        // Append a random query string to the URL to bypass cache
+        var randomQueryString = `&_=${new Date().getTime()}`;
+
+        fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Vider le cache et recharger la page
+            clearCacheAndReload();
+        })
+        .catch(error => console.error('Error:', error));
     });
-}
-document.getElementById('filterButton').addEventListener('click', function() {
-    var startDate = startDateInput.value;
-    var endDate = endDateInput.value;
-    var status = statusInput.value;
-    var bailleur = bailleurInput.value;
-    var dateType = document.querySelector('input[name="radioButtons"]:checked');
 
-    if (!dateType) {
-        $('#alertMessage').text('Veuillez sélectionner une option de date (prévisionnelles ou effectives) ou le sans filtre.');
-        $('#alertModal').modal('show');
-        return;
-    }
-
-    dateType = dateType.value;
-
-    var formData = {
-        startDate: startDate,
-        endDate: endDate,
-        status: status,
-        bailleur: bailleur,
-        dateType: dateType
-    };
-    localStorage.setItem('formData', JSON.stringify(formData));
-
-    // Append a random query string to the URL to bypass cache
-    var randomQueryString = `&_=${new Date().getTime()}`;
-
-    fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
-        headers: {
-            'Cache-Control': 'no-cache'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        updateMap(data);
-        filterApplied = true;
-        clearMapLayers();
-        loadFilteredGeoJSON();
-    })
-    .catch(error => console.error('Error:', error));
-});
     function clearCacheAndReload() {
         if ('caches' in window) {
             caches.keys().then(function(names) {
@@ -286,7 +294,6 @@ document.getElementById('filterButton').addEventListener('click', function() {
                     caches.delete(name);
                 }
             }).then(function() {
-                localStorage.removeItem('filtersApplied');
                 window.location.reload(true);
             });
         } else {
@@ -325,14 +332,10 @@ document.getElementById('filterButton').addEventListener('click', function() {
 
 
 
-    function updateMap(data) {
-        // Implement the logic to update your map with the filtered data
-        console.log(data);
-    }
-    loadDefaultGeoJSON();
+
+
     // Call initMapJS on page load
     document.addEventListener('DOMContentLoaded', function () {
-        loadDefaultGeoJSON();
         initMapJS();
     });
 
@@ -356,14 +359,20 @@ document.getElementById('filterButton').addEventListener('click', function() {
     }
 </script>
 
-
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
 <script src="{{ asset('leaflet/leaflet.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojson/regions.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojson/departements.geojson.js')}}"></script>
-
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Department.geojson.js')}}"></script>
 <script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
 <script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
 

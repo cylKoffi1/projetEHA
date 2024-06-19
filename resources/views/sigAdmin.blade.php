@@ -386,6 +386,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Department.geojson.js')}}"></script>
 <script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
 <script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
 @endsection

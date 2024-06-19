@@ -284,7 +284,7 @@ function initMapJS() {
                 };
             }
 
-            function getDepartmentInfo(ddepartmentName) {
+            function getDepartmentInfo(departmentName) {
                 var department = statesDataDepartmentsBD.features.find(function (feature) {
                     return feature.properties.NAME_3=== departmentName;
                 });
@@ -347,6 +347,7 @@ function initMapJS() {
             info.update = function (props) {
                 var districtInfo = getDistrictInfo(props ? props.NAME_1 : '');
                 var regionInfo = getRegionInfo(props ? props.NAME_2:'');
+                var departmentInfo = getDepartmentInfo(props ? props.NAME_3:'');
 
 
 
@@ -411,10 +412,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(0)}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.AEP || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AEP, districtInfo.AEP_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AEP, districtInfo.AEP))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AEP, regionInfo.AEP))}</th>
                             </tr>
 
                         `
@@ -443,10 +444,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.AD_T) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.AD) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.AD) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.AD || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AD, districtInfo.AD_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AD, districtInfo.AD))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AD, regionInfo.AD))}</th>
                             </tr>
 
                         `
@@ -475,10 +476,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">Hygiène :</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.HY_T) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.HY) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.HY) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.HY || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.HY, districtInfo.HY_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.HY, districtInfo.HY))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.HY, regionInfo.HY))}</th>
                             </tr>
 
                         `
@@ -507,10 +508,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.REE_T) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.REE) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.REE) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.REE || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.REE, districtInfo.REE_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.REE, districtInfo.REE))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.REE, regionInfo.REE))}</th>
                             </tr>
 
                         `
@@ -540,10 +541,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">EHA établissement de Santé :</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAES_T) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAES) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAES) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.EHAES || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAES, districtInfo.EHAES_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAES, districtInfo.EHAES))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAES, regionInfo.EHAES))}</th>
                             </tr>
 
                         `
@@ -573,10 +574,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">EHA établissemet d’Enseignement :</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEE_T) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEE) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEE) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.EHAEE || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEE, districtInfo.EHAEE_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEE, districtInfo.EHAEE))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEE, regionInfo.EHAEE))}</th>
                             </tr>
 
                         `
@@ -606,10 +607,10 @@ function initMapJS() {
                         ? `
                             <tr>
                                 <th class="row22" style="text-align: right;">EHA autres Entités :</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${0 || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEEn_T) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEEn) || '-'}</th>
-                                <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(0, districtInfo.EHAEEn) || '-'}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(departmentInfo.EHAEEn || '-')}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEEn, districtInfo.EHAEEn_T) )}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEEn, districtInfo.EHAEEn))}</th>
+                                <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEEn, regionInfo.EHAEEn))}</th>
                             </tr>
 
                         `

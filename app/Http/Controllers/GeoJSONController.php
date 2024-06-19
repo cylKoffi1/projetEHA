@@ -36,6 +36,34 @@ class GeoJSONController extends Controller
             Storage::disk('geojson')->makeDirectory('');
         }
     }
+    public function showSIG(Request $request)
+    {
+
+         // Vérifiez les filtres dans la requête
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $status = $request->input('status');
+        $bailleur = $request->input('bailleur');
+        $dateType = $request->input('date_type');
+
+        $filtersApplied = $startDate || $endDate || $status || $bailleur || $dateType;
+
+        if ($filtersApplied) {
+            // Si des filtres sont présents, appliquez-les
+            return $this->filter($request);
+        }else{
+            $this->addDistrictToGeoJSON();
+            $this->addRegionToGeoJSON();
+            $this->addCoutProjetDistrictToGeoJSON();
+            $this->addCoutProjetRegionToGeoJSON();
+            $this->addDepartmentToGeoJSON();
+        }
+
+        $bailleur = Bailleur::all();
+        $statut = StatutProjet::all();
+
+        return view('sig', compact('bailleur', 'statut', 'filtersApplied'));
+    }
 
     //DISTRICT
     public function addDistrictToGeoJSON()
@@ -422,59 +450,63 @@ class GeoJSONController extends Controller
                 ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
                 ->get();
 
-            if ($departments->isEmpty() || $departments_total->isEmpty()) {
-                return 'Aucune donnée à ajouter.';
-            }
 
-            // Charger le contenu GeoJSON existant
-            $filePath = Storage::disk('geojson')->path('Department.geojson.js');
-            $geojsonContent = file_get_contents($filePath);
-            $geojsonData = $geojsonContent ? json_decode($geojsonContent, true) : null;
+                if ($departments->isEmpty() || $departments_total->isEmpty()) {
+                    return 'Aucune donnée à ajouter.';
+                }
 
-            if ($geojsonData === null) {
-                $geojsonData = [
-                    'type' => 'FeatureCollection',
-                    'features' => [],
-                ];
-            }
+                // Charger le contenu GeoJSON existant
+                $filePath = Storage::disk('geojson')->path('Department.geojson.js');
+                $geojsonContent = file_get_contents($filePath);
+                $geojsonData_depart = $geojsonContent ? json_decode($geojsonContent, true) : null;
 
-            // Initialiser les valeurs totales une seule fois
-            $department_total = isset($departments_total[0]) ? $departments_total[0] : null;
+                if ($geojsonData_depart === null) {
+                    $geojsonData_depart = [
+                        'type' => 'FeatureCollection',
+                        'features' => [],
+                    ];
+                }
 
-            foreach ($departments as $department) {
-                $newFeature = [
-                    'type' => 'Feature',
-                    'properties' => [
-                        'NAME_1' => $department->department_name,
-                        'PROJET_NUM' => (int) $department->total_projects,
-                        'AEP' => (int) $department->Alimentation_en_Eau_Potable,
-                        'AD' => (int) $department->Assainissement_et_Drainage,
-                        'HY' => (int) $department->Hygiène,
-                        'REE' => (int) $department->Ressources_en_Eau,
-                        'EHAES' => (int) $department->EHA_dans_les_Etablissements_de_Santé,
-                        'EHAEE' => (int) $department->EHA_dans_les_Etablissements_d_Enseignement,
-                        'EHAEEn' => (int) $department->EHA_dans_les_autres_Entités,
-                        // Totaux
-                        'PROJET_NUM_T' => $department_total ? (int) $department_total->total_projects_total : 0,
-                        'AEP_T' => $department_total ? (int) $department_total->Alimentation_en_Eau_Potable_total : 0,
-                        'AD_T' => $department_total ? (int) $department_total->Assainissement_et_Drainage_total : 0,
-                        'HY_T' => $department_total ? (int) $department_total->Hygiène_total : 0,
-                        'REE_T' => $department_total ? (int) $department_total->Ressources_en_Eau_total : 0,
-                        'EHAES_T' => $department_total ? (int) $department_total->EHA_dans_les_Etablissements_de_Santé_total : 0,
-                        'EHAEE_T' => $department_total ? (int) $department_total->EHA_dans_les_Etablissements_d_Enseignement_total : 0,
-                        'EHAEEn_T' => $department_total ? (int) $department_total->EHA_dans_les_autres_Entités_total : 0,
-                    ],
-                    'geometry' => [
-                        'type' => 'MultiPolygon',  // Remplissez les coordonnées ici
-                    ],
-                ];
+                // Initialiser les valeurs totales une seule fois
+                $department_total = isset($departments_total[0]) ? $departments_total[0] : null;
 
-                $geojsonData['features'][] = $newFeature;
-            }
+                foreach ($departments as $department) {
+                    $newFeature = [
+                        'type' => 'Feature',
+                        'properties' => [
+                            'NAME_1' => $department->districts_name,
+                            'NAME_2' => $department->regions_name,
+                            'NAME_3' => $department->department_name,
+                            'PROJET_NUM' => (int) $department->total_projects,
+                            'AEP' => (int) $department->Alimentation_en_Eau_Potable,
+                            'AD' => (int) $department->Assainissement_et_Drainage,
+                            'HY' => (int) $department->Hygiène,
+                            'REE' => (int) $department->Ressources_en_Eau,
+                            'EHAES' => (int) $department->EHA_dans_les_Etablissements_de_Santé,
+                            'EHAEE' => (int) $department->EHA_dans_les_Etablissements_d_Enseignement,
+                            'EHAEEn' => (int) $department->EHA_dans_les_autres_Entités,
+                            // Totaux
+                            'PROJET_NUM_T' => $department_total ? (int) $department_total->total_projects_total : 0,
+                            'AEP_T' => $department_total ? (int) $department_total->Alimentation_en_Eau_Potable_total : 0,
+                            'AD_T' => $department_total ? (int) $department_total->Assainissement_et_Drainage_total : 0,
+                            'HY_T' => $department_total ? (int) $department_total->Hygiène_total : 0,
+                            'REE_T' => $department_total ? (int) $department_total->Ressources_en_Eau_total : 0,
+                            'EHAES_T' => $department_total ? (int) $department_total->EHA_dans_les_Etablissements_de_Santé_total : 0,
+                            'EHAEE_T' => $department_total ? (int) $department_total->EHA_dans_les_Etablissements_d_Enseignement_total : 0,
+                            'EHAEEn_T' => $department_total ? (int) $department_total->EHA_dans_les_autres_Entités_total : 0,
+                        ],
+                        'geometry' => [
+                            'type' => 'MultiPolygon',  // Remplissez les coordonnées ici
+                        ],
+                    ];
 
-            // Écrire les données GeoJSON dans le fichier
-            file_put_contents($this->filePaths['department'], 'var statesDataDepartmentsBD = ' . json_encode($geojsonData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
+                    $geojsonData_depart['features'][] = $newFeature;
+                }
 
+                // Écrire les données GeoJSON dans le fichier
+                file_put_contents($this->filePaths['department'], 'var statesDataDepartmentsBD = ' . json_encode($geojsonData_depart, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
+
+            
             return View::make('department');
         } catch (\Exception $e) {
             Log::error($e->getMessage());
@@ -483,26 +515,7 @@ class GeoJSONController extends Controller
     }
 
 
-    public function showSIG(Request $request)
-    {
-         // Vérifiez les filtres dans la requête
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $status = $request->input('status');
-        $bailleur = $request->input('bailleur');
-        $dateType = $request->input('date_type');
-
-        $filtersApplied = $startDate || $endDate || $status || $bailleur || $dateType;
-
-        if ($filtersApplied) {
-            // Si des filtres sont présents, appliquez-les
-            return $this->filter($request);
-        }
-        $bailleur = Bailleur::all();
-        $statut = StatutProjet::all();
-
-        return view('sig', compact('bailleur', 'statut', 'filtersApplied'));
-    }
+    /////////////////////////////////////////FILTRE//////////////////////////////////////////
 
 
 
@@ -647,8 +660,7 @@ class GeoJSONController extends Controller
                     ////////REGION COUT/////////
 
                     ///////// DEPARTEMENT NOMBRE /////////
-                    // Requête pour obtenir les données des départements et des projets associés
-                    $departments = DB::table('action_beneficiaires_projet')
+                      $departments = DB::table('action_beneficiaires_projet')
                         ->select(
                             'departement.libelle as department_name',
                             'district.libelle as districts_name',
@@ -671,8 +683,8 @@ class GeoJSONController extends Controller
                         ->groupBy('departement.libelle', 'district.libelle', 'region.libelle')
                         ->get();
 
-                    // Requête pour obtenir les totaux globaux pour les projets
-                    $departments_total = DB::table('action_beneficiaires_projet')
+                        // Requête pour obtenir les totaux globaux pour les projets
+                        $departments_total = DB::table('action_beneficiaires_projet')
                         ->select(
                             DB::raw('COUNT(projet_eha2.CodeProjet) AS total_projects_total'),
                             DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN 1 ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable_total'),
@@ -780,25 +792,6 @@ class GeoJSONController extends Controller
                             )
                             ->leftJoin('district', 'region.code_district', '=', 'district.code')
                             ->leftJoin('projet_eha2', 'region.code', '=', 'projet_eha2.code_region')
-                            ->whereIn('projet_eha2.CodeProjet', $projectIds)
-                            ->groupBy('district.libelle', 'region.libelle')
-                            ->get();
-                            // Requête pour obtenir les totaux globaux pour les régions
-                            $regions_total = DB::table('projet_eha2')
-                            ->select(
-                                'district.libelle as district_name',
-                                'region.libelle as region_name',
-                                DB::raw('COUNT(projet_eha2.CodeProjet) AS total_projects_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN 1 ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN 1 ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN 1 ELSE 0 END) AS UNSIGNED) AS Hygiène_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN 1 ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement_total'),
-                                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN 1 ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités_total')
-                            )
-                            ->join('region', 'projet_eha2.code_region', '=', 'region.code')
-                            ->join('district', 'region.code_district', '=', 'district.code')
                             ->whereIn('projet_eha2.CodeProjet', $projectIds)
                             ->groupBy('district.libelle', 'region.libelle')
                             ->get();
@@ -961,8 +954,8 @@ class GeoJSONController extends Controller
                 file_put_contents($this->filePaths['district_temp'], 'var statesDataDistrictsBD = ' . json_encode($geojsonData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
             /////////////////////FIN DISTRICT NOMBRE//////////////
 
-            ///////////////////REGION NOMBRE//////////////////////
-                // Vérifier s'il y a des données à ajouter
+            //////////////REGION NOMBRE////////////
+               // Vérifier s'il y a des données à ajouter
                 if ($regions_nbr->isEmpty()) {
                     return 'Aucune donnée à ajouter.';
                 }
@@ -982,9 +975,7 @@ class GeoJSONController extends Controller
                     ];
                 }
 
-                // Initialiser les valeurs totales une seule fois
-                $region_total = isset($regions_total[0]) ? $regions_total[0] : null;
-
+                // Ajouter de nouvelles données à la propriété features
                 foreach ($regions_nbr as $region) {
                     $newFeature = [
                         'type' => 'Feature',
@@ -999,28 +990,20 @@ class GeoJSONController extends Controller
                             'EHAES' => (int) $region->EHA_dans_les_Etablissements_de_Santé,
                             'EHAEE' => (int) $region->EHA_dans_les_Etablissements_d_Enseignement,
                             'EHAEEn' => (int) $region->EHA_dans_les_autres_Entités,
-                            // Totaux
-                            'PROJET_NUM_T' => $region_total ? (int) $region_total->total_projects_total : 0,
-                            'AEP_T' => $region_total ? (int) $region_total->Alimentation_en_Eau_Potable_total : 0,
-                            'AD_T' => $region_total ? (int) $region_total->Assainissement_et_Drainage_total : 0,
-                            'HY_T' => $region_total ? (int) $region_total->Hygiène_total : 0,
-                            'REE_T' => $region_total ? (int) $region_total->Ressources_en_Eau_total : 0,
-                            'EHAES_T' => $region_total ? (int) $region_total->EHA_dans_les_Etablissements_de_Santé_total : 0,
-                            'EHAEE_T' => $region_total ? (int) $region_total->EHA_dans_les_Etablissements_d_Enseignement_total : 0,
-                            'EHAEEn_T' => $region_total ? (int) $region_total->EHA_dans_les_autres_Entités_total : 0,
                         ],
                         'geometry' => [
-                            'type' => 'MultiPolygon',  // Remplissez les coordonnées ici
+                            'type' => 'MultiPolygon',  // Vous devrez remplir les coordonnées ici
                         ],
                     ];
 
-                    $geojsonData_region['features'][] = $newFeature;
+                    $geojsonData_region_nbr['features'][] = $newFeature;
                 }
-
 
                 // Sauvegarder le fichier GeoJSON mis à jour
                 file_put_contents($this->filePaths['region_temp'], 'var statesDataRegionsBD = ' . json_encode($geojsonData_region_nbr, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
-            ///////////////////FIN REGION NOMBRE//////////////////
+
+            //////////////FIN REGION NOMBRE//////////
+
 
             //////////////////DISTRICT COUT///////////////////
                 // Vérifier s'il y a des données à ajouter
@@ -1204,13 +1187,4 @@ class GeoJSONController extends Controller
             return response()->json(['message' => 'Une erreur s\'est produite.' . $e->getMessage()]);
         }
     }
-
-
-
 }
-
-
-
-
-
-
