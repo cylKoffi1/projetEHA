@@ -9,62 +9,7 @@
 
         @include('layouts.lurl')
         <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css')}}" />
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                // Sélectionnez le bouton "Afficher toutes les données"
-                var tousButton = document.getElementById('radioButton3');
 
-                // Vérifiez si le bouton existe
-                if (tousButton) {
-                    // Appliquer le filtre par défaut lorsque le bouton est sélectionné
-                    applyDefaultFilter();
-                }
-            });
-
-            function applyDefaultFilter() {
-               // Récupérez les éléments du formulaire
-                var startDateInput = document.getElementById('start_date');
-                var endDateInput = document.getElementById('end_date');
-                var statusInput = document.getElementById('status');
-                var bailleurInput = document.getElementById('bailleur');
-
-                // Réinitialisez les valeurs des champs à null (ou chaîne vide '')
-                startDateInput.value = '';
-                endDateInput.value = '';
-                statusInput.value = '';
-                bailleurInput.value = '';
-
-                // Créez l'objet formData avec les valeurs mises à null
-                var formData = {
-                    startDate: startDateInput.value,
-                    endDate: endDateInput.value,
-                    status: statusInput.value,
-                    bailleur: bailleurInput.value,
-                    dateType: 'Tous'
-                };
-
-                // Append a random query string to the URL to bypass cache
-                var randomQueryString = `&_=${new Date().getTime()}`;
-
-                fetch(`{{ route('filter.maps') }}?start_date=${startDateInput}&end_date=${endDateInput}&status=${statusInput}&bailleur=${bailleurInput}&date_type=Tous${randomQueryString}`, {
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    //window.location.reload();
-                })
-                .catch(error => console.error('Error:', error));
-            }
-
-
-        </script>
 
 
   <style>
@@ -225,6 +170,61 @@
 
 
 <script>
+    // Call initMapJS on page load
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Automatically select the "Afficher toutes les données" radio button and trigger the filter
+        var allDataRadioButton = document.getElementById('radioButton3');
+        if (allDataRadioButton) {
+            allDataRadioButton.checked = true; // Check the radio button
+            triggerFilter(); // Call the function to apply the filter
+        }
+    });
+
+    function triggerFilter() {
+        var startDate = startDateInput.value;
+        var endDate = endDateInput.value;
+        var status = statusInput.value;
+        var bailleur = bailleurInput.value;
+        var dateType = document.querySelector('input[name="radioButtons"]:checked').value;
+
+        var formData = {
+            startDate: startDate,
+            endDate: endDate,
+            status: status,
+            bailleur: bailleur,
+            dateType: dateType
+        };
+        localStorage.setItem('formData', JSON.stringify(formData));
+
+        // Append a random query string to the URL to bypass cache
+        var randomQueryString = `&_=${new Date().getTime()}`;
+
+        fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        } else {
+        }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+
     // Récupérez les éléments d'entrée
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
