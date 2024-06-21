@@ -21,7 +21,7 @@ class PaysController extends Controller
     {
         $ecran = Ecran::find($request->input('ecran_id'));
         $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
-        return view('pays', ['pays' => $pays, 'ecran' => $ecran,]);
+        return view('parSpecifique.pays', ['pays' => $pays, 'ecran' => $ecran,]);
     }
     public function checkPaysCode(Request $request)
     {
@@ -84,7 +84,7 @@ class PaysController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
 
-        return view('district', ['districts' => $districts, 'pays' => $pays, 'ecran' => $ecran]);
+        return view('parSpecifique.district', ['districts' => $districts, 'pays' => $pays, 'ecran' => $ecran]);
     }
     public function checkDistrictCode(Request $request)
     {
@@ -110,7 +110,7 @@ class PaysController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('district', ['ecran_id' => $ecran_id])->with('success', 'District enregistré avec succès.');
+        return redirect()->route('parSpecifique.district', ['ecran_id' => $ecran_id])->with('success', 'District enregistré avec succès.');
     }
     public function getDistrict($code)
     {
@@ -138,7 +138,7 @@ class PaysController extends Controller
         $district->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('district', ['ecran_id' => $ecran_id])->with('success', 'District mis à jour avec succès.');
+        return redirect()->route('parSpecifique.district', ['ecran_id' => $ecran_id])->with('success', 'District mis à jour avec succès.');
     }
     public function deleteDistrict($code)
     {
@@ -182,7 +182,7 @@ class PaysController extends Controller
             $query->where('id_pays', config('app_settings.id_pays'));
         })->get();
 
-        return view('region', ['pays' => $pays, 'ecran' => $ecran, 'districts' => $districts, 'regions' => $regions, ]);
+        return view('parSpecifique.region', ['pays' => $pays, 'ecran' => $ecran, 'districts' => $districts, 'regions' => $regions, ]);
     }
     public function getDistricts(Request $request, $pays)
     {
@@ -221,7 +221,7 @@ class PaysController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('region', ['ecran_id' => $ecran_id])->with('success', 'Region enregistré avec succès.');
+        return redirect()->route('parSpecifique.region', ['ecran_id' => $ecran_id])->with('success', 'Region enregistré avec succès.');
     }
     public function getRegion($code)
     {
@@ -247,7 +247,7 @@ class PaysController extends Controller
         $Region->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('region', ['ecran_id' => $ecran_id])->with('success', 'Région mis à jour avec succès.');
+        return redirect()->route('parSpecifique.region', ['ecran_id' => $ecran_id])->with('success', 'Région mis à jour avec succès.');
     }
 
 
@@ -302,7 +302,7 @@ class PaysController extends Controller
         })->get();
 
 
-        return view('departement', ['ecran' => $ecran,'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
+        return view('parSpecifique.departement', ['ecran' => $ecran,'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
     }
 
     public function getRegions(Request $request, $districtId)
@@ -332,7 +332,7 @@ class PaysController extends Controller
         $departement->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('departement', ['ecran_id' => $ecran_id])->with('success', 'Département enregistré avec succès.');
+        return redirect()->route('parSpecifique.departement', ['ecran_id' => $ecran_id])->with('success', 'Département enregistré avec succès.');
     }
 
 
@@ -371,7 +371,7 @@ class PaysController extends Controller
         $departement->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('departement', ['ecran_id' => $ecran_id])->with('success', 'Département mis à jour avec succès.');
+        return redirect()->route('parSpecifique.departement', ['ecran_id' => $ecran_id])->with('success', 'Département mis à jour avec succès.');
     }
     public function deleteDepartement($code)
     {
@@ -418,7 +418,7 @@ class PaysController extends Controller
         $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('sous_prefecture', ['sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
+        return view('parSpecifique.sous_prefecture', ['ecran'=>$ecran,'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
     }
 
     public function storeSous_prefecture(Request $request)
@@ -435,7 +435,7 @@ class PaysController extends Controller
 
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('sous_prefecture', ['ecran_id' => $ecran_id])->with('success', 'Sous_prefecture enregistré avec succès.');
+        return redirect()->route('parSpecifique.sous_prefecture', ['ecran_id' => $ecran_id])->with('success', 'Sous_prefecture enregistré avec succès.');
     }
 
 
@@ -455,7 +455,7 @@ class PaysController extends Controller
         $s_p->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('sous_prefecture', ['ecran_id' => $ecran_id])->with('success', 'Sous-préfecture  mis à jour avec succès.');
+        return redirect()->route('parSpecifique.sous_prefecture', ['ecran_id' => $ecran_id])->with('success', 'Sous-préfecture  mis à jour avec succès.');
     }
 
 
@@ -535,7 +535,7 @@ class PaysController extends Controller
         $localites = Localite::whereHas('sous_prefecture.departement.region.district.pays', function ($query) {
             $query->where('id', config('app_settings.id_pays'));
         })->get();
-        return view('localite', ['localites' => $localites, 'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
+        return view('parSpecifique.localite', ['ecran'=>$ecran,'localites' => $localites, 'sous_prefectures' => $sous_prefectures, 'departements' => $departements, 'pays' => $pays, 'districts' => $districts, 'regions' => $regions]);
 
     }
 

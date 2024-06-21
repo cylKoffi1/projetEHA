@@ -423,10 +423,10 @@ var statesDataRegionsBD = {
                 "PROJET_NUM": 13,
                 "AEP": 8,
                 "AD": 2,
-                "HY": 1,
+                "HY": 0,
                 "REE": 1,
                 "EHAES": 0,
-                "EHAEE": 1,
+                "EHAEE": 2,
                 "EHAEEn": 0
             },
             "geometry": {

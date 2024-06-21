@@ -16,10 +16,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -41,10 +41,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -66,10 +66,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -91,10 +91,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -116,10 +116,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -141,10 +141,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -166,10 +166,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -191,10 +191,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -216,10 +216,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -241,10 +241,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -258,18 +258,18 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM": 59,
                 "AEP": 50,
                 "AD": 5,
-                "HY": 1,
+                "HY": 0,
                 "REE": 2,
                 "EHAES": 0,
-                "EHAEE": 1,
+                "EHAEE": 2,
                 "EHAEEn": 0,
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -291,10 +291,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -316,10 +316,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {
@@ -341,10 +341,10 @@ var statesDataDistrictsBD = {
                 "PROJET_NUM_T": 914,
                 "AEP_T": 760,
                 "AD_T": 33,
-                "HY_T": 1,
+                "HY_T": 0,
                 "REE_T": 115,
                 "EHAES_T": 3,
-                "EHAEE_T": 2,
+                "EHAEE_T": 3,
                 "EHAEEn_T": 0
             },
             "geometry": {

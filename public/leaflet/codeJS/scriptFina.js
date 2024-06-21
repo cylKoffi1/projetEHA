@@ -278,7 +278,54 @@ function initMapFina() {
             MontantTotal: 0
         };
     }
+    function getDepartmentInfo(departmentName) {
+        var department = statesDataDepartmentsCoutBD.features.find(function (feature) {
+            return feature.properties.NAME_3=== departmentName;
+        });
 
+        return department ? {
+            AEP: department.properties.AEP || 0,
+            AD: department.properties.AD || 0,
+            HY: department.properties.HY || 0,
+            EHAES: department.properties.EHAEE || 0,
+            EHAEE: department.properties.EHAEE || 0,
+            EHAEEn: department.properties.EHAEEn || 0,
+            REE: department.properties.REE || 0,
+            RCPE: department.properties.RCPE || 0,
+            PROJET_NUM: department.properties.PROJET_NUM || 0,
+            // Ajout des valeurs totales
+            AEP_T: department.properties.AEP_T || 0,
+            AD_T: department.properties.AD_T || 0,
+            HY_T: department.properties.HY_T || 0,
+            EHAES_T: department.properties.EHAES_T || 0,
+            EHAEE_T: department.properties.EHAEE_T || 0,
+            EHAEEn_T: department.properties.EHAEEn_T || 0,
+            REE_T: department.properties.REE_T || 0,
+            RCPE_T: department.properties.RCPE_T || 0,
+            PROJET_NUM_T: department.properties.PROJET_NUM_T || 0
+        } : {
+            AEP: 0,
+            AD: 0,
+            HY: 0,
+            EHAES: 0,
+            EHAEE: 0,
+            EHAEEn: 0,
+            REE: 0,
+            RCPE: 0,
+            PROJET_NUM: 0,
+            // Valeurs totales par défaut
+            AEP_T: 0,
+            AD_T: 0,
+            HY_T: 0,
+            EHAES_T: 0,
+            EHAEE_T: 0,
+            EHAEEn_T: 0,
+            REE_T: 0,
+            RCPE_T: 0,
+            PROJET_NUM_T: 0
+        };
+
+    }
     // Fonction pour mettre à jour les données de la région
     function updateRegionInfo(regionCode) {
         // Utilisez la couche des régions pour obtenir les informations de la région
@@ -294,6 +341,9 @@ function initMapFina() {
     info.update = function (props) {
         var districtInfo = getDistrictInfo(props ? props.NAME_1 : '');
         var regionInfo = getRegionInfo(props ? props.NAME_2:'');
+        var departmentInfo = getDepartmentInfo(props ? props.NAME_3:'');
+
+
         var formatNumberWithSpaces =function (value) {
             return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         }
@@ -357,16 +407,16 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.AEP/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AEP, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AEP, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AEP, regionInfo.AEP))}</th>
                     </tr>
 
                 `
                 : isRegion
                 ? `
-                    <tr>    
+                    <tr>
                         <th class="row22" style="text-align: right;">Alimentation en eau potable:</th>
                         <th class="wide-column" style="border: 1px solid black; text-align: right; width: 105px;">${formatNumberWithSpaces((regionInfo.AEP/1000000).toFixed(3) || 0)}</th>
                         <th class="col" style="border: 1px solid black; text-align: center;">${calculatePercentageR(regionInfo.AEP, districtInfo.AEP_T)}</th>
@@ -389,10 +439,10 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">Assainissement et drainage :</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.AD/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AD, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AD, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.AD, districtInfo.AEP))}</th>
                     </tr>
 
                 `
@@ -421,10 +471,10 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">Hygiène :</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.HY/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.HY, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.HY, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.HY, districtInfo.AEP))}</th>
                     </tr>
 
                 `
@@ -453,10 +503,10 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">Ressource en eau :</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.REE/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.REE, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.REE, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.REE, districtInfo.AEP))}</th>
                     </tr>
 
                 `
@@ -486,10 +536,10 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">EHA Etb de Santé :</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.EHAES/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAES, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAES, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAES, districtInfo.AEP))}</th>
                     </tr>
 
                 `
@@ -519,10 +569,10 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">EHA Etb d’Enseignement :</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.EHAEE/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEE, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEE, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEE, districtInfo.AEP))}</th>
                     </tr>
 
                 `
@@ -552,10 +602,10 @@ function initMapFina() {
                 ? `
                     <tr>
                         <th class="row22" style="text-align: right;">EHA autres Entités :</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((0/1000000).toFixed(3) || 0)}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP_T) )}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
-                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(0, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${formatNumberWithSpaces((departmentInfo.EHAEEn/1000000).toFixed(3) || 0)}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEEn, districtInfo.AEP_T) )}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEEn, districtInfo.AEP))}</th>
+                        <th class="col" style="border: 1px solid black; text-align: center;">${displayValue(calculatePercentageR(departmentInfo.EHAEEn, districtInfo.AEP))}</th>
                     </tr>
 
                 `

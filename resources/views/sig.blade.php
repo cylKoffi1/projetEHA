@@ -209,7 +209,10 @@
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            return response.json();
+            // Convert response to text and log it for debugging
+            return response.text().then(text => {
+                return JSON.parse(text);
+            });
         })
         .then(data => {
             if ('caches' in window) {
@@ -241,7 +244,9 @@
         }
     });
     // Écoutez les changements dans les champs de formulaire pour sauvegarder les données dans le stockage local
-
+    document.getElementById('filterButton').addEventListener('click', function() {
+        triggerFilter();
+    });
     document.getElementById('filterButton').addEventListener('click', function() {
         var startDate = startDateInput.value;
         var endDate = endDateInput.value;
@@ -278,7 +283,10 @@
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            return response.json();
+            // Convert response to text and log it for debugging
+            return response.text().then(text => {
+                return JSON.parse(text);
+            });
         })
         .then(data => {
             // Vider le cache et recharger la page
@@ -368,6 +376,7 @@
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutDepartment.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District_temp.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>

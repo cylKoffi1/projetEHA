@@ -6,7 +6,7 @@
 @if (session('success'))
 <script>
     alert("{{ session('success') }}");
-
+    
 </script>
 @endif
 
@@ -69,7 +69,7 @@
                             Ajout d'une fonction utilisateur
                             <a  href="#" data-toggle="modal" data-target="#fonctionUtilisateur-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>

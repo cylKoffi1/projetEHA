@@ -382,6 +382,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutDepartment.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District_temp.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>

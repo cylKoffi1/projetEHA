@@ -57,7 +57,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('admin/pays', [PaysController::class, 'storePays'])->name('pays.store');
     Route::get('admin/district', [PaysController::class, 'district'])->name('district');
     Route::get('admin/departement', [PaysController::class, 'departement'])->name('departement');
-    Route::get('admin/sous-prefecture', [PaysController::class, 'sous_prefecture'])->name('sous_prefecture');
+    Route::get('admin/sous_prefecture', [PaysController::class, 'sous_prefecture'])->name('sous_prefecture');
     Route::get('admin/localite', [PaysController::class, 'localite'])->name('localite');
     Route::get('admin/region', [PaysController::class, 'region'])->name('region');
     Route::post('/check-district-code', [PaysController::class, 'checkDistrictCode']);

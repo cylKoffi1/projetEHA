@@ -54,7 +54,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $agences = AgenceExecution::orderBy('nom_agence', 'asc')->get();
-        return view('agences', ['agences' => $agences, 'ecran' => $ecran, ]);
+        return view('parSpecifique.agences', ['agences' => $agences, 'ecran' => $ecran, ]);
     }
 
     public function getAgence($code)
@@ -106,7 +106,7 @@ class PlateformeController extends Controller
         $agence->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('agences', ['ecran_id' => $ecran_id])->with('success', 'Agence enregistré avec succès.');
+        return redirect()->route('parSpecifique.agences', ['ecran_id' => $ecran_id])->with('success', 'Agence enregistré avec succès.');
     }
     public function updateAgence(Request $request)
     {
@@ -129,11 +129,11 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('agences', ['ecran_id' => $ecran_id])->with('success', 'Agence mis à jour avec succès.');
+        return redirect()->route('parSpecifique.agences', ['ecran_id' => $ecran_id])->with('success', 'Agence mis à jour avec succès.');
     }
 
 
-
+    
     //***************** BAILLEURS ************* */
     public function bailleurs(Request $request)
     {
@@ -142,7 +142,7 @@ class PlateformeController extends Controller
         $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
         $type_bailleurs = TypeBailleur::all();
         $devises = Devise::all();
-        return view('bailleurs', ['bailleurs' => $bailleurs,'ecran' => $ecran, 'devises' => $devises, 'type_bailleurs' => $type_bailleurs, 'pays' => $pays]);
+        return view('parSpecifique.bailleurs', ['bailleurs' => $bailleurs,'ecran' => $ecran, 'devises' => $devises, 'type_bailleurs' => $type_bailleurs, 'pays' => $pays]);
     }
 
     public function getBailleur($code)
@@ -197,7 +197,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('bailleurs', ['ecran_id' => $ecran_id])->with('success', 'bailleur enregistré avec succès.');
+        return redirect()->route('parSpecifique.bailleurs', ['ecran_id' => $ecran_id])->with('success', 'bailleur enregistré avec succès.');
     }
     public function updateBailleur(Request $request)
     {
@@ -222,7 +222,7 @@ class PlateformeController extends Controller
         $bailleur->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('bailleurs', ['ecran_id' => $ecran_id])->with('success', 'bailleur mis à jour avec succès.');
+        return redirect()->route('parSpecifique.bailleurs', ['ecran_id' => $ecran_id])->with('success', 'bailleur mis à jour avec succès.');
     }
 
 
@@ -329,7 +329,7 @@ class PlateformeController extends Controller
         // Créez un tableau d'options pour les districts
         $niveauxOptions = [];
         foreach ($niveaux as $niveau) {
-            $niveauxOptions[$niveau->code] = $niveau->libelle_long;     
+            $niveauxOptions[$niveau->code] = $niveau->libelle_long;
         }
 
         return response()->json(['niveaux' => $niveauxOptions]);
@@ -340,7 +340,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $ministeres = Ministere::orderBy('libelle', 'asc')->get();
-        return view('ministeres', ['ministeres' => $ministeres, 'ecran' => $ecran,]);
+        return view('parSpecifique.ministeres', ['ministeres' => $ministeres, 'ecran' => $ecran,]);
     }
 
 
@@ -380,7 +380,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('domaines', ['ecran_id' => $ecran_id])->with('success', 'Domaine enregistré avec succès.');
+        return redirect()->route('parGeneraux.domaines', ['ecran_id' => $ecran_id])->with('success', 'Domaine enregistré avec succès.');
     }
 
     public function storeSousDomaine(Request $request)
@@ -397,7 +397,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('sous_domaines', ['ecran_id' => $ecran_id])->with('success', 'Sous-domaine enregistré avec succès.');
+        return redirect()->route('parGeneraux.sous_domaines', ['ecran_id' => $ecran_id])->with('success', 'Sous-domaine enregistré avec succès.');
     }
 
     public function updateDomaine(Request $request)
@@ -414,7 +414,7 @@ class PlateformeController extends Controller
         $domaine->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('domaines', ['ecran_id' => $ecran_id])->with('success', 'Domaine mis à jour avec succès.');
+        return redirect()->route('parGeneraux.domaines', ['ecran_id' => $ecran_id])->with('success', 'Domaine mis à jour avec succès.');
     }
 
     public function updateSousDomaine(Request $request)
@@ -431,13 +431,13 @@ class PlateformeController extends Controller
         $s_domaine->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('sous_domaines', ['ecran_id' => $ecran_id])->with('success', 'Sous-domaine mis à jour avec succès.');
+        return redirect()->route('parGeneraux.sous_domaines', ['ecran_id' => $ecran_id])->with('success', 'Sous-domaine mis à jour avec succès.');
     }
     public function domaines(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $domaines = Domaine::orderBy('libelle', 'asc')->get();
-        return view('domaines', ['domaines' => $domaines,'ecran' => $ecran, ]);
+        return view('parGeneraux.domaines', ['domaines' => $domaines,'ecran' => $ecran, ]);
     }
 
     public function sousDomaines(Request $request)
@@ -445,7 +445,7 @@ class PlateformeController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $sous_domaines = SousDomaine::orderBy('libelle', 'asc')->get();
         $domaines = Domaine::orderBy('libelle', 'asc')->get();
-        return view('sous_domaines', ['sous_domaines' => $sous_domaines,'ecran' => $ecran,  'domaines' => $domaines]);
+        return view('parGeneraux.sous_domaines', ['sous_domaines' => $sous_domaines,'ecran' => $ecran,  'domaines' => $domaines]);
     }
 
     public function deleteDomaine($code)
@@ -511,7 +511,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $devises = Devise::orderBy('libelle', 'asc')->get();
-        return view('devises', ['devises' => $devises,'ecran' => $ecran, ]);
+        return view('parGeneraux.devises', ['devises' => $devises,'ecran' => $ecran, ]);
     }
     public function getDevise($code)
     {
@@ -540,7 +540,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('devises', ['ecran_id' => $ecran_id])->with('success', 'Dévises enregistré avec succès.');
+        return redirect()->route('parGeneraux.devises', ['ecran_id' => $ecran_id])->with('success', 'Dévises enregistré avec succès.');
     }
 
     public function updateDevise(Request $request)
@@ -558,7 +558,7 @@ class PlateformeController extends Controller
         $devise->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('devises', ['ecran_id' => $ecran_id])->with('success', 'Dévise mise à jour avec succès.');
+        return redirect()->route('parGeneraux.devises', ['ecran_id' => $ecran_id])->with('success', 'Dévise mise à jour avec succès.');
     }
     public function deleteDevise($code)
     {
@@ -592,7 +592,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $acquifere = Acquifere::orderBy('libelle', 'asc')->get();
-        return view('acquifere', ['acquifere' => $acquifere,  'ecran' => $ecran]);
+        return view('parGeneraux.acquifere', ['acquifere' => $acquifere,  'ecran' => $ecran]);
     }
 
 
@@ -620,7 +620,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('acquifere', ['ecran_id' => $ecran_id])->with('success', 'Acquifère enregistré avec succès.');
+        return redirect()->route('parGeneraux.acquifere', ['ecran_id' => $ecran_id])->with('success', 'Acquifère enregistré avec succès.');
     }
     public function updateAcquifere(Request $request)
     {
@@ -636,7 +636,7 @@ class PlateformeController extends Controller
         $acquifere->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('acquifere', ['ecran_id' => $ecran_id])->with('success', 'Acquifère mis à jour avec succès.');
+        return redirect()->route('parGeneraux.acquifere', ['ecran_id' => $ecran_id])->with('success', 'Acquifère mis à jour avec succès.');
     }
 
     public function deleteAcquifere($code)
@@ -671,7 +671,7 @@ class PlateformeController extends Controller
         {
            $ecran = Ecran::find($request->input('ecran_id'));
             $actionMener = ActionMener::orderBy('libelle', 'asc')->get();
-            return view('actionMener', ['actionMener' => $actionMener,  'ecran' => $ecran]);
+            return view('parGeneraux.actionmener', ['actionMener' => $actionMener,  'ecran' => $ecran]);
         }
 
 
@@ -750,7 +750,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $bassin = Bassin::orderBy('libelle', 'asc')->get();
-        return view('bassin', ['bassin' => $bassin, 'ecran' => $ecran,]);
+        return view('parGeneraux.bassin', ['bassin' => $bassin, 'ecran' => $ecran,]);
     }
 
     public function getBassin($code)
@@ -777,7 +777,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('bassin', ['ecran_id' => $ecran_id])->with('success', 'Bassin enregistré avec succès.');
+        return redirect()->route('parGeneraux.bassin', ['ecran_id' => $ecran_id])->with('success', 'Bassin enregistré avec succès.');
     }
     public function updateBassin(Request $request)
     {
@@ -793,7 +793,7 @@ class PlateformeController extends Controller
         $bassin->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('bassin', ['ecran_id' => $ecran_id])->with('success', 'Bassin mis à jour avec succès.');
+        return redirect()->route('parGeneraux.bassin', ['ecran_id' => $ecran_id])->with('success', 'Bassin mis à jour avec succès.');
     }
 
     public function deleteBassin($code)
@@ -828,7 +828,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $courdeau = CourDeau::orderBy('libelle', 'asc')->get();
-        return view('courdeau', ['courdeau' => $courdeau,'ecran' => $ecran, ]);
+        return view('parGeneraux.courdeau', ['courdeau' => $courdeau,'ecran' => $ecran, ]);
     }
 
     public function getCourDeau($code)
@@ -855,7 +855,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('courdeau', ['ecran_id' => $ecran_id])->with('success', 'Cour d\'eau enregistré avec succès.');
+        return redirect()->route('parGeneraux.courdeau', ['ecran_id' => $ecran_id])->with('success', 'Cour d\'eau enregistré avec succès.');
     }
     public function updateCourDeau(Request $request)
     {
@@ -871,7 +871,7 @@ class PlateformeController extends Controller
         $courdeau->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('courdeau', ['ecran_id' => $ecran_id])->with('success', 'Cour d\'eau mis à jour avec succès.');
+        return redirect()->route('parGeneraux.courdeau', ['ecran_id' => $ecran_id])->with('success', 'Cour d\'eau mis à jour avec succès.');
     }
 
     public function deleteCourDeau($code)
@@ -908,7 +908,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $familleinfrastructure = FamilleInfrastructure::orderBy('nom_famille', 'asc')->get();
-        return view('familleinfrastructure', ['familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, ]);
+        return view('parGeneraux.familleinfrastructure', ['familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, ]);
     }
 
     public function getFamilleinfrastructure($code)
@@ -935,7 +935,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure enregistré avec succès.');
+        return redirect()->route('parGeneraux.familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure enregistré avec succès.');
     }
     public function updateFamilleInfrastructure(Request $request)
     {
@@ -951,7 +951,7 @@ class PlateformeController extends Controller
         $familleinfrastructure->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure à jour avec succès.');
+        return redirect()->route('parGeneraux.familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure à jour avec succès.');
     }
 
     public function deleteFamilleInfrastructure($code)
@@ -987,7 +987,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $fonctionUtilisateur = FonctionUtilisateur::orderBy('libelle_fonction', 'asc')->get();
-        return view('fonctionUtilisateur', ['fonctionUtilisateur' => $fonctionUtilisateur, 'ecran' => $ecran,]);
+        return view('parGeneraux.fonctionUtilisateur', ['fonctionUtilisateur' => $fonctionUtilisateur, 'ecran' => $ecran,]);
     }
 
 
@@ -1016,7 +1016,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('fonctionUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Fonction Utilisateur enregistré avec succès.');
+        return redirect()->route('parGeneraux.fonctionUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Fonction Utilisateur enregistré avec succès.');
     }
     public function updateFonctionUtilisateur(Request $request)
     {
@@ -1032,7 +1032,7 @@ class PlateformeController extends Controller
         $fonctionUtilisateur->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('fonctionUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Fonction Utilisateur mis à jour avec succès.');
+        return redirect()->route('parGeneraux.fonctionUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Fonction Utilisateur mis à jour avec succès.');
     }
 
     public function deleteFonctionUtilisateur($code)
@@ -1070,7 +1070,7 @@ class PlateformeController extends Controller
         $fonctionGroupe = Fonction_groupe_utilisateur::with('groupeUtilisateur')->with('fonction')->get();
         $fonctions = FonctionUtilisateur::orderBy('libelle_fonction', 'asc')->get();
         $groupes = Role::orderBy('name', 'asc')->get();
-        return view('fonctionGroupe', ['fonctionGroupe' => $fonctionGroupe,'ecran' => $ecran,  'fonctions' => $fonctions, 'groupes' => $groupes,]);
+        return view('parGeneraux.fonctionGroupe', ['fonctionGroupe' => $fonctionGroupe,'ecran' => $ecran,  'fonctions' => $fonctions, 'groupes' => $groupes,]);
     }
     public function storeFonctionGroupe(Request $request)
     {
@@ -1088,7 +1088,7 @@ class PlateformeController extends Controller
         }
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
         return response()->json(['success' => 'Fonction Groupe enregistré avec succès.', 'donnees' => $groupesSelect]);
-        //return redirect()->route('fonctionUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Fonction Utilisateur enregistré avec succès.');
+        //return redirect()->route('parGeneraux.fonctionUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Fonction Utilisateur enregistré avec succès.');
     }
 
 
@@ -1118,7 +1118,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $genre = Genre::orderBy('libelle_genre', 'asc')->get();
-        return view('genre', ['genre' => $genre,'ecran' => $ecran, ]);
+        return view('parGeneraux.genre', ['genre' => $genre,'ecran' => $ecran, ]);
     }
 
 
@@ -1147,7 +1147,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('genre', ['ecran_id' => $ecran_id])->with('success', 'Genre enregistré avec succès.');
+        return redirect()->route('parGeneraux.genre', ['ecran_id' => $ecran_id])->with('success', 'Genre enregistré avec succès.');
     }
     public function updateGenre(Request $request)
     {
@@ -1163,7 +1163,7 @@ class PlateformeController extends Controller
         $Genre->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('genre', ['ecran_id' => $ecran_id])->with('success', 'Genre mis à jour avec succès.');
+        return redirect()->route('parGeneraux.genre', ['ecran_id' => $ecran_id])->with('success', 'Genre mis à jour avec succès.');
     }
 
     public function deleteGenre($code)
@@ -1199,7 +1199,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $uniteTraitement = UniteTraitement::orderBy('libelle', 'asc')->get();
-        return view('uniteTraitement', ['uniteTraitement' => $uniteTraitement,'ecran' => $ecran, ]);
+        return view('parGeneraux.uniteTraitement', ['uniteTraitement' => $uniteTraitement,'ecran' => $ecran, ]);
     }
 
 
@@ -1209,7 +1209,7 @@ class PlateformeController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $groupeUtilisateur = Role::orderBy('name', 'asc')->get();
         $fonctionUtilisateur = FonctionUtilisateur::orderBy('libelle_fonction', 'asc')->get();
-        return view('groupeUtilisateur', ['groupeUtilisateur' => $groupeUtilisateur,'ecran' => $ecran,  'fonctions' => $fonctionUtilisateur]);
+        return view('parGeneraux.groupeUtilisateur', ['groupeUtilisateur' => $groupeUtilisateur,'ecran' => $ecran,  'fonctions' => $fonctionUtilisateur]);
     }
     public function getGroupeUtilisateur($code)
     {
@@ -1235,7 +1235,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('groupeUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Groupe Utilisateur enregistré avec succès.');
+        return redirect()->route('parGeneraux.groupeUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Groupe Utilisateur enregistré avec succès.');
     }
     public function updateGroupeUtilisateur(Request $request)
     {
@@ -1251,7 +1251,7 @@ class PlateformeController extends Controller
         $groupeUtilisateur->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('groupeUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Groupe Utilisateur mis à jour avec succès.');
+        return redirect()->route('parGeneraux.groupeUtilisateur', ['ecran_id' => $ecran_id])->with('success', 'Groupe Utilisateur mis à jour avec succès.');
     }
 
     public function deleteGroupeUtilisateur($code)
@@ -1312,7 +1312,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $materielStockage = MaterielStockage::orderBy('libelle', 'asc')->get();
-        return view('materielStockage', ['materielStockage' => $materielStockage,'ecran' => $ecran, ]);
+        return view('parGeneraux.materielStockage', ['materielStockage' => $materielStockage,'ecran' => $ecran, ]);
     }
 
     public function getMaterielStockage($code)
@@ -1339,7 +1339,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('materielStockage', ['ecran_id' => $ecran_id])->with('success', 'Materiel de Stockage enregistré avec succès.');
+        return redirect()->route('parGeneraux.materielStockage', ['ecran_id' => $ecran_id])->with('success', 'Materiel de Stockage enregistré avec succès.');
     }
     public function updateMaterielStockage(Request $request)
     {
@@ -1355,7 +1355,7 @@ class PlateformeController extends Controller
         $materielStockage->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('materielStockage', ['ecran_id' => $ecran_id])->with('success', 'Materiel de Stockage mis à jour avec succès.');
+        return redirect()->route('parGeneraux.materielStockage', ['ecran_id' => $ecran_id])->with('success', 'Materiel de Stockage mis à jour avec succès.');
     }
 
     public function deleteMaterielStockage($code)
@@ -1391,7 +1391,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $niveauAccesDonnees = NiveauAccesDonnees::orderBy('libelle', 'asc')->get();
-        return view('niveauAccesDonnees', ['niveauAccesDonnees' => $niveauAccesDonnees,'ecran' => $ecran, ]);
+        return view('parGeneraux.niveauAccesDonnees', ['niveauAccesDonnees' => $niveauAccesDonnees,'ecran' => $ecran, ]);
     }
 
 
@@ -1416,7 +1416,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('niveauAccesDonnees', ['ecran_id' => $ecran_id])->with('success', 'Niveau enregistré avec succès.');
+        return redirect()->route('parGeneraux.niveauAccesDonnees', ['ecran_id' => $ecran_id])->with('success', 'Niveau enregistré avec succès.');
     }
     public function updateNiveauAccesDonnees(Request $request)
     {
@@ -1432,7 +1432,7 @@ class PlateformeController extends Controller
         $materielStockage->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('niveauAccesDonnees', ['ecran_id' => $ecran_id])->with('success', 'Niveau mis à jour avec succès.');
+        return redirect()->route('parGeneraux.niveauAccesDonnees', ['ecran_id' => $ecran_id])->with('success', 'Niveau mis à jour avec succès.');
     }
 
     public function deleteNiveauAccesDonnees($code)
@@ -1470,7 +1470,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $outilsCollecte = OutilsCollecte::orderBy('libelle', 'asc')->get();
-        return view('outilsCollecte', ['outilsCollecte' => $outilsCollecte, 'ecran' => $ecran,]);
+        return view('parGeneraux.outilsCollecte', ['outilsCollecte' => $outilsCollecte, 'ecran' => $ecran,]);
     }
 
     public function getOutilsCollecte($code)
@@ -1494,7 +1494,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('outilsCollecte', ['ecran_id' => $ecran_id])->with('success', 'Outils de Collecte enregistré avec succès.');
+        return redirect()->route('parGeneraux.outilsCollecte', ['ecran_id' => $ecran_id])->with('success', 'Outils de Collecte enregistré avec succès.');
     }
     public function updateOutilsCollecte(Request $request)
     {
@@ -1510,7 +1510,7 @@ class PlateformeController extends Controller
         $materielStockage->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('outilsCollecte', ['ecran_id' => $ecran_id])->with('success', 'Outils de Collecte mis à jour avec succès.');
+        return redirect()->route('parGeneraux.outilsCollecte', ['ecran_id' => $ecran_id])->with('success', 'Outils de Collecte mis à jour avec succès.');
     }
 
     public function deleteOutilsCollecte($code)
@@ -1625,7 +1625,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $statutProjet = StatutProjet::orderBy('libelle', 'asc')->get();
-        return view('statutProjet', ['statutProjet' => $statutProjet,'ecran' => $ecran, ]);
+        return view('parGeneraux.statutProjet', ['statutProjet' => $statutProjet,'ecran' => $ecran, ]);
     }
 
     //*****************  TYPE BAILLEUR  ************* */
@@ -1633,7 +1633,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeBailleur = typeBailleur::orderBy('libelle', 'asc')->get();
-        return view('typeBailleur', ['typeBailleur' => $typeBailleur, 'ecran' => $ecran,]);
+        return view('parGeneraux.typeBailleur', ['typeBailleur' => $typeBailleur, 'ecran' => $ecran,]);
     }
 
     //*****************  TYPE ETABLISSEMENT  ************* */
@@ -1641,7 +1641,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeEtablissement = TypeEtablissement::orderBy('libelle', 'asc')->get();
-        return view('typeEtablissement', ['typeEtablissement' => $typeEtablissement,'ecran' => $ecran, ]);
+        return view('parGeneraux.typeEtablissement', ['typeEtablissement' => $typeEtablissement,'ecran' => $ecran, ]);
     }
 
     //*****************  TYPE MATERIAUX DE CONDUITE  ************* */
@@ -1649,14 +1649,14 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeMateriauxConduite = TypeMateriauxConduite::orderBy('libelle', 'asc')->get();
-        return view('typeMateriauxConduite', ['typeMateriauxConduite' => $typeMateriauxConduite,'ecran' => $ecran, ]);
+        return view('parGeneraux.typeMateriauxConduite', ['typeMateriauxConduite' => $typeMateriauxConduite,'ecran' => $ecran, ]);
     }
     //*****************  TYPE RESEAUX  ************* */
     public function typeResaux(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeResaux = TypeResaux::orderBy('libelle', 'asc')->get();
-        return view('typeResaux', ['typeResaux' => $typeResaux, 'ecran' => $ecran,]);
+        return view('parGeneraux.typeResaux', ['typeResaux' => $typeResaux, 'ecran' => $ecran,]);
     }
 
     //*****************  TYPE STATTION  ************* */
@@ -1664,7 +1664,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeStation = TypeStation::orderBy('libelle', 'asc')->get();
-        return view('typeStation', ['typeStation' => $typeStation,'ecran' => $ecran, ]);
+        return view('parGeneraux.typeStation', ['typeStation' => $typeStation,'ecran' => $ecran, ]);
     }
 
 
@@ -1673,7 +1673,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeStockage = TypeStockage::orderBy('libelle', 'asc')->get();
-        return view('typeStockage', ['typeStockage' => $typeStockage, 'ecran' => $ecran,]);
+        return view('parGeneraux.typeStockage', ['typeStockage' => $typeStockage, 'ecran' => $ecran,]);
     }
 
     //*****************  UNITE RESEAUX  ************* */
@@ -1681,14 +1681,14 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         //$uniteStockage = UniteStockage::orderBy('libelle', 'asc')->get();
-        return view('uniteStockage', [ /*'uniteStockage' => $uniteStockage, */'ecran' => $ecran,]);
+        return view('parGeneraux.uniteStockage', [ /*'uniteStockage' => $uniteStockage, */'ecran' => $ecran,]);
     }
     //*****************  UNITE DISTANCE  ************* */
     public function uniteDistance(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $uniteDistance = UniteDistance::orderBy('libelle_long', 'asc')->get();
-        return view('uniteDistance', ['uniteDistance' => $uniteDistance,'ecran' => $ecran, ]);
+        return view('parGeneraux.uniteDistance', ['uniteDistance' => $uniteDistance,'ecran' => $ecran, ]);
     }
 
     //*****************  UNITE DE MESURE  ************* */
@@ -1696,7 +1696,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $uniteMesure = UniteMesure::orderBy('libelle_long', 'asc')->get();
-        return view('uniteMesure', ['uniteMesure' => $uniteMesure, 'ecran' => $ecran,]);
+        return view('parGeneraux.uniteMesure', ['uniteMesure' => $uniteMesure, 'ecran' => $ecran,]);
     }
 
     //*****************  UNITE DE SURFACE  ************* */
@@ -1704,21 +1704,21 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $uniteSurface = UniteSurface::orderBy('libelle_long', 'asc')->get();
-        return view('uniteSurface', ['uniteSurface' => $uniteSurface, 'ecran' => $ecran,]);
+        return view('parGeneraux.uniteSurface', ['uniteSurface' => $uniteSurface, 'ecran' => $ecran,]);
     }
     //*****************  UNITE DE VOLUME  ************* */
     public function uniteVolume(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $uniteVolume = uniteVolume::orderBy('libelle_long', 'asc')->get();
-        return view('uniteVolume', ['uniteVolume' => $uniteVolume, 'ecran' => $ecran,]);
+        return view('parGeneraux.uniteVolume', ['uniteVolume' => $uniteVolume, 'ecran' => $ecran,]);
     }
     //*****************  TYPE DE RESERVOUR  ************* */
     public function typeReservoire(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         //$typeReservoire = TypeReservoire::orderBy('libelle', 'asc')->get();
-        return view('typeReservoire', [ /*'typeReservoire' => $typeReservoire, */'ecran' => $ecran,]);
+        return view('parGeneraux.typeReservoire', [ /*'typeReservoire' => $typeReservoire, */'ecran' => $ecran,]);
     }
 
     //*****************  TYPE D'INSTRUMENT  ************* */
@@ -1726,7 +1726,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeInstrument = TypeInstrument::orderBy('code', 'asc')->get();
-        return view('typeInstrument', ['typeInstrument' => $typeInstrument, 'ecran' => $ecran,]);
+        return view('parGeneraux.typeInstrument', ['typeInstrument' => $typeInstrument, 'ecran' => $ecran,]);
     }
 
 

@@ -24,6 +24,7 @@ class GeoJSONController extends Controller
             'cout_district' => Storage::disk('geojson')->path('Cout.geojson.js'),
             'cout_region' => Storage::disk('geojson')->path('CoutRegion.geojson.js'),
             'department' => Storage::disk('geojson')->path('Department.geojson.js'),
+            'department_cout' => Storage::disk('geojson')->path('CoutDepartment.geojson.js'),
             //Les fichiers temporaires
             'district_temp' => Storage::disk('geojson')->path('District_temp.geojson.js'),
             'region_temp' => Storage::disk('geojson')->path('Region_temp.geojson.js'),
@@ -57,6 +58,7 @@ class GeoJSONController extends Controller
             $this->addCoutProjetDistrictToGeoJSON();
             $this->addCoutProjetRegionToGeoJSON();
             $this->addDepartmentToGeoJSON();
+            $this->addDepartmentCoutToGeoJSON();
         }
 
         $bailleur = Bailleur::all();
@@ -403,7 +405,7 @@ class GeoJSONController extends Controller
 
             // Sauvegarder le fichier GeoJSON mis à jour
             file_put_contents($this->filePaths['cout_region'], 'var montantRegion = ' . json_encode($geojsonData_cout_mon, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
-            return View::make('cout_region');
+
         } catch (\Exception $e) {
             // Imprimez l'erreur dans les logs
             Log::error($e->getMessage());
@@ -412,6 +414,7 @@ class GeoJSONController extends Controller
     }
 
     //DEPARTEMENT
+    //en nombre de projet
     public function addDepartmentToGeoJSON()
     {
         try {
@@ -505,14 +508,114 @@ class GeoJSONController extends Controller
 
                 // Écrire les données GeoJSON dans le fichier
                 file_put_contents($this->filePaths['department'], 'var statesDataDepartmentsBD = ' . json_encode($geojsonData_depart, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
+                return View::make('department');
 
-            
-            return View::make('department');
         } catch (\Exception $e) {
             Log::error($e->getMessage());
             return 'Une erreur s\'est produite.';
         }
     }
+
+    //en financement
+    public function addDepartmentCoutToGeoJSON()
+    {
+        try{
+            // Requête pour obtenir les données par département
+            $departmentsFinan = DB::table('action_beneficiaires_projet')
+            ->select(
+                'departement.libelle as department_name',
+                DB::raw('SUM(projet_eha2.cout_projet) as total_project_cost'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Hygiène'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités')
+            )
+            ->join('departement', 'departement.code', '=', 'action_beneficiaires_projet.beneficiaire_id')
+            ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'action_beneficiaires_projet.CodeProjet')
+            ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
+            ->groupBy('departement.libelle')
+            ->get();
+
+            // Requête pour obtenir les totaux globaux pour les projets
+            $departments_totalFinan = DB::table('action_beneficiaires_projet')
+            ->select(
+                DB::raw('SUM(projet_eha2.cout_projet) AS total_project_cost_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Hygiène_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement_total'),
+                DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités_total')
+            )
+            ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'action_beneficiaires_projet.CodeProjet')
+            ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
+            ->get();
+
+            if ($departmentsFinan->isEmpty() || $departments_totalFinan->isEmpty()) {
+                return 'Aucune donnée à ajouter.';
+            }
+
+            // Charger le contenu GeoJSON existant
+            $filePath = Storage::disk('geojson')->path('CoutDepartment.geojson.js');
+            $geojsonContent = file_get_contents($filePath);
+            $geojsonData_departFinan = $geojsonContent ? json_decode($geojsonContent, true) : null;
+
+            if ($geojsonData_departFinan === null) {
+            $geojsonData_departFinan = [
+                'type' => 'FeatureCollection',
+                'features' => [],
+            ];
+            }
+
+            // Initialiser les valeurs totales une seule fois
+            $department_totalFinan = isset($departments_totalFinan[0]) ? $departments_totalFinan[0] : null;
+
+            foreach ($departmentsFinan as $departmentFinan) {
+            $newFeature = [
+                'type' => 'Feature',
+                'properties' => [
+                    'NAME_3' => $departmentFinan->department_name,
+                    'PROJET_NUM' => (int) $departmentFinan->total_project_cost, // Corrigé de 'total_projects'
+                    'AEP' => (int) $departmentFinan->Alimentation_en_Eau_Potable,
+                    'AD' => (int) $departmentFinan->Assainissement_et_Drainage,
+                    'HY' => (int) $departmentFinan->Hygiène,
+                    'REE' => (int) $departmentFinan->Ressources_en_Eau,
+                    'EHAES' => (int) $departmentFinan->EHA_dans_les_Etablissements_de_Santé,
+                    'EHAEE' => (int) $departmentFinan->EHA_dans_les_Etablissements_d_Enseignement,
+                    'EHAEEn' => (int) $departmentFinan->EHA_dans_les_autres_Entités,
+                    // Totaux
+                    'PROJET_NUM_T' => $department_totalFinan ? (int) $department_totalFinan->total_project_cost_total : 0,
+                    'AEP_T' => $department_totalFinan ? (int) $department_totalFinan->Alimentation_en_Eau_Potable_total : 0,
+                    'AD_T' => $department_totalFinan ? (int) $department_totalFinan->Assainissement_et_Drainage_total : 0,
+                    'HY_T' => $department_totalFinan ? (int) $department_totalFinan->Hygiène_total : 0,
+                    'REE_T' => $department_totalFinan ? (int) $department_totalFinan->Ressources_en_Eau_total : 0,
+                    'EHAES_T' => $department_totalFinan ? (int) $department_totalFinan->EHA_dans_les_Etablissements_de_Santé_total : 0,
+                    'EHAEE_T' => $department_totalFinan ? (int) $department_totalFinan->EHA_dans_les_Etablissements_d_Enseignement_total : 0,
+                    'EHAEEn_T' => $department_totalFinan ? (int) $department_totalFinan->EHA_dans_les_autres_Entités_total : 0,
+                ],
+                'geometry' => [
+                    'type' => 'MultiPolygon',  // Remplissez les coordonnées ici
+                ],
+            ];
+
+            $geojsonData_departFinan['features'][] = $newFeature;
+            }
+
+            // Écrire les données GeoJSON dans le fichier
+            file_put_contents($filePath, 'var statesDataDepartmentsCoutBD = ' . json_encode($geojsonData_departFinan, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
+
+            return View::make('department_cout');
+
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return 'Une erreur s\'est produite.';
+        }
+    }
+
 
 
     /////////////////////////////////////////FILTRE//////////////////////////////////////////
@@ -703,6 +806,46 @@ class GeoJSONController extends Controller
                         ->get();
 
                     ///////// FIN DEPARTEMENT NOMBRE /////////
+
+                    /////////DEPARTEMENT COUT /////////
+                        $departmentsFinan = DB::table('action_beneficiaires_projet')
+                        ->select(
+                        'departement.libelle as department_name',
+                        DB::raw('SUM(projet_eha2.cout_projet) as total_project_cost'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Hygiène'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                        DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités')
+                        )
+                        ->join('departement', 'departement.code', '=', 'action_beneficiaires_projet.beneficiaire_id')
+                        ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'action_beneficiaires_projet.CodeProjet')
+                        ->whereIn('projet_eha2.CodeProjet', $projectIds)
+                        ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
+                        ->groupBy('departement.libelle')
+                        ->get();
+
+                        // Requête pour obtenir les totaux globaux pour les projets
+                        $departments_totalFinan = DB::table('action_beneficiaires_projet')
+                            ->select(
+                            DB::raw('SUM(projet_eha2.cout_projet) AS total_project_cost_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Hygiène_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités_total')
+                           )
+                           ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'action_beneficiaires_projet.CodeProjet')
+                           ->whereIn('projet_eha2.CodeProjet', $projectIds)
+                           ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
+                           ->get();
+
+                    /////////FIN DEPARTEMENT COUT /////////
+
 
                 }
 
@@ -899,6 +1042,45 @@ class GeoJSONController extends Controller
                             ->get();
 
                     ///////// FIN DEPARTEMENT NOMBRE /////////
+
+                    /////////DEPARTEMENT COUT /////////
+                        $departmentsFinan = DB::table('action_beneficiaires_projet')
+                        ->select(
+                            'departement.libelle as department_name',
+                            DB::raw('SUM(projet_eha2.cout_projet) as total_project_cost'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Hygiène'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités')
+                        )
+                        ->join('departement', 'departement.code', '=', 'action_beneficiaires_projet.beneficiaire_id')
+                        ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'action_beneficiaires_projet.CodeProjet')
+                        ->whereIn('projet_eha2.CodeProjet', $projectIds)
+                        ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
+                        ->groupBy('departement.libelle')
+                        ->get();
+
+                        // Requête pour obtenir les totaux globaux pour les projets
+                        $departments_totalFinan = DB::table('action_beneficiaires_projet')
+                            ->select(
+                            DB::raw('SUM(projet_eha2.cout_projet) AS total_project_cost_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 1 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Alimentation_en_Eau_Potable_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 2 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Assainissement_et_Drainage_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 3 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Hygiène_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 4 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS Ressources_en_Eau_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 5 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_de_Santé_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 6 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_Etablissements_d_Enseignement_total'),
+                            DB::raw('CAST(SUM(CASE WHEN projet_eha2.code_domaine = 7 THEN projet_eha2.cout_projet ELSE 0 END) AS UNSIGNED) AS EHA_dans_les_autres_Entités_total')
+                        )
+                        ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'action_beneficiaires_projet.CodeProjet')
+                        ->whereIn('projet_eha2.CodeProjet', $projectIds)
+                        ->where('action_beneficiaires_projet.type_beneficiaire', 'departement')
+                        ->get();
+
+                    /////////FIN DEPARTEMENT COUT /////////
             }
 
             /////////////////////DISTRICT NOMBRE//////////////////
@@ -1174,12 +1356,74 @@ class GeoJSONController extends Controller
 
             ///////////////FIN DEPARTEMENT NOMBRE///////////
 
+            ///////////////DEPARTEMENT COUT///////////
+
+                if ($departmentsFinan->isEmpty() || $departments_totalFinan->isEmpty()) {
+                    return 'Aucune donnée à ajouter.';
+                }
+
+                // Charger le contenu GeoJSON existant
+                $filePath = Storage::disk('geojson')->path('CoutDepartment.geojson.js');
+                $geojsonContent = file_get_contents($filePath);
+                $geojsonData_departFinan = $geojsonContent ? json_decode($geojsonContent, true) : null;
+
+                if ($geojsonData_departFinan === null) {
+                    $geojsonData_departFinan = [
+                        'type' => 'FeatureCollection',
+                        'features' => [],
+                    ];
+                }
+
+                // Initialiser les valeurs totales une seule fois
+                $department_totalFinan = isset($departments_totalFinan[0]) ? $departments_totalFinan[0] : null;
+
+                foreach ($departmentsFinan as $departmentFinan) {
+                    $newFeature = [
+                        'type' => 'Feature',
+                        'properties' => [
+                            'NAME_3' => $departmentFinan->department_name,
+                            'PROJET_NUM' => (int) $departmentFinan->total_projects,
+                            'AEP' => (int) $departmentFinan->Alimentation_en_Eau_Potable,
+                            'AD' => (int) $departmentFinan->Assainissement_et_Drainage,
+                            'HY' => (int) $departmentFinan->Hygiène,
+                            'REE' => (int) $departmentFinan->Ressources_en_Eau,
+                            'EHAES' => (int) $departmentFinan->EHA_dans_les_Etablissements_de_Santé,
+                            'EHAEE' => (int) $departmentFinan->EHA_dans_les_Etablissements_d_Enseignement,
+                            'EHAEEn' => (int) $departmentFinan->EHA_dans_les_autres_Entités,
+                            // Totaux
+                            'PROJET_NUM_T' => $department_totalFinan ? (int) $department_totalFinan->total_projects_total : 0,
+                            'AEP_T' => $department_totalFinan ? (int) $department_totalFinan->Alimentation_en_Eau_Potable_total : 0,
+                            'AD_T' => $department_totalFinan ? (int) $department_totalFinan->Assainissement_et_Drainage_total : 0,
+                            'HY_T' => $department_totalFinan ? (int) $department_totalFinan->Hygiène_total : 0,
+                            'REE_T' => $department_totalFinan ? (int) $department_totalFinan->Ressources_en_Eau_total : 0,
+                            'EHAES_T' => $department_totalFinan ? (int) $department_totalFinan->EHA_dans_les_Etablissements_de_Santé_total : 0,
+                            'EHAEE_T' => $department_totalFinan ? (int) $department_totalFinan->EHA_dans_les_Etablissements_d_Enseignement_total : 0,
+                            'EHAEEn_T' => $department_totalFinan ? (int) $department_totalFinan->EHA_dans_les_autres_Entités_total : 0,
+                        ],
+                        'geometry' => [
+                            'type' => 'MultiPolygon',  // Remplissez les coordonnées ici
+                            ],
+                        ];
+
+                        $geojsonData_departFinan['features'][] = $newFeature;
+                }
+
+                // Écrire les données GeoJSON dans le fichier
+                file_put_contents($this->filePaths['department_cout'], 'var statesDataDepartmentsCoutBD = ' . json_encode($geojsonData_departFinan, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ';');
+
+            ///////////////DEPARTEMENT COUT///////////
+
+
+
+
+
             return response()->json([
                 'geojsonData' => $geojsonData,
                 'geojsonData_region_nbr' =>$geojsonData_region_nbr,
                 'geojsonData_cout'=> $geojsonData_cout,
                 'geojsonData_cout_mon' => $geojsonData_cout_mon,
                 'geojsonData_depart'=>$geojsonData_depart,
+                'geojsonData_departFinan'=>$geojsonData_departFinan,
                 'filtersApplied'=>$filtersApplied
             ]);
         } catch (\Exception $e) {
