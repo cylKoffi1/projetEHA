@@ -69,7 +69,7 @@
                             Ajout d'une dévise
                             <a  href="#" data-toggle="modal" data-target="#devise-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -101,7 +101,7 @@
                             </thead>
 
                             <tbody>
-                                @foreach ($devises as $devise)
+                                @   ch ($devises as $devise)
                                 <tr>
                                     <td>{{ $devise->code }}</td>
                                     <td>{{ $devise->libelle }}</td>

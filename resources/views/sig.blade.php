@@ -52,6 +52,28 @@
                     justify-content: center;
                     align-items: center;
                 }
+                #context-menu {
+                display: flex;
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                    padding: 10px;
+                    list-style: none;
+                }
+
+                #context-menu ul {
+                    margin: 0;
+                    padding: 0;
+                }
+
+                #context-menu li {
+                    padding: 5px 10px;
+                    cursor: pointer;
+                }
+
+                #context-menu li:hover {
+                    background-color: #f0f0f0;
+                }
 
     </style>
     </head>
@@ -93,13 +115,6 @@
                                     </div>
 
                                 </div>
-                                <div class="col-md-2 col-sm-12">
-                                    <h style="color: yellow;"> fin</h>
-                                    <div >
-                                        <input type="date" class="form-control" name="end_date" id="end_date">
-                                    </div>
-
-                                </div>
                             </div>
                     </div>
                         <div class="col-md-2 col-sm-12">
@@ -129,7 +144,7 @@
                         <div class="col-md-29 col-sm-2">
                             <div class="single-model-search text-center">
 
-                                <button class="welcome-btnn model-search-btn" id="filterButton" onclick="window.location.href='#'">
+                                <button class="welcome-btnn model-search-btn" id="filterButton" >
                                     Filtrer
                                 </button>
                             </div>
@@ -161,6 +176,7 @@
 
                                                 <div id="map" style="width: 90%; height: 590px; padding-left: 107%; z-index:1; outline-style: none;"></div>
 
+
                                     </div>
                             </div>
 
@@ -168,173 +184,248 @@
                     </div>
                 </section>
 
+                <button id="openModalButton">Ouvrir Modal</button>
+<style>
+    /* Style de base pour le modal */
+.modal {
+  display: none; /* Le modal est caché par défaut */
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4); /* Fond semi-transparent */
+}
 
+/* Contenu du modal */
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 600px;
+  border-radius: 8px;
+  position: relative;
+}
+
+/* Bouton de fermeture (X) */
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+</style>
+<!-- The Modal -->
+<div id="customModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <p id="alertMessage">Message du modal</p>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
+<script src="{{ asset('leaflet/leaflet.js')}}"></script>
+
+<script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojson/regions.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojson/departements.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutDepartment.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js')}}"></script>
+<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Department.geojson.js')}}"></script>
+<script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
+<script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
 <script>
     // Call initMapJS on page load
     document.addEventListener('DOMContentLoaded', function () {
-
-        // Automatically select the "Afficher toutes les données" radio button and trigger the filter
-        var allDataRadioButton = document.getElementById('radioButton3');
-        if (allDataRadioButton) {
-            allDataRadioButton.checked = true; // Check the radio button
-            triggerFilter(); // Call the function to apply the filter
-        }
-    });
-
-    function triggerFilter() {
-        var startDate = startDateInput.value;
-        var endDate = endDateInput.value;
-        var status = statusInput.value;
-        var bailleur = bailleurInput.value;
-        var dateType = document.querySelector('input[name="radioButtons"]:checked').value;
-
-        var formData = {
-            startDate: startDate,
-            endDate: endDate,
-            status: status,
-            bailleur: bailleur,
-            dateType: dateType
-        };
-        localStorage.setItem('formData', JSON.stringify(formData));
-
-        // Append a random query string to the URL to bypass cache
-        var randomQueryString = `&_=${new Date().getTime()}`;
-
-        fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            // Convert response to text and log it for debugging
-            return response.text().then(text => {
-                return JSON.parse(text);
-            });
-        })
-        .then(data => {
-            if ('caches' in window) {
-            caches.keys().then(function(names) {
-                for (let name of names) {
-                    caches.delete(name);
-                }
-            });
-        } else {
-        }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-
-
-    // Récupérez les éléments d'entrée
+    // Automatically select the "Afficher toutes les données" radio button and trigger the filter
+    var allDataRadioButton = document.getElementById('radioButton3');
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
     var statusInput = document.getElementById('status');
     var bailleurInput = document.getElementById('bailleur');
 
+if (allDataRadioButton) {
+        allDataRadioButton.checked = true;
 
-    endDateInput.addEventListener('change', function() {
-        // Assurez-vous que la date de fin ne peut pas être antérieure à la date de début
-        if (endDateInput.value < startDateInput.value) {
-            $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
-            $('#alertModal').modal('show');
-            endDateInput.value = startDateInput.value; // Réinitialisez la date de fin à la date de début
-        }
-    });
-    // Écoutez les changements dans les champs de formulaire pour sauvegarder les données dans le stockage local
-    document.getElementById('filterButton').addEventListener('click', function() {
-        triggerFilter();
-    });
-    document.getElementById('filterButton').addEventListener('click', function() {
-        var startDate = startDateInput.value;
-        var endDate = endDateInput.value;
-        var status = statusInput.value;
-        var bailleur = bailleurInput.value;
-        var dateType = document.querySelector('input[name="radioButtons"]:checked');
 
-        if (!dateType) {
-            $('#alertMessage').text('Veuillez sélectionner une option de date (prévisionnelles ou effectives) ou le sans filtre.');
-            $('#alertModal').modal('show');
-            return;
-        }
+        // Videz les champs de formulaire
+        startDateInput.value = '';
+        endDateInput.value = '';
+        statusInput.value = '';
+        bailleurInput.value = '';
 
-        dateType = dateType.value;
+    }
+});
 
-        var formData = {
-            startDate: startDate,
-            endDate: endDate,
-            status: status,
-            bailleur: bailleur,
-            dateType: dateType
-        };
-        localStorage.setItem('formData', JSON.stringify(formData));
 
-        // Append a random query string to the URL to bypass cache
-        var randomQueryString = `&_=${new Date().getTime()}`;
 
-        fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
-            headers: {
-                'Cache-Control': 'no-cache'
+
+function getContextMenuLink(geoCode, geoType, domaine) {
+    console.log(geoType + ' code est ' + geoCode); // Log ajoutée ici
+    var storedFormDataString = localStorage.getItem('formData');
+    if (storedFormDataString) {
+        var storedFormData = JSON.parse(storedFormDataString);
+        console.log('Retrieved form data:', storedFormData);
+
+        var startDate = storedFormData.startDate || '';
+        var endDate = storedFormData.endDate || '';
+        var status = storedFormData.status || '';
+        var bailleur = storedFormData.bailleur || '';
+        var type = storedFormData.dateType || '';
+
+        var filteredDataURL = '{{ url("/filtered-data") }}' +
+            '?domaine=' + encodeURIComponent(domaine) +
+            '&geoCode=' + encodeURIComponent(geoCode) +
+            '&geoType=' + encodeURIComponent(geoType) +
+            '&start_date=' + encodeURIComponent(startDate) +
+            '&end_date=' + encodeURIComponent(endDate) +
+            '&status=' + encodeURIComponent(status) +
+            '&bailleur=' + encodeURIComponent(bailleur) +
+            '&type=' + encodeURIComponent(type);
+
+        return filteredDataURL;
+    } else {
+        console.log('No stored form data found.');
+        return '{{ url("/filtered-data")}}' +
+            '?domaine=' + encodeURIComponent(domaine) +
+            '&geoCode=' + encodeURIComponent(geoCode) +
+            '&geoType=' + encodeURIComponent(geoType);
+    }
+}
+
+
+
+var startDateInput = document.getElementById('start_date');
+var endDateInput = document.getElementById('end_date');
+var statusInput = document.getElementById('status');
+var bailleurInput = document.getElementById('bailleur');
+
+// Chargement des données sauvegardées depuis le localStorage
+window.addEventListener('DOMContentLoaded', function() {
+    // Vérifie s'il y a des données sauvegardées dans le localStorage
+    var formDataJSON = localStorage.getItem('formData');
+    if (formDataJSON) {
+        var formData = JSON.parse(formDataJSON);
+
+        // Remplir les champs de formulaire avec les données sauvegardées
+        startDateInput.value = formData.startDate || '';
+        endDateInput.value = formData.endDate || '';
+        statusInput.value = formData.status || '';
+        bailleurInput.value = formData.bailleur || '';
+    }
+});
+var startDateInput = document.getElementById('start_date');
+var endDateInput = document.getElementById('end_date');
+var statusInput = document.getElementById('status');
+var bailleurInput = document.getElementById('bailleur');
+
+endDateInput.addEventListener('change', function() {
+    if (endDateInput.value < startDateInput.value) {
+        $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
+        $('#alertModal').modal('show');
+        endDateInput.value = startDateInput.value;
+    }
+
+});
+
+document.getElementById('filterButton').addEventListener('click', function() {
+    var startDate = startDateInput.value;
+    var endDate = endDateInput.value;
+    var status = statusInput.value;
+    var bailleur = bailleurInput.value;
+    var dateType = document.querySelector('input[name="radioButtons"]:checked');
+
+    if (!dateType) {
+        $('#alertMessage').text('Veuillez sélectionner une option de date (prévisionnelles ou effectives) ou le sans filtre.');
+        $('#alertModal').modal('show');
+        return;
+    }
+
+    dateType = dateType.value;
+
+    var formData = {
+        startDate: startDate,
+        endDate: endDate,
+        status: status,
+        bailleur: bailleur,
+        dateType: dateType
+    };
+
+    // Sauvegarde des données dans le localStorage
+    localStorage.setItem('formData', JSON.stringify(formData));
+
+    // Appel de la fonction pour filtrer et mettre à jour les résultats
+    triggerFilter();
+
+    // Rechargement de la page après la mise à jour des résultats
+    clearCacheAndReload();
+});
+
+// Fonction pour nettoyer le cache et recharger la page
+function clearCacheAndReload() {
+    if ('caches' in window) {
+        caches.keys().then(function(names) {
+            for (let name of names) {
+                caches.delete(name);
             }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            // Convert response to text and log it for debugging
-            return response.text().then(text => {
-                return JSON.parse(text);
-            });
-        })
-        .then(data => {
-            // Vider le cache et recharger la page
-            clearCacheAndReload();
-        })
-        .catch(error => console.error('Error:', error));
-    });
+        }).then(function() {
+            window.location.reload();
+        });
+    } else {
+        window.location.reload();
+    }
+}
 
-    function clearCacheAndReload() {
+// Fonction pour déclencher le filtrage des résultats
+function triggerFilter() {
+    var startDate = startDateInput.value;
+    var endDate = endDateInput.value;
+    var status = statusInput.value;
+    var bailleur = bailleurInput.value;
+    var dateType = document.querySelector('input[name="radioButtons"]:checked').value;
+
+    var randomQueryString = `&_=${new Date().getTime()}`;
+
+    fetch(`{{ route('filter.maps') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
+        headers: {
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+    })
+    .then(data => {
         if ('caches' in window) {
             caches.keys().then(function(names) {
                 for (let name of names) {
                     caches.delete(name);
                 }
-            }).then(function() {
-                window.location.reload(true);
             });
-        } else {
-            window.location.reload(true);
         }
-    }
+    })
+    .catch(error => console.error('Error:', error));
+}
 
-        // Chargez les valeurs précédentes des champs de formulaire depuis le stockage local (s'il y en a)
-        window.addEventListener('DOMContentLoaded', function() {
-            // Vérifiez s'il y a des données sauvegardées dans le stockage local
-            if (localStorage.getItem('formData')) {
-                // Parsez les données sauvegardées depuis le stockage local
-                var formData = JSON.parse(localStorage.getItem('formData'));
-
-                // Si l'option "Sans filtre" est sélectionnée, ne remplissez pas les champs de formulaire avec les données sauvegardées
-                var sansFiltreRadio = document.getElementById('radioButton3');
-                if (sansFiltreRadio && sansFiltreRadio.checked) {
-                    localStorage.removeItem('formData'); // Supprimez les données sauvegardées
-                } else {
-                    // Remplissez les champs de formulaire avec les données sauvegardées
-                    startDateInput.value = formData.startDate || '';
-                    endDateInput.value = formData.endDate || '';
-                    statusInput.value = formData.status || '';
-                    bailleurInput.value = formData.bailleur || '';
-
-                    // Effacez les données après un certain délai (1 minute)
-                    var delayInMilliseconds = 1 * 60 * 1000; // 1 minute en millisecondes
-                    setTimeout(function() {
-                        localStorage.removeItem('formData');
-                    }, delayInMilliseconds);
-                }
-            }
-        });
 
 
 
@@ -366,23 +457,36 @@
         }
     }
 </script>
+<script>
+    // Récupération des éléments nécessaires
+var modal = document.getElementById('customModal');
+var modalMessage = document.getElementById('modalMessage');
+var openModalButton = document.getElementById('openModalButton');
+var closeModalSpan = document.getElementsByClassName('close')[0];
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
-<script src="{{ asset('leaflet/leaflet.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojson/regions.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojson/departements.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutDepartment.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Department.geojson.js')}}"></script>
-<script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
-<script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
+// Écouteur pour ouvrir le modal lorsque le bouton est cliqué
+openModalButton.addEventListener('click', function() {
+  modal.style.display = 'block'; // Affiche le modal
+});
+
+// Écouteur pour fermer le modal lorsque l'utilisateur clique sur (X)
+closeModalSpan.addEventListener('click', function() {
+  modal.style.display = 'none'; // Cache le modal
+});
+
+// Écouteur pour fermer le modal lorsque l'utilisateur clique en dehors du modal
+window.addEventListener('click', function(event) {
+  if (event.target === modal) {
+    modal.style.display = 'none'; // Cache le modal
+  }
+});
+
+// Fonction pour afficher un message dans le modal
+function showModalMessage(message) {
+  modalMessage.textContent = message;
+  modal.style.display = 'block'; // Affiche le modal
+}
+
+</script>
 
     </body>

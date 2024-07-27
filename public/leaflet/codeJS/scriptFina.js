@@ -14,6 +14,24 @@ function initMapFina() {
     }).setView([7.54, -5.55], 7);
     mapFina.panBy([120, 0]);
 
+    function combineGeoJsonData(mainData, additionalData, keyProperty) {
+        var additionalDataDict = {};
+        additionalData.features.forEach(function(feature) {
+            additionalDataDict[feature.properties[keyProperty]] = feature.properties;
+        });
+
+        mainData.features.forEach(function(feature) {
+            var additionalProperties = additionalDataDict[feature.properties[keyProperty]];
+            if (additionalProperties) {
+                feature.properties = { ...feature.properties, ...additionalProperties };
+            }
+        });
+    }
+
+    combineGeoJsonData(statesDataDistricts, statesDataDistrictsBD, 'NAME_1');
+    combineGeoJsonData(statesDataRegions, statesDataRegionsBD, 'NAME_2');
+    combineGeoJsonData(statesDataDepartements, statesDataDepartmentsBD, 'NAME_3');
+
 
     // Ajout d'une couche GeoJSON pour les régions
     var statesDataRegionsGeoJs = L.geoJson(statesDataRegions, {
@@ -22,7 +40,19 @@ function initMapFina() {
             layer.on({
                 mouseover: highlightRegion,
                 mouseout: resetRegionHighlight,
-                click: zoomToRegion
+                click: zoomToRegion,
+                contextmenu: function (e) {
+                var codeRegion = feature.properties.Code_NAME_2; // Assurez-vous que cette propriété est correcte
+                if (typeof codeRegion === 'undefined') {
+                    console.error('Code_NAME_2 is undefined for feature:', feature);
+                } else {
+                    console.log(feature)
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(createContextMenu(contextMenuItems, codeRegion, 'region')) // Utilisation de Code_NAME_1
+                        .openOn(mapFina);
+                }
+            }
             });
         }
     }).addTo(mapFina);
@@ -35,7 +65,19 @@ function initMapFina() {
             layer.on({
                 mouseover: highlightDepartement,
                 mouseout: resetDepartementHighlight,
-                click: zoomToDepartement
+                click: zoomToDepartement,
+                contextmenu: function (e) {
+                    var codeDepartment = feature.properties.Code_NAME_3; // Assurez-vous que cette propriété est correcte
+                    if (typeof codeDepartment === 'undefined') {
+                        console.error('Code_NAME_3 is undefined for feature:', feature);
+                    } else {
+                        console.log(feature)
+                        L.popup()
+                            .setLatLng(e.latlng)
+                            .setContent(createContextMenu(contextMenuItems, codeDepartment, 'departement')) // Utilisation de Code_NAME_1
+                            .openOn(mapFina);
+                    }
+                }
             });
         }
     }).addTo(mapFina);
@@ -56,11 +98,104 @@ function initMapFina() {
             });
         },
         style: styleDist,
-        onEachFeature: evenement,
-        labels: true  // Assurez-vous que les labels sont activés
+        onEachFeature: function (feature, layer) {
+                    layer.on({
+                        mouseover: highlightFeature,
+                        mouseout: resetHighlight,
+                        click: zoomToFeature,
+                        contextmenu: function (e) {
+                            var codeDistrict = feature.properties.Code_NAME_1;
+                           if (typeof codeDistrict === 'undefined') {
+                               console.error('Code_NAME_1 is undefined for feature:', feature);
+                           } else {
+                               L.popup()
+                                   .setLatLng(e.latlng)
+                                   .setContent(createContextMenu(contextMenuItems, codeDistrict, 'district')) // Utilisation de Code_NAME_1
+                                   .openOn(mapFina);
+                           }
+                       }
+                    });
+                }
     }).addTo(mapFina);
 
+    function afficherRegionData(e) {
+        var layer = e.target;
+        var props = layer.feature.properties;
+        updateTableWithRegionData(props);
+    }
+    function createContextMenu(items, geoCode, geoType, props) {
+        var container = L.DomUtil.create('div', 'context-menu');
+        var table = L.DomUtil.create('table', '', container);
 
+        // Trouver les informations basées sur geoCode
+        var districtInfo = statesDataDistrictsBD.features.find(function (feature) {
+            return feature.properties.Code_NAME_1 === geoCode;
+        });
+        var regionInfo = statesDataRegionsBD.features.find(function (feature) {
+            return feature.properties.Code_NAME_2 === geoCode;
+        });
+        var departmentInfo = statesDataDepartmentsBD.features.find(function (feature) {
+            return feature.properties.Code_NAME_3 === geoCode;
+        });
+
+
+        // Déterminer le type
+        // Détermine si l'entité est un district en fonction de la présence de districtInfo et de geoType
+        var isDistrict = !!districtInfo && geoType === 'district';
+
+        // De même pour les autres types
+        var isRegion = !!regionInfo && geoType === 'region';
+        var isDepartment = !!departmentInfo && geoType === 'departement';
+
+        console.log(isDistrict, isRegion, isDepartment)
+        // Boucle à travers les éléments du menu contextuel
+        items.forEach(function(item) {
+            var row = L.DomUtil.create('tr', '', table);
+
+            // Création de la cellule de texte
+            var textCell = L.DomUtil.create('td', '', row);
+            textCell.innerHTML = item.text;
+
+            // Création de la cellule de valeur
+            var valueCell = L.DomUtil.create('td', '', row);
+            var value = '';
+            if (isDepartment) {
+                value = `${departmentInfo ? departmentInfo.properties[item.codeDomaines] || '-' : '-'}`;
+            } else if (isRegion) {
+                value = `${regionInfo ? regionInfo.properties[item.codeDomaines] || '-' : '-'}`;
+            } else if (isDistrict) {
+                value = `${districtInfo ? districtInfo.properties[item.codeDomaines] || '-' : '-'}`;
+            } else {
+                value = '-';
+            }
+            valueCell.innerHTML = value;
+
+            // Création de la cellule d'action
+            var actionCell = L.DomUtil.create('td', '', row);
+            var link = L.DomUtil.create('a', '', actionCell);
+            link.href = '#';
+            link.innerHTML = ' Voir';
+            link.onclick = function(e) {
+                e.preventDefault();
+                if (item.callback) {
+                    item.callback(geoCode, geoType);
+                }
+            };
+        });
+
+        return container;
+    }
+
+    // Définition des éléments du menu contextuel
+    var contextMenuItems = [
+        {text: 'Alimentation en Eau Potable <br>', codeDomaines: 'AEP', codeDomaine:'01', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+        {text: 'Assainissement et Drainage <br>', codeDomaines: 'AD', codeDomaine:'02', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+        {text: 'Hygiène <br>', codeDomaines: 'HY', codeDomaine:'03', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+        {text: 'Ressources en Eau <br>', codeDomaines: 'REE', codeDomaine:'04', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+        {text: 'EHA dans les Établissements de Santé <br>', codeDomaines: 'EHAES', codeDomaine:'05', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+        {text: 'EHA dans les Établissements d\'Enseignement <br>', codeDomaines: 'EHAEE', codeDomaine:'06', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+        {text: 'EHA dans les autres Entités', codeDomaines: 'EHAEEn', codeDomaine:'07', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}}
+    ];
     // Fonction pour mettre en surbrillance une entité au survol
     function highlightFeature(e) {
         var layer = e.target;

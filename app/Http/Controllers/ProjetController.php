@@ -22,6 +22,8 @@ use App\Models\Infrastructure;
 use App\Models\Localite;
 use App\Models\Ministere;
 use App\Models\MinistereProjet;
+use App\Models\Motifs_changerchefprojet;
+use App\Models\Motifs_changermaitreoeuvre;
 use App\Models\NatureTravaux;
 use App\Models\NiveauAccesDonnees;
 use App\Models\Pays;
@@ -31,6 +33,7 @@ use App\Models\ProjetAgence;
 use App\Models\ProjetChefProjet;
 use App\Models\ProjetEha2;
 use App\Models\ProjetStatutProjet;
+use App\Models\Reattribution;
 use App\Models\Region;
 use App\Models\Sous_prefecture;
 use App\Models\SousDomaine;
@@ -42,8 +45,12 @@ use App\Models\uniteVolume;
 use App\Models\User;
 use App\Models\UtilisateurDomaine;
 use Carbon\Carbon;
+use Dotenv\Exception\ValidationException;
+use Exception;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException as ValidationValidationException;
 
 class ProjetController extends Controller
 {
@@ -94,7 +101,7 @@ class ProjetController extends Controller
             if ($lastCouvrirRegion) {
                 $codeRegions =$lastCouvrirRegion->code_region;
                 // Récupérer le district associé à cette région
-                
+
                 $codeDistrict = Region::where('code', $codeRegions)->value('code_district');
                 // Récupérer la région et le district
                 $regions = Region::where('code', $codeRegions)->get();
@@ -465,7 +472,7 @@ class ProjetController extends Controller
             } catch (\Exception $e) {
                 // En cas d'erreur, annuler la transaction et renvoyer une réponse d'erreur
                 DB::rollBack();
-                return response()->json(['error' => true, 'message' => 'Erreur lors de l\'enregistrement du formulaire. Détails: ' . $e->getMessage()]);
+                return response()->json(['error' => true, 'message' => 'Erreur lors de l\'enregistrement du formulaire. Détails: '  ]);
             }
         }
 
@@ -524,9 +531,154 @@ class ProjetController extends Controller
     }
 
 
-    public function changementChef(){
-        return view('changementChefProjet');
+    public function reatributionProjet(Request $request){
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $projets = ProjetEha2::all();
+        $agences = ProjetAgence::where('niveau', 2)->get();
+        $agenceExe = AgenceExecution::all();
+        $chefs = ProjetChefProjet::all();
+
+        $personnel = User::all();
+        $reattributions = Reattribution::all();
+        $changerChef = Motifs_changerchefprojet::all();
+        $changerMaitre = Motifs_changermaitreoeuvre::all();
+
+        return view('changementChefProjet', compact('ecran','projets','agenceExe', 'agences', 'chefs', 'reattributions','personnel','changerChef','changerMaitre'));
     }
+    public function storereat(Request $request)
+    {
+        try {
+            $ecran = Ecran::find($request->input('ecran_id'));
+            $validatedData = $request->validate([
+                'code_projet' => 'required',
+                'changement' => 'required|date',
+                'type_reattribution' => 'required',
+                'chef' => 'nullable|string',
+                'maitre' => 'nullable|string',
+                'motifs' => 'array',
+                'motif' => 'nullable|string'
+            ]);
+
+            // Créer une réattribution sans le champ 'motif'
+            $reattributionData = [
+                'code_projet' => $validatedData['code_projet'],
+                'changement' => $validatedData['changement'],
+                'type_reattribution' => $validatedData['type_reattribution'] ?? '',
+                'motifs' => json_encode($validatedData['motifs'] ?? []),
+                'motif' => $validatedData['motif'] ?? '',
+                'code_chef' => $validatedData['chef'] ?? '',
+                'code_agence' => $validatedData['maitre'] ?? ''
+            ];
+
+            // Ajouter les champs 'motif', 'code_chef' et 'code_agence' uniquement s'ils sont présents
+            if (isset($validatedData['motif'])) {
+                $reattributionData['motif'] = $validatedData['motif'];
+            } else {
+                $reattributionData['motif'] = '';
+            }
+            if (isset($validatedData['chef'])) {
+                $reattributionData['code_chef'] = $validatedData['chef'];
+            } else {
+                $reattributionData['code_chef'] = '';
+            }
+            if (isset($validatedData['maitre'])) {
+                $reattributionData['code_agence'] = $validatedData['maitre'];
+            } else {
+                $reattributionData['code_agence'] = '';
+            }
+
+
+           // Vérifier et créer un nouveau chef de projet si nécessaire
+            if ($validatedData['type_reattribution'] === 'chef_projet' && isset($validatedData['chef'])) {
+                $existingChef = ProjetChefProjet::where('code_projet', $validatedData['code_projet'])->first();
+
+                if (!$existingChef) {
+                    ProjetChefProjet::create([
+                        'code_projet' => $validatedData['code_projet'],
+                        'code_personnel' => $validatedData['chef'],
+                        'date' => $validatedData['changement']
+                    ]);
+                }
+            }
+
+            // Vérifier et créer une nouvelle agence (maître d'œuvre) si nécessaire
+            if ($validatedData['type_reattribution'] === 'maitre_oeuvre' && isset($validatedData['maitre'])) {
+                $existingAgence = ProjetAgence::where('code_projet', $validatedData['code_projet'])
+                                            ->where('niveau', 2)
+                                            ->first();
+
+                if (!$existingAgence) {
+                    ProjetAgence::create([
+                        'code_projet' => $validatedData['code_projet'],
+                        'code_agence' => $validatedData['maitre'],
+                        'niveau' => 2,
+                        'date' => $validatedData['changement']
+                    ]);
+                }
+            }
+
+            // Créer une réattribution seulement si nécessaire
+            if ($reattributionData['motif'] == '' && $reattributionData['motifs'] == '' && ($validatedData['chef'] || $validatedData['maitre'])) {
+                Reattribution::create($reattributionData);
+            }
+
+            return redirect()->back()->with('success', 'Réattribution effectuée avec succès');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Une erreur est survenue : ' . $e->getMessage());
+        }
+    }
+
+    public function updatereat(Request $request, $id)
+    {
+        $reattribution = Reattribution::findOrFail($id);
+        $reattribution->update($request->all());
+        return redirect()->route('reattribution.index')->with('success', 'Réattribution mise à jour avec succès');
+    }
+
+    public function destroyreat($id)
+    {
+
+        Reattribution::findOrFail($id)->delete();
+        return redirect()->route('reattribution.index')->with('success', 'Réattribution supprimée avec succès');
+    }
+    public function getProjectDetails($codeProjet)
+    {
+        // Récupérer le projet par son code
+        $projet = ProjetEha2::where('CodeProjet', $codeProjet)->first();
+
+        if (!$projet) {
+            return response()->json([
+                'chef' => null,
+                'maitre' => null
+            ]);
+        }
+
+        // Récupérer les chefs de projet liés au projet spécifique
+        $chefs = ProjetChefProjet::where('code_projet', $projet->CodeProjet)->latest('date')->get();
+        $chefCodes = $chefs->pluck('code_personnel')->toArray(); // Liste des codes de personnel des chefs de projet
+
+        // Récupérer les agences d'exécution liées aux projets spécifiques et de niveau 2
+        $agences = ProjetAgence::where('niveau', 2)
+                               ->where('code_projet', $projet->CodeProjet)
+                               ->latest('date')
+                               ->get();
+        $maitreCodes = $agences->pluck('code_agence')->toArray(); // Liste des codes d'agence des agences d'exécution
+
+        // Récupérer les détails des utilisateurs (chefs de projet) en fonction des codes de personnel
+        $chefsDetail = User::whereIn('code_personnel', $chefCodes)->get();
+        if($chefsDetail){
+
+            $chefsDetails = Personnel::where('code_personnel', $chefCodes)->get();
+        }
+        // Récupérer les détails des agences d'exécution en fonction des codes d'agence
+        $maitresDetails = AgenceExecution::whereIn('code_agence_execution', $maitreCodes)->get();
+
+        return response()->json([
+            'chef' => $chefsDetails,
+            'maitre' => $maitresDetails
+        ]);
+    }
+
 
 
 }

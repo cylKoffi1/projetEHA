@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class StructureRattachement extends Model
 {
     use HasFactory;
-    public $timestamps = false; 
+    public $timestamps = false;
 
     protected $table = 'structure_rattachement'; // Nom de la table
     protected $keyType = 'string';

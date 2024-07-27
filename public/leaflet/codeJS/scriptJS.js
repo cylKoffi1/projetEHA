@@ -15,20 +15,49 @@ function initMapJS() {
     }).setView([7.54, -5.55], 7);
     map.panBy([120, 0]);
 
+    function combineGeoJsonData(mainData, additionalData, keyProperty) {
+        var additionalDataDict = {};
+        additionalData.features.forEach(function(feature) {
+            additionalDataDict[feature.properties[keyProperty]] = feature.properties;
+        });
 
+        mainData.features.forEach(function(feature) {
+            var additionalProperties = additionalDataDict[feature.properties[keyProperty]];
+            if (additionalProperties) {
+                feature.properties = { ...feature.properties, ...additionalProperties };
+            }
+        });
+    }
 
-            // Ajout d'une couche GeoJSON pour les régions
-            var statesDataRegionsGeoJs = L.geoJson(statesDataRegions, {
-                style: styleRegion,
-                onEachFeature: function (feature, layer) {
-                    layer.on({
-                        mouseover: highlightRegion,
-                        mouseout: resetRegionHighlight,
-                        click: zoomToRegion
-                    });
+    combineGeoJsonData(statesDataDistricts, statesDataDistrictsBD, 'NAME_1');
+    combineGeoJsonData(statesDataRegions, statesDataRegionsBD, 'NAME_2');
+    combineGeoJsonData(statesDataDepartements, statesDataDepartmentsBD, 'NAME_3');
+
+// Ajout d'une couche GeoJSON pour les régions
+var statesDataRegionsGeoJs = L.geoJson(statesDataRegions, {
+    style: styleRegion,
+    onEachFeature: function (feature, layer) {
+        layer.on({
+            mouseover: highlightRegion,
+            mouseout: resetRegionHighlight,
+            click: zoomToRegion,
+            contextmenu: function (e) {
+                var codeRegion = feature.properties.Code_NAME_2; // Assurez-vous que cette propriété est correcte
+                if (typeof codeRegion === 'undefined') {
+                    console.error('Code_NAME_2 is undefined for feature:', feature);
+                } else {
+                    console.log(feature)
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(createContextMenu(contextMenuItems, codeRegion, 'region')) // Utilisation de Code_NAME_1
+                        .openOn(map);
                 }
-            }).addTo(map);
-// Supprime le logo Leaflet
+            }
+        });
+    }
+}).addTo(map);
+
+
 
             // Ajout d'une couche GeoJSON pour les départements en fonction des régions
             var statesDataDepartementsGeoJs = L.geoJson(statesDataDepartements, {
@@ -37,7 +66,19 @@ function initMapJS() {
                     layer.on({
                         mouseover: highlightDepartement,
                         mouseout: resetDepartementHighlight,
-                        click: zoomToDepartement
+                        click: zoomToDepartement,
+                        contextmenu: function (e) {
+                            var codeDepartment = feature.properties.Code_NAME_3; // Assurez-vous que cette propriété est correcte
+                            if (typeof codeDepartment === 'undefined') {
+                                console.error('Code_NAME_3 is undefined for feature:', feature);
+                            } else {
+                                console.log(feature)
+                                L.popup()
+                                    .setLatLng(e.latlng)
+                                    .setContent(createContextMenu(contextMenuItems, codeDepartment, 'departement')) // Utilisation de Code_NAME_1
+                                    .openOn(map);
+                            }
+                        }
                     });
                 }
             }).addTo(map);
@@ -46,9 +87,7 @@ function initMapJS() {
 
             }
 
-            // Utilisation de setSizeIcon dans cette fonction
 
-            // Actions au survol de la souris
             var statesDataDistrictsGeoJs = L.geoJson(statesDataDistricts, {
                 pointToLayer: function (feature, latlng) {
                     var radius = setSizeIcon(feature.properties.nb_prod);
@@ -60,11 +99,36 @@ function initMapJS() {
                     });
                 },
                 style: styleDist,
-                onEachFeature: evenement,
-                labels: true  // Assurez-vous que les labels sont activés
+                onEachFeature: function (feature, layer) {
+                    layer.on({
+                        mouseover: highlightFeature,
+                        mouseout: resetHighlight,
+                        click: zoomToFeature,
+                        contextmenu: function (e) {
+                             var codeDistrict = feature.properties.Code_NAME_1;
+                            if (typeof codeDistrict === 'undefined') {
+                                console.error('Code_NAME_1 is undefined for feature:', feature);
+                            } else {
+                                L.popup()
+                                    .setLatLng(e.latlng)
+                                    .setContent(createContextMenu(contextMenuItems, codeDistrict, 'district')) // Utilisation de Code_NAME_1
+                                    .openOn(map);
+                            }
+                        }
+                    });
+                }
             }).addTo(map);
 
+            // Définition du menu contextuel
 
+
+
+
+            function afficherRegionData(e) {
+                var layer = e.target;
+                var props = layer.feature.properties;
+                updateTableWithRegionData(props);
+            }
             // Fonction pour mettre en surbrillance une entité au survol
             function highlightFeature(e) {
                 var layer = e.target;
@@ -343,14 +407,104 @@ function initMapJS() {
                 // Mettez à jour les informations de la région dans le panneau d'information
                 info.update(region.properties);
             }
+            function createContextMenu(items, geoCode, geoType, props) {
+                var container = L.DomUtil.create('div', 'context-menu');
+                var table = L.DomUtil.create('table', '', container);
+
+                // Trouver les informations basées sur geoCode
+                var districtInfo = statesDataDistrictsBD.features.find(function (feature) {
+                    return feature.properties.Code_NAME_1 === geoCode;
+                });
+                var regionInfo = statesDataRegionsBD.features.find(function (feature) {
+                    return feature.properties.Code_NAME_2 === geoCode;
+                });
+                var departmentInfo = statesDataDepartmentsBD.features.find(function (feature) {
+                    return feature.properties.Code_NAME_3 === geoCode;
+                });
+
+
+                // Déterminer le type
+                // Détermine si l'entité est un district en fonction de la présence de districtInfo et de geoType
+                var isDistrict = !!districtInfo && geoType === 'district';
+
+                // De même pour les autres types
+                var isRegion = !!regionInfo && geoType === 'region';
+                var isDepartment = !!departmentInfo && geoType === 'departement';
+
+                console.log(isDistrict, isRegion, isDepartment)
+                // Boucle à travers les éléments du menu contextuel
+                items.forEach(function(item) {
+                    var row = L.DomUtil.create('tr', '', table);
+
+                    // Création de la cellule de texte
+                    var textCell = L.DomUtil.create('td', '', row);
+                    textCell.innerHTML = item.text;
+
+                    // Création de la cellule de valeur
+                    var valueCell = L.DomUtil.create('td', '', row);
+                    var value = '';
+                    if (isDepartment) {
+                        value = `${departmentInfo ? departmentInfo.properties[item.codeDomaines] || '-' : '-'}`;
+                    } else if (isRegion) {
+                        value = `${regionInfo ? regionInfo.properties[item.codeDomaines] || '-' : '-'}`;
+                    } else if (isDistrict) {
+                        value = `${districtInfo ? districtInfo.properties[item.codeDomaines] || '-' : '-'}`;
+                    } else {
+                        value = '-';
+                    }
+                    valueCell.innerHTML = value;
+
+                    // Création de la cellule d'action
+                    var actionCell = L.DomUtil.create('td', '', row);
+                    var link = L.DomUtil.create('a', '', actionCell);
+                    link.href = '#';
+                    link.innerHTML = ' Voir';
+                    link.onclick = function(e) {
+                        e.preventDefault();
+                        if (item.callback) {
+                            item.callback(geoCode, geoType);
+                        }
+                    };
+                });
+
+                return container;
+            }
+
+            // Définition des éléments du menu contextuel
+            var contextMenuItems = [
+                {text: 'Alimentation en Eau Potable <br>', codeDomaines: 'AEP', codeDomaine:'01', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+                {text: 'Assainissement et Drainage <br>', codeDomaines: 'AD', codeDomaine:'02', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+                {text: 'Hygiène <br>', codeDomaines: 'HY', codeDomaine:'03', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+                {text: 'Ressources en Eau <br>', codeDomaines: 'REE', codeDomaine:'04', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+                {text: 'EHA dans les Établissements de Santé <br>', codeDomaines: 'EHAES', codeDomaine:'05', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+                {text: 'EHA dans les Établissements d\'Enseignement <br>', codeDomaines: 'EHAEE', codeDomaine:'06', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}},
+                {text: 'EHA dans les autres Entités', codeDomaines: 'EHAEEn', codeDomaine:'07', callback: function(geoCode, geoType) {window.location.href = getContextMenuLink(geoCode, geoType, this.codeDomaine);}}
+            ];
+
+
+
+
+
+
+            // Fonction pour créer le lien du menu contextuel
 
             info.update = function (props) {
                 var districtInfo = getDistrictInfo(props ? props.NAME_1 : '');
                 var regionInfo = getRegionInfo(props ? props.NAME_2:'');
                 var departmentInfo = getDepartmentInfo(props ? props.NAME_3:'');
+                var isRegion = props && props.NAME_2;
+                var isDepaterment = props && props.NAME_3;
 
-
-
+                currentLayerData = {
+                    district: props ? props.NAME_1 : '---',
+                    region: props ? props.NAME_2 : '---',
+                    department: props ? props.NAME_3 : '---',
+                    districtInfo: districtInfo,
+                    regionInfo: regionInfo,
+                    departmentInfo: departmentInfo,
+                    isRegion: props && props.NAME_2 !== undefined,
+                    isDepartment: props && props.NAME_3 !== undefined
+                };
 
 
                 var calculatePercentageR = function (value, total ) {
@@ -365,8 +519,7 @@ function initMapJS() {
                     }
                 }
                 // Condition pour déterminer si c'est une région ou un district
-                var isRegion = props && props.NAME_2;
-                var isDepaterment = props && props.NAME_3;
+
 
                 this._div.innerHTML = `
                 <table>
@@ -651,6 +804,68 @@ function initMapJS() {
             info.addTo(map);
 
 
+// Add context menu to the map
+/*
+map.on('contextmenu', event => {
+    // position where user right clicked / long pressed
+    let latlng = event.latlng;
+
+    // Define your array of entities
+    const entities = [
+      'EHA autres Entités',
+      'EHA établissement de Santé',
+      'EHA établissement d’Enseignement',
+      'Alimentation en eau potable',
+      'Assainissement et drainage',
+      'Hygiène',
+      'Ressource en eau'
+    ];
+
+    // Remove any existing context menu
+    let existingMenu = document.querySelector('.custom-context-menu');
+    if (existingMenu) {
+      existingMenu.remove();
+    }
+
+    // Create a list element to hold menu items and add custom class
+    let items = document.createElement('ul');
+    items.className = 'custom-context-menu';
+
+    // Create a div to position the context menu
+    let contextMenuDiv = document.createElement('div');
+    contextMenuDiv.style.position = 'absolute';
+    contextMenuDiv.style.top = event.originalEvent.clientY + 'px';
+    contextMenuDiv.style.left = event.originalEvent.clientX + 'px';
+    contextMenuDiv.appendChild(items);
+
+    document.body.appendChild(contextMenuDiv);
+
+    // Iterate over the entities array and create a menu item for each
+    entities.forEach(entity => {
+      let item = document.createElement('li');
+      let link = document.createElement('a');
+      link.textContent = entity;
+      link.href = "#";
+      link.addEventListener('click', e => {
+        // Perform action based on entity clicked
+        // Example action: add a marker
+        this.scene.add(new Marker(latlng.lat, latlng.lng));
+        contextMenuDiv.remove();
+        e.preventDefault();
+      }, false);
+      item.appendChild(link);
+      items.appendChild(item);
+    });
+
+    // Remove the context menu when clicking outside of it
+    document.addEventListener('click', function handler(e) {
+      if (!contextMenuDiv.contains(e.target)) {
+        contextMenuDiv.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  });
+    */
 
 
             // Fonction de style pour les régions

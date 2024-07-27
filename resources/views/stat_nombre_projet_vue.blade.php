@@ -112,7 +112,8 @@
 
                             <tbody>
                                 <tr class="national-row">
-                                    <td>..National</td>
+                                <td>..<a href="{{ route('nombre.data', ['ecran_id' => $ecran->id, 'type' => 'national']) }}">National</a></td>
+
                                     @if($projets_prevus != 0)
                                     <td style="text-align: right">{{ number_format($projets_prevus, 0, '.', ' ') }}</td>
                                     @endif
@@ -133,7 +134,7 @@
                                     @endif
                                 </tr>
                                 <tr>
-                                    <td>{{ $personnelAffiche }}</td>
+                                <td>.<a href="{{ route('nombre.data', ['ecran_id' => $ecran->id, 'type' => 'personnel']) }}">{{ $personnelAffiche }}</a></td>
                                     @if($projets_prevus != 0)
                                     <td style="text-align: right">
                                         @php $nonZero = false; @endphp

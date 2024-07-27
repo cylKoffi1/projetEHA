@@ -9,7 +9,7 @@ class ProjetChefProjet extends Model
 {
     use HasFactory;
     protected $table = 'projet_chef_projet';
-    protected $primaryKey = 'code';
+    protected $primaryKey = 'code_projet';
     public $timestamps = false;
     protected $fillable = [
         'code_projet',

@@ -13,7 +13,8 @@ class ProjetAgence extends Model
     protected $fillable = [
         'code_projet',
         'code_agence',
-        'niveau'
+        'niveau',
+        'date'
     ];
     public function agenceExecution()
     {

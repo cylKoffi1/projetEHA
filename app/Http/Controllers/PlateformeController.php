@@ -6,6 +6,7 @@ use App\Models\Acquifere;
 use App\Models\ActionMener;
 use App\Models\AgenceExecution;
 use App\Models\ApartenirGroupeUtilisateur;
+use App\Models\Approbateur;
 use App\Models\Bailleur;
 use App\Models\Bassin;
 use App\Models\CourDeau;
@@ -32,6 +33,7 @@ use App\Models\TypeEtablissement;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Pays;
+use App\Models\Personnel;
 use App\Models\StatutProjet;
 use App\Models\TypeInstrument;
 use App\Models\TypeMateriauxConduite;
@@ -44,6 +46,8 @@ use App\Models\UniteStockage;
 use App\Models\UniteSurface;
 use App\Models\UniteTraitement;
 use App\Models\uniteVolume;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 
@@ -133,7 +137,7 @@ class PlateformeController extends Controller
     }
 
 
-    
+
     //***************** BAILLEURS ************* */
     public function bailleurs(Request $request)
     {
@@ -821,6 +825,97 @@ class PlateformeController extends Controller
         $exists = Bassin::where('code', $code)->exists();
 
         return response()->json(['exists' => $exists]);
+    }
+
+    //*****************Approbation***************/
+    public function approbation(Request $request){
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $personne = Personnel::all();
+        $approbateurs = Approbateur::with('personnel', 'structure')->get();
+        return view('parGeneraux.approbateur', compact('ecran', 'personne', 'approbateurs'));
+    }
+    public function storeApprobation(Request $request)
+    {
+        // Début de la transaction
+        DB::beginTransaction();
+
+        try {
+            // Vérification de l'existence de l'approbateur avec le même code personnel
+            $existingApprobateur = Approbateur::where('code_personnel', $request->input('userapp'))->first();
+
+            if ($existingApprobateur) {
+                // Rouler en arrière la transaction
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Erreur : L\'approbateur existe déjà.');
+            }
+
+            // Vérification de l'unicité du numéro d'ordre
+            $existingNumOrdre = Approbateur::where('numOrdre', $request->input('Nordre'))->first();
+
+            if ($existingNumOrdre) {
+                // Rouler en arrière la transaction
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Erreur : Un approbateur existe déjà avec ce numéro d\'ordre.');
+            }
+
+            // Si les vérifications sont réussies, enregistrer l'approbateur
+            $approbateur = new Approbateur();
+            $approbateur->code_personnel = $request->input('userapp');
+            $approbateur->numOrdre = $request->input('Nordre');
+            $approbateur->save();
+
+            // Commit de la transaction
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Approbateur enregistré avec succès');
+        } catch (\Exception $e) {
+            // En cas d'erreur, rouler en arrière la transaction
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'Erreur lors de l\'enregistrement de l\'approbateur.');
+        }
+    }
+
+    public function editApprobation($id)
+    {
+        $approbateur = Approbateur::find($id);
+        return response()->json($approbateur);
+    }
+
+    public function updateApprobation(Request $request, $id)
+    {
+        $request->validate([
+            'userapp_mod' => 'required',
+            'Nordre_mod' => 'required|integer|min:1|max:10',
+        ]);
+        try {
+            $approbateur = Approbateur::findOrFail($id);
+            $approbateur->code_personnel = $request->input('userapp_mod');
+            $approbateur->numOrdre = $request->input('Nordre_mod');
+            $approbateur->save();
+
+            return redirect()->back()->with('success', 'Approbateur modifié avec succès');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur lors de la modification de l\'approbateur.'.$e->getMessage());
+        }
+    }
+
+
+
+    public function deleteApprobation($id)
+    {
+        $approbateur = Approbateur::find($id);
+
+        if (!$approbateur) {
+            return response()->json(['error' => 'L\'approbateur que vous essayez de supprimer n\'existe pas.'], 404);
+        }
+
+        try {
+            $approbateur->delete();
+            return response()->json(['success' => 'Approbateur supprimé avec succès'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la suppression de l\'approbateur.'], 500);
+        }
     }
 
     //***************** COURS D'EAU ************* */
@@ -1546,7 +1641,7 @@ class PlateformeController extends Controller
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $ouvrageTransport = OuvrageTransport::orderBy('libelle', 'asc')->get();
-        return view('ouvrageTransport', ['ouvrageTransport' => $ouvrageTransport, 'ecran' => $ecran,]);
+        return view('parGeneraux.ouvrageTransport', ['ouvrageTransport' => $ouvrageTransport, 'ecran' => $ecran,]);
     }
 
 
@@ -1571,7 +1666,7 @@ class PlateformeController extends Controller
         $ecran_id = $request->input('ecran_id');
 
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('ouvrageTransport', ['ecran_id' => $ecran_id])->with('success', 'Ouvrage de Transport enregistré avec succès.');
+        return redirect()->route('parGeneraux.ouvrageTransport', ['ecran_id' => $ecran_id])->with('success', 'Ouvrage de Transport enregistré avec succès.');
     }
     public function updateOuvrageTransport(Request $request)
     {
@@ -1587,7 +1682,7 @@ class PlateformeController extends Controller
         $materielStockage->save();
         $ecran_id = $request->input('ecran_id');
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('ouvrageTransport', ['ecran_id' => $ecran_id])->with('success', 'Ouvrage de Transport mis à jour avec succès.');
+        return redirect()->route('parGeneraux.ouvrageTransport', ['ecran_id' => $ecran_id])->with('success', 'Ouvrage de Transport mis à jour avec succès.');
     }
 
     public function deleteOuvrageTransport($code)

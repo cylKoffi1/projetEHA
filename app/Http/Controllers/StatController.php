@@ -741,4 +741,257 @@ class StatController extends Controller
 
     }
 
+
+    public function statNombreData(Request $request)
+    {
+        try {
+            $ecran = Ecran::find($request->input('ecran_id'));
+
+            // Récupérer le type (national ou personnel)
+            $type = $request->input('type');
+
+            // Initialiser la variable $statutsProjets
+            $statutsProjets = collect();
+            $personnelAffiche = '';
+
+            if ($type === 'national') {
+                // Si le type est national, récupérer tous les projets sans exception
+                $statutsProjets = ProjetEha2::all();
+            } else {
+                // Récupérer le code région de l'utilisateur
+                $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                $code_region = $region->code_region;
+
+                // Récupérer le code de fonction de l'utilisateur connecté
+                $codeFonction = auth()->user()->latestFonction->fonctionUtilisateur->code;
+
+                if ($codeFonction === 'cp') {
+                    $chefprojet = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+
+                    if ($chefprojet) {
+                        if ($chefprojet->type_structure == 'agence_execution') {
+                            $chefprojetInfo = AgenceExecution::where('code_agence_execution', $chefprojet->code_structure)->first();
+                            $personnelAffiche = $chefprojetInfo ? $chefprojetInfo->nom_agence : '---';
+                        } else if ($chefprojet->type_structure == 'ministere') {
+                            $chefprojetInfo = Ministere::where('code', $chefprojet->code_structure)->first();
+                            $personnelAffiche = $chefprojetInfo ? $chefprojetInfo->libelle : '---';
+                        }
+
+                        $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet AS psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                            ->leftJoin('statut_projet AS sp', 'sp.code', '=', 'psp.code_statut_projet')
+                            ->leftJoin('projet_chef_projet AS pcp', 'pcp.code_projet', '=', 'psp.code_projet')
+                            ->where('pcp.code_personnel', auth()->user()->personnel->code_personnel)
+                            ->select('projet_eha2.*', 'sp.*', 'pcp.*')
+                            ->get();
+                    }
+                } elseif ($codeFonction === 'ba') {
+                    $bailleur = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+
+                    if ($bailleur) {
+                        $bailleurInfo = Bailleur::where('code_bailleur', $bailleur->code_structure)->first();
+                        $personnelAffiche = $bailleurInfo ? $bailleurInfo->libelle_long : '---';
+                        $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet AS psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                            ->leftJoin('bailleurs_projets AS pcp', 'pcp.code_projet', '=', 'psp.code_projet')
+                            ->where('pcp.code_bailleur', $bailleurInfo->code_bailleur)
+                            ->select('projet_eha2.*', 'psp.*', 'pcp.*')
+                            ->get();
+                    }
+                } elseif ($codeFonction === 'dc') {
+                    $ministere = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                    if ($ministere) {
+                        $ministereInfo = Ministere::where('code', $ministere->code_structure)->first();
+                        $personnelAffiche = $ministereInfo ? $ministereInfo->libelle : 'Directeur de cabinet';
+                        $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet AS psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                            ->where('projet_eha2.code_ministere', $ministereInfo->code)
+                            ->select('projet_eha2.*')
+                            ->get();
+                    }
+                } elseif ($codeFonction === 'dr') {
+                    $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                    if ($region) {
+                        $regionInfo = Region::where('code', $region->code_region)->first();
+                        $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Directeur Régional';
+                        $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet AS psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                            ->where('projet_eha2.code_region', $regionInfo->code)
+                            ->select('projet_eha2.*')
+                            ->get();
+                    }
+                } elseif ($codeFonction === 'mo') {
+                    $maitreoeurvre = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                    if ($maitreoeurvre) {
+                        $maitreoeurvreInfo = AgenceExecution::where('code_agence_execution', $maitreoeurvre->code_structure)->first();
+                        $personnelAffiche = $maitreoeurvreInfo ? $maitreoeurvreInfo->nom_agence : '---';
+                        $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet AS psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                            ->leftJoin('statut_projet AS sp', 'sp.code', '=', 'psp.code_statut_projet')
+                            ->leftJoin('projet_agence AS pcp', 'pcp.code_projet', '=', 'psp.code_projet')
+                            ->where('pcp.code_agence', $maitreoeurvreInfo->code_agence_execution)
+                            ->where('pcp.niveau', '=', '2')
+                            ->select('projet_eha2.*')
+                            ->get();
+                    }
+                } elseif ($codeFonction === 'rf') {
+                    $regie = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                    if ($regie) {
+                        $regieInfo = AgenceExecution::where('code_agence_execution', $regie->code_structure)->first();
+                        $personnelAffiche = $regieInfo ? $regieInfo->nom_agence : '---';
+                        $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet AS psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                            ->leftJoin('projet_agence AS pcp', 'pcp.code_projet', '=', 'psp.code_projet')
+                            ->where('pcp.code_agence', $regieInfo->code_agence_execution)
+                            ->where('pcp.niveau', '=', '1')
+                            ->select('projet_eha2.*', 'psp.*', 'pcp.*')
+                            ->get();
+                    }
+                }
+            }
+
+            $Statuts = DB::table('projet_statut_projet')
+                ->join('statut_projet', 'statut_projet.code', '=', 'projet_statut_projet.code_statut_projet')
+                ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
+                ->select('projet_statut_projet.code', 'projet_eha2.CodeProjet', 'projet_statut_projet.code_statut_projet as codeSStatu', 'projet_statut_projet.date', 'statut_projet.libelle as statut_libelle')
+                ->get();
+
+            return view('stat_nombre_projet_lien', compact('ecran', 'personnelAffiche', 'statutsProjets', 'Statuts'));
+
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
+        }
+    }
+
+
+
+    public function statFinanceData(Request $request)
+    {
+        try {
+            // Récupérer le pays
+            $ecran = Ecran::find($request->input('ecran_id'));
+
+            // Récupérer tous les projets
+            $projets = ProjetEha2::all();
+
+            // Récupérer le code région de l'utilisateur
+            $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+
+            // Initialisation des variables
+            $personnelAffiche = '';
+            $chefprojet = null;
+            $bailleurInfo = null;
+            $ministereInfo = null;
+            $regionInfo = null;
+            $maitreoeurvreInfo = null;
+            $regieInfo = null;
+
+            $userCode = auth()->user()->latestFonction->fonctionUtilisateur->code;
+
+            // Déterminer la valeur de $personnelAffiche en fonction du groupe utilisateur
+            if ($userCode === 'cp') {
+                $chefprojet = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+
+                if ($chefprojet) {
+                    if ($chefprojet->type_structure == 'agence_execution') {
+                        $chefprojetInfo = AgenceExecution::where('code_agence_execution', $chefprojet->code_structure)->first();
+                        $personnelAffiche = $chefprojetInfo ? $chefprojetInfo->nom_agence : '---';
+                    } else if ($chefprojet->type_structure == 'ministere') {
+                        $chefprojetInfo = Ministere::where('code', $chefprojet->code_structure)->first();
+                        $personnelAffiche = $chefprojetInfo ? $chefprojetInfo->libelle : '---';
+                    }
+                }
+            } elseif ($userCode === 'ba') {
+                $bailleur = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                if ($bailleur) {
+                    $bailleurInfo = Bailleur::where('code_bailleur', $bailleur->code_structure)->first();
+                    $personnelAffiche = $bailleurInfo ? $bailleurInfo->libelle_long : '---';
+                }
+            } elseif ($userCode === 'dc') {
+                $ministere = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                if ($ministere) {
+                    $ministereInfo = Ministere::where('code', $ministere->code_structure)->first();
+                    $personnelAffiche = $ministereInfo ? $ministereInfo->libelle : 'Directeur de cabinet';
+                }
+            } elseif ($userCode === 'dr') {
+                $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                if ($region) {
+                    $regionInfo = Region::where('code', $region->code_region)->first();
+                    $personnelAffiche = $regionInfo ? $regionInfo->libelle : 'Directeur Régional';
+                }
+            } elseif ($userCode === 'mo') {
+                $maitreoeurvre = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                if ($maitreoeurvre) {
+                    $maitreoeurvreInfo = AgenceExecution::where('code_agence_execution', $maitreoeurvre->code_structure)->first();
+                    $personnelAffiche = $maitreoeurvreInfo ? $maitreoeurvreInfo->nom_agence : '---';
+                }
+            } elseif ($userCode === 'rf') {
+                $regie = StructureRattachement::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
+                if ($regie) {
+                    $regieInfo = AgenceExecution::where('code_agence_execution', $regie->code_structure)->first();
+                    $personnelAffiche = $regieInfo ? $regieInfo->nom_agence : '---';
+                }
+            }
+
+            // Vérifier si l'utilisateur a cliqué sur "National" ou sur le lien avec $personnelAffiche
+            if ($request->input('type') === 'national') {
+                // Afficher toutes les données de ProjetEha2
+                $statutsProjets = ProjetEha2::all();
+            } else {
+                // Filtrer les données en fonction de la logique spécifique
+                $statutsProjets = ProjetEha2::leftJoin('projet_statut_projet as psp', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
+                    ->leftJoin('statut_projet as sp', 'sp.code', '=', 'psp.code_statut_projet')
+                    ->when($userCode === 'cp', function ($query) use ($chefprojet) {
+                        return $query->whereExists(function ($query) use ($chefprojet) {
+                            $query->select(DB::raw(1))
+                                ->from('projet_chef_projet as pcp')
+                                ->whereRaw('pcp.code_projet = psp.code_projet')
+                                ->where('pcp.code_personnel', '=', $chefprojet->code_personnel);
+                        });
+                    })
+                    ->when($userCode === 'ba', function ($query) use ($bailleurInfo) {
+                        return $query->whereExists(function ($query) use ($bailleurInfo) {
+                            $query->select(DB::raw(1))
+                                ->from('bailleurs_projets as pcp')
+                                ->whereRaw('pcp.code_projet = psp.code_projet')
+                                ->where('pcp.code_bailleur', '=', $bailleurInfo->code_bailleur);
+                        });
+                    })
+                    ->when($userCode === 'dc', function ($query) use ($ministereInfo) {
+                        return $query->where('projet_eha2.code_ministere', '=', $ministereInfo->code);
+                    })
+                    ->when($userCode === 'dr', function ($query) use ($regionInfo) {
+                        return $query->where('projet_eha2.code_region', '=', $regionInfo->code);
+                    })
+                    ->when($userCode === 'mo', function ($query) use ($maitreoeurvreInfo) {
+                        return $query->whereExists(function ($query) use ($maitreoeurvreInfo) {
+                            $query->select(DB::raw(1))
+                                ->from('projet_agence as pcp')
+                                ->whereRaw('pcp.code_projet = psp.code_projet')
+                                ->where('pcp.code_agence', '=', $maitreoeurvreInfo->code_agence_execution)
+                                ->where('pcp.niveau', '=', '2');
+                        });
+                    })
+                    ->when($userCode === 'rf', function ($query) use ($regieInfo) {
+                        return $query->whereExists(function ($query) use ($regieInfo) {
+                            $query->select(DB::raw(1))
+                                ->from('projet_agence as pcp')
+                                ->whereRaw('pcp.code_projet = psp.code_projet')
+                                ->where('pcp.code_agence', '=', $regieInfo->code_agence_execution)
+                                ->where('pcp.niveau', '=', '1');
+                        });
+                    })
+                    ->select('projet_eha2.*')
+                    ->get();
+            }
+
+            $Statuts = DB::table('projet_statut_projet')
+                ->join('statut_projet', 'statut_projet.code', '=', 'projet_statut_projet.code_statut_projet')
+                ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
+                ->select('projet_statut_projet.code', 'projet_eha2.CodeProjet', 'projet_statut_projet.code_statut_projet as codeSStatu', 'projet_statut_projet.date', 'statut_projet.libelle as statut_libelle')
+                ->get();
+
+            return view('stat_fincance_lien', compact('ecran', 'personnelAffiche', 'statutsProjets', 'Statuts'));
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
+        }
+    }
+
+
+
+
 }
