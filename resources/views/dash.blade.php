@@ -129,10 +129,10 @@
                                         <div class="card">
                                             <div class="card-header">
                                                 <di class="card-body">
-                                                        <h6>Nombre de Projets par Année</h6>
+                                                        <center><h6>Nombre de Projets par Année</h6></center>
                                                         <div class="col-2">
-                                                            <label for="chartTypeSelect">Type de graph</label>
-                                                            <select id="chartTypeSelect" class="form-control" onchange="updateChart2()">
+                                                            <label for="chartTypeSelect2">Type de graph</label>
+                                                            <select id="chartTypeSelect2" class="form-control" onchange="updateChart2()">
                                                                 <option value="bar">Bar</option>
                                                                 <option value="line">Line</option>
                                                                 <option value="pie">Pie</option>
@@ -152,7 +152,7 @@
                                                             </button>
                                                         </div>
                                                         <canvas id="projetsChart"></canvas>
-                                                    
+
                                                 </div>
                                             </div>
                                         </div>
@@ -175,6 +175,7 @@
                                         <div class="card">
                                             <div class="card-header">
                                                 <div class="card-body">
+                                                <center><h6>Autres données par Année</h6></center>
                                                     <div class="row">
                                                         <div class="col-2">
                                                             <label for="">Type de données</label>
@@ -247,7 +248,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 <!-- Nombre de projet -->
 <script>
-    
     function createProjetsChart(data, chartType) {
         const ctx = document.getElementById('projetsChart').getContext('2d');
         new Chart(ctx, {
@@ -270,9 +270,9 @@
     }
 
     function updateChart2() {
-        const chartType = document.getElementById('chartTypeSelect').value;
+        const chartType2 = document.getElementById('chartTypeSelect2').value;
         const dataProjets = @json($dataProjets);
-        let chartInstance2;
+
         // Trier les données par année
         dataProjets.sort((a, b) => a.year - b.year);
 
@@ -284,10 +284,10 @@
             window.chartInstance2.destroy();
         }
 
-        if (chartType) {
+        if (chartType2) {
             const ctx = document.getElementById('projetsChart').getContext('2d');
             window.chartInstance2 = new Chart(ctx, {
-                type: chartType,
+                type: chartType2,
                 data: {
                     labels: years,
                     datasets: [{
@@ -318,7 +318,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         updateChart2();
     });
-    
+
     async function downloadPDF2() {
         const { jsPDF } = window.jspdf;
         const myChart = document.getElementById('projetsChart');
@@ -330,16 +330,17 @@
         pdf.save('chart.pdf');
     }
 
-
     function downloadExcel2() {
-        const worksheet = XLSX.utils.json_to_sheet(chartInstance2.data.datasets[0].data);
+        const worksheet = XLSX.utils.json_to_sheet(window.chartInstance2.data.datasets[0].data);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
         XLSX.writeFile(workbook, 'chart.xlsx');
     }
+
+    // Ajouter des gestionnaires d'événements pour détecter les changements dans les sélections
+    document.getElementById('chartTypeSelect2').addEventListener('change', updateChart2);
+
 </script>
-
-
 
 <!--Les autres type de données -->
 <script>
@@ -349,15 +350,16 @@
     let chartInstance;
 
     function getData(type) {
-        const labels = years;
+        // Trier les années dans l'ordre croissant
+        const sortedYears = [...years].sort((a, b) => a - b);
+        const labels = sortedYears;
         let datasets = [];
 
-        
         // Logique pour d'autres types
         const types = [...new Set(dataByType[type].map(item => item.type))];
 
         types.forEach(typeValue => {
-            const data = years.map(year => {
+            const data = sortedYears.map(year => {
                 const found = dataByType[type].find(item => item.year == year && item.type == typeValue);
                 return found ? found.total : 0;
             });
@@ -370,11 +372,9 @@
                 borderWidth: 1
             });
         });
-        
 
         return { labels, datasets };
     }
-
 
     function getRandomColor() {
         const letters = '0123456789ABCDEF';
@@ -417,7 +417,6 @@
         pdf.save('chart.pdf');
     }
 
-
     function downloadExcel() {
         const worksheet = XLSX.utils.json_to_sheet(chartInstance.data.datasets[0].data);
         const workbook = XLSX.utils.book_new();
@@ -425,8 +424,14 @@
         XLSX.writeFile(workbook, 'chart.xlsx');
     }
 
+    // Ajouter des gestionnaires d'événements pour détecter les changements dans les sélections
+    document.getElementById('typeSelect').addEventListener('change', updateChart);
+    document.getElementById('chartTypeSelect').addEventListener('change', updateChart);
 
-
-    updateChart();
+    // Initialiser le graphique lors du chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        updateChart();
+    });
 </script>
+
     @endsection
