@@ -50,7 +50,8 @@ Route::get('/admin/modele', function () {
 
 // Exemple de route protégée (accessible uniquement aux utilisateurs authentifiés)
 Route::middleware(['auth', 'auth.session'])->group(function () {
-    Route::get('admin', [AdminController::class, 'index']);
+    Route::get('admin', [AdminController::class, 'index'])->name('projets.index');
+    Route::get('/projets-data', [AdminController::class, 'getProjetData']);
     Route::get('/admin/initSidebar', [AdminController::class, 'initSidebar']);
     // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
     Route::get('admin/pays', [PaysController::class, 'pays'])->name('pays');

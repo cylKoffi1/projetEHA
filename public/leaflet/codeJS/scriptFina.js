@@ -123,6 +123,7 @@ function initMapFina() {
         var props = layer.feature.properties;
         updateTableWithRegionData(props);
     }
+    
     function createContextMenu(items, geoCode, geoType, props) {
         var container = L.DomUtil.create('div', 'context-menu');
         var table = L.DomUtil.create('table', '', container);
@@ -138,16 +139,13 @@ function initMapFina() {
             return feature.properties.Code_NAME_3 === geoCode;
         });
 
-
         // Déterminer le type
-        // Détermine si l'entité est un district en fonction de la présence de districtInfo et de geoType
         var isDistrict = !!districtInfo && geoType === 'district';
-
-        // De même pour les autres types
         var isRegion = !!regionInfo && geoType === 'region';
         var isDepartment = !!departmentInfo && geoType === 'departement';
 
-        console.log(isDistrict, isRegion, isDepartment)
+        console.log(isDistrict, isRegion, isDepartment);
+
         // Boucle à travers les éléments du menu contextuel
         items.forEach(function(item) {
             var row = L.DomUtil.create('tr', '', table);
@@ -156,26 +154,23 @@ function initMapFina() {
             var textCell = L.DomUtil.create('td', '', row);
             textCell.innerHTML = item.text;
 
-            // Création de la cellule de valeur
+            // Création de la cellule de valeur avec lien
             var valueCell = L.DomUtil.create('td', '', row);
-            var value = '';
-            if (isDepartment) {
-                value = `${departmentInfo ? departmentInfo.properties[item.codeDomaines] || '-' : '-'}`;
-            } else if (isRegion) {
-                value = `${regionInfo ? regionInfo.properties[item.codeDomaines] || '-' : '-'}`;
-            } else if (isDistrict) {
-                value = `${districtInfo ? districtInfo.properties[item.codeDomaines] || '-' : '-'}`;
-            } else {
-                value = '-';
-            }
-            valueCell.innerHTML = value;
+            var valueLink = L.DomUtil.create('a', '', valueCell);
+            valueLink.href = '#';
+            valueLink.innerHTML = '-'; // Valeur par défaut si aucune donnée n'est trouvée
 
-            // Création de la cellule d'action
-            var actionCell = L.DomUtil.create('td', '', row);
-            var link = L.DomUtil.create('a', '', actionCell);
-            link.href = '#';
-            link.innerHTML = ' Voir';
-            link.onclick = function(e) {
+            // Déterminer la valeur à afficher
+            if (isDepartment) {
+                valueLink.innerHTML = `${departmentInfo ? departmentInfo.properties[item.codeDomaines] || '-' : '-'}`;
+            } else if (isRegion) {
+                valueLink.innerHTML = `${regionInfo ? regionInfo.properties[item.codeDomaines] || '-' : '-'}`;
+            } else if (isDistrict) {
+                valueLink.innerHTML = `${districtInfo ? districtInfo.properties[item.codeDomaines] || '-' : '-'}`;
+            }
+
+            // Ajouter l'événement onclick au lien
+            valueLink.onclick = function(e) {
                 e.preventDefault();
                 if (item.callback) {
                     item.callback(geoCode, geoType);

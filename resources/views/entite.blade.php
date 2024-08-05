@@ -9,7 +9,7 @@
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
         <style>
             /* Custom styles for DataTables */
-        
+
             table {
                 width: 100%;
                 border-collapse: collapse;
@@ -91,12 +91,12 @@
     <div class="card-header">
                 <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
                 </div>
-                <div style="text-align: center; font-size: 15px; font-family: Nunito;">
+                <div style="text-align: center; font-size: 15px;">
                    <h5 class="card-title"> {{ $geoName }} : @foreach ($domainess as $domaines) {{ $domaines->libelle }} @endforeach</h5>
                 </div>
             </div>
             <div style="margin: 20px;">
-        <table class="table" cellspacing="0" id="table1" style=" font-size: 12px; font-family: Nunito;">
+        <table class="table" cellspacing="0" id="table1" style=" font-size: 12px;   ">
             <thead>
                 <tr>
                     <th>Code Projet</th>

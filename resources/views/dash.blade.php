@@ -2,10 +2,20 @@
 
 @section('content')
 {{-- @include('layouts.header') --}}
+<style>
+    .chart-container {
+        position: relative;
+        width: 100%;
+        height: 400px;
+    }
 
-<div class="page-heading">
-    <br><br><br>
-</div>
+    .chart-legend {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+</style>
+
 <div class="page-content">
     <section class="row">
         <div class="col-12">
@@ -107,46 +117,115 @@
                   </div>
                 </div>
             </div>
-            <section class="section">
+            <!-- Section pour le nombre de projets -->
+            <section class="row">
+                <div class="page-content">
+                    <section class="row">
+                        <div class="col-12">
 
-            <!--
-                DANS CETTE SECTION LE BUT SERA DE FAIRE UN SYSTEME DE PAGINATION
-                ** POUR POUVOIR DONNER L'OCCASION A L UTILISATEUR DE CHOISIR
-                ** LE TYPE DE GRAPHIQUE QU IL VOUDRAIT ET LUI DONNER ENSUITE LA POSSIBILITE
-                **DE LE TELECHARGER
-            -->
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>Dépenses Prévues Secteur
-                                EHA
-                            </h4>
-                            <div class="card-body">
-                                <select id="chartTypeSelect" onchange="updateChart()">
-                                    <option value="bar">Graphique à Barres</option>
-                                    <option value="area">Graphique en Aires</option>
-                                    <option value="multi-axis">Graphique à Axes Multiples</option>
-                                <!-- <option value="pie">Graphique Circulaire</option>-->
-                                </select>
-
-                                <!-- Conteneur pour le graphique -->
-                                <div>
-                                    <canvas id="myChart" width="400" height="400"></canvas>
+                            <section class="section">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <di class="card-body">
+                                                        <h6>Nombre de Projets par Année</h6>
+                                                        <div class="col-2">
+                                                            <label for="chartTypeSelect">Type de graph</label>
+                                                            <select id="chartTypeSelect" class="form-control" onchange="updateChart2()">
+                                                                <option value="bar">Bar</option>
+                                                                <option value="line">Line</option>
+                                                                <option value="pie">Pie</option>
+                                                                <option value="doughnut">Doughnut</option>
+                                                                <option value="radar">Radar</option>
+                                                                <option value="polarArea">Polar Area</option>
+                                                                <option value="bubble">Bubble</option>
+                                                                <option value="scatter">Scatter</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col text-end">
+                                                            <button class="btn btn-danger me-2" onclick="downloadPDF2()">
+                                                                <i class="fa fa-file-pdf-o"></i> PDF
+                                                            </button>
+                                                            <button class="btn btn-success me-2" onclick="downloadExcel2()">
+                                                                <i class="fa fa-file-excel-o"></i> Excel
+                                                            </button>
+                                                        </div>
+                                                        <canvas id="projetsChart"></canvas>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-
-
-                            </div>
+                            </section>
                         </div>
-                    </div>
+                    </section>
                 </div>
-            </div>
+            </section>
+            <!-- Section pour les autres types -->
+            <section class="row">
+                <div class="page-content">
+                    <section class="row">
+                        <div class="col-12">
+
+                            <section class="section">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-2">
+                                                            <label for="">Type de données</label>
+                                                            <select id="typeSelect" class="form-control" onchange="updateChart()">
+                                                                <option value="domaine">Domaine</option>
+                                                                <option value="sous_domaine">Sous Domaine</option>
+                                                                <option value="district">District</option>
+                                                                <option value="region">Région</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-2">
+                                                            <label for="">Type de graph</label>
+                                                            <select id="chartTypeSelect" class="form-control" onchange="updateChart()">
+                                                                <option value="bar">Bar</option>
+                                                                <option value="line">Line</option>
+                                                                <option value="pie">Pie</option>
+                                                                <option value="doughnut">Doughnut</option>
+                                                                <option value="radar">Radar</option>
+                                                                <option value="polarArea">Polar Area</option>
+                                                                <option value="bubble">Bubble</option>
+                                                                <option value="scatter">Scatter</option>
+
+                                                            </select>
+                                                        </div>
+                                                        <div class="col text-end">
+                                                            <button class="btn btn-danger me-2" onclick="downloadPDF()">
+                                                                <i class="fa fa-file-pdf-o"></i> PDF
+                                                            </button>
+                                                            <button class="btn btn-success me-2" onclick="downloadExcel()">
+                                                                <i class="fa fa-file-excel-o"></i> Excel
+                                                            </button>
+                                                        </div>
+
+                                                    </div><br>
 
 
 
+                                                    <div class="chart-container">
+                                                        <canvas id="myChart" width="400" height="400"></canvas>
+                                                        <div id="chartLegend" class="chart-legend"></div>
+                                                    </div>
 
 
-
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                    </section>
+                </div>
 
 
             </section>
@@ -158,54 +237,196 @@
         <div class="float-start">
             <p>2023 &copy; EHA</p>
         </div>
-        <div class="float-end">
-            <p>Crée par Soro & Cyl</p>
-        </div>
     </div>
 </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@0.5.0-beta4/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.3.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.6.0/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<!-- Nombre de projet -->
 <script>
-        // Récupérer les données des projets et des statuts depuis le contrôleur
-        const projets = {!! json_encode($projets) !!};
-        const statuts = {!! json_encode($statuts) !!};
-
-        // Initialiser les tableaux de données pour les graphiques
-        const labels = [];
-        const data = [];
-
-        // Préparer les données pour le graphique
-        statuts.forEach(statut => {
-            labels.push(statut.libelle);
-            // Calculer le coût total pour chaque statut
-            const coutTotal = projets.reduce((total, projet) => {
-                if (projet.code_statut_projet === statut.code) {
-                    return total + projet.cout_projet;
-                }
-                return total;
-            }, 0);
-            data.push(coutTotal);
-        });
-
-        // Créer le graphique
-        const ctx = document.getElementById('myChart').getContext('2d');
-        const myChart = new Chart(ctx, {
-            type: 'bar',
+    
+    function createProjetsChart(data, chartType) {
+        const ctx = document.getElementById('projetsChart').getContext('2d');
+        new Chart(ctx, {
+            type: chartType,
             data: {
-                labels: labels,
+                labels: data.years,
                 datasets: [{
-                    label: 'Coût total par statut',
-                    data: data,
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
+                    label: 'Nombre de Projets',
+                    data: data.counts,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 1
                 }]
             },
             options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
-    </script>
-@endsection
+    }
+
+    function updateChart2() {
+        const chartType = document.getElementById('chartTypeSelect').value;
+        const dataProjets = @json($dataProjets);
+        let chartInstance2;
+        // Trier les données par année
+        dataProjets.sort((a, b) => a.year - b.year);
+
+        const years = dataProjets.map(item => item.year);
+        const counts = dataProjets.map(item => item.count);
+
+        // Supprimer le graphique existant s'il y en a un
+        if (window.chartInstance2) {
+            window.chartInstance2.destroy();
+        }
+
+        if (chartType) {
+            const ctx = document.getElementById('projetsChart').getContext('2d');
+            window.chartInstance2 = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Nombre de Projets',
+                        data: counts,
+                        backgroundColor: getRandomColor2(),
+                        borderColor: getRandomColor2(),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+    }
+
+    function getRandomColor2() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateChart2();
+    });
+    
+    async function downloadPDF2() {
+        const { jsPDF } = window.jspdf;
+        const myChart = document.getElementById('projetsChart');
+        const imgData = myChart.toDataURL('image/png');
+
+        // Crée une instance jsPDF avec orientation paysage
+        const pdf = new jsPDF('l', 'mm', 'a4'); // 'l' pour landscape, 'mm' pour millimètres, 'a4' pour le format A4
+        pdf.addImage(imgData, 'PNG', 10, 10, 280, 160); // Ajustez les dimensions selon vos besoins
+        pdf.save('chart.pdf');
+    }
+
+
+    function downloadExcel2() {
+        const worksheet = XLSX.utils.json_to_sheet(chartInstance2.data.datasets[0].data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        XLSX.writeFile(workbook, 'chart.xlsx');
+    }
+</script>
+
+
+
+<!--Les autres type de données -->
+<script>
+    const years = @json($years);
+    const dataByType = @json($dataByType);
+
+    let chartInstance;
+
+    function getData(type) {
+        const labels = years;
+        let datasets = [];
+
+        
+        // Logique pour d'autres types
+        const types = [...new Set(dataByType[type].map(item => item.type))];
+
+        types.forEach(typeValue => {
+            const data = years.map(year => {
+                const found = dataByType[type].find(item => item.year == year && item.type == typeValue);
+                return found ? found.total : 0;
+            });
+
+            datasets.push({
+                label: typeValue,
+                data: data,
+                backgroundColor: getRandomColor(),
+                borderColor: getRandomColor(),
+                borderWidth: 1
+            });
+        });
+        
+
+        return { labels, datasets };
+    }
+
+
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
+    function updateChart() {
+        const selectedType = document.getElementById('typeSelect').value;
+        const chartType = document.getElementById('chartTypeSelect').value;
+        const data = getData(selectedType);
+
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        const ctx = document.getElementById('myChart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+            type: chartType === 'horizontalBar' ? 'bar' : chartType,
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: chartType === 'horizontalBar' ? 'y' : 'x', // Pour barres horizontales
+            }
+        });
+    }
+
+    async function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const myChart = document.getElementById('myChart');
+        const imgData = myChart.toDataURL('image/png');
+
+        // Crée une instance jsPDF avec orientation paysage
+        const pdf = new jsPDF('l', 'mm', 'a4'); // 'l' pour landscape, 'mm' pour millimètres, 'a4' pour le format A4
+        pdf.addImage(imgData, 'PNG', 10, 10, 280, 160); // Ajustez les dimensions selon vos besoins
+        pdf.save('chart.pdf');
+    }
+
+
+    function downloadExcel() {
+        const worksheet = XLSX.utils.json_to_sheet(chartInstance.data.datasets[0].data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        XLSX.writeFile(workbook, 'chart.xlsx');
+    }
+
+
+
+    updateChart();
+</script>
+    @endsection

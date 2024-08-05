@@ -79,13 +79,6 @@
                             </div>
                         </div>
 
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" name="remember" id="remember">
-                            <label class="form-check mb-0" for="remember">
-                                Rester connecté
-                            </label>
-                        </div>
-
 
                         <div class="text-center p-t-115">
                             <div class="d-flex justify-content-between align-items-top mb-4">

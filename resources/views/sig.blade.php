@@ -28,11 +28,11 @@
                     color: #777;
                 }
                 .district-label {
-        font-size: 12px;
-        font-weight: bold;
-        text-align: center;
-        color: #000; /* Couleur du texte */
-    }
+                    font-size: 12px;
+                    font-weight: bold;
+                    text-align: center;
+                    color: #000; /* Couleur du texte */
+                }
 
             .legend {
                 text-align: left;
@@ -59,6 +59,13 @@
                     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
                     padding: 10px;
                     list-style: none;
+                }
+
+                .context-menu{
+                    font-size: 14px;
+                }
+                .context-menu table {
+                    border: 1px;
                 }
 
                 #context-menu ul {
