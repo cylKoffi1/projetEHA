@@ -50,7 +50,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel');
     }
-
+    public function approbateur(){
+        return $this->belongsTo(Approbateur::class, 'code_personnel','code_personnel');
+    }
     public function personnel()
     {
         return $this->belongsTo(Personnel::class, 'code_personnel', 'code_personnel');

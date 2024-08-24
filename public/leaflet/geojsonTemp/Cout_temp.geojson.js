@@ -5,6 +5,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Abidjan",
+                "Code_NAME_1": "01",
                 "MontantTotal": 52,
                 "CoutProjet": 30068649004,
                 "AEP": 25716846669,
@@ -31,6 +32,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lagunes",
+                "Code_NAME_1": "07",
                 "MontantTotal": 39,
                 "CoutProjet": 17461496782,
                 "AEP": 17239736679,
@@ -57,6 +59,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Bas-Sassandra",
+                "Code_NAME_1": "02",
                 "MontantTotal": 46,
                 "CoutProjet": 22830691666,
                 "AEP": 18012372988,
@@ -83,6 +86,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Comoé",
+                "Code_NAME_1": "03",
                 "MontantTotal": 27,
                 "CoutProjet": 14371904203,
                 "AEP": 14284298823,
@@ -109,6 +113,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Lacs",
+                "Code_NAME_1": "06",
                 "MontantTotal": 85,
                 "CoutProjet": 52759598437,
                 "AEP": 50188528353,
@@ -135,6 +140,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Denguélé",
+                "Code_NAME_1": "04",
                 "MontantTotal": 103,
                 "CoutProjet": 15511109709,
                 "AEP": 15266215603,
@@ -161,6 +167,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Gôh-Djiboua",
+                "Code_NAME_1": "05",
                 "MontantTotal": 47,
                 "CoutProjet": 25325886815,
                 "AEP": 25109701705,
@@ -187,6 +194,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Yamoussoukro",
+                "Code_NAME_1": "13",
                 "MontantTotal": 6,
                 "CoutProjet": 4839214870,
                 "AEP": 4771178270,
@@ -213,6 +221,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Vallée du Bandama",
+                "Code_NAME_1": "11",
                 "MontantTotal": 15,
                 "CoutProjet": 8193396038,
                 "AEP": 7822446896,
@@ -239,6 +248,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Woroba",
+                "Code_NAME_1": "12",
                 "MontantTotal": 75,
                 "CoutProjet": 42288805648,
                 "AEP": 41996466611,
@@ -265,6 +275,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Montagnes",
+                "Code_NAME_1": "08",
                 "MontantTotal": 35,
                 "CoutProjet": 24282899069,
                 "AEP": 18771370293,
@@ -291,6 +302,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Sassandra-Marahoué",
+                "Code_NAME_1": "09",
                 "MontantTotal": 46,
                 "CoutProjet": 15447391991,
                 "AEP": 14630807455,
@@ -317,6 +329,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Savanes",
+                "Code_NAME_1": "10",
                 "MontantTotal": 4,
                 "CoutProjet": 554545656,
                 "AEP": 0,
@@ -343,6 +356,7 @@ var montantBD = {
             "type": "Feature",
             "properties": {
                 "NAME_1": "Zanzan",
+                "Code_NAME_1": "14",
                 "MontantTotal": 3,
                 "CoutProjet": 329008320,
                 "AEP": 51835000,

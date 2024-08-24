@@ -32,7 +32,9 @@ class Personnel extends Model
         return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel')
                     ->latest('date', 'desc');
     }
-
+    public function approbateur(){
+        return $this->belongsTo(Approbateur::class, 'code_personnel','code_personnel');
+    }
     public function latestFonction()
     {
         return $this->hasOne(OccuperFonction::class, 'code_personnel', 'code_personnel')

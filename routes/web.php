@@ -18,6 +18,7 @@ use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\SigController;
 use App\Http\Controllers\GeoJSONController;
+use App\Http\Controllers\Naissance;
 use App\Http\Controllers\pibController;
 use App\Http\Controllers\ProjectStatusController;
 use App\Http\Controllers\RealiseProjetController;
@@ -221,11 +222,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     //***************** approbation ************* */
     Route::get('admin/approbation', [PlateformeController::class, 'approbation'])->name('approbation');
-    Route::post('/storeApprobation', [PlateformeController::class, 'storeApprobation'])->name('storeApprobation');
-    Route::put('/approbation/{id}', [PlateformeController::class, 'updateApprobation'])->name('updateApprobation');
+    Route::post('/storeApprobation', [PlateformeController::class, 'storeApprobation'])->name('approbateur.store');
     Route::delete('/approbation/{id}', [PlateformeController::class, 'deleteApprobation']);
-    Route::get('/approbateur/{id}/edit', [PlateformeController::class, 'editApprobation']);
-
+    Route::put('/approbateur/update', [PlateformeController::class, 'updateApprobateur'])->name('approbateur.update');
     //***************** Dévises ************* */
     Route::get('admin/devises', [PlateformeController::class, 'devises'])->name('devises');
     Route::get('admin/devise/{code}', [PlateformeController::class, 'getDevise'])->name('devise.show');
@@ -299,6 +298,21 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/enregistrer-formulaire', [ProjetController::class, 'store'])->name('enregistrer.formulaire');
     Route::get('/projet/getTable', [ProjetController::class, 'getTable']);
     Route::get('admin/editionProjet', [ProjetController::class, 'editionProjet']);
+
+        /*****************ETUDE DE PROJET**************** */
+        Route::get('admin/naissanceProjet',[ProjetController::class, 'createNaissance'])->name('project.create');
+        Route::post('/projects/store', [ProjetController::class, 'storeNaissance'])->name('project.store');
+        /***********************VALIDATION***************** */
+// web.php
+Route::get('/planifierProjet', [ProjetController::class, 'planifier'])->name('planning.index');
+Route::get('/planning/show', [ProjetController::class, 'showPlanning'])->name('planning.show');
+
+        /********************PLANIFICATION***************** */
+        Route::get('admin/planifierProjet',[ProjetController::class, 'planifier']);
+        Route::get('projects/{codeEtudeProjets}/plan', [ProjetController::class, 'plan'])->name('projects.plan');
+        Route::post('projects/{codeEtudeProjets}/tasks', [ProjetController::class, 'storeTask'])->name('projects.storeTask');
+        Route::put('tasks/{task}', [ProjetController::class, 'updateTask'])->name('tasks.update');
+        Route::delete('tasks/{task}', [ProjetController::class, 'destroyTask'])->name('tasks.destroy');
 
         /**************************** REATTRIBUTION DE PROJET ******************************/
     Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('reattribution.index');
@@ -475,3 +489,4 @@ Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middl
 Route::get('/sig', [GeoJSONController::class, 'showSIG'])->name('carte.sig');
 Route::get('/filter-maps', [GeoJSONController::class, 'filter'])->name('filter.maps');
 Route::get('/filtered-data', [GeoJSONController::class, 'showFilteredData'])->name('filtered.data');
+Route::get('test', [AdminController::class, 'test']);

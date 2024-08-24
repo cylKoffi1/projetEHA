@@ -831,76 +831,89 @@ class PlateformeController extends Controller
     public function approbation(Request $request){
         $ecran = Ecran::find($request->input('ecran_id'));
         $personne = Personnel::all();
+        // Récupérer le dernier numéro d'ordre enregistré
+        $lastOrder = Approbateur::orderBy('numOrdre', 'desc')->first();
+        $nextOrder = $lastOrder ? $lastOrder->numOrdre + 1 : 1;
+
         $approbateurs = Approbateur::with('personnel', 'structure')->get();
-        return view('parGeneraux.approbateur', compact('ecran', 'personne', 'approbateurs'));
+        return view('parGeneraux.approbateur', compact('nextOrder','ecran', 'personne', 'approbateurs'));
     }
     public function storeApprobation(Request $request)
     {
-        // Début de la transaction
+        $approbateurs = json_decode($request->input('approbateurs'), true);
+        \Log::info('Request Data:', $request->all()); // Log all request data
+        $errors = [];
+
         DB::beginTransaction();
-
         try {
-            // Vérification de l'existence de l'approbateur avec le même code personnel
-            $existingApprobateur = Approbateur::where('code_personnel', $request->input('userapp'))->first();
+            foreach ($approbateurs as $approbateur) {
+                \Log::info('Processing Approver:', $approbateur);
 
-            if ($existingApprobateur) {
-                // Rouler en arrière la transaction
-                DB::rollBack();
-                return redirect()->back()->with('error', 'Erreur : L\'approbateur existe déjà.');
+                // Recherche de l'utilisateur par code personnel
+                $user = Personnel::where('code_personnel', $approbateur['userCode'])->first();
+
+                if ($user) {
+                    \Log::info('User Found:', $user->toArray());
+
+                    // Vérification de l'existence de l'approbateur avec le même code personnel
+                    $existingApprobateur = Approbateur::where('code_personnel', $user->code_personnel)->first();
+                    if ($existingApprobateur) {
+                        $errors[] = "L'utilisateur {$user->nom} {$user->prenom} est déjà un approbateur.";
+                        continue;
+                    }
+
+                    // Vérification de l'unicité du numéro d'ordre
+                    $existingOrder = Approbateur::where('numOrdre', $approbateur['nordre'])->first();
+                    if ($existingOrder) {
+                        $errors[] = "Le numéro d'ordre {$approbateur['nordre']} est déjà utilisé.";
+                        continue;
+                    }
+
+                    // Enregistrement de l'approbateur
+                    Approbateur::create([
+                        'code_personnel' => $user->code_personnel,
+                        'numOrdre' => $approbateur['nordre']
+                    ]);
+                } else {
+                    \Log::warning('User Not Found:', $approbateur);
+                }
             }
 
-            // Vérification de l'unicité du numéro d'ordre
-            $existingNumOrdre = Approbateur::where('numOrdre', $request->input('Nordre'))->first();
-
-            if ($existingNumOrdre) {
-                // Rouler en arrière la transaction
+            if (!empty($errors)) {
                 DB::rollBack();
-                return redirect()->back()->with('error', 'Erreur : Un approbateur existe déjà avec ce numéro d\'ordre.');
+                return redirect()->back()->withErrors($errors)->withInput();
             }
 
-            // Si les vérifications sont réussies, enregistrer l'approbateur
-            $approbateur = new Approbateur();
-            $approbateur->code_personnel = $request->input('userapp');
-            $approbateur->numOrdre = $request->input('Nordre');
-            $approbateur->save();
-
-            // Commit de la transaction
             DB::commit();
+            return redirect()->back()->with('success', 'Approbateurs enregistrés avec succès');
 
-            return redirect()->back()->with('success', 'Approbateur enregistré avec succès');
         } catch (\Exception $e) {
-            // En cas d'erreur, rouler en arrière la transaction
             DB::rollBack();
-
-            return redirect()->back()->with('error', 'Erreur lors de l\'enregistrement de l\'approbateur.');
+            \Log::error('Error during saving approbateurs:', ['exception' => $e]);
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue lors de l\'enregistrement: ' . $e->getMessage()])->withInput();
         }
     }
 
-    public function editApprobation($id)
+    public function updateApprobateur(Request $request)
     {
-        $approbateur = Approbateur::find($id);
-        return response()->json($approbateur);
-    }
+        // Rechercher l'approbateur par le numéro d'ordre
+        $approbateur = Approbateur::where('numOrdre', $request->input('numOrdreId'))->first();
 
-    public function updateApprobation(Request $request, $id)
-    {
-        $request->validate([
-            'userapp_mod' => 'required',
-            'Nordre_mod' => 'required|integer|min:1|max:10',
-        ]);
-        try {
-            $approbateur = Approbateur::findOrFail($id);
-            $approbateur->code_personnel = $request->input('userapp_mod');
-            $approbateur->numOrdre = $request->input('Nordre_mod');
-            $approbateur->save();
-
-            return redirect()->back()->with('success', 'Approbateur modifié avec succès');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Erreur lors de la modification de l\'approbateur.'.$e->getMessage());
+        // Vérifier si l'approbateur existe
+        if (!$approbateur) {
+            return redirect()->back()->with('error', 'Approbateur non trouvé.');
         }
+
+        // Mettre à jour les champs
+        $approbateur->numOrdre = $request->input('editNordre'); // Assurez-vous de mettre à jour le numéro d'ordre si nécessaire
+        $approbateur->code_personnel = $request->input('editUserapp');
+
+        // Sauvegarder les modifications
+        $approbateur->save();
+
+        // Rediriger avec un message de succès
+        return redirect()->back()->with('success', 'Approbateur modifié avec succès.');
     }
-
-
 
     public function deleteApprobation($id)
     {
@@ -924,7 +937,7 @@ class PlateformeController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $courdeau = CourDeau::orderBy('libelle', 'asc')->get();
         return view('parGeneraux.courdeau', ['courdeau' => $courdeau,'ecran' => $ecran, ]);
-    }
+    }   
 
     public function getCourDeau($code)
     {

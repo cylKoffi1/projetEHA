@@ -108,5 +108,7 @@ class AdminController extends Controller
         return response()->json(['rubriques' => $rubriques]);
     }
 
-
+    public function test(){
+        return view('text');
+    }
 }

@@ -17,6 +17,11 @@
 </style>
 
 <div class="page-content">
+@if (session('error'))
+                <div class="alert alert-danger">
+                    {{ session('error') }}
+                </div>
+            @endif
     <section class="row">
         <div class="col-12">
             <div class="row" style="justify-content: space-around;">
