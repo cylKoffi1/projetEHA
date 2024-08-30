@@ -225,6 +225,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/storeApprobation', [PlateformeController::class, 'storeApprobation'])->name('approbateur.store');
     Route::delete('/approbation/{id}', [PlateformeController::class, 'deleteApprobation']);
     Route::put('/approbateur/update', [PlateformeController::class, 'updateApprobateur'])->name('approbateur.update');
+    Route::get('/get-structure/{code_personnel}', [PlateformeController::class, 'getStructure'])->name('getStructure');
+
     //***************** Dévises ************* */
     Route::get('admin/devises', [PlateformeController::class, 'devises'])->name('devises');
     Route::get('admin/devise/{code}', [PlateformeController::class, 'getDevise'])->name('devise.show');

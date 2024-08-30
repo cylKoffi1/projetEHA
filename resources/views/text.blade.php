@@ -1,6 +1,10 @@
 v
 @extends('layouts.app')
-
+@can("ajouter_ecran_" . $ecran->id)
+                            <button type="submit" id="soumettre_personnel" class="btn btn-primary me-1 mb-1">
+                                Enregistrer
+                            </button>
+                            @endcan
 @section('content')
 @if (session('success'))
 <script>
@@ -54,7 +58,7 @@ v
                 </div>
             </div>
         </div>
-    </div>      
+    </div>
 
     <div class="modal-content">
         <div class="modal-body">

@@ -69,7 +69,8 @@ class ProjetController extends Controller
     {
         $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA');
         $ecran = Ecran::find($request->input('ecran_id'));
-        return view('etudes_projets.naissance', compact('ecran','generatedCodeProjet'));
+        $natures = NatureTravaux::all();
+        return view('etudes_projets.naissance', compact('ecran','generatedCodeProjet','natures'));
     }
     const MAX_FILE_SIZE_KB = 2048; // 2 Mo
     const MAX_FILE_SIZE_MB = 2;
@@ -186,7 +187,7 @@ class ProjetController extends Controller
         $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
         $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
 
-        return "{$location}_PROJ_{$category}_{$year}_{$newNumber}";
+        return "{$location}_{$category}_{$year}_{$newNumber}";
     }
 
     ////////////////////////////////////Validation de projet/////////////////////////////////
@@ -320,7 +321,7 @@ public function storePlanning(Request $request)
         public function showPlanning(Request $request)
         {
             $projectId = $request->input('project_id');
-            
+
             if (!$projectId) {
                 return redirect()->route('planning.index')->with('error', 'Veuillez sélectionner un projet.');
             }

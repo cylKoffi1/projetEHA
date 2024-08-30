@@ -93,7 +93,7 @@
     </div>
     <section id="multiple-column-forms"  style="justify-content: center;">
 
-        <div class="col-8">
+        <div class="col-10">
             <div class="card">
                 <div class="card-header">
                     <div class="row">
@@ -124,18 +124,23 @@
                 <div class="card-content">
                     <fieldset class="border p-3 mt-5 rounded">
                         <div class="row align-items-center">
-                            <div class="col-2">
-                                <label for="nordre" class="form-label">N° d'ordre:</label>
-                                <input type="number" name="Nordre" id="nordre" value="{{ $nextOrder }}"  readonly class="form-control">
-                            </div>
-                            <div class="col-5">
+
+                            <div class="col-4">
                                 <label for="user" class="form-label">Utilisateur:</label>
                                 <select id="user" class="form-select" name="userapp">
-                                    <option value="">Selectionner les approbateurs</option>
+                                    <option value="">Sélectionner les approbateurs</option>
                                     @foreach($personne as $personnes)
-                                    <option value="{{ $personnes->code_personnel }}">{{ $personnes->nom }} {{ $personnes->prenom }}</option>
+                                        <option value="{{ $personnes->code_personnel }}">{{ $personnes->nom }} {{ $personnes->prenom }}</option>
                                     @endforeach
                                 </select>
+                            </div>
+                            <div class="col-4">
+                                <label for="structure">Structure:</label>
+                                <input type="text" id="structure" name="structure" class="form-control" readonly>
+                            </div>
+                            <div class="col-2 ms-auto">
+                                <label for="nordre" class="form-label">Niveau :</label>
+                                <input type="number" name="Nordre" id="nordre" value="{{ $nextOrder }}"  readonly class="form-control">
                             </div>
                             <div class="col-12 mt-3">
                                 <button type="button" class="btn btn-primary" id="addAction">
@@ -161,8 +166,9 @@
                         <table id="tableActionMener" class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>N° d'ordre</th>
+                                    <th>Niveau d'approbation</th>
                                     <th>Nom</th>
+                                    <th>Structure </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -193,17 +199,18 @@
                     <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="liste-approbateur-table">
                         <thead>
                             <tr>
-                                <th>N° ordre</th>
+
                                 <th>Nom </th>
                                 <th>Prénoms</th>
                                 <th>Structure</th>
+                                <th>Niveau approbation</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($approbateurs as $approbateur)
                             <tr>
-                                <td>{{ $approbateur->numOrdre }}</td>
+
                                 <td>{{ $approbateur->personnel->nom }}</td>
                                 <td>{{ $approbateur->personnel->prenom }}</td>
                                 <td>
@@ -217,6 +224,7 @@
                                         @endif
                                     @endif
                                 </td>
+                                <td>{{ $approbateur->numOrdre }}</td>
                                 <td>
                                     <div class="dropdown">
                                         <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
@@ -256,7 +264,7 @@
                         <fieldset class="border p-3 mt-5 rounded">
                             <div class="row align-items-center">
                                 <div class="col-2">
-                                    <label for="editNordre" class="form-label">N° d'ordre:</label>
+                                    <label for="editNordre" class="form-label">Niveau approbation:</label>
                                     <input type="number" name="editNordre" id="editNordre" readonly class="form-control">
                                 </div>
                                 <div class="col-5">
@@ -305,7 +313,8 @@
             // Récupérer les valeurs des champs
             var nordre = parseInt($('#nordre').val());
             var userCode = $('#user').val();
-            var userText = $('#user option:selected').text(); // Nom de l'utilisateur sélectionné
+            var userText = $('#user option:selected').text();
+            var structure = $('#structure').val();
 
             // Vérifier si toutes les données sont sélectionnées ou saisies
             if (userCode) {
@@ -323,7 +332,7 @@
                     // Ajouter les données récupérées au tableau #tableActionMener
                     var tableActionMener = $('#tableActionMener tbody');
                     tableActionMener.append(
-                        '<tr><td>' + nordre + '</td><td>' + userText + '</td><td hidden>' + userCode + '</td><td><button type="button" class="btn btn-danger btn-sm delete-action">Supprimer</button></td></tr>'
+                        '<tr><td>' + nordre + '</td><td>' + userText + '</td><td>'+structure+'</td><td hidden>' + userCode + '</td><td><button type="button" class="btn btn-danger btn-sm delete-action">Supprimer</button></td></tr>'
                     );
 
                     // Incrémenter le champ #nordre
@@ -416,5 +425,26 @@
         this.submit();
     });
 
+</script>
+<script>
+    document.getElementById('user').addEventListener('change', function () {
+        var codePersonnel = this.value;
+        var structureInput = document.getElementById('structure');
+
+        if (codePersonnel) {
+            fetch(`/get-structure/${codePersonnel}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.libelle) {
+                        structureInput.value = data.libelle; // Affiche le libellé de la structure
+                    } else {
+                        structureInput.value = 'Aucune structure trouvée.';
+                    }
+                })
+                .catch(error => console.error('Erreur:', error));
+        } else {
+            structureInput.value = '';
+        }
+    });
 </script>
 @endsection

@@ -35,6 +35,7 @@ use Illuminate\Http\Request;
 use App\Models\Pays;
 use App\Models\Personnel;
 use App\Models\StatutProjet;
+use App\Models\StructureRattachement;
 use App\Models\TypeInstrument;
 use App\Models\TypeMateriauxConduite;
 use App\Models\TypeResaux;
@@ -930,6 +931,41 @@ class PlateformeController extends Controller
             return response()->json(['error' => 'Erreur lors de la suppression de l\'approbateur.'], 500);
         }
     }
+    public function getStructure($code_personnel)
+    {
+        // Récupérer la structure de rattachement
+        $structure = StructureRattachement::where('code_personnel', $code_personnel)->first();
+
+        if ($structure) {
+            // Selon le type de structure, faire la jointure appropriée
+            switch ($structure->type_structure) {
+                case 'ministere':
+                    $data = Ministere::where('code', $structure->code_structure)->first();
+                    $libelle = $data ? $data->libelle : 'Structure non trouvée';
+                    break;
+
+                case 'bailleurss':
+                    $data = Bailleur::where('code_bailleur', $structure->code_structure)->first();
+                    $libelle = $data ? $data->libelle_long : 'Structure non trouvée';
+                    break;
+
+                case 'agence_execution':
+                    $data = AgenceExecution::where('code_agence_execution', $structure->code_structure)->first();
+                    $libelle = $data ? $data->nom_agence : 'Structure non trouvée';
+                    break;
+
+                default:
+                    $libelle = 'Type de structure inconnu';
+                    break;
+            }
+
+            return response()->json([
+                'libelle' => $libelle
+            ]);
+        } else {
+            return response()->json(['message' => 'Aucune structure trouvée.'], 404);
+        }
+    }
 
     //***************** COURS D'EAU ************* */
     public function courdeau(Request $request)
@@ -937,7 +973,7 @@ class PlateformeController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $courdeau = CourDeau::orderBy('libelle', 'asc')->get();
         return view('parGeneraux.courdeau', ['courdeau' => $courdeau,'ecran' => $ecran, ]);
-    }   
+    }
 
     public function getCourDeau($code)
     {

@@ -193,11 +193,9 @@
                             {{-- <button type="reset" class="btn btn-light-secondary me-1 mb-1">
                                         Annuler
                                     </button> --}}
-                            @can("ajouter_ecran_" . $ecran->id)
                             <button type="submit" id="soumettre_personnel" class="btn btn-primary me-1 mb-1">
                                 Enregistrer
                             </button>
-                            @endcan
 
                         </div>
                     </div>
@@ -226,101 +224,126 @@
         btn.textContent = (btn.textContent === "-") ? "+" : "-";
     }
 
-
-    // Écoutez l'événement de soumission du formulaire
     document.getElementById('personnelForm').addEventListener('submit', function(event) {
-        // Empêcher le comportement par défaut du formulaire
-        event.preventDefault();
+    // Empêcher le comportement par défaut du formulaire
+    event.preventDefault();
 
-        // Récupérer les données du formulaire
-        var formData = new FormData(this);
+    // Désactiver le bouton de soumission
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
 
-        // Créer un tableau pour stocker les ID des éléments sélectionnés
-        var consulterRubrique = [];
-        var consulterRubriqueEcran = [];
-        var consulterSousMenu = [];
-        var consulterSousMenuEcran = [];
+    // Récupérer les données du formulaire
+    var formData = new FormData(this);
 
-        var ajouterSousMenuEcran = [];
-        var modifierSousMenuEcran = [];
-        var supprimerSousMenuEcran = [];
+    // Créer des tableaux pour stocker les ID des éléments sélectionnés
+    var consulterRubrique = [];
+    var consulterRubriqueEcran = [];
+    var consulterSousMenu = [];
+    var consulterSousMenuEcran = [];
 
-        var ajouterRubriqueEcran = [];
-        var modifierRubriqueEcran = [];
-        var supprimerRubriqueEcran = [];
+    var ajouterSousMenuEcran = [];
+    var modifierSousMenuEcran = [];
+    var supprimerSousMenuEcran = [];
 
+    var ajouterRubriqueEcran = [];
+    var modifierRubriqueEcran = [];
+    var supprimerRubriqueEcran = [];
 
-        var permissionsAsupprimer = [];
+    var permissionsAsupprimer = [];
 
-        // Sélectionner tous les éléments checkbox et ajouter leurs valeurs aux tableaux appropriés
-        document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
-            if (checkbox.name === 'consulter_rubrique' && checkbox.checked) {
-                consulterRubrique.push(checkbox.value);
-            } else if (checkbox.name === 'consulter_rubrique_ecran' && checkbox.checked) {
-                consulterRubriqueEcran.push(checkbox.value);
-            } else if (checkbox.name === 'consulter_sous_menu' && checkbox.checked) {
-                consulterSousMenu.push(checkbox.value);
-            } else if (checkbox.name === 'consulter_sous_menu_ecran' && checkbox.checked) {
-                consulterSousMenuEcran.push(checkbox.value);
-            } else if (checkbox.name === 'ajouter_rubrique_ecran' && checkbox.checked) {
-                ajouterRubriqueEcran.push(checkbox.value);
-            } else if (checkbox.name === 'modifier_rubrique_ecran' && checkbox.checked) {
-                modifierRubriqueEcran.push(checkbox.value);
-            } else if (checkbox.name === 'supprimer_rubrique_ecran' && checkbox.checked) {
-                supprimerRubriqueEcran.push(checkbox.value);
-            } else if (checkbox.name === 'ajouter_sous_menu_ecran' && checkbox.checked) {
-                ajouterSousMenuEcran.push(checkbox.value);
-            } else if (checkbox.name === 'modifier_sous_menu_ecran' && checkbox.checked) {
-                modifierSousMenuEcran.push(checkbox.value);
-            } else if (checkbox.name === 'supprimer_sous_menu_ecran' && checkbox.checked) {
-                supprimerSousMenuEcran.push(checkbox.value);
-            } else if (checkbox.name === 'ajouter_rubrique_ecran' && !checkbox.checked) {
-                permissionsAsupprimer.push(checkbox.className);
-            } else if (checkbox.name === 'modifier_rubrique_ecran' && !checkbox.checked) {
-                permissionsAsupprimer.push(checkbox.className);
-            } else if (checkbox.name === 'supprimer_rubrique_ecran' && !checkbox.checked) {
-                permissionsAsupprimer.push(checkbox.className);
-            } else if (checkbox.name === 'ajouter_sous_menu_ecran' && !checkbox.checked) {
-                permissionsAsupprimer.push(checkbox.className);
-            } else if (checkbox.name === 'modifier_sous_menu_ecran' && !checkbox.checked) {
-                permissionsAsupprimer.push(checkbox.className);
-            } else if (checkbox.name === 'supprimer_sous_menu_ecran' && !checkbox.checked) {
-                permissionsAsupprimer.push(checkbox.className);
+    // Sélectionner tous les éléments checkbox et ajouter leurs valeurs aux tableaux appropriés
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+        if (checkbox.checked) {
+            switch (checkbox.name) {
+                case 'consulter_rubrique':
+                    consulterRubrique.push(checkbox.value);
+                    break;
+                case 'consulter_rubrique_ecran':
+                    consulterRubriqueEcran.push(checkbox.value);
+                    break;
+                case 'consulter_sous_menu':
+                    consulterSousMenu.push(checkbox.value);
+                    break;
+                case 'consulter_sous_menu_ecran':
+                    consulterSousMenuEcran.push(checkbox.value);
+                    break;
+                case 'ajouter_rubrique_ecran':
+                    ajouterRubriqueEcran.push(checkbox.value);
+                    break;
+                case 'modifier_rubrique_ecran':
+                    modifierRubriqueEcran.push(checkbox.value);
+                    break;
+                case 'supprimer_rubrique_ecran':
+                    supprimerRubriqueEcran.push(checkbox.value);
+                    break;
+                case 'ajouter_sous_menu_ecran':
+                    ajouterSousMenuEcran.push(checkbox.value);
+                    break;
+                case 'modifier_sous_menu_ecran':
+                    modifierSousMenuEcran.push(checkbox.value);
+                    break;
+                case 'supprimer_sous_menu_ecran':
+                    supprimerSousMenuEcran.push(checkbox.value);
+                    break;
             }
-        });
-
-        // Ajouter les tableaux d'ID aux données du formulaire
-        formData.append('consulterRubrique', JSON.stringify(consulterRubrique));
-        formData.append('consulterRubriqueEcran', JSON.stringify(consulterRubriqueEcran));
-        formData.append('consulterSousMenu', JSON.stringify(consulterSousMenu));
-        formData.append('consulterSousMenuEcran', JSON.stringify(consulterSousMenuEcran));
-
-        formData.append('ajouterRubriqueEcran', JSON.stringify(ajouterRubriqueEcran));
-        formData.append('modifierRubriqueEcran', JSON.stringify(modifierRubriqueEcran));
-        formData.append('supprimerRubriqueEcran', JSON.stringify(supprimerRubriqueEcran));
-
-        formData.append('ajouterSousMenuEcran', JSON.stringify(ajouterSousMenuEcran));
-        formData.append('modifierSousMenuEcran', JSON.stringify(modifierSousMenuEcran));
-        formData.append('supprimerSousMenuEcran', JSON.stringify(supprimerSousMenuEcran));
-
-        formData.append('permissionsAsupprimer', JSON.stringify(permissionsAsupprimer));
-
-        // Envoyer les données via Ajax
-        fetch(this.action, {
-                method: 'POST'
-                , body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Traiter la réponse
-                console.log(data);
-                showPopup(data.message);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showPopup("Une erreur s'est produite !");
-            });
+        } else {
+            switch (checkbox.name) {
+                case 'ajouter_rubrique_ecran':
+                case 'modifier_rubrique_ecran':
+                case 'supprimer_rubrique_ecran':
+                case 'ajouter_sous_menu_ecran':
+                case 'modifier_sous_menu_ecran':
+                case 'supprimer_sous_menu_ecran':
+                    permissionsAsupprimer.push(checkbox.className);
+                    break;
+            }
+        }
     });
+
+    // Ajouter les tableaux d'ID aux données du formulaire
+    formData.append('consulterRubrique', JSON.stringify(consulterRubrique));
+    formData.append('consulterRubriqueEcran', JSON.stringify(consulterRubriqueEcran));
+    formData.append('consulterSousMenu', JSON.stringify(consulterSousMenu));
+    formData.append('consulterSousMenuEcran', JSON.stringify(consulterSousMenuEcran));
+
+    formData.append('ajouterRubriqueEcran', JSON.stringify(ajouterRubriqueEcran));
+    formData.append('modifierRubriqueEcran', JSON.stringify(modifierRubriqueEcran));
+    formData.append('supprimerRubriqueEcran', JSON.stringify(supprimerRubriqueEcran));
+
+    formData.append('ajouterSousMenuEcran', JSON.stringify(ajouterSousMenuEcran));
+    formData.append('modifierSousMenuEcran', JSON.stringify(modifierSousMenuEcran));
+    formData.append('supprimerSousMenuEcran', JSON.stringify(supprimerSousMenuEcran));
+
+    formData.append('permissionsAsupprimer', JSON.stringify(permissionsAsupprimer));
+
+    // Envoyer les données via Ajax
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erreur du réseau');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log(data);
+        showPopup(data.message);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showPopup("Une erreur s'est produite !");
+        // Réactiver le bouton de soumission en cas d'erreur
+        submitButton.disabled = false;
+    });
+
+    // Fonction pour afficher une alerte
+    function showPopup(message) {
+        alert(message);
+    }
+});
+
 
 
 

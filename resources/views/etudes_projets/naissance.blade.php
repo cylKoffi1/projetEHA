@@ -106,16 +106,20 @@
 
                                 </div>
                                 <div class="row">
-                                    <div class="col-5">
-                                    <label for="title" class="form-label">Titre du Projet</label>
-                                    <input type="text" class="form-control" id="title" name="title" required>
+                                    <div class="col-4">
+                                    <label for="title" class="form-label">Nature des travaux</label>
+                                    <select class="form-select" name="nature_travaux" id="nature_travaux">
+                                        @foreach ($natures as $nature)
+                                        <option value="{{ $nature->code}}">{{ $nature->libelle}}</option>
+                                        @endforeach
+                                    </select>
                                     </div>
 
                                 </div>
                             </div>
                             <div class="col-4">
                                 <div class="col" style="text-align: right;">
-                                    <label class="form-label">Type d'entreprise</label>
+                                    <label class="form-label">Maitre d'oeuvre</label>
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="typeDemandeur" id="radioEntreprise" value="entreprise" checked>
                                         <label class="form-check-label" for="radioEntreprise">Entreprise</label>
@@ -189,16 +193,16 @@
                         <div id="formParticulier" style="display:none;">
                             <div class="row">
                                 <div class="col">
-                                    <label for="fullName">Nom et prénom :</label>
-                                    <input type="text" class="form-control" id="fullName" name="fullName">
+                                    <label for="name">Nom :</label>
+                                    <input type="text" class="form-control" id="nom" name="nom">
+                                </div>
+                                <div class="col">
+                                    <label for="prenom">Pénoms :</label>
+                                    <input type="text" class="form-control" id="prenom" name="prenom">
                                 </div>
                                 <div class="col">
                                     <label for="professionalStatus">Statut professionnel :</label>
                                     <input type="text" class="form-control" id="professionalStatus" name="professionalStatus">
-                                </div>
-                                <div class="col">
-                                    <label for="individualRegistrationNumber">Numéro d'immatriculation :</label>
-                                    <input type="text" class="form-control" id="individualRegistrationNumber" name="individualRegistrationNumber">
                                 </div>
                             </div>
                             <div class="row">
@@ -231,16 +235,16 @@
                             </div>
                             <div class="row">
                                 <div class="col">
+                                    <label for="individualRegistrationNumber">Numéro d'immatriculation :</label>
+                                    <input type="text" class="form-control" id="individualRegistrationNumber" name="individualRegistrationNumber">
+                                </div>
+                                <div class="col">
                                     <label for="references">Références professionnelles :</label>
                                     <input type="text" class="form-control" id="references" name="references">
                                 </div>
                                 <div class="col">
-                                    <label for="additionalInfo3">Information supplémentaire 3 :</label>
+                                    <label for="additionalInfo3">Information supplémentaire  :</label>
                                     <input type="text" class="form-control" id="additionalInfo3" name="additionalInfo3">
-                                </div>
-                                <div class="col">
-                                    <label for="additionalInfo4">Information supplémentaire 4 :</label>
-                                    <input type="text" class="form-control" id="additionalInfo4" name="additionalInfo4">
                                 </div>
                             </div>
                         </div>
@@ -252,13 +256,13 @@
 
                                         <i class="fas fa-folder"></i>
                                         <i class="fas fa-plus" style="position: relative; left: -15px; top: 5px; font-size: 1em; color: black;"></i>
-                                        Ajouter fichier
-                                    </button>
+                                        Importer fichier
+                                    </button><br>
                                 </div>
                                 <div class="row align-items-center">
 
                                     <div class="col-6">
-                                        <label for="files" class="form-label">Importer un fichier :</label>
+                                        <label for="files" class="form-label"></label>
                                         <div class="file-card" id="file-card-0">
                                             <div id="file-icon-0" class="file-icon">
                                                 <span class="upload-icon" onclick="document.getElementById('files-0').click()">
@@ -293,7 +297,7 @@
 
         var newFileLabel = document.createElement('label');
         newFileLabel.className = 'form-label';
-        newFileLabel.textContent = 'Importer un fichier :';
+        newFileLabel.textContent = '';
 
         var fileCard = document.createElement('div');
         fileCard.className = 'file-card';
