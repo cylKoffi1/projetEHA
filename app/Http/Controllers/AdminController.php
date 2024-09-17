@@ -27,9 +27,11 @@ class AdminController extends Controller
         $projets_redemarrer = ProjetStatutProjet::where("code_statut_projet", "06")->get();
 
         $years = ProjetEha2::selectRaw('YEAR(Date_demarrage_prevue) as year')
-                    ->groupBy('year')
-                    ->pluck('year')
-                    ->toArray();
+        ->whereRaw('YEAR(Date_demarrage_prevue) > 0') // Exclut les années <= 0
+        ->groupBy('year')
+        ->pluck('year')
+        ->toArray();
+
 
             // Données pour nombre de projets
             $dataProjets = $this->getProjetData();
@@ -66,6 +68,7 @@ class AdminController extends Controller
     {
         return ProjetEha2::selectRaw('YEAR(Date_demarrage_prevue) as year, COUNT(CodeProjet) as count')
             ->groupBy('year')
+            ->whereRaw('YEAR(Date_demarrage_prevue) > 0')
             ->get()
             ->map(function ($item) {
                 return [

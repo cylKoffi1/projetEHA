@@ -98,4 +98,8 @@ class ProjetEha2 extends Model
             ->latest('date')
             ->orderBy('date', 'desc');
     }
+     public function renforcements()
+    {
+        return $this->belongsToMany(Renforcement::class, 'renforcement_projet', 'CodeProjet', 'renforcement_capacite');
+    }
 }

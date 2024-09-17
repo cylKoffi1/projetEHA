@@ -97,7 +97,7 @@
                         @csrf
 
                         <div class="row">
-                            <div class="col-8">
+                            <div class="col-8"> 
                                 <div class="row">
                                     <div class="col-4">
                                         <label for="code">Code</label>

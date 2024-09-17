@@ -131,6 +131,7 @@
 
                                 <h6>Documents associés</h6>
                                 <ul class="list-unstyled">
+                                @if($project->files && $project->files->count() > 0)
                                     @foreach ($project->files as $file)
                                         <li>
                                             <a href="{{ asset('storage/' . $file->file_path) }}" class="btn btn-link">
@@ -138,6 +139,10 @@
                                             </a>
                                         </li>
                                     @endforeach
+                                @else
+                                    <li>Aucun fichier disponible pour ce projet.</li>
+                                @endif
+
                                 </ul>
 
                                 @if ($project->status === 'pending' && $project->current_approver === auth()->user()->approbateur->codeAppro)

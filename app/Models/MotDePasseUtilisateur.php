@@ -20,4 +20,8 @@ class MotDePasseUtilisateur extends Authenticatable implements CanResetPasswordC
     protected $hidden = [
         'password', 'remember_token',
     ];
+    public function renforcements()
+    {
+        return $this->belongsToMany(Renforcement::class, 'renforcement_beneficiaire', 'beneficiaire_id', 'renforcement_capacite');
+    }
 }

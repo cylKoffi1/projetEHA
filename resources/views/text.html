@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt Chart Example</title>
+    <!-- DHTMLX Gantt CSS and JS -->
+    <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
+    <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+    <style>
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #gantt_here {
+            width: 100%;
+            height: 100vh;
+        }
+        .red_color { background: red; }
+        .blue_color { background: blue; }
+        .gray_color { background: gray; }
+        .gantt_task_progress { background-color: rgba(33, 33, 33, 0.17); }
+    </style>
+</head>
+<body>
+    <div id="gantt_here"></div>
+
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            // Initialize the Gantt chart in the div container
+            gantt.init("gantt_here");
+
+            // Define Gantt chart data
+            gantt.parse({
+                data: [
+                    { id: 10, text: "Planification de la recherche sociale", start_date: "01-04-2023", duration: 5, order: 10, progress: 0.4, open: true },
+                    { id: 1, text: "Choix des problèmes de recherche", start_date: "01-04-2023", duration: 2, order: 10, progress: 0.6, parent: 10, priority: "high" },
+                    { id: 2, text: "Formulation du plan de recherche", start_date: "03-04-2023", duration: 3, order: 20, progress: 0.6, parent: 10, priority: "high" },
+                    { id: 20, text: "Mener des recherches", start_date: "06-04-2023", duration: 5, order: 10, progress: 0.4, type: "project", open: true },
+                    { id: 3, text: "Collecte de données", start_date: "06-04-2023", duration: 2, order: 10, progress: 0.6, parent: 20, priority: "low" },
+                    { id: 4, text: "Analyse des résultats", start_date: "08-04-2023", duration: 3, order: 20, progress: 0.6, parent: 20, priority: "medium" }
+                ],
+                links: [
+                    { id: 1, source: 1, target: 2, type: "0" },
+                    { id: 2, source: 2, target: 3, type: "0" },
+                    { id: 3, source: 3, target: 4, type: "0" },
+                    { id: 4, source: 2, target: 5, type: "0" }
+                ]
+            });
+
+            // Custom task coloring based on priority
+            gantt.templates.task_class = function (start, end, task) {
+                switch (task.priority) {
+                    case "high": return "red_color";
+                    case "medium": return "blue_color";
+                    case "low": return "gray_color";
+                }
+            };
+        });
+    </script>
+</body>
+</html>

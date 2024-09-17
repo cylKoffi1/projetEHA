@@ -14,6 +14,8 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\cloturerProjetController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\EtudeProjet;
+use App\Http\Controllers\GanttController;
 use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\SigController;
@@ -25,6 +27,7 @@ use App\Http\Controllers\RealiseProjetController;
 use App\Http\Controllers\representationGraphique;
 use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
+use App\Models\Renforcement;
 use Laravel\Ui\Presets\React;
 use PasswordResetController as GlobalPasswordResetController;
 
@@ -302,19 +305,31 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('admin/editionProjet', [ProjetController::class, 'editionProjet']);
 
         /*****************ETUDE DE PROJET**************** */
-        Route::get('admin/naissanceProjet',[ProjetController::class, 'createNaissance'])->name('project.create');
-        Route::post('/projects/store', [ProjetController::class, 'storeNaissance'])->name('project.store');
+        Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
+        Route::post('/projects/store', [EtudeProjet::class, 'storeNaissance'])->name('project.store');
         /***********************VALIDATION***************** */
-// web.php
-Route::get('/planifierProjet', [ProjetController::class, 'planifier'])->name('planning.index');
-Route::get('/planning/show', [ProjetController::class, 'showPlanning'])->name('planning.show');
+
+        Route::get('admin/validationProjet', [EtudeProjet::class, 'validatet'])->name('projects.validate');
+        Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
 
         /********************PLANIFICATION***************** */
-        Route::get('admin/planifierProjet',[ProjetController::class, 'planifier']);
-        Route::get('projects/{codeEtudeProjets}/plan', [ProjetController::class, 'plan'])->name('projects.plan');
-        Route::post('projects/{codeEtudeProjets}/tasks', [ProjetController::class, 'storeTask'])->name('projects.storeTask');
-        Route::put('tasks/{task}', [ProjetController::class, 'updateTask'])->name('tasks.update');
-        Route::delete('tasks/{task}', [ProjetController::class, 'destroyTask'])->name('tasks.destroy');
+        Route::get('admin/planifierProjet', [GanttController::class, 'index']);
+        Route::get('/gantt/load/{project_id}', [GanttController::class, 'loadData']);
+        Route::post('/gantt/task', [GanttController::class, 'storeTask'])->name('gantt.task.store');
+        Route::put('/gantt/task/{id}', [GanttController::class, 'updateTask']);
+        Route::delete('/gantt/task/{id}', [GanttController::class, 'deleteTask']);
+        Route::post('/gantt/link', [GanttController::class, 'storeLink']);
+        Route::put('/gantt/link/{id}', [GanttController::class, 'updateLink']);
+        Route::delete('/gantt/link/{id}', [GanttController::class, 'deleteLink']);
+        Route::post('/gantt/save', [GanttController::class, 'saveGantt'])->name('gantt.save');
+        Route::get('/gantt/check/{projectId}', [GanttController::class, 'checkProjectData']);
+
+
+        /********************RENFORCEMENT***************** */
+        Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo']);
+
+        // Enregistrer un nouveau renforcement
+        Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
 
         /**************************** REATTRIBUTION DE PROJET ******************************/
     Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('reattribution.index');
