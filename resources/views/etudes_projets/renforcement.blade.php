@@ -33,7 +33,7 @@
         font-size: 12px;
     }
     .select2-selection__rendered{
-        
+
     }
 
 </style>
@@ -154,7 +154,18 @@
 
                         <button type="submit">Enregistrer</button>
                     </form>
-                    <h1>Liste des Renforcements de Capacité</h1>
+
+                </div>
+            </div>
+        </div>
+        <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">
+            Liste des Renforcements de Capacité
+            </h5>
+            </div>
+            <div class="card-content">
+
                     <table>
                         <thead>
                             <tr>
@@ -185,10 +196,10 @@
                             @endforeach
                         </tbody>
                     </table>
-                </div>
             </div>
         </div>
     </div>
+
 </section>
 <script>
     $(document).ready(function() {

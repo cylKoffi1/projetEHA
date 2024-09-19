@@ -9,6 +9,7 @@ class GanttTache extends Model
 {
     use HasFactory;
 
+/*
     protected $fillable = [
         'project_id',
         'text',
@@ -18,6 +19,11 @@ class GanttTache extends Model
         'parent',
         'priority'
     ];
-
+*/
+protected $table = 'gantt_tache';
+protected $fillable = [
+    'project_id', 'text', 'start_date', 'end_date', 'duration', 'progress',
+    'priority', 'parent', 'order', 'open'
+];
     public $timestamps = false;
 }

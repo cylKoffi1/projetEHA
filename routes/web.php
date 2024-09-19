@@ -314,17 +314,19 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
         /********************PLANIFICATION***************** */
         Route::get('admin/planifierProjet', [GanttController::class, 'index']);
-        Route::get('/gantt/load/{project_id}', [GanttController::class, 'loadData']);
-        Route::post('/gantt/task', [GanttController::class, 'storeTask'])->name('gantt.task.store');
+        /*Route::post('/gantt/task', [GanttController::class, 'storeTask'])->name('gantt.task.store');
         Route::put('/gantt/task/{id}', [GanttController::class, 'updateTask']);
         Route::delete('/gantt/task/{id}', [GanttController::class, 'deleteTask']);
         Route::post('/gantt/link', [GanttController::class, 'storeLink']);
         Route::put('/gantt/link/{id}', [GanttController::class, 'updateLink']);
         Route::delete('/gantt/link/{id}', [GanttController::class, 'deleteLink']);
         Route::post('/gantt/save', [GanttController::class, 'saveGantt'])->name('gantt.save');
+        Route::get('/gantt/load/{project_id}', [GanttController::class, 'loadData']);
         Route::get('/gantt/check/{projectId}', [GanttController::class, 'checkProjectData']);
-
-
+        */
+        Route::get('/gantt/load/{projectId}', [GanttController::class, 'load']);
+        Route::post('/gantt/save/{projectId}', [GanttController::class, 'save']);
+        Route::delete('/gantt/delete/{projectId}', [GanttController::class, 'delete']);
         /********************RENFORCEMENT***************** */
         Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo']);
 
