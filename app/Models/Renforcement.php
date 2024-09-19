@@ -6,24 +6,48 @@ use Illuminate\Database\Eloquent\Model;
 
 class Renforcement extends Model
 {
+    use HasFactory;
+
     protected $table = 'renforcement_capacites';
-      // Définition de la clé primaire
-      protected $primaryKey = 'code_renforcement';
-      public $incrementing = false; // Désactive l'auto-incrémentation de la clé primaire car elle est de type string
-      protected $keyType = 'string'; // Le type de la clé est une chaîne
 
-      // Définir les colonnes pouvant être massivement assignées
-      protected $fillable = ['code_renforcement', 'titre', 'description', 'date_renforcement'];
+    protected $primaryKey = 'code_renforcement';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
-      // Relation avec la table 'beneficiaires'
-      public function beneficiaires()
-      {
-          return $this->belongsToMany(MotDePasseUtilisateur::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'beneficiaire_id');
-      }
+    protected $fillable = ['code_renforcement', 'titre', 'description', 'date_renforcement'];
 
-      // Relation avec la table 'projet_eha'
-      public function projets()
-      {
-          return $this->belongsToMany(ProjetEha2::class, 'renforcement_projet', 'renforcement_capacite', 'CodeProjet');
-      }
+    // Relation avec les bénéficiaires
+    public function beneficiaires()
+    {
+        return $this->belongsToMany(User::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_personnel');
+    }
+
+    // Relation avec les projets
+    public function projets()
+    {
+        return $this->belongsToMany(ProjetEha2::class, 'renforcement_projet', 'renforcement_capacite', 'CodeProjet');
+    }
+
+    public static function generateCodeRenforcement()
+    {
+        $latest = self::latest()->first();
+        $orderNumber = $latest ? intval(substr($latest->code_renforcement, -3)) + 1 : 1;
+        $month = now()->format('m');
+        $year = now()->format('Y');
+        return 'EHA_RF_' . $month . '_' . $year . '_' . str_pad($orderNumber, 3, '0', STR_PAD_LEFT);
+    }
+    // Cette méthode est appelée lorsque l'événement 'deleting' est déclenché
+    public static function boot()
+    {
+        parent::boot();
+
+        // Supprimer les relations avec les tables pivot lors de la suppression d'un renforcement
+        static::deleting(function ($renforcement) {
+            // Détacher les bénéficiaires liés
+            $renforcement->beneficiaires()->detach();
+
+            // Détacher les projets liés
+            $renforcement->projets()->detach();
+        });
+    }
 }

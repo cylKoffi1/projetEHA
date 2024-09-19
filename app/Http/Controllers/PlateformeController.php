@@ -1025,11 +1025,7 @@ class PlateformeController extends Controller
         if (!$courdeau) {
             return response()->json(['error' => 'Cour d\'eau non trouvé'], 404);
         }
-        //$projet = ProjetEha2::where('code_domaine', $code)->first();
-
-        // if ($projet) {
-        //     return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
-        // }
+        
         $courdeau->delete();
 
         return response()->json(['success' => 'Cour d\'eau supprimé avec succès']);

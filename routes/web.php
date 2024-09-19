@@ -328,9 +328,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/gantt/save/{projectId}', [GanttController::class, 'save']);
         Route::delete('/gantt/delete/{projectId}', [GanttController::class, 'delete']);
         /********************RENFORCEMENT***************** */
-        Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo']);
-
-        // Enregistrer un nouveau renforcement
+        Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
+        Route::delete('/renforcementDelete/{id}', [EtudeProjet::class, 'deleteRenforcement']);
+        Route::put('/renforcements/{code}', [EtudeProjet::class, 'update'])->name('renforcements.update');
         Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
 
         /**************************** REATTRIBUTION DE PROJET ******************************/

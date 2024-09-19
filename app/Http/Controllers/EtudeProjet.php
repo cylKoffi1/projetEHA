@@ -231,17 +231,31 @@ class EtudeProjet extends Controller
 
 
     /////////////////////////////RENFORCEMENT DES CAPACITE//////////////////////
-    public static function generateCodeRenforcement()
+
+    public function deleteRenforcement($id)
     {
-        $latest = self::latest()->first();
-        $orderNumber = $latest ? $latest->id + 1 : 1;
-        $month = now()->format('m');
-        $year = now()->format('Y');
-        return 'EHA_RF_' . $month . '_' . $year . '_' . str_pad($orderNumber, 3, '0', STR_PAD_LEFT);
+        // Trouver le renforcement par son code
+        $renforcement = Renforcement::where('code_renforcement', $id)->firstOrFail();
+
+        if (!$renforcement) {
+            return response()->json(['error' => 'Le renforcement de capacité que vous essayez de supprimer n\'existe pas.'], 404);
+        }
+
+        try {
+            // Supprimer le renforcement et les relations associées (grâce au hook deleting)
+            $renforcement->delete();
+
+            return response()->json(['success' => 'Le renforcement de capacité et ses relations associées ont été supprimés avec succès'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la suppression du renforcement de capacité. Détails : ' . $e->getMessage()], 500);
+        }
     }
+
+
     public function renfo(Request $request)
     {
-        $renforcements = Renforcement::all ();
+        $renforcements = Renforcement::all();
+
         $ecran = Ecran::find($request->input('ecran_id'));
         $projets = ProjetEha2::all();
         $beneficiaires = User::all();
@@ -250,25 +264,83 @@ class EtudeProjet extends Controller
 
     public function store(Request $request)
     {
-        // Générer un code personnalisé pour le renforcement
-        $codeRenforcement = Renforcement::generateCodeRenforcement();
+        try {
+            // Valider les données d'entrée (les projets ne sont pas obligatoires)
+            $validatedData = $request->validate([
+                'titre' => 'required|string|max:255',
+                'description' => 'required|string',
+                'date_renforcement' => 'required|date',
+                'beneficiaires' => 'required|array|min:1',  // Au moins un bénéficiaire est requis
+                'beneficiaires.*' => 'exists:mot_de_passe_utilisateur,code_personnel', // Valider que chaque bénéficiaire existe
+                'projets' => 'nullable|array',  // Projets non obligatoires
+                'projets.*' => 'exists:projet_eha2,CodeProjet',  // Si des projets sont fournis, vérifier qu'ils existent
+            ]);
 
-        // Créer un renforcement
-        $renforcement = Renforcement::create([
-            'code_renforcement' => $codeRenforcement,
-            'titre' => $request->titre,
-            'description' => $request->description,
-            'date_renforcement' => $request->date_renforcement,
-        ]);
+            // Générer un code personnalisé pour le renforcement
+            $codeRenforcement = Renforcement::generateCodeRenforcement();
 
-        // Associer les bénéficiaires
-        $renforcement->beneficiaires()->attach($request->beneficiaires);
+            // Créer un renforcement
+            $renforcement = Renforcement::create([
+                'code_renforcement' => $codeRenforcement,
+                'titre' => $validatedData['titre'],
+                'description' => $validatedData['description'],
+                'date_renforcement' => $validatedData['date_renforcement'],
+            ]);
 
-        // Si des projets sont sélectionnés, les associer
-        if ($request->has('projets')) {
-            $renforcement->projets()->attach($request->projets);
+            // Associer les bénéficiaires s'ils sont présents
+            if (isset($validatedData['beneficiaires'])) {
+                $renforcement->beneficiaires()->attach($validatedData['beneficiaires']);
+            }
+
+            // Associer les projets s'ils sont présents
+            if (isset($validatedData['projets'])) {
+                $renforcement->projets()->attach($validatedData['projets']);
+            }
+            $ecran_id = $request->input('ecran_id');
+            // Rediriger vers la liste des renforcements après la sauvegarde
+            return redirect()->route('renforcements.index', ['ecran_id' => $ecran_id])->with('success', 'Renforcement créé avec succès !');
+
+        } catch (\Exception $e) {
+            // Capture et gestion des erreurs
+            return redirect()->back()->withInput()->withErrors(['error' => 'Une erreur est survenue lors de la création du renforcement : ' . $e->getMessage()]);
         }
-
-        return redirect()->route('renforcements.index');
     }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            // Trouver le renforcement par son identifiant
+            $renforcement = Renforcement::where('code_renforcement', $id)->firstOrFail();
+
+            // Mettre à jour les détails du renforcement
+            $renforcement->update([
+                'titre' => $request->titre,
+                'description' => $request->description,
+                'date_renforcement' => $request->date_renforcement,
+            ]);
+
+            // Mettre à jour les bénéficiaires associés
+            if ($request->has('beneficiaires')) {
+                $renforcement->beneficiaires()->sync($request->beneficiaires);
+            } else {
+                $renforcement->beneficiaires()->detach();
+            }
+
+            // Mettre à jour les projets associés
+            if ($request->has('projets')) {
+                $renforcement->projets()->sync($request->projets);
+            } else {
+                $renforcement->projets()->detach();
+            }
+
+            // Rediriger avec succès
+            return redirect()->route('renforcements.index')->with('success', 'Renforcement modifié avec succès !');
+        } catch (\Exception $e) {
+            // En cas d'erreur, rediriger avec un message d'erreur
+            return back()->with('error', 'Une erreur s\'est produite lors de la modification : ' . $e->getMessage());
+        }
+    }
+
+
+
 }
