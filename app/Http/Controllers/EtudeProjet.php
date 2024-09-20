@@ -14,6 +14,8 @@ use App\Models\Personnel;
 use App\Models\ProjetEha2;
 use App\Models\Renforcement;
 use App\Models\Task;
+use App\Models\TravauxConnexes;
+use App\Models\TypeTravauxConnexes;
 use App\Models\User;
 use App\Models\Validations;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -270,6 +272,7 @@ class EtudeProjet extends Controller
                 'titre' => 'required|string|max:255',
                 'description' => 'required|string',
                 'date_renforcement' => 'required|date',
+                'date_fin' => 'required|date',
                 'beneficiaires' => 'required|array|min:1',  // Au moins un bénéficiaire est requis
                 'beneficiaires.*' => 'exists:mot_de_passe_utilisateur,code_personnel', // Valider que chaque bénéficiaire existe
                 'projets' => 'nullable|array',  // Projets non obligatoires
@@ -284,7 +287,8 @@ class EtudeProjet extends Controller
                 'code_renforcement' => $codeRenforcement,
                 'titre' => $validatedData['titre'],
                 'description' => $validatedData['description'],
-                'date_renforcement' => $validatedData['date_renforcement'],
+                'date_debut' => $validatedData['date_renforcement'],
+                'date_fin' => $validatedData['date_fin']
             ]);
 
             // Associer les bénéficiaires s'ils sont présents
@@ -316,7 +320,8 @@ class EtudeProjet extends Controller
             $renforcement->update([
                 'titre' => $request->titre,
                 'description' => $request->description,
-                'date_renforcement' => $request->date_renforcement,
+                'date_debut' => $request->date_renforcement,
+                'date_fin' => $request->date_fin
             ]);
 
             // Mettre à jour les bénéficiaires associés
@@ -333,14 +338,92 @@ class EtudeProjet extends Controller
                 $renforcement->projets()->detach();
             }
 
+            $ecran_id = $request->input('ecran_id');
             // Rediriger avec succès
-            return redirect()->route('renforcements.index')->with('success', 'Renforcement modifié avec succès !');
+            return redirect()->route('renforcements.index', ['ecran_id' => $ecran_id])->with('success', 'Renforcement modifié avec succès !');
         } catch (\Exception $e) {
             // En cas d'erreur, rediriger avec un message d'erreur
             return back()->with('error', 'Une erreur s\'est produite lors de la modification : ' . $e->getMessage());
         }
     }
 
+    ////////////////////////////////////ACTIVITE CONNEXE//////////////////////////////
+    // Afficher la liste des travaux connexes
+    public function activite(Request $request)
+    {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $travaux = TravauxConnexes::with('typeTravaux', 'projet')->get();
+        $projets = ProjetEha2::all();
+        $typesTravaux = TypeTravauxConnexes::all();
 
+        return view('etudes_projets.activite', compact('ecran','travaux', 'projets', 'typesTravaux'));
+    }
+
+    // Enregistrer un nouveau travail connexe
+    public function storeConnexe(Request $request)
+    {
+        // Validation des champs du formulaire
+        $request->validate([
+            'code_projet' => 'required',
+            'type_travaux_id' => 'required',
+            'cout_projet' => 'required|numeric',
+            'date_debut_previsionnelle' => 'required|date',
+            'date_fin_previsionnelle' => 'required|date|after_or_equal:date_debut_previsionnelle',
+        ]);
+
+        try {
+            // Générer le code projet pour travaux connexes
+            $codeProjet = TravauxConnexes::generateCodeTravauxConnexe();
+
+            // Créer et enregistrer le travail connexe
+            TravauxConnexes::create([
+                'CodeProjet' => $codeProjet,
+                'type_travaux_id' => $request->input('type_travaux_id'),
+                'cout_projet' => $request->input('cout_projet'),
+                'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
+                'date_fin_previsionnelle' => $request->input('date_fin_previsionnelle'),
+                'date_debut_effective' => $request->input('date_debut_effective'),
+                'date_fin_effective' => $request->input('date_fin_effective'),
+                'commentaire' => $request->input('commentaire'),
+            ]);
+
+            // Rediriger avec un message de succès
+            $ecran_id = $request->input('ecran_id');
+            return redirect()->route('activite.index', ['ecran_id' => $ecran_id])
+                ->with('success', 'Travail connexe enregistré avec succès.');
+
+        } catch (\Exception $e) {
+            // En cas d'erreur, retourner avec un message d'erreur
+            return back()->with('error', 'Erreur lors de l\'enregistrement du travail connexe. Détails : ' . $e->getMessage());
+        }
+    }
+
+
+    // Modifier un travail connexe
+    public function updateConnexe(Request $request, $id)
+    {
+        // Valider les champs du formulaire
+        $request->validate([
+            'type_travaux_id' => 'required',
+            'cout_projet' => 'required|numeric',
+            'date_debut_previsionnelle' => 'required|date',
+            'date_fin_previsionnelle' => 'required|date|after_or_equal:date_debut_previsionnelle',
+        ]);
+
+        // Mise à jour du travail connexe
+        $travaux = TravauxConnexes::findOrFail($id);
+        $travaux->update($request->all());
+
+        return redirect()->route('travaux_connexes.index')->with('success', 'Travail connexe modifié avec succès.');
+    }
+
+    // Supprimer un travail connexe
+    public function destroyConnexe($id)
+    {
+        $travaux = TravauxConnexes::findOrFail($id);
+        $travaux->delete();
+
+        return redirect()->route('travaux_connexes.index')->with('success', 'Travail connexe supprimé avec succès.');
+    }
 
 }

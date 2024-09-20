@@ -33,10 +33,10 @@
         font-size: 12px;
     }
     .select2-selection__rendered{
-        width: 300.663px; !important
+        width: 300.663px !important;
     }
      .select2-container--default{
-        width: 300.663px; !important
+        width: 300.663px !important; 
     }
 </style>
 
@@ -120,9 +120,16 @@
                                     @enderror
                                 </div>
                                 <div class="col-5">
-                                    <label for="date_renforcement">Date :</label>
-                                    <input type="date" name="date_renforcement" required class="form-control" value="{{ old('date_renforcement') }}">
+                                    <label for="date_renforcement">Date debut:</label>
+                                    <input type="date" name="date_renforcement" id="date_renforcements" required class="form-control" value="{{ old('date_renforcement') }}">
                                     @error('date_renforcement')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-5">
+                                    <label for="date_fin">Date fin :</label>
+                                    <input type="date" name="date_fin" id="date_fins" required class="form-control" value="{{ old('date_fin') }}">
+                                    @error('date_fin')
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -178,8 +185,12 @@
                                         <input type="text" id="titre" name="titre" required class="form-control">
                                     </div>
                                     <div class="col-5">
-                                        <label for="date_renforcement">Date :</label>
+                                        <label for="date_renforcement">Date debut:</label>
                                         <input type="date" id="date_renforcement" name="date_renforcement" required class="form-control">
+                                    </div>
+                                    <div class="col-5">
+                                        <label for="date_fin">Date fin:</label>
+                                        <input type="date" id="date_fin" name="date_fin" required class="form-control">
                                     </div>
                                 </div>
 
@@ -244,7 +255,8 @@
                             <th>Code Renforcement</th>
                             <th>Code Projets</th>
                             <th>Titre</th>
-                            <th>Date</th>
+                            <th>Date debut </th>
+                            <th>Date fin </th>
                             <th>Bénéficiaires</th>
                             <th>Action</th>
                         </tr>
@@ -268,7 +280,8 @@
                             </td>
 
                             <td>{{ $renforcement->titre }}</td>
-                            <td>{{ $renforcement->date_renforcement }}</td>
+                            <td>{{ $renforcement->date_debut }}</td>
+                            <td>{{ $renforcement->date_fin }}</td>
 
                             <td>
                                 @if($renforcement->beneficiaires->isNotEmpty())
@@ -295,7 +308,8 @@
                                                onclick="editRenforcement('{{ $renforcement->code_renforcement }}',
                                                '{{ $renforcement->titre }}',
                                                '{{ $renforcement->description }}',
-                                               '{{ $renforcement->date_renforcement }}',
+                                               '{{ $renforcement->date_debut }}',
+                                               '{{ $renforcement->date_fin }}',
                                                {{ json_encode($renforcement->beneficiaires->pluck('code_personnel')->toArray()) }},
                                                {{ json_encode($renforcement->projets->pluck('CodeProjet')->toArray()) }})">
                                                <i class="bi bi-pencil-fill me-3"></i> Modifier
@@ -322,11 +336,40 @@
 </section>
 <script>
     $(document).ready(function() {
-    $('.form-select').select2();
+        $('.form-select').select2();
     });
     $(document).ready(function() {
 
-    initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table', 'Listes des renforcements de capacités');
+        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table', 'Listes des renforcements de capacités');
+    });
+    window.addEventListener('DOMContentLoaded', function() {
+
+        var startDateInput = document.getElementById('date_renforcement');
+        var endDateInput = document.getElementById('date_fin');
+        var startDateInputs = document.getElementById('date_renforcements');
+        var endDateInputs = document.getElementById('date_fins');
+
+        endDateInput.addEventListener('change', function() {
+            var startDate = new Date(startDateInput.value);
+            var endDate = new Date(endDateInput.value);
+
+            if (endDate < startDate) {
+                $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
+                $('#alertModal').modal('show');
+                endDateInput.value = startDateInput.value; // Réinitialiser la date de fin à la date de début
+            }
+        });
+
+        endDateInputs.addEventListener('change', function() {
+            var startDates = new Date(startDateInputs.value);
+            var endDates = new Date(endDateInputs.value);
+
+            if (endDates < startDates) {
+                $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
+                $('#alertModal').modal('show');
+                endDateInputs.value = startDateInputs.value; // Réinitialiser la date de fin à la date de début
+            }
+        });
     });
     function deleteRenforcement(id) {
         if (confirm("Êtes-vous sûr de vouloir supprimer ?")) {
@@ -348,7 +391,8 @@
             });
         }
     }
-    function editRenforcement(code, titre, description, date, beneficiaires, projets) {
+
+    function editRenforcement(code, titre, description, date,date_fin, beneficiaires, projets) {
         // Cacher le formulaire d'enregistrement
         document.getElementById('addForm').style.display = 'none';
 
@@ -357,6 +401,7 @@
         document.getElementById('titre').value = titre;
         document.getElementById('description').value = description;
         document.getElementById('date_renforcement').value = date;
+        document.getElementById('date_fin').value = date_fin;
 
         // Sélectionner les bénéficiaires
     let beneficiairesSelect = document.getElementById('beneficiaires');

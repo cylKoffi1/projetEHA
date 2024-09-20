@@ -14,7 +14,7 @@ class Renforcement extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable = ['code_renforcement', 'titre', 'description', 'date_renforcement'];
+    protected $fillable = ['code_renforcement', 'titre', 'description', 'date_debut', 'date_fin'];
 
     // Relation avec les bénéficiaires
     public function beneficiaires()

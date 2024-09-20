@@ -333,6 +333,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::put('/renforcements/{code}', [EtudeProjet::class, 'update'])->name('renforcements.update');
         Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
 
+        /****************************ACTIVITE CONNEXE******************** */
+        Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
+        Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
+        Route::delete('/activiteConnexeProjet/{id}', [EtudeProjet::class, 'destroyConnexe'])->name('travaux_connexes.destroy');
+        
         /**************************** REATTRIBUTION DE PROJET ******************************/
     Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('reattribution.index');
     Route::put('/reattribution', [ProjetController::class, 'storereat'])->name('reattribution.store');
