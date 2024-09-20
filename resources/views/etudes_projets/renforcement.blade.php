@@ -274,12 +274,13 @@
                                 @if($renforcement->beneficiaires->isNotEmpty())
                                     <ul>
                                         @foreach($renforcement->beneficiaires as $beneficiaire)
-
-                                            <li>{{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}</li>
+                                            @if ($beneficiaire && $beneficiaire->personnel) <!-- Vérification de l'existence du bénéficiaire et de personnel -->
+                                                <li>{{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}</li>
+                                            @endif
                                         @endforeach
                                     </ul>
                                 @else
-                                    Aucun bénéficiaire
+                                    <em>Aucun bénéficiaire</em>
                                 @endif
                             </td>
 
@@ -358,16 +359,20 @@
         document.getElementById('date_renforcement').value = date;
 
         // Sélectionner les bénéficiaires
-        let beneficiairesSelect = document.getElementById('beneficiaires');
-        for (let option of beneficiairesSelect.options) {
-            option.selected = beneficiaires.includes(option.value);
-        }
+    let beneficiairesSelect = document.getElementById('beneficiaires');
+    for (let option of beneficiairesSelect.options) {
+        option.selected = beneficiaires.includes(option.value);
+    }
 
-        // Sélectionner les projets
-        let projetsSelect = document.getElementById('projets');
-        for (let option of projetsSelect.options) {
-            option.selected = projets.includes(option.value);
-        }
+    // Sélectionner les projets
+    let projetsSelect = document.getElementById('projets');
+    for (let option of projetsSelect.options) {
+        option.selected = projets.includes(option.value);
+    }
+
+    // Rafraîchir les sélections avec select2
+    $('#beneficiaires').trigger('change');
+    $('#projets').trigger('change');
 
         // Modifier l'action du formulaire pour inclure l'ID (code_renforcement)
         document.getElementById('formAction').action = '/renforcements/' + code;

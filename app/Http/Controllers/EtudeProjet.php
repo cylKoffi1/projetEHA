@@ -254,7 +254,7 @@ class EtudeProjet extends Controller
 
     public function renfo(Request $request)
     {
-        $renforcements = Renforcement::all();
+        $renforcements = Renforcement::with(['beneficiaires.personnel', 'projets'])->get();
 
         $ecran = Ecran::find($request->input('ecran_id'));
         $projets = ProjetEha2::all();
