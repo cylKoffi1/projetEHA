@@ -87,66 +87,131 @@
         </div>
     </div>
     <div class="row justify-content-center align-items-center my-5">
-        <div class="col-5" style="justify-content: center;">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title">Renforcement des capacités</h5>
+                    <h5 class="card-title text-center">Renforcement des capacités</h5>
 
-                @if (session('success'))
-                    <div class="alert alert-success">
-                        {{ session('success') }}
-                    </div>
-                @endif
+                    @if (session('success'))
+                        <div class="alert alert-success text-center">
+                            {{ session('success') }}
+                        </div>
+                    @endif
 
-                @if (session('error'))
-                    <div class="alert alert-danger">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
+                    @if (session('error'))
+                        <div class="alert alert-danger text-center">
+                            {{ session('error') }}
+                        </div>
+                    @endif
                 </div>
-                <div class="card-content">
-                    <div class="col">
-                        <form id="addForm" action="{{ route('renforcements.store') }}" method="POST">
-                            @csrf
-                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                <div class="card-body">
+                    <form id="addForm" action="{{ route('renforcements.store') }}" method="POST">
+                        @csrf
+                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
 
-                            <div class="row">
-                                <div class="col-7">
-                                    <label for="titre">Titre :</label>
-                                    <input type="text" name="titre" required class="form-control" value="{{ old('titre') }}">
-                                    @error('titre')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
+                        <!-- Row for Title and Dates -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="titre" class="form-label">Titre :</label>
+                                <input type="text" name="titre" required class="form-control" value="{{ old('titre') }}">
+                                @error('titre')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date_renforcement" class="form-label">Date début :</label>
+                                <input type="date" name="date_renforcement" id="date_renforcements" required class="form-control" value="{{ old('date_renforcement') }}">
+                                @error('date_renforcement')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date_fin" class="form-label">Date fin :</label>
+                                <input type="date" name="date_fin" id="date_fins" required class="form-control" value="{{ old('date_fin') }}">
+                                @error('date_fin')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Description Field -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="description" class="form-label">Description :</label>
+                                <textarea name="description" class="form-control" rows="3">{{ old('description') }}</textarea>
+                                @error('description')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Beneficiaires Selection -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label>
+                                <select name="beneficiaires[]" multiple class="form-select" style="width: 100%">
+                                    @foreach($beneficiaires as $beneficiaire)
+                                        @if ($beneficiaire->personnel)
+                                            <option value="{{ $beneficiaire->code_personnel }}">
+                                                {{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}
+                                            </option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="projets" class="form-label">Sélectionnez les projets :</label>
+                                <select name="projets[]" multiple class="form-select" style="width: 100%">
+                                    @foreach($projets as $projet)
+                                        <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="row text-center">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Hidden Edit Form -->
+                    <div id="editFormContainer" style="display: none;">
+                        <form id="formAction" action="" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
+
+                            <input type="hidden" id="code" name="code">
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="titre" class="form-label">Titre :</label>
+                                    <input type="text" id="titre" name="titre" required class="form-control">
                                 </div>
-                                <div class="col-5">
-                                    <label for="date_renforcement">Date debut:</label>
-                                    <input type="date" name="date_renforcement" id="date_renforcements" required class="form-control" value="{{ old('date_renforcement') }}">
-                                    @error('date_renforcement')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
+                                <div class="col-md-3">
+                                    <label for="date_renforcement" class="form-label">Date début :</label>
+                                    <input type="date" id="date_renforcement" name="date_renforcement" required class="form-control">
                                 </div>
-                                <div class="col-5">
-                                    <label for="date_fin">Date fin :</label>
-                                    <input type="date" name="date_fin" id="date_fins" required class="form-control" value="{{ old('date_fin') }}">
-                                    @error('date_fin')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
+                                <div class="col-md-3">
+                                    <label for="date_fin" class="form-label">Date fin :</label>
+                                    <input type="date" id="date_fin" name="date_fin" required class="form-control">
                                 </div>
                             </div>
-                            <div class="row">
+
+                            <div class="row mb-3">
                                 <div class="col-12">
-                                    <label for="description">Description :</label>
-                                    <textarea name="description" class="form-control">{{ old('description') }}</textarea>
-                                    @error('description')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
+                                    <label for="description" class="form-label">Description :</label>
+                                    <textarea id="description" name="description" class="form-control" rows="3"></textarea>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <label for="beneficiaires">Sélectionnez les bénéficiaires :</label>
-                                    <select name="beneficiaires[]" multiple class="form-select">
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label>
+                                    <select id="beneficiaires" name="beneficiaires[]" multiple class="form-select">
                                         @foreach($beneficiaires as $beneficiaire)
                                             @if ($beneficiaire->personnel)
                                                 <option value="{{ $beneficiaire->code_personnel }}">
@@ -156,89 +221,29 @@
                                         @endforeach
                                     </select>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <label for="projets">Sélectionnez les projets :</label>
-                                    <select name="projets[]" multiple class="form-select">
+                                <div class="col-6">
+                                    <label for="projets" class="form-label">Sélectionnez les projets :</label>
+                                    <select id="projets" name="projets[]" multiple class="form-select">
                                         @foreach($projets as $projet)
                                             <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                            </div><br>
-                            <button type="submit" class="btn btn-primary me-1 mb-1">Enregistrer</button>
+                            </div>
+
+                            <div class="row text-center">
+                                <div class="col-12">
+                                    <button type="submit" id="formButton" class="btn btn-primary">Modifier</button>
+                                </div>
+                            </div>
                         </form>
-                        <!-- Formulaire de modification caché par défaut -->
-                        <div id="editFormContainer" style="display: none;">
-                            <form id="formAction" action="" method="POST">
-                                @csrf
-                                @method('PUT') <!-- Utiliser la méthode PUT pour la mise à jour -->
-                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-
-                                <!-- ID caché pour le renforcement -->
-                                <input type="hidden" id="code" name="code">
-
-                                <div class="row">
-                                    <div class="col-7">
-                                        <label for="titre">Titre :</label>
-                                        <input type="text" id="titre" name="titre" required class="form-control">
-                                    </div>
-                                    <div class="col-5">
-                                        <label for="date_renforcement">Date debut:</label>
-                                        <input type="date" id="date_renforcement" name="date_renforcement" required class="form-control">
-                                    </div>
-                                    <div class="col-5">
-                                        <label for="date_fin">Date fin:</label>
-                                        <input type="date" id="date_fin" name="date_fin" required class="form-control">
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-12">
-                                        <label for="description">Description :</label>
-                                        <textarea id="description" name="description" class="form-control"></textarea>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-12">
-                                        <label >Sélectionnez les bénéficiaires :</label>
-                                        <select id="beneficiaires" name="beneficiaires[]" multiple class="form-select" style="width: 100%">
-                                            @foreach($beneficiaires as $beneficiaire)
-                                                @if ($beneficiaire->personnel)  <!-- Vérifie que la relation 'personnel' existe -->
-                                                    <option value="{{ $beneficiaire->code_personnel }}">
-                                                        {{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}
-                                                    </option>
-                                                @endif
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-12">
-                                        <label >Sélectionnez les projets :</label>
-                                        <select id="projets" name="projets[]" multiple class="form-select"  style="width: 100%">
-                                            @foreach($projets as $projet)
-                                                <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <br>
-                                <button type="submit" id="formButton" class="btn btn-primary me-1 mb-1">Modifier</button>
-                            </form>
-                        </div>
-
-
                     </div>
+
                 </div>
             </div>
-
         </div>
     </div>
+
 
 
     <div class="card">
