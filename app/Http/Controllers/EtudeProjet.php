@@ -372,12 +372,10 @@ class EtudeProjet extends Controller
         ]);
 
         try {
-            // Générer le code projet pour travaux connexes
-            $codeProjet = TravauxConnexes::generateCodeTravauxConnexe();
-
+            
             // Créer et enregistrer le travail connexe
             TravauxConnexes::create([
-                'CodeProjet' => $codeProjet,
+                'CodeProjet' => $request->input('code_projet'),
                 'type_travaux_id' => $request->input('type_travaux_id'),
                 'cout_projet' => $request->input('cout_projet'),
                 'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
