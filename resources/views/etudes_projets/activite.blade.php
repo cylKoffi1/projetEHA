@@ -92,24 +92,34 @@
                 <div class="card-header">
                     <h5 class="card-title">Activité connexe</h5>
 
-                @if (session('success'))
-                    <div class="alert alert-success">
-                        {{ session('success') }}
-                    </div>
-                @endif
+                    @if (session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
+                    @endif
 
-                @if (session('error'))
-                    <div class="alert alert-danger">
-                        {{ session('error') }}
-                    </div>
-                @endif
+                    @if (session('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                 </div>
                 <div class="card-content">
                     <div class="col">
-                        <form action="{{ route('travaux_connexes.store') }}" method="POST">
+                        <form id="addForm" action="{{ route('travaux_connexes.store') }}" method="POST">
+
                             @csrf
-                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
 
                             <div class="row">
                                 <div class="col-4">
@@ -122,9 +132,7 @@
                                 </div>
                             </div>
 
-
-                            <div class="row ">
-
+                            <div class="row">
                                 <div class="col">
                                     <label for="type_travaux_id">Type Travaux :</label>
                                     <select name="type_travaux_id" id="type_travaux_id" class="form-select" required>
@@ -137,7 +145,6 @@
                                     <label for="cout_projet">Coût du Projet (XOF) :</label>
                                     <input type="text" name="cout_projet" id="cout_projet" class="form-control text-end" required oninput="formatNumber(this)">
                                 </div>
-
                                 <div class="col">
                                     <label for="date_debut_previsionnelle">Date Début Prévisionnelle :</label>
                                     <input type="date" name="date_debut_previsionnelle" id="date_debut_previsionnelle" class="form-control" required>
@@ -148,22 +155,18 @@
                                     <label for="date_fin_previsionnelle">Date Fin Prévisionnelle :</label>
                                     <input type="date" name="date_fin_previsionnelle" id="date_fin_previsionnelle" class="form-control" required>
                                 </div>
-
                                 <div class="col">
                                     <label for="date_debut_effective">Date Début Effective :</label>
                                     <input type="date" name="date_debut_effective" id="date_debut_effective" class="form-control">
                                 </div>
-
                                 <div class="col">
                                     <label for="date_fin_effective">Date Fin Effective :</label>
                                     <input type="date" name="date_fin_effective" id="date_fin_effective" class="form-control">
                                 </div>
-
                                 <div class="col-12 mt-3">
                                     <label for="commentaire">Commentaire :</label>
                                     <textarea name="commentaire" id="commentaire" class="form-control"></textarea>
                                 </div>
-
                                 <div class="col-12 mt-4">
                                     <button type="submit" class="btn btn-primary">Enregistrer</button>
                                 </div>
@@ -172,7 +175,61 @@
 
                         <!-- Formulaire de modification caché par défaut -->
                         <div id="editFormContainer" style="display: none;">
+                            <form id="formAction" action="" method="POST">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
 
+                                <input type="hidden" id="edit_codeActivite" name="codeActivite">
+                                <div class="row">
+                                    <div class="col-4">
+                                        <label for="edit_code_projet">Code Projet :</label>
+                                        <input type="text" id="edit_code_projet" name="code_projet" class="form-control" required readonly>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="edit_type_travaux_id">Type Travaux :</label>
+                                        <select id="edit_type_travaux_id" name="type_travaux_id" class="form-select" required>
+                                            @foreach($typesTravaux as $type)
+                                                <option value="{{ $type->id }}">{{ $type->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <label for="edit_cout_projet">Coût du Projet (XOF) :</label>
+                                        <input type="text" id="edit_cout_projet" name="cout_projet" class="form-control text-end" required>
+
+                                    </div>
+                                    <div class="col">
+                                        <label for="edit_date_debut_previsionnelle">Date Début Prévisionnelle :</label>
+                                        <input type="date" id="edit_date_debut_previsionnelle" name="date_debut_previsionnelle" class="form-control" required>
+
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="edit_date_fin_previsionnelle">Date Fin Prévisionnelle :</label>
+                                        <input type="date" id="edit_date_fin_previsionnelle" name="date_fin_previsionnelle" class="form-control" required>
+
+                                    </div>
+                                    <div class="col">
+                                        <label for="edit_date_debut_effective">Date Début Effective :</label>
+                                        <input type="date" id="edit_date_debut_effective" name="date_debut_effective" class="form-control">
+
+                                    </div>
+                                    <div class="col">
+                                        <label for="edit_date_fin_effective">Date Fin Effective :</label>
+                                        <input type="date" id="edit_date_fin_effective" name="date_fin_effective" class="form-control">
+
+                                    </div>
+                                </div>
+
+                                <label for="edit_commentaire">Commentaire :</label>
+                                <textarea id="edit_commentaire" name="commentaire" class="form-control"></textarea>
+
+                                <button type="submit" class="btn btn-primary mt-3">Enregistrer</button>
+                            </form>
                         </div>
 
 
@@ -195,6 +252,7 @@
                 <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table">
                     <thead>
                         <tr>
+                            <th>Code Travaux</th>
                             <th>Code Projet</th>
                             <th>Type Travaux</th>
                             <th>Coût (XOF)</th>
@@ -209,7 +267,8 @@
                     <tbody>
                         @foreach($travaux as $travail)
                         <tr>
-                            <td>{{ $travail->projet->code_projet }}</td>
+                            <td>{{ $travail->codeActivite }}</td>
+                            <td>{{ $travail->projet->CodeProjet }}</td>
                             <td>{{ $travail->typeTravaux->libelle }}</td>
                             <td style="text-align: right">{{ number_format($travail->cout_projet, 2) }}</td>
                             <td>{{ $travail->date_debut_previsionnelle }}</td>
@@ -218,12 +277,34 @@
                             <td>{{ $travail->date_fin_effective }}</td>
                             <td>{{ $travail->commentaire }}</td>
                             <td>
-                                <a href="#" class="btn btn-sm btn-warning">Modifier</a>
-                                <form action="{{ route('travaux_connexes.destroy', $travail->id) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
-                                </form>
+                                <div class="dropdown">
+                                    <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
+                                        <span style="color: white"></span>
+                                    </a>
+                                    <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                        <li>
+                                            <a class="dropdown-item" href="#"
+                                            onclick="editActivite(
+                                                '{{ $travail->codeActivite }}',
+                                                '{{ $travail->CodeProjet }}',
+                                                '{{ $travail->type_travaux_id }}',
+                                                '{{ $travail->cout_projet }}',
+                                                '{{ $travail->date_debut_previsionnelle }}',
+                                                '{{ $travail->date_fin_previsionnelle }}',
+                                                '{{ $travail->date_debut_effective }}',
+                                                '{{ $travail->date_fin_effective }}',
+                                                '{{ $travail->commentaire }}')">
+                                            <i class="bi bi-pencil-fill me-3"></i> Modifier
+                                         </a>
+
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="deleteActivite('{{ $travail->codeActivite }}')">
+                                                <i class="bi bi-trash3-fill me-3"></i> Supprimer
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
@@ -282,7 +363,54 @@
             }
         });
     });
+    function deleteActivite(id) {
+        if (confirm("Êtes-vous sûr de vouloir supprimer ?")) {
+            $.ajax({
+                url: '/activiteDelete/' + id,
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(result) {
+                    $('#alertMessage').text("Activité connexe supprimé avec succès.");
+                    $('#alertModal').modal('show');
+                    window.location.reload(true);
+                },
+                error: function(xhr, status, error) {
+                    $('#alertMessage').text('Erreur lors de la suppression : ' + error);
+                    $('#alertModal').modal('show');
+                }
+            });
+        }
+    }
+    function formatNumberForDisplay(value) {
+        // Supprimer les espaces pour reformater
+        let number = value.toString().replace(/\s+/g, '');
+        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    function editActivite(codeActivite, codeProjet, typeTravauxId, coutProjet, dateDebutPrevisionnelle, dateFinPrevisionnelle, dateDebutEffective, dateFinEffective, commentaire) {
+        // Cacher le formulaire d'enregistrement
+        document.getElementById('addForm').style.display = 'none';
 
+        // Remplir les champs du formulaire avec les données passées en paramètres
+        document.getElementById('edit_codeActivite').value = codeActivite;
+        document.getElementById('edit_code_projet').value = codeProjet;
+        document.getElementById('edit_type_travaux_id').value = typeTravauxId;
 
+        // Formater le coût projet avec des espaces
+        document.getElementById('edit_cout_projet').value = formatNumberForDisplay(coutProjet);
+
+        document.getElementById('edit_date_debut_previsionnelle').value = dateDebutPrevisionnelle;
+        document.getElementById('edit_date_fin_previsionnelle').value = dateFinPrevisionnelle;
+        document.getElementById('edit_date_debut_effective').value = dateDebutEffective;
+        document.getElementById('edit_date_fin_effective').value = dateFinEffective;
+        document.getElementById('edit_commentaire').value = commentaire;
+
+        // Modifier l'action du formulaire pour inclure l'ID (code_renforcement)
+        document.getElementById('formAction').action = '/activite/' + codeActivite;
+
+        // Afficher le formulaire de modification
+        document.getElementById('editFormContainer').style.display = 'block';
+    }
 </script>
 @endsection

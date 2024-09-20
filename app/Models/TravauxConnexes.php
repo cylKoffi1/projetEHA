@@ -9,7 +9,12 @@ class TravauxConnexes extends Model
 {
     protected $table = 'travaux_connexes';
 
+    protected $primaryKey = 'codeActivite';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
+        'codeActivite',
         'CodeProjet',
         'type_travaux_id',
         'cout_projet',
@@ -34,7 +39,7 @@ class TravauxConnexes extends Model
     public static function generateCodeTravauxConnexe()
     {
         $latest = self::latest()->first();
-        $orderNumber = $latest ? intval(substr($latest->CodeProjet, -3)) + 1 : 1;
+        $orderNumber = $latest ? intval(substr($latest->codeActivite, -3)) + 1 : 1;
         $month = now()->format('m');
         $year = now()->format('Y');
         return 'EHA_TC_' . $month . '_' . $year . '_' . str_pad($orderNumber, 3, '0', STR_PAD_LEFT);

@@ -362,6 +362,9 @@ class EtudeProjet extends Controller
     // Enregistrer un nouveau travail connexe
     public function storeConnexe(Request $request)
     {
+        $request->merge([
+            'cout_projet' => str_replace(' ', '', $request->input('cout_projet')),
+        ]);
         // Validation des champs du formulaire
         $request->validate([
             'code_projet' => 'required',
@@ -372,12 +375,15 @@ class EtudeProjet extends Controller
         ]);
 
         try {
-            
+            // Générer un code personnalisé pour l'activité connexe
+            $codeActivite = TravauxConnexes::generateCodeTravauxConnexe();
+
             // Créer et enregistrer le travail connexe
             TravauxConnexes::create([
-                'CodeProjet' => $request->input('code_projet'),
+                'codeActivite' => $codeActivite,
+                'CodeProjet' => $request->input('code_projet'), // Utiliser le code projet fourni
                 'type_travaux_id' => $request->input('type_travaux_id'),
-                'cout_projet' => $request->input('cout_projet'),
+                'cout_projet' => $request->input('cout_projet'), // Enlever les espaces
                 'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
                 'date_fin_previsionnelle' => $request->input('date_fin_previsionnelle'),
                 'date_debut_effective' => $request->input('date_debut_effective'),
@@ -386,8 +392,7 @@ class EtudeProjet extends Controller
             ]);
 
             // Rediriger avec un message de succès
-            $ecran_id = $request->input('ecran_id');
-            return redirect()->route('activite.index', ['ecran_id' => $ecran_id])
+            return redirect()->route('activite.index', ['ecran_id' => $request->input('ecran_id')])
                 ->with('success', 'Travail connexe enregistré avec succès.');
 
         } catch (\Exception $e) {
@@ -397,9 +402,13 @@ class EtudeProjet extends Controller
     }
 
 
+
     // Modifier un travail connexe
     public function updateConnexe(Request $request, $id)
     {
+        $request->merge([
+            'cout_projet' => str_replace(' ', '', $request->input('cout_projet')),
+        ]);
         // Valider les champs du formulaire
         $request->validate([
             'type_travaux_id' => 'required',
@@ -408,20 +417,49 @@ class EtudeProjet extends Controller
             'date_fin_previsionnelle' => 'required|date|after_or_equal:date_debut_previsionnelle',
         ]);
 
-        // Mise à jour du travail connexe
-        $travaux = TravauxConnexes::findOrFail($id);
-        $travaux->update($request->all());
+        try {
+            // Récupérer le travail connexe à modifier par son code d'activité (codeActivite)
+            $travauxConnexe = TravauxConnexes::where('codeActivite', $id)->firstOrFail();
 
-        return redirect()->route('travaux_connexes.index')->with('success', 'Travail connexe modifié avec succès.');
+            // Mettre à jour les informations du travail connexe
+            $travauxConnexe->update([
+                'type_travaux_id' => $request->input('type_travaux_id'),
+                'cout_projet' =>$request->input('cout_projet'), // Enlever les espaces avant d'enregistrer
+                'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
+                'date_fin_previsionnelle' => $request->input('date_fin_previsionnelle'),
+                'date_debut_effective' => $request->input('date_debut_effective'),
+                'date_fin_effective' => $request->input('date_fin_effective'),
+                'commentaire' => $request->input('commentaire'),
+            ]);
+
+            // Rediriger avec un message de succès
+            return redirect()->route('activite.index', ['ecran_id' => $request->input('ecran_id')])->with('success', 'Travail connexe modifié avec succès.');
+
+        } catch (\Exception $e) {
+            // Gérer les erreurs et rediriger avec un message d'erreur
+            return back()->with('error', 'Erreur lors de la modification du travail connexe. Détails : ' . $e->getMessage());
+        }
     }
+
 
     // Supprimer un travail connexe
-    public function destroyConnexe($id)
+
+    public function deleteActivite($id)
     {
-        $travaux = TravauxConnexes::findOrFail($id);
-        $travaux->delete();
+        // Trouver le renforcement par son code
+        $travaux = TravauxConnexes::where('codeActivite', $id)->firstOrFail();
 
-        return redirect()->route('travaux_connexes.index')->with('success', 'Travail connexe supprimé avec succès.');
+        if (!$travaux) {
+            return response()->json(['error' => 'L\'activité connexe que vous essayez de supprimer n\'existe pas.'], 404);
+        }
+
+        try {
+            // Supprimer le renforcement et les relations associées (grâce au hook deleting)
+            $travaux->delete();
+
+            return response()->json(['success' => 'L\'activite connexe a été supprimés avec succès'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la suppression. Détails : ' . $e->getMessage()], 500);
+        }
     }
-
 }

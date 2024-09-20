@@ -36,7 +36,7 @@
         width: 300.663px !important;
     }
      .select2-container--default{
-        width: 300.663px !important; 
+        width: 300.663px !important;
     }
 </style>
 
