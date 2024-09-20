@@ -331,13 +331,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
         Route::delete('/renforcementDelete/{id}', [EtudeProjet::class, 'deleteRenforcement']);
         Route::put('/renforcements/{code}', [EtudeProjet::class, 'update'])->name('renforcements.update');
-        Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
+        Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
 
         /****************************ACTIVITE CONNEXE******************** */
         Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
         Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
         Route::delete('/activiteDelete/{id}', [EtudeProjet::class, 'deleteActivite']);
         Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('tavaux_connexes.update');
+
         /**************************** REATTRIBUTION DE PROJET ******************************/
     Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('reattribution.index');
     Route::put('/reattribution', [ProjetController::class, 'storereat'])->name('reattribution.store');
