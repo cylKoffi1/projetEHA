@@ -122,7 +122,7 @@
                             <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
 
                             <div class="row">
-                                <div class="col-4">
+                                <div class="col-3">
                                     <label for="code_projet">Code Projet :</label>
                                     <select name="code_projet" id="code_projet" class="form-select" required>
                                         @foreach($projets as $projet)
@@ -130,37 +130,46 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <div class="col-7 d-flex justify-content-end align-items-end">
+                                    <label for="dates">Dates</label>
+                                </div>
+
+
                             </div>
 
                             <div class="row">
-                                <div class="col">
+                                <div class="col-3">
                                     <label for="type_travaux_id">Type Travaux :</label>
                                     <select name="type_travaux_id" id="type_travaux_id" class="form-select" required>
-                                        @foreach($typesTravaux as $type)
-                                            <option value="{{ $type->id }}">{{ $type->libelle }}</option>
-                                        @endforeach
+                                    @foreach($typesTravaux as $type)
+                                        <option value="{{ $type->id }}">{{ $type->libelle }}</option>
+                                    @endforeach
+
                                     </select>
                                 </div>
-                                <div class="col">
-                                    <label for="cout_projet">Coût du Projet (XOF) :</label>
+                                <div class="col-1"></div>
+                                <div class="col-2">
+                                    <label for="cout_projet">Coût du Projet(XOF) :</label>
                                     <input type="text" name="cout_projet" id="cout_projet" class="form-control text-end" required oninput="formatNumber(this)">
                                 </div>
-                                <div class="col">
-                                    <label for="date_debut_previsionnelle">Date Début Prévisionnelle :</label>
+                                <div class="col-2"></div>
+                                <div class="col-2">
+                                    <label for="date_debut_previsionnelle">Début Prévisionnel :</label>
                                     <input type="date" name="date_debut_previsionnelle" id="date_debut_previsionnelle" class="form-control" required>
+                                </div>
+                                <div class="col-2">
+                                    <label for="date_fin_previsionnelle">Fin Prévisionnel :</label>
+                                    <input type="date" name="date_fin_previsionnelle" id="date_fin_previsionnelle" class="form-control" required>
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col">
-                                    <label for="date_fin_previsionnelle">Date Fin Prévisionnelle :</label>
-                                    <input type="date" name="date_fin_previsionnelle" id="date_fin_previsionnelle" class="form-control" required>
-                                </div>
-                                <div class="col">
-                                    <label for="date_debut_effective">Date Début Effective :</label>
+                                <div class="col-8"></div>
+                                <div class="col-2">
+                                    <label for="date_debut_effective">Début Effectif :</label>
                                     <input type="date" name="date_debut_effective" id="date_debut_effective" class="form-control">
                                 </div>
-                                <div class="col">
-                                    <label for="date_fin_effective">Date Fin Effective :</label>
+                                <div class="col-2">
+                                    <label for="date_fin_effective">Fin Effectif :</label>
                                     <input type="date" name="date_fin_effective" id="date_fin_effective" class="form-control">
                                 </div>
                                 <div class="col-12 mt-3">
@@ -168,7 +177,9 @@
                                     <textarea name="commentaire" id="commentaire" class="form-control"></textarea>
                                 </div>
                                 <div class="col-12 mt-4">
-                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary text-end">Enregistrer</button>
+                                </div>
                                 </div>
                             </div>
                         </form>
@@ -227,8 +238,9 @@
 
                                 <label for="edit_commentaire">Commentaire :</label>
                                 <textarea id="edit_commentaire" name="commentaire" class="form-control"></textarea>
-
-                                <button type="submit" class="btn btn-primary mt-3">Enregistrer</button>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary -mb-2 text-end">Modifier</button>
+                                </div>
                             </form>
                         </div>
 

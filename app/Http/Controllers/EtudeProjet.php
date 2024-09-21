@@ -256,7 +256,7 @@ class EtudeProjet extends Controller
 
     public function renfo(Request $request)
     {
-        $renforcements = Renforcement::with(['beneficiaires.personnel', 'projets'])->get();
+        $renforcements = Renforcement::with(['beneficiaires', 'projets'])->get();
 
         $ecran = Ecran::find($request->input('ecran_id'));
         $projets = ProjetEha2::all();
@@ -354,7 +354,7 @@ class EtudeProjet extends Controller
         $ecran = Ecran::find($request->input('ecran_id'));
         $travaux = TravauxConnexes::with('typeTravaux', 'projet')->get();
         $projets = ProjetEha2::all();
-        $typesTravaux = TypeTravauxConnexes::all();
+        $typesTravaux = TypeTravauxConnexes::orderBy('libelle', 'asc')->get();
 
         return view('etudes_projets.activite', compact('ecran','travaux', 'projets', 'typesTravaux'));
     }

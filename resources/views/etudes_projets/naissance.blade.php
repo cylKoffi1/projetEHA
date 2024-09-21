@@ -97,7 +97,7 @@
                         @csrf
 
                         <div class="row">
-                            <div class="col-8"> 
+                            <div class="col-8">
                                 <div class="row">
                                     <div class="col-4">
                                         <label for="code">Code</label>
@@ -248,39 +248,37 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col">
-                            <div class="card-body">
-                                <div class="col-6">
+                        <div class="col text-end">
+                            <div class="card-body text-end">
+                                <div class="col text-end">
                                     <button type="button" id="addFileType" class="btn btn-primary">
                                         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
                                         <i class="fas fa-folder"></i>
                                         <i class="fas fa-plus" style="position: relative; left: -15px; top: 5px; font-size: 1em; color: black;"></i>
-                                        Importer fichier
+                                        pièce à fournir
                                     </button><br>
                                 </div>
-                                <div class="row align-items-center">
+                                <div class="d-flex justify-content-end">
+    <div class="col text-end">
+        <label for="files" class="form-label"></label>
+        <div class="file-card ms-auto" id="file-card-0">
+            <div id="file-icon-0" class="file-icon">
+                <span class="upload-icon" onclick="document.getElementById('files-0').click()">
+                    <img src="{{ asset('armoiries/files-data.png') }}" alt="File Icon" id="file-icon-img-0">
+                </span>
+            </div>
+            <div id="file-name-0" class="file-name">Aucune pièce sélectionné</div>
+        </div>
+        <input class="form-control d-none" type="file" id="files-0" name="files[]" multiple required>
+    </div>
+</div>
 
-                                    <div class="col-6">
-                                        <label for="files" class="form-label"></label>
-                                        <div class="file-card" id="file-card-0">
-                                            <div id="file-icon-0" class="file-icon">
-                                                <span class="upload-icon" onclick="document.getElementById('files-0').click()">
-                                                    <img src="{{ asset('armoiries/files-data.png') }}" alt="File Icon" id="file-icon-img-0">
-                                                </span>
-                                            </div>
-                                            <div id="file-name-0" class="file-name">Aucun fichier sélectionné</div>
-                                        </div>
-                                        <input class="form-control d-none" type="file" id="files-0" name="files[]" multiple required>
-                                    </div>
-                                </div>
-                                <div class="row" id="additionalFileTypes">
-                                    <!-- Les inputs pour les autres types de fichiers seront ajoutés ici -->
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary -mb-2">Soumettre</button>
-                    </form>
+<div class="d-flex justify-content-end">
+    <button type="submit" class="btn btn-primary -mb-2 text-end">Enregistrer</button>
+</div>
+
+</form>
                 </div>
             </div>
         </div>
@@ -313,7 +311,7 @@
         var fileNameDiv = document.createElement('div');
         fileNameDiv.className = 'file-name';
         fileNameDiv.id = 'file-name-' + index;
-        fileNameDiv.textContent = 'Aucun fichier sélectionné';
+        fileNameDiv.textContent = 'Aucune pièce sélectionné';
 
         var newFileInput = document.createElement('input');
         newFileInput.className = 'form-control d-none';

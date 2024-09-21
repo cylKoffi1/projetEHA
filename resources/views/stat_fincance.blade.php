@@ -136,7 +136,7 @@
                                     @endif
                                 </tr>
                                 <tr>
-                                <td>..<a href="{{ route('finance.data', ['ecran_id' => $ecran->id, 'type' => 'personnel']) }}">{{ $personnelAffiche }}</a></td>
+                                <td>.<a href="{{ route('finance.data', ['ecran_id' => $ecran->id, 'type' => 'personnel']) }}">{{ $personnelAffiche }}</a></td>
                                     @if($projets_prevus != 0)
                                         <td style="text-align: right">
                                             @php $nonZero = false; @endphp

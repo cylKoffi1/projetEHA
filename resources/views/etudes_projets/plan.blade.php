@@ -90,8 +90,8 @@
                     <div id="gantt_here"></div>
 
                     <!-- Boutons pour Enregistrer et Supprimer -->
-                    <div class="mt-3">
-                        <button id="saveButton" class="btn btn-primary">Enregistrer le Gantt</button>
+                    <div class="mt-3 d-flex justify-content-end">
+                        <button id="saveButton" class="btn btn-primary">Enregistrer le Gantt  </button>
                         <button id="deleteButton" class="btn btn-danger">Supprimer le Projet</button>
                     </div>
                 </div>
@@ -367,79 +367,81 @@
     });
 
 */
-document.addEventListener("DOMContentLoaded", function () {
-    gantt.init("gantt_here");
-        gantt.templates.task_class = function (start, end, task) {
-            switch (task.priority) {
-                case "high": return "red_color";
-                case "medium": return "blue_color";
-                case "low": return "gray_color";
-            }
-        };
+        document.addEventListener("DOMContentLoaded", function () {
+            gantt.init("gantt_here");
+                gantt.templates.task_class = function (start, end, task) {
+                    switch (task.priority) {
+                        case "high": return "red_color";
+                        case "medium": return "blue_color";
+                        case "low": return "gray_color";
+                    }
+                };
 
 
 
 
-        // Initialisation de Gantt
-        gantt.config.xml_date = "%Y-%m-%dT%H:%i:%s";
-        gantt.config.date_format = "%Y-%m-%dT%H:%i:%s";
-        gantt.init("gantt_here");
-        function isValidDate(dateStr) {
-            const date = new Date(dateStr);
-            return !isNaN(date.getTime());
-        }
+                // Initialisation de Gantt
+                gantt.config.xml_date = "%Y-%m-%d %H:%i:%s";
+                gantt.config.date_format = "%Y-%m-%d %H:%i:%s";
 
-function formatDateForGantt(dateStr) {
-    if (!dateStr) {
-        console.error('Date non définie ou vide:', dateStr);
-        return null;
-    }
+                gantt.config.xml_date = "%Y-%m-%dT%H:%i:%s";
+                gantt.config.date_format = "%Y-%m-%dT%H:%i:%s";
+                gantt.init("gantt_here");
+                function isValidDate(dateStr) {
+                    const date = new Date(dateStr);
+                    return !isNaN(date.getTime());
+                }
 
-    let date = new Date(dateStr);  // Conversion en objet Date
-    if (isNaN(date.getTime())) {
-        console.error('Date invalide:', dateStr);
-        return null;
-    }
+                function formatDateForGantt(dateStr) {
+                    if (!dateStr) {
+                        console.error('Date non définie ou vide:', dateStr);
+                        return null;
+                    }
 
-    return date.toISOString();  // Conversion en format ISO 8601
-}
-// Charger les données du Gantt
+                    const date = new Date(dateStr);  // Conversion en objet Date
+                    if (isNaN(date.getTime())) {
+                        console.error('Date invalide:', dateStr);
+                        return null;
+                    }
 
-document.getElementById('projectSelect').addEventListener('change', (event) => {
-    const projectId = event.target.value;
+                    return date.toISOString();  // Conversion en format ISO 8601
+                }
 
-    const url = `/gantt/load/${projectId}`;
-    console.log(`URL appelée : ${url}`);
+        // Charger les données du Gantt
 
-    fetch(url)
-    .then(response => response.json())
-    .then(data => {
-        if (!data || !data.data || !data.links) {
-            console.error("Format de données invalide :", data);
-            return;
-        }
+        document.getElementById('projectSelect').addEventListener('change', (event) => {
+            const projectId = event.target.value;
 
-        console.log("Données du projet avant formatage :", data);
+            const url = `/gantt/load/${projectId}`;
+            console.log(`URL appelée : ${url}`);
 
-        // Formater les dates
-        data.data.forEach(task => {
-            task.start_date = formatDateForGantt(task.start_date);
-            task.end_date = formatDateForGantt(task.end_date);
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (!data || !data.data || !data.links) {
+                    console.error("Format de données invalide :", data);
+                    return;
+                }
+
+                console.log("Données du projet avant formatage :", data);
+
+                // Formater les dates
+                data.data.forEach(task => {
+                    task.start_date = formatDateForGantt(task.start_date);
+                    task.end_date = formatDateForGantt(task.end_date);
+                });
+
+                console.log("Données du projet après formatage :", data);
+
+                gantt.clearAll();
+                gantt.parse(data);  // Charger les données dans Gantt
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des données Gantt :', error);
+            });
+
+
         });
-
-        console.log("Données du projet après formatage :", data);
-
-        gantt.clearAll();
-        gantt.parse(data);  // Charger les données dans Gantt
-    })
-    .catch(error => {
-        console.error('Erreur lors du chargement des données Gantt :', error);
-    });
-
-
-});
-
-
 
         function getDuration(startDate, endDate) {
             let start = new Date(startDate);
@@ -454,17 +456,22 @@ document.getElementById('projectSelect').addEventListener('change', (event) => {
         }
 
         function _getStartEndConfig(task) {
-            console.log('Task start_date:', task.start_date);
-            console.log('Task end_date:', task.end_date);
-
             if (!task.start_date || !task.end_date) {
                 console.error('Start date ou end date manquante pour la tâche:', task);
-                return;
+                return null;
+            }
+
+            let start = new Date(task.start_date);
+            let end = new Date(task.end_date);
+
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                console.error('Dates invalides:', task.start_date, task.end_date);
+                return null;
             }
 
             return {
-                start: new Date(task.start_date),
-                end: new Date(task.end_date)
+                start: start,
+                end: end
             };
         }
 
@@ -500,7 +507,6 @@ document.getElementById('projectSelect').addEventListener('change', (event) => {
             });
         }
 
-
         function deleteProject(projectId) {
             if (!confirm('Êtes-vous sûr de vouloir supprimer ce projet?')) return;
 
@@ -530,8 +536,6 @@ document.getElementById('projectSelect').addEventListener('change', (event) => {
                 alert('Erreur lors de la suppression du projet : ' + error.message);
             });
         }
-
-
 
         document.getElementById('saveButton').addEventListener('click', () => {
             const projectId = document.getElementById('projectSelect').value;

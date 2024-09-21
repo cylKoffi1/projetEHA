@@ -21,18 +21,18 @@ class GanttController extends Controller
     public function load($project_id)
     {
         try {
-            // Charger les tâches pour le projet donné
+            // Charger les tâches et les liens du projet donné
             $tasks = GanttTache::where('project_id', $project_id)->get();
             $links = GanttLien::where('project_id', $project_id)->get();
 
             // Formater les dates en ISO 8601
             $tasks = $tasks->map(function($task) {
                 if (!empty($task->start_date)) {
-                    $task->start_date = Carbon::parse($task->start_date)->toISOString(); // Conversion ISO 8601
+                    $task->start_date = Carbon::parse($task->start_date)->toISOString(); // ISO 8601
                 }
 
                 if (!empty($task->end_date)) {
-                    $task->end_date = Carbon::parse($task->end_date)->toISOString(); // Conversion ISO 8601
+                    $task->end_date = Carbon::parse($task->end_date)->toISOString(); // ISO 8601
                 }
 
                 return $task;
@@ -47,9 +47,6 @@ class GanttController extends Controller
             return response()->json(['error' => 'Erreur lors du chargement des données: ' . $e->getMessage()], 500);
         }
     }
-
-
-
 
 
     public function save(Request $request, $projectId)
@@ -79,9 +76,6 @@ class GanttController extends Controller
 
         return response()->json(['status' => 'success']);
     }
-
-
-
 
     public function delete($projectId)
     {

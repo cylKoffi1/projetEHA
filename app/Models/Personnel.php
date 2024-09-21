@@ -66,4 +66,9 @@ class Personnel extends Model
     {
         return $this->belongsTo(Ministere::class, 'domaine_activite', 'code');
     }
+
+    public function renforcements()
+    {
+        return $this->belongsToMany(Renforcement::class, 'renforcement_beneficiaire', 'code_personnel', 'renforcement_capacite');
+    }
 }

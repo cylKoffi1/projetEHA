@@ -25,6 +25,12 @@
         font-size: 24px;
         cursor: pointer;
     }
+    .select2-results__options{
+        font-size: 12px !important;
+    }
+    .selection{
+        width: 60px !important;
+    }
     #file-display {
         display: flex;
         flex-wrap: wrap;
@@ -86,11 +92,11 @@
             </div>
         </div>
     </div>
-    <div class="row justify-content-center align-items-center my-5">
-        <div class="col-md-8">
+    <div class="row justify-content-center align-items-center ">
+        <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title text-center">Renforcement des capacités</h5>
+                    <h5 class="card-title">Renforcement des capacités</h5>
 
                     @if (session('success'))
                         <div class="alert alert-success text-center">
@@ -111,21 +117,22 @@
 
                         <!-- Row for Title and Dates -->
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-5">
                                 <label for="titre" class="form-label">Titre :</label>
                                 <input type="text" name="titre" required class="form-control" value="{{ old('titre') }}">
                                 @error('titre')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-3"></div>
+                            <div class="col-md-2">
                                 <label for="date_renforcement" class="form-label">Date début :</label>
                                 <input type="date" name="date_renforcement" id="date_renforcements" required class="form-control" value="{{ old('date_renforcement') }}">
                                 @error('date_renforcement')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label for="date_fin" class="form-label">Date fin :</label>
                                 <input type="date" name="date_fin" id="date_fins" required class="form-control" value="{{ old('date_fin') }}">
                                 @error('date_fin')
@@ -148,8 +155,16 @@
                         <!-- Beneficiaires Selection -->
                         <div class="row mb-3">
                             <div class="col-6">
-                                <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label>
-                                <select name="beneficiaires[]" multiple class="form-select" style="width: 100%">
+                                <label for="projets" class="form-label">Sélectionnez les projets :</label><br>
+                                <select name="projets[]" multiple class="form-select" style="width: 50px !important">
+                                    @foreach($projets as $projet)
+                                        <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label><br>
+                                <select name="beneficiaires[]" multiple class="form-select" style="width: 100%;">
                                     @foreach($beneficiaires as $beneficiaire)
                                         @if ($beneficiaire->personnel)
                                             <option value="{{ $beneficiaire->code_personnel }}">
@@ -159,18 +174,10 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-6">
-                                <label for="projets" class="form-label">Sélectionnez les projets :</label>
-                                <select name="projets[]" multiple class="form-select" style="width: 100%">
-                                    @foreach($projets as $projet)
-                                        <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
                         </div>
 
                         <!-- Submit Button -->
-                        <div class="row text-center">
+                        <div class="row text-end">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Enregistrer</button>
                             </div>
@@ -187,15 +194,16 @@
                             <input type="hidden" id="code" name="code">
 
                             <div class="row mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-5">
                                     <label for="titre" class="form-label">Titre :</label>
                                     <input type="text" id="titre" name="titre" required class="form-control">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-3"></div>
+                                <div class="col-md-2">
                                     <label for="date_renforcement" class="form-label">Date début :</label>
                                     <input type="date" id="date_renforcement" name="date_renforcement" required class="form-control">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label for="date_fin" class="form-label">Date fin :</label>
                                     <input type="date" id="date_fin" name="date_fin" required class="form-control">
                                 </div>
@@ -210,8 +218,16 @@
 
                             <div class="row mb-3">
                                 <div class="col-6">
-                                    <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label>
-                                    <select id="beneficiaires" name="beneficiaires[]" multiple class="form-select">
+                                    <label for="projets" class="form-label">Sélectionnez les projets :</label><br>
+                                    <select id="projets" name="projets[]" multiple class="form-select" style="width: 50px !important">
+                                        @foreach($projets as $projet)
+                                            <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label><br>
+                                    <select id="beneficiaires" name="beneficiaires[]" multiple class="form-select" >
                                         @foreach($beneficiaires as $beneficiaire)
                                             @if ($beneficiaire->personnel)
                                                 <option value="{{ $beneficiaire->code_personnel }}">
@@ -221,17 +237,9 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-6">
-                                    <label for="projets" class="form-label">Sélectionnez les projets :</label>
-                                    <select id="projets" name="projets[]" multiple class="form-select">
-                                        @foreach($projets as $projet)
-                                            <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
                             </div>
 
-                            <div class="row text-center">
+                            <div class="row text-end">
                                 <div class="col-12">
                                     <button type="submit" id="formButton" class="btn btn-primary">Modifier</button>
                                 </div>
@@ -292,8 +300,8 @@
                                 @if($renforcement->beneficiaires->isNotEmpty())
                                     <ul>
                                         @foreach($renforcement->beneficiaires as $beneficiaire)
-                                            @if ($beneficiaire && $beneficiaire->personnel) <!-- Vérification de l'existence du bénéficiaire et de personnel -->
-                                                <li>{{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}</li>
+                                            @if ($beneficiaire && $beneficiaire) <!-- Vérification de l'existence du bénéficiaire et de personnel -->
+                                                <li>{{ $beneficiaire->nom }} {{ $beneficiaire->prenom }}</li>
                                             @endif
                                         @endforeach
                                     </ul>

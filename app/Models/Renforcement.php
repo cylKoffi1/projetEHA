@@ -19,7 +19,7 @@ class Renforcement extends Model
     // Relation avec les bénéficiaires
     public function beneficiaires()
     {
-        return $this->belongsToMany(User::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_personnel');
+        return $this->belongsToMany(Personnel::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_personnel');
     }
 
     // Relation avec les projets

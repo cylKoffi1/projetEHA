@@ -309,7 +309,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/projects/store', [EtudeProjet::class, 'storeNaissance'])->name('project.store');
         /***********************VALIDATION***************** */
 
-        Route::get('admin/validationProjet', [EtudeProjet::class, 'validatet'])->name('projects.validate');
+        Route::get('admin/validationProjet', [EtudeProjet::class, 'validation'])->name('projects.validate');
         Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
 
         /********************PLANIFICATION***************** */

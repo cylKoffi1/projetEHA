@@ -108,9 +108,5 @@ class User extends Authenticatable
             ->latest('date')
             ->orderBy('date', 'desc');
     }
-    public function renforcements()
-    {
-        return $this->belongsToMany(Renforcement::class, 'renforcement_beneficiaire', 'code_personnel', 'renforcement_capacite');
-    }
 
 }

@@ -54,7 +54,7 @@
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="">Etudes projets</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Validation</li>
+                            <li class="breadcrumb-item active" aria-current="page">Approuver</li>
                         </ol>
                         <div class="row">
                             <script>
@@ -76,7 +76,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title">Validation de projet</h5>
+                <h5 class="card-title">Approuver projets</h5>
 
             @if (session('success'))
                 <div class="alert alert-success">
