@@ -32,21 +32,21 @@ class RoleAssignmentController extends Controller
         try{
         // Récupérer les données du formulaire
         $role_id = $request->input('role');
-        $consulterRubrique = json_decode($request->input('consulterRubrique'), true);
-        $consulterRubriqueEcran = json_decode($request->input('consulterRubriqueEcran'), true);
-        $consulterSousMenu = json_decode($request->input('consulterSousMenu'), true);
-        $consulterSousMenuEcran = json_decode($request->input('consulterSousMenuEcran'), true);
+        $consulterRubrique = json_decode($request->input('consulterRubrique'));
+        $consulterRubriqueEcran = json_decode($request->input('consulterRubriqueEcran'));
+        $consulterSousMenu = json_decode($request->input('consulterSousMenu'));
+        $consulterSousMenuEcran = json_decode($request->input('consulterSousMenuEcran'));
 
-        $ajouterRubriqueEcran = json_decode($request->input('ajouterRubriqueEcran'), true);
-        $modifierRubriqueEcran = json_decode($request->input('modifierRubriqueEcran'), true);
-        $supprimerRubriqueEcran = json_decode($request->input('supprimerRubriqueEcran'), true);
+        $ajouterRubriqueEcran = json_decode($request->input('ajouterRubriqueEcran'));
+        $modifierRubriqueEcran = json_decode($request->input('modifierRubriqueEcran'));
+        $supprimerRubriqueEcran = json_decode($request->input('supprimerRubriqueEcran'));
 
-        $ajouterSousMenuEcran = json_decode($request->input('ajouterSousMenuEcran'), true);
-        $modifierSousMenuEcran = json_decode($request->input('modifierSousMenuEcran'), true);
-        $supprimerSousMenuEcran = json_decode($request->input('supprimerSousMenuEcran'), true);
+        $ajouterSousMenuEcran = json_decode($request->input('ajouterSousMenuEcran'));
+        $modifierSousMenuEcran = json_decode($request->input('modifierSousMenuEcran'));
+        $supprimerSousMenuEcran = json_decode($request->input('supprimerSousMenuEcran'));
 
 
-        $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer'), true);
+        $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer'));
 
 
         // Récupérer le rôle
@@ -222,16 +222,16 @@ class RoleAssignmentController extends Controller
 
 
 
-        // Return success response
+        // Retourner une réponse JSON
         return response()->json([
             'message' => 'Données enregistrées avec succès.',
             'donnee' => $permissionsAsupprimer,
         ]);
     } catch (\Exception $e) {
-        // Handle errors and return a JSON response
+        // Gérer les erreurs et retourner une réponse JSON avec l'erreur
         return response()->json([
-            'error' => $e->getMessage(),
-        ], 500);
+            'error' => $e->getMessage(), // Vous pouvez personnaliser le message d'erreur selon vos besoins
+        ], 500); // Code d'erreur HTTP 500 pour une erreur interne du serveur
     }
     }
 

@@ -29,6 +29,9 @@
         display: flex;
         flex-wrap: wrap;
     }
+    .hidden {
+        display: none;
+    }
 </style>
 @section('content')
 
@@ -97,16 +100,66 @@
                         @csrf
 
                         <div class="row">
-                            <div class="col-8">
+                            <div class="col-12">
                                 <div class="row">
-                                    <div class="col-4">
-                                        <label for="code">Code</label>
-                                        <input type="text" class="form-control" name="codeProjet" id="codeProjet" readonly value="{{ old('codeProjet', $generatedCodeProjet) }}">
-                                    </div>
+                                        <label class="form-label">Maitre d'ouvrage</label>
+                                        <div class="col" style="text-align: left;">
+                                            <!-- Radio for Public -->
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="maitreOuvrage" id="public" value="1" checked>
+                                                <label class="form-check-label" for="public">Public</label>
+                                            </div>
+                                            <!-- Radio for Private -->
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="maitreOuvrage" id="prive" value="2">
+                                                <label class="form-check-label" for="prive">Privé</label>
+                                            </div>
+                                        </div>
 
+                                        <!-- Dynamic content based on selection -->
+
+                                        <!-- For Public (Select fields) -->
+                                        <div class="col hidden" id="publicFields">
+                                            <div class="mb-3">
+                                                <label for="ministere" class="form-label">Ministère</label>
+                                                <select class="form-select" id="ministere">
+                                                    @foreach ($ministeres as $min)
+                                                    <option value="{{$min->code}}">{{$min->libelle}}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                            <label for="collectivite" class="form-label">Collectivité Territoriale</label>
+                                                <select class="form-select" id="collectivite">
+                                                    @foreach ($collectivites as $collectivite)
+                                                        <option value="{{ $collectivite->code_bailleur }}">{{ $collectivite->libelle_long }}</option>
+                                                    @endforeach
+                                                </select>
+
+                                            </div>
+                                        </div>
+
+                                        <!-- For Private (Radio buttons for Enterprise or Individual) -->
+                                        <div class="col" id="priveFields">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="typeDemandeur" id="radioEntreprise" value="entreprise" checked>
+                                                <label class="form-check-label" for="radioEntreprise">Entreprise</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="typeDemandeur" id="radioParticulier" value="particulier">
+                                                <label class="form-check-label" for="radioParticulier">Particulier</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-3">
+                                            <label for="code">Code</label>
+
+                                            <input type="text" class="form-control" name="codeProjet" id="codeProjet" readonly value="{{ old('codeProjet', $generatedCodeProjet) }}">
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div class="row">
-                                    <div class="col-4">
+                                    <div class="col-4" style="text-align: rigth;">
                                     <label for="title" class="form-label">Nature des travaux</label>
                                     <select class="form-select" name="nature_travaux" id="nature_travaux">
                                         @foreach ($natures as $nature)
@@ -118,17 +171,7 @@
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="col" style="text-align: right;">
-                                    <label class="form-label">Maitre d'oeuvre</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="typeDemandeur" id="radioEntreprise" value="entreprise" checked>
-                                        <label class="form-check-label" for="radioEntreprise">Entreprise</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="typeDemandeur" id="radioParticulier" value="particulier">
-                                        <label class="form-check-label" for="radioParticulier">Particulier</label>
-                                    </div>
-                                </div>
+
                             </div>
 
                         </div><br>
@@ -383,5 +426,54 @@
         });
     });
 </script>
+<script>
+        // Get the elements
+        const publicRadio = document.getElementById('public');
+        const priveRadio = document.getElementById('prive');
+        const publicFields = document.getElementById('publicFields');
+        const priveFields = document.getElementById('priveFields');
 
+        // Function to toggle the fields based on selection
+        function toggleFields() {
+            if (publicRadio.checked) {
+                publicFields.classList.remove('hidden');
+                priveFields.classList.add('hidden');
+            } else if (priveRadio.checked) {
+                priveFields.classList.remove('hidden');
+                publicFields.classList.add('hidden');
+            }
+        }
+
+        // Add event listeners to the radio buttons
+        publicRadio.addEventListener('change', toggleFields);
+        priveRadio.addEventListener('change', toggleFields);
+
+        // Initial toggle based on default selection
+        window.onload = toggleFields;
+    </script>
+     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Capture radio button changes
+            const radios = document.querySelectorAll('input[name="maitreOuvrage"]');
+            const codeProjetInput = document.getElementById('codeProjet');
+            let location = 'CI';  // You can dynamically set this if needed
+            let category = 'EHA'; // You can dynamically set this if needed
+
+            radios.forEach(radio => {
+                radio.addEventListener('change', function () {
+                    const typeFinancement = this.value;  // Get the value 1 (Public) or 2 (Privé)
+                    const year = new Date().getFullYear();
+
+                    // Fetch the latest project number from the server
+                    fetch(`/get-latest-project-number/${location}/${category}/${typeFinancement}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const newNumber = data.newNumber;
+                            // Update the code in the input field
+                            codeProjetInput.value = `${location}${category}${typeFinancement}${year}${newNumber}`;
+                        });
+                });
+            });
+        });
+    </script>
 @endsection

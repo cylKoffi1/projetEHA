@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Approbateur;
+use App\Models\Bailleur;
 use App\Models\Ecran;
 use App\Models\Entreprise;
 use App\Models\EtudeProject;
 use App\Models\EtudeProjectFile;
+use App\Models\Ministere;
 use App\Models\MotDePasseUtilisateur;
 use App\Models\NatureTravaux;
 use App\Models\Particulier;
@@ -28,11 +30,17 @@ class EtudeProjet extends Controller
         //////////////////////////////////ETUDE DE PROJET///////////////////////////////////
         public function createNaissance(Request $request)
         {
-            $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA');
+            // Générer le code par défaut pour Public (1)
+            $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA', 1); // 1 pour Public
+
             $ecran = Ecran::find($request->input('ecran_id'));
             $natures = NatureTravaux::all();
-            return view('etudes_projets.naissance', compact('ecran','generatedCodeProjet','natures'));
+            $ministeres = Ministere::all();
+            $collectivites = Bailleur::where('code_type_bailleur', '06')->get();
+
+            return view('etudes_projets.naissance', compact('ecran','generatedCodeProjet','natures', 'ministeres', 'collectivites'));
         }
+
         const MAX_FILE_SIZE_KB = 2048; // 2 Mo
         const MAX_FILE_SIZE_MB = 2;
         public function storeNaissance(Request $request)
@@ -137,18 +145,30 @@ class EtudeProjet extends Controller
         }
 
 
-
-        private function generateProjectCode($location, $category)
+        public function getLatestProjectNumber($location, $category, $typeFinancement)
         {
             $year = date('Y');
-            $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}_PROJ_{$category}_{$year}_%")
+            $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}PROJ{$category}{$typeFinancement}{$year}_%")
                                         ->orderBy('codeEtudeProjets', 'desc')
                                         ->first();
 
             $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
             $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
 
-            return "{$location}_{$category}_{$year}_{$newNumber}";
+            return response()->json(['newNumber' => $newNumber]);
+        }
+
+        private function generateProjectCode($location, $category, $typeFinancement)
+        {
+            $year = date('Y');
+            $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}PROJ{$category}{$typeFinancement}{$year}_%")
+                                        ->orderBy('codeEtudeProjets', 'desc')
+                                        ->first();
+
+            $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
+            $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
+
+            return "{$location}{$category}{$typeFinancement}{$year}{$newNumber}";
         }
 
         ////////////////////////////////////Validation de projet/////////////////////////////////

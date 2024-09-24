@@ -307,37 +307,39 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         /*****************ETUDE DE PROJET**************** */
         Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
         Route::post('/projects/store', [EtudeProjet::class, 'storeNaissance'])->name('project.store');
+        Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
+
         /***********************VALIDATION***************** */
 
-        Route::get('admin/validationProjet', [EtudeProjet::class, 'validation'])->name('projects.validate');
-        Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
+            Route::get('admin/validationProjet', [EtudeProjet::class, 'validation'])->name('projects.validate');
+            Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
 
         /********************PLANIFICATION***************** */
-        Route::get('admin/planifierProjet', [GanttController::class, 'index']);
-        /*Route::post('/gantt/task', [GanttController::class, 'storeTask'])->name('gantt.task.store');
-        Route::put('/gantt/task/{id}', [GanttController::class, 'updateTask']);
-        Route::delete('/gantt/task/{id}', [GanttController::class, 'deleteTask']);
-        Route::post('/gantt/link', [GanttController::class, 'storeLink']);
-        Route::put('/gantt/link/{id}', [GanttController::class, 'updateLink']);
-        Route::delete('/gantt/link/{id}', [GanttController::class, 'deleteLink']);
-        Route::post('/gantt/save', [GanttController::class, 'saveGantt'])->name('gantt.save');
-        Route::get('/gantt/load/{project_id}', [GanttController::class, 'loadData']);
-        Route::get('/gantt/check/{projectId}', [GanttController::class, 'checkProjectData']);
-        */
-        Route::get('/gantt/load/{projectId}', [GanttController::class, 'load']);
-        Route::post('/gantt/save/{projectId}', [GanttController::class, 'save']);
-        Route::delete('/gantt/delete/{projectId}', [GanttController::class, 'delete']);
+            Route::get('admin/planifierProjet', [GanttController::class, 'index']);
+            /*Route::post('/gantt/task', [GanttController::class, 'storeTask'])->name('gantt.task.store');
+            Route::put('/gantt/task/{id}', [GanttController::class, 'updateTask']);
+            Route::delete('/gantt/task/{id}', [GanttController::class, 'deleteTask']);
+            Route::post('/gantt/link', [GanttController::class, 'storeLink']);
+            Route::put('/gantt/link/{id}', [GanttController::class, 'updateLink']);
+            Route::delete('/gantt/link/{id}', [GanttController::class, 'deleteLink']);
+            Route::post('/gantt/save', [GanttController::class, 'saveGantt'])->name('gantt.save');
+            Route::get('/gantt/load/{project_id}', [GanttController::class, 'loadData']);
+            Route::get('/gantt/check/{projectId}', [GanttController::class, 'checkProjectData']);
+            */
+            Route::get('/gantt/load/{projectId}', [GanttController::class, 'load']);
+            Route::post('/gantt/save/{projectId}', [GanttController::class, 'save']);
+            Route::delete('/gantt/delete/{projectId}', [GanttController::class, 'delete']);
         /********************RENFORCEMENT***************** */
-        Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
-        Route::delete('/renforcementDelete/{id}', [EtudeProjet::class, 'deleteRenforcement']);
-        Route::put('/renforcements/{code}', [EtudeProjet::class, 'update'])->name('renforcements.update');
-        Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
+            Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
+            Route::delete('/renforcementDelete/{id}', [EtudeProjet::class, 'deleteRenforcement']);
+            Route::put('/renforcements/{code}', [EtudeProjet::class, 'update'])->name('renforcements.update');
+            Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
 
         /****************************ACTIVITE CONNEXE******************** */
-        Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
-        Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
-        Route::delete('/activiteDelete/{id}', [EtudeProjet::class, 'deleteActivite']);
-        Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('tavaux_connexes.update');
+            Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
+            Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
+            Route::delete('/activiteDelete/{id}', [EtudeProjet::class, 'deleteActivite']);
+            Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('tavaux_connexes.update');
 
         /**************************** REATTRIBUTION DE PROJET ******************************/
     Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('reattribution.index');

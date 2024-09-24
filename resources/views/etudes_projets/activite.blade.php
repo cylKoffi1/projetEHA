@@ -129,10 +129,9 @@
                                             <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
                                         @endforeach
                                     </select>
-                                </div>
-                                <div class="col-7 d-flex justify-content-end align-items-end">
-                                    <label for="dates">Dates</label>
-                                </div>
+                                </div><div class="col-7 d-flex justify-content-end align-items-end">
+                                <label for="dates">Dates</label>
+                            </div>
 
 
                             </div>
