@@ -164,8 +164,11 @@
     header img {
         height: 57px;
     }
+
+
 </style>
-    <div class="container">
+<body>
+<div class="container">
         <header>
             <div class="row" >
                 <div class="col">
@@ -314,7 +317,7 @@
             <div class="centrale">
                 <label for="">17. Date de fin effective:</label>
                 <input type="date" readonly value="@foreach ($donnees->dateFinEffective as $dates){{ $dates->date ?? '' }}@endforeach">
-            </div><br><br><br><br>
+            </div>
             <h4>VI. Budget </h4>
             <div class="centrale">
                 <label for="">18. Engagement global coût du Projet</label>
@@ -336,27 +339,66 @@
 
         </form>
     </div>
-    <br>
+</body>
+
 
     <center><input type="button" class="btn-imprimer" value="Imprimer"></center>
 
 
     <script src="{{ asset('betsa/js/html2pdf.bundle.js')}}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-    <script>
-var btn = document.querySelector(".btn-imprimer");
-btn.onclick = () => {
-    var element = document.querySelector(".container"); // Sélectionnez la racine de l'élément HTML
-    var options = {
-        filename: 'Fiche_de_collecte.pdf',
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 1.4, logging: false, scrollX: 0, scrollY: -2},
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    html2pdf().from(element).set(options).save();
-}
+<script>
+  const { jsPDF } = window.jspdf;
+  const codeProjet = "{{ $donnees->CodeProjet }}";
+  window.onload = function() {
+    const printButton = document.querySelector('.btn-imprimer');
 
-    </script>
+    printButton.addEventListener('click', function() {
+      // Masquer le bouton avant la capture
+      printButton.style.display = 'none';
+
+      // Capturer la page
+      html2canvas(document.body).then(function(canvas) {
+        const imgData = canvas.toDataURL('image/png');
+
+        const pdf = new jsPDF();
+
+        // Obtenir la taille du PDF (A4 par défaut : 210 x 297 mm)
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        // Définir la largeur de l'image à 80% de la largeur du PDF
+        const imgWidth = pdfWidth * 1.1; // 80% de la largeur du PDF
+
+        // Obtenir la taille de l'image capturée
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        // Calculer le ratio de l'image (largeur / hauteur)
+        const imgRatio = canvasWidth / canvasHeight;
+
+        // Calculer la hauteur correspondante pour maintenir les proportions
+        const imgHeight = imgWidth / imgRatio;
+
+        // Centrer l'image verticalement si nécessaire
+        const xPos = (pdfWidth - imgWidth) / 2;
+        const yPos = (pdfHeight - imgHeight) / 2;
+
+        // Ajouter l'image avec la largeur de 80% et la hauteur proportionnelle
+        pdf.addImage(imgData, 'PNG', xPos, yPos, imgWidth, imgHeight);
+
+        // Réafficher le bouton après la capture
+        printButton.style.display = 'block';
+
+        // Télécharger le PDF
+        pdf.save('fiche_collecte_' + codeProjet + '.pdf');
+      });
+    });
+  };
+</script>
+
 <script>
     $(document).ready(function() {
 
