@@ -448,3 +448,108 @@
     });
 </script>
 @endsection
+<?php
+    public function filterAnnexe(Request $request)
+    {
+        try {
+            // 1. Récupérer le sous-domaine, l'année et l'écran sélectionnés
+            $selectedSousDomaineCode = $request->input('sous_domaine');
+            $selectedYear = $request->input('year');
+            $ecran_id = $request->input('ecran_id');
+
+            // Vérifier que les paramètres nécessaires sont présents
+            if (!$selectedSousDomaineCode || !$selectedYear || !$ecran_id) {
+                return back()->withErrors(['error' => 'Paramètres manquants.']);
+            }
+
+            // 2. Extraire les années et les codes sous-domaines depuis les projets
+            $projets = ProjetEha2::all();
+
+            // Filtrer les projets en fonction de l'année et du sous-domaine sélectionnés
+            $projetsFiltres = $projets->filter(function ($projet) use ($selectedSousDomaineCode, $selectedYear) {
+                // Extraire le code sous-domaine de la position 12 à 15 du CodeProjet
+                $codeSousDomaine = substr($projet->CodeProjet, 12, 4);
+                // Extraire l'année de la position 17 à 21
+                $year = substr($projet->CodeProjet, 17, 4);
+
+                // Vérifier que le projet correspond au sous-domaine et à l'année sélectionnés
+                return $codeSousDomaine == $selectedSousDomaineCode && $year == $selectedYear;
+            });
+
+            // 3. Vérifier si les projets existent dans la table `Caractéristique`
+            $caracteristiques = Caracteristique::whereIn('CodeProjet', $projetsFiltres->pluck('CodeProjet'))->get();
+
+            // Trouver les intersections entre les projets dans `ProjetEha2` et `Caractéristique`
+            $intersections = $projetsFiltres->filter(function ($projet) use ($caracteristiques) {
+                return $caracteristiques->contains('CodeProjet', $projet->CodeProjet);
+            });
+
+            // Obtenir les CodeCaractFamille correspondants
+            $codeCaractFamilles = $caracteristiques->pluck('CodeCaractFamille');
+
+            // Récupérer les tables associées au sous-domaine sélectionné
+            $caracts = SousDomaineTypeCaract::where('CodeSousDomaine', $selectedSousDomaineCode)->get();
+
+            // Vérifier s'il y a des caractéristiques associées
+            if ($caracts->isEmpty()) {
+                return back()->withErrors(['error' => 'Aucun type de table trouvé pour ce sous-domaine.']);
+            }
+
+            // Préparer les colonnes et les données des tables associées
+            $resultats = [];
+            $headerConfig = []; // Pour stocker les configurations des en-têtes
+
+            foreach ($caracts as $caract) {
+                $tableName = $caract->CaractTypeTable;
+
+                // Charger dynamiquement le modèle basé sur le nom de la table
+                $modelClass = "App\\Models\\" . ucfirst($tableName);
+                if (!class_exists($modelClass)) {
+                    return back()->withErrors(['error' => "Le modèle pour la table $tableName n'existe pas."]);
+                }
+
+                $model = app($modelClass);
+                // Filtrer les données en fonction des CodeCaractFamille
+                $data = $model::whereIn('CodeCaractFamille', $codeCaractFamilles)->get();
+
+                // Remplacer les codes de natureTravaux par leur libellé
+                foreach ($data as $row) {
+                    // Remplacement de la valeur de natureTravaux par son libellé
+                    if (isset($row->natureTravaux)) {
+                        $libelleNatureTravaux = NatureTravaux::getLibelleByCode($row->natureTravaux);
+                        $row->natureTravaux = $libelleNatureTravaux ?: $row->natureTravaux; // Si pas de libellé trouvé, garde le code
+                    }
+
+                    // Remplacement de la valeur de typeCaptage par son libellé
+                    if (isset($row->typeCaptage)) {
+                        $libelleTypeCaptage = TypeCaptage::getLibelleByCode($row->typeCaptage);
+                        $row->typeCaptage = $libelleTypeCaptage ?: $row->typeCaptage; // Si pas de libellé trouvé, garde le code
+                    }
+                }
+
+                // Récupérer les colonnes de la table actuelle
+                $columns = \Schema::getColumnListing($model->getTable());
+
+                // Configuration dynamique des en-têtes
+                $headerName = $this->formatHeaderName($tableName); // Formater le nom de l'en-tête
+                $headerConfig[] = [
+                    'name' => $headerName,
+                    'colspan' => count($columns), // Mettez à jour avec le nombre de colonnes
+                ];
+
+                // Stocker les résultats sous forme de table
+                $resultats[$headerName] = [
+                    'data' => $data,
+                    'columns' => $columns,
+                ];
+            }
+
+            // Passer les résultats, l'année, et le sous-domaine à la vue
+            return view('partials.result_table', compact('headerConfig', 'resultats', 'selectedSousDomaineCode', 'selectedYear'));
+
+        } catch (\Exception $e) {
+            // Afficher l'erreur dans les logs
+            \Log::error('Erreur lors de l\'exécution de filterAnnexe: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Une erreur est survenue lors du traitement.']);
+        }
+    }

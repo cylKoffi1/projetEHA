@@ -2,12 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionBeneficiairesProjet;
 use App\Models\ActionMener;
 use App\Models\AgenceExecution;
 use App\Models\BailleursProjet;
+use App\Models\Caracteristique;
+use App\Models\Departement;
+use App\Models\District;
 use App\Models\Ecran;
+use App\Models\Localite;
+use App\Models\NatureTravaux;
 use App\Models\ProjetAgence;
 use App\Models\ProjetEha2;
+use App\Models\Region;
+use App\Models\Sous_prefecture;
+use App\Models\SousDomaine;
+use App\Models\SousDomaineTypeCaract;
+use App\Models\typeCaptage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -139,7 +150,6 @@ class AnnexeController extends Controller
         $projets = ProjetEha2::all();
         return view('ficheCollecte', compact('ecran', 'projets'));
     }
-
     public function FicheCollecteImprimer($code){
         // Utilisez le code pour récupérer les données de votre base de données
         $donnees = ProjetEha2::where('CodeProjet', $code)->first();
@@ -169,5 +179,257 @@ class AnnexeController extends Controller
         // Retourner les détails du projet au format JSON
         return response()->json($projectDetails);
     }
+    public function annexe3(Request $request)
+    {
+        // 1. Récupérer l'écran en fonction de l'ID passé dans la requête
+        $ecran = Ecran::find($request->input('ecran_id'));
 
+        // 2. Récupérer tous les sous-domaines
+        $sousDomaines = SousDomaine::all();
+
+        // 3. Extraire les années disponibles depuis les codes projets
+        $projets = ProjetEha2::all();
+        $years = $projets->pluck('CodeProjet')->map(function ($code) {
+            // Extraire l'année en utilisant substr pour prendre les bons caractères
+            return substr($code, 17, 4); // Extraire l'année à partir de la position 17, longueur de 4 caractères
+        })->unique()->filter(); // Filtrer pour ne conserver que les années distinctes et non nulles
+
+        // 4. Extraire également les codes sous-domaine depuis le CodeProjet (position 11 à 15)
+        $codeSousDomaines = $projets->pluck('CodeProjet')->map(function ($code) {
+            return substr($code, 12, 4); // Extraire le code sous-domaine à partir de la position 11, longueur de 4 caractères
+        })->unique()->filter(); // Filtrer pour avoir des codes distincts
+
+        // 5. Passer les données récupérées à la vue
+        return view('annexe3', compact('ecran', 'sousDomaines', 'years', 'codeSousDomaines'));
+    }
+    public function filterAnnexe(Request $request){
+    try {
+        // Pour vérifier les données envoyées, ajoutez des logs
+        \Log::info('Données reçues: ', $request->all());
+
+        // 1. Validation des entrées
+        $validatedData = $request->validate([
+            'sous_domaine' => 'required|string',
+            'year' => 'required|integer',
+            'ecran_id' => 'required|integer'
+        ]);
+
+        // Logique pour récupérer les données en fonction des paramètres
+        $sousDomaine = $validatedData['sous_domaine'];
+        $year = $validatedData['year'];
+        $ecranId = $validatedData['ecran_id'];
+
+        $selectedSousDomaineCode = $validatedData['sous_domaine'];
+        $selectedYear = $validatedData['year'];
+        // 2. Récupérer tous les sous-domaines
+        $sousDomaines = SousDomaine::all(); // Initialisation ici
+
+        // 3. Extraire les projets
+        $projets = ProjetEha2::all();
+
+        // Filtrer les projets en fonction de l'année et du sous-domaine sélectionnés
+        $projetsFiltres = $projets->filter(function ($projet) use ($sousDomaine, $year) {
+            $codeSousDomaine = substr($projet->CodeProjet, 12, 4);
+            $projectYear = substr($projet->CodeProjet, 17, 4);
+            return $codeSousDomaine == $sousDomaine && $projectYear == $year;
+        });
+
+        if ($projetsFiltres->isEmpty()) {
+            return back()->withErrors(['error' => 'Aucun projet trouvé pour l\'année et le sous-domaine sélectionnés.']);
+        }
+
+        // 4. Récupérer les caractéristiques liées aux projets
+        $caracteristiques = Caracteristique::whereIn('CodeProjet', $projetsFiltres->pluck('CodeProjet'))->get();
+
+        if ($caracteristiques->isEmpty()) {
+            return back()->withErrors(['error' => 'Aucune caractéristique trouvée pour les projets sélectionnés.']);
+        }
+        // Récupérer les tables associées au sous-domaine sélectionné
+        $caracts = SousDomaineTypeCaract::where('CodeSousDomaine', $selectedSousDomaineCode)->get();
+        if ($caracts->isEmpty()) {
+            return back()->withErrors(['error' => 'Aucun type de table trouvé pour ce sous-domaine.']);
+        }
+        // 5. Préparer les résultats et les en-têtes
+        $resultats = [];
+        $headerConfig = [];
+        $codeCaractFamilles = $caracteristiques->pluck('CodeCaractFamille');
+
+
+            foreach ($caracts as $caract) {
+                $tableName = $caract->CaractTypeTable;
+                $modelClass = "App\\Models\\" . ucfirst($tableName);
+
+                if (!class_exists($modelClass)) {
+                    return back()->withErrors(['error' => "Le modèle pour la table $tableName n'existe pas."]);
+                }
+
+                $model = app($modelClass);
+                $data = $model::whereIn('CodeCaractFamille', $codeCaractFamilles)->get();
+
+                // Remplacement des libellés pour natureTravaux et typeCaptage
+                $data->each(function ($row) {
+                    if (isset($row->natureTravaux)) {
+                        $row->natureTravaux = NatureTravaux::getLibelleByCode($row->natureTravaux) ?: $row->natureTravaux;
+                    }
+
+                    if (isset($row->typeCaptage)) {
+                        $row->typeCaptage = TypeCaptage::getLibelleByCode($row->typeCaptage) ?: $row->typeCaptage;
+                    }
+                });
+
+                $columns = \Schema::getColumnListing($model->getTable());
+                $columns = array_filter($columns, fn($column) => $column !== 'CodeCaractFamille');
+
+                $headerName = $this->formatHeaderName($tableName);
+                $headerConfig[] = [
+                    'name' => $headerName,
+                    'colspan' => count($columns),
+                ];
+
+                $resultats[$headerName] = [
+                    'data' => $data,
+                    'columns' => $columns,
+                ];
+            }
+
+            // 6. Récupérer les bénéficiaires liés aux projets
+            $beneficiaires = ActionBeneficiairesProjet::whereIn('CodeProjet', $projetsFiltres->pluck('CodeProjet'))->get();
+
+            foreach ($beneficiaires as $beneficiaire) {
+                $typeBeneficiaire = $beneficiaire->type_beneficiaire;
+                $columns = ['N°', 'Districts', 'Régions', 'Départements', 'Sous-préfectures/Communes'];
+                $data = [];
+
+                // Récupérer les données spécifiques en fonction du type de bénéficiaire
+                switch ($typeBeneficiaire) {
+                    case 'district':
+                        $district = District::where('code', $beneficiaire->beneficiaire_id)->first(); // Utilisation de first() pour un seul objet
+                        if ($district) {
+                            $data[] = [
+                                'Districts' => $district->libelle,
+                                'Régions' => '',
+                                'Départements' => '',
+                                'Sous-préfectures/Communes' => ''
+                            ];
+                        }
+                        break;
+
+                    case 'departement':
+                        $departement = Departement::where('code', $beneficiaire->beneficiaire_id)->first(); // Utilisation de first()
+                        if ($departement) {
+                            $region = $departement->region; // Assurez-vous que la relation est définie
+                            $district = $region->district; // Assurez-vous que la relation est définie
+
+                            $data[] = [
+                                'Districts' => $district->libelle ?? '', // Utilisation de ?? pour éviter les erreurs si null
+                                'Régions' => $region->libelle ?? '',
+                                'Départements' => $departement->libelle,
+                                'Sous-préfectures/Communes' => ''
+                            ];
+                        }
+                        break;
+
+                    case 'region':
+                        $region = Region::where('code', $beneficiaire->beneficiaire_id)->first(); // Utilisation de first()
+                        if ($region) {
+                            $district = $region->district; // Assurez-vous que la relation est définie
+                            $data[] = [
+                                'Districts' => $district->libelle ?? '',
+                                'Régions' => $region->libelle,
+                                'Départements' => '',
+                                'Sous-préfectures/Communes' => ''
+                            ];
+                        }
+                        break;
+
+                    case 'sous_prefecture':
+                        $sousPrefecture = Sous_prefecture::where('code', $beneficiaire->beneficiaire_id)->first(); // Utilisation de first()
+                        if ($sousPrefecture) {
+                            $departement = $sousPrefecture->departement; // Vérifiez que la relation est correcte
+                            $region = $departement->region; // Vérifiez que la relation est correcte
+                            $district = $region->district; // Vérifiez que la relation est correcte
+
+                            $data[] = [
+                                'Districts' => $district->libelle ?? '',
+                                'Régions' => $region->libelle,
+                                'Départements' => $departement->libelle,
+                                'Sous-préfectures/Communes' => $sousPrefecture->libelle
+                            ];
+                        }
+                        break;
+
+                    case 'localite':
+                        $localite = Localite::where('code', $beneficiaire->beneficiaire_id)->first(); // Utilisation de first()
+                        if ($localite) {
+                            $sousPrefecture = Sous_prefecture::find($localite->code_sous_prefecture); // Utilisation de find() pour récupérer la sous-préfecture
+                            if ($sousPrefecture) {
+                                $departement = $sousPrefecture->departement; // Vérifiez que la relation est correcte
+                                $region = $departement->region; // Vérifiez que la relation est correcte
+                                $district = $region->district; // Vérifiez que la relation est correcte
+
+                                $data[] = [
+                                    'Districts' => $district->libelle ?? '',
+                                    'Régions' => $region->libelle,
+                                    'Départements' => $departement->libelle,
+                                    'Sous-préfectures/Communes' => $localite->libelle
+                                ];
+                            }
+                        }
+                        break;
+
+                    case 'etablissement':
+                        // Ajouter la logique pour les établissements ici si nécessaire
+                        break;
+
+                    default:
+                        // Gérer le cas par défaut si nécessaire
+                        break;
+                }
+
+
+                $resultats[$typeBeneficiaire] = [
+                    'data' => $data,
+                    'columns' => $columns,
+                ];
+
+                $headerConfig[] = [
+                    'name' => ucfirst($typeBeneficiaire),
+                    'colspan' => count($columns),
+                ];
+            }
+
+            // Passer les résultats à la vue
+            return view('annexe3', compact('sousDomaines', 'headerConfig', 'resultats', 'sousDomaine', 'year'));
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de l\'exécution de filterAnnexe: ' . $e->getMessage());
+            return response()->json(['error' => 'Une erreur est survenue lors du traitement.'. $e->getMessage()], 500);
+            return response()->json(['error' => 'Message d\'erreur'], 400);
+
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    private function formatHeaderName($type)
+    {
+        // Supprimer le préfixe 'caract' et transformer en format lisible
+        if (strpos($type, 'caract') === 0) {
+            $cleanedName = substr($type, 6); // Enlever 'caract'
+            // Remplacer les underscores par des espaces et mettre en forme
+            $cleanedName = str_replace('_', ' ', $cleanedName);
+            return ucfirst($cleanedName);
+        }
+        return $type; // Retourner tel quel si le préfixe ne correspond pas
+    }
 }
+

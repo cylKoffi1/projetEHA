@@ -360,6 +360,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('admin/projet/edition/ficheImprimer/{code}',[AnnexeController::class, 'FicheCollecteImprimer'])->name('Annexe2.FicheCollecte');
         Route::get('/getProjectDetails', [AnnexeController::class, 'getProjectDetails']);
 
+         /**************************** GESTION DES ANNEXE 3 ******************************/
+    // Route basique pour accéder à la page annexe3
+    Route::get('admin/annexe3', [AnnexeController::class, 'annexe3'])->name('annexe.page');
+    Route::get('/filter-annexe', [AnnexeController::class, 'filterAnnexe'])->name('filterAnnexe');
+
     //***************** REALISATION ************* */
     Route::get('admin/realise/PramatreRealise', [RealiseProjetController::class, 'PramatreRealise']);
     Route::get('admin/realise', [RealiseProjetController::class, 'realise']);
@@ -471,7 +476,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
 
 
-    });
+});
 
 
 

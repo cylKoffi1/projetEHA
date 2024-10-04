@@ -9,30 +9,9 @@
 @endif
 
 <style>
-    .invalid-feedback {
-        display: block;
-        width: 100%;
-        margin-top: 6px;
-        font-size: 80%;
-        color: #dc3545;
-        /* Couleur du texte pour les messages d'erreur */
-    }
-    fieldset {
-            margin-bottom: 20px;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
-    .text-center {
-        background-color: #5c76cc;
-        color: white;
-    }
-    fieldset .row .col label {
-        width: 100%;
-    }
+
 
 </style>
-
 
 <section id="multiple-column-form">
     <div class="page-heading">
@@ -50,7 +29,7 @@
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="">Editions</a></li>
-                            <li class="breadcrumb-item"><a href="">Annexe 2</a></li>
+                            <li class="breadcrumb-item"><a href="">Annexe 3</a></li>
                             <li class="breadcrumb-item active" aria-current="page">Fiche de collecte</li>
 
                         </ol>
@@ -66,9 +45,7 @@
                                 var currentDate = new Date();
                                 return currentDate.toLocaleString(); // Vous pouvez utiliser une autre méthode pour le formatage
                             }
-
                         </script>
-
                     </div>
                 </div>
             </div>
@@ -79,9 +56,7 @@
             <div class="card">
                 <div class="card-header">
                     <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                        <h5 class="card-title">Annexe 2: Formulaire de collecte de données</h5>
-
-
+                        <h5 class="card-title">Annexe 3: Formulaire de collecte de données</h5>
                     </div>
                     <div style="text-align: center;">
                         <h5 class="card-title"></h5>
@@ -89,41 +64,48 @@
                 </div>
                 <div class="card-content">
                     <div class="card-body">
-                        <fieldset >
-                            <div class="row">
-                                <div class="col-3" style="width: 28%;">
-                                    <label for="code_projet">Année</label>
-                                    <select name="code_projet" id="code_projet" class="form-select col-35">
-                                        <option value=""></option>
-                                        @foreach ($projets as $projet)
-                                        <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-2">
-                                    <button type="button" class="btn btn-primary" style="width: 125px;" onclick="loadProjectDetails()">
-                                        <i class="bi bi-search"></i>Afficher
-                                    </button>
-                                </div>
-                                <div class="col">
-                                    <button type="button" class="btn btn-danger"  onclick="clearProjectDetails()">
-                                        <i class="bi bi-trash"></i> Vider les champs
-                                    </button>
-                                </div>
-                                <div class="col">
-                                    <button type="button" class="btn btn-secondary" style="width: 125px;" onclick="printerDocument()">
-                                        <i class="bi bi-printer"></i> imprimer
-                                    </button>
-                                </div>
-                                <div class="col">
-                                    <button type="button" class="btn btn-secondary" style="width: 125px;" onclick="generatePDF()">
-                                        <i class="bi bi-download"></i> télécharger en Pdf
-                                    </button>
-                                </div>
+                        <!-- Sélecteur pour le sous-domaine -->
+                        <div class="row align-items-end">
+                            <div class="col-4">
+                                <label for="sous_domaine">Sous-Domaine :</label>
+                                <select id="sous_domaine" name="sous_domaine" class="form-control" required>
+                                    @foreach($sousDomaines as $sousDomaine)
+                                        <option value="{{ $sousDomaine->code }}">{{ $sousDomaine->libelle }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
-                        </fieldset>
+                            <!-- Sélecteur pour l'année -->
+                            <div class="col-2">
+                                <label for="year">Année :</label>
+                                <select id="year" name="year" class="form-control" required>
+                                    @foreach($years as $year)
+                                        <option value="{{ $year }}">{{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
+                            <!-- Bouton Filtrer sur la même ligne -->
+                            <div class="col-2">
+                                <button id="filter-button" class="btn btn-primary w-100">Filtrer</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div id="result-container" class="mt-4">
+                            <table class="table table-striped table-bordered" id="table1" cellspacing="0" style="width: 100%">
+                                <thead id="table-header">
+                                    <!-- Les en-têtes seront insérés ici via JavaScript -->
+                                </thead>
+                                <tbody id="table-body">
+                                    <!-- Les données seront insérées ici via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -131,103 +113,153 @@
     </div>
 
 </section>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
 <script>
-    $(document).ready(function() {
+$(document).ready(function() {
+    $('#filter-button').on('click', function() {
+        var sousDomaine = $('#sous_domaine').val();
+        var year = $('#year').val();
+        var ecranId = "{{ $ecran->id }}"; // Récupération de l'ID de l'écran dynamique
 
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe 1: infomations principales');
-    });
-    //fonction pour récuperer les informations liées au code projet
-    function loadProjectDetails() {
-        // Récupérer le code du projet sélectionné
-        var selectedCodeProjet = document.getElementById('code_projet').value;
+        // Vérifier si les champs obligatoires sont vides avant l'envoi de la requête
+        if (!sousDomaine || !year || !ecranId) {
+            alert('Veuillez sélectionner tous les champs obligatoires.');
+            return;
+        }
 
-        // Vérifier si le code du projet est sélectionné
-        if (selectedCodeProjet) {
-            // Faire une requête AJAX pour récupérer les détails du projet à partir du fichier JSON
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', "/getProjectDetails?code_projet=" + selectedCodeProjet, true);
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === XMLHttpRequest.DONE) {
-                    if (xhr.status === 200) {
-                       // Convertir la réponse JSON en objet JavaScript
-                        var projetDetails = JSON.parse(xhr.responseText);
+        console.log("Sous-domaine: ", sousDomaine); // Ajouter un log pour le sous-domaine
+        console.log("Année: ", year); // Ajouter un log pour l'année
+        console.log("Ecran ID: ", ecranId); // Ajouter un log pour l'ID de l'écran
 
-                        // Afficher les détails du projet dans les champs correspondants
-                        document.getElementById('nom_contact').value = projetDetails[0]?.projet_chef_projet[0]?.personne[0]?.nom || '---';
-                        document.getElementById('adresse_contact').value = projetDetails[0]?.projet_chef_projet[0]?.personne[0]?.addresse || '---';
-                        document.getElementById('tel_contact').value = projetDetails[0]?.projet_chef_projet[0]?.personne[0]?.telephone || '---';
-                        document.getElementById('email_contact').value = projetDetails[0]?.projet_chef_projet[0]?.personne[0]?.email || '---';
+        // Envoi de la requête AJAX
+        $.ajax({
+            url: `{{ route("filterAnnexe") }}`, // Correct usage of template literals
+            type: 'GET', // Changer à GET
+            dataType: 'json',
+            data: {
+                sous_domaine: sousDomaine,
+                year: year,
+                ecran_id: ecranId
+            },
+            success: function(response) {
+                console.log(response);
 
-                        var bailleursString = projetDetails[0]?.bailleurs_projets.map(bailleur => bailleur.bailleurss[0]?.libelle_long).join(', ');
-                        document.getElementById('bailleur_fonds').value = bailleursString || '---';
-                        document.getElementById('objectif_global').value = projetDetails[0]?.Objectif_global || '---';
-                        document.getElementById('statut_programme_projet').value = projetDetails[0]?.projet_statut_projet[0]?.statut[0]?.libelle || '---';
+                if (response.error) {
+                    alert(response.error);
+                    return;
+                }
 
-                        var ministereNonNuls = projetDetails[0]?.ministere_projet.filter(ministere => ministere.ministere !== null);
-                        var ministereTutelleString = ministereNonNuls.map(ministere => ministere.ministere.libelle).join(', ');
-                        document.getElementById('ministere_tutelle').value = ministereTutelleString || '---';
-                        
-                        // Affichage des agences d'exécution (niveau 1)
-                        var agencesNiveau1String = projetDetails[0]?.projet_agence.filter(agence => agence.niveau === 1)
-                            .map(agence => agence.agence_execution[0]?.nom_agence).join(', ');
-                        document.getElementById('agence_execution_niveau1').value = agencesNiveau1String || '---';
+                // Vider les anciens résultats
+                $('#table-header').empty();
+                $('#table-body').empty();
 
-                        // Affichage des agences d'exécution (niveau 2)
-                        var agencesNiveau2String = projetDetails[0]?.projet_agence.filter(agence => agence.niveau === 2)
-                            .map(agence => agence.agence_execution[0]?.nom_agence).join(', ');
-                        document.getElementById('agence_execution_niveau2').value = agencesNiveau2String || '---';
-                        document.getElementById('date_demarrage_prevue').value = projetDetails[0]?.Date_demarrage_prevue || '---';
-                        document.getElementById('date_fin_prevue').value = projetDetails[0]?.date_fin_prevue || '---';
-                    } else {
-                        console.error('Erreur de chargement des détails du projet: ' + xhr.status);
+                // Construire les en-têtes du tableau
+                var headerRow1 = '<tr>';
+                var headerRow2 = '<tr>';
+                headerRow1 += `
+                    <th rowspan="2">N°</th>
+                    <th rowspan="2">Districts</th>
+                    <th rowspan="2">Régions</th>
+                    <th rowspan="2">Départements</th>
+                    <th rowspan="2">Sous-préfectures/Communes</th>
+                `;
+
+                response.headerConfig.forEach(function(header) {
+                    headerRow1 += '<th colspan="' + header.colspan + '">' + header.name + '</th>';
+                });
+
+                headerRow1 += `
+                    <th rowspan="2">Nb de ménages desservis</th>
+                    <th rowspan="2">Coût en F CFA (XOF)</th>
+                `;
+                headerRow1 += '</tr>';
+
+                // Ajouter les en-têtes des colonnes dynamiques
+                headerRow2 = '<tr>';
+                for (var key in response.resultats) {
+                    if (response.resultats.hasOwnProperty(key)) {
+                        var resultat = response.resultats[key];
+                        resultat.columns.forEach(function(columnName) {
+                            headerRow2 += '<th>' + columnName + '</th>';
+                        });
                     }
                 }
-            };
-            xhr.send();
-        } else {
-            // Afficher un message d'erreur si aucun projet n'est sélectionné
-            alert('Veuillez sélectionner un code de projet.');
-        }
-    }
+                headerRow2 += '</tr>';
 
-    function clearProjectDetails(){
-        document.getElementById('nom_contact').value="";
-        document.getElementById('adresse_contact').value = null;
-        document.getElementById('tel_contact').value = null;
-        document.getElementById('email_contact').value = null;
-        document.getElementById('bailleur_fonds').value = null;
-        document.getElementById('objectif_global').value = null;
-        document.getElementById('statut_programme_projet').value = null;
-        document.getElementById('ministere_tutelle').value = null;
-        document.getElementById('agence_execution_niveau1').value = null;
-        document.getElementById('agence_execution_niveau2').value = null;
-        document.getElementById('date_demarrage_prevue').value = null;
-        document.getElementById('date_fin_prevue').value = null;
+                $('#table-header').append(headerRow1);
+                $('#table-header').append(headerRow2);
 
-    }
-    function generatePDF() {
-        // Créer une instance de jsPDF
-        const doc = new jsPDF();
+                // Remplir le corps du tableau
+                var rowIndex = 1;
+                for (var key in response.resultats) {
+                    if (response.resultats.hasOwnProperty(key)) {
+                        var resultat = response.resultats[key];
+                        resultat.data.forEach(function(dataRow) {
+                            var row = '<tr>';
+                            row += `<td>${rowIndex++}</td>`;
+                            row += `<td>${dataRow['Districts'] || ''}</td>`;
+                            row += `<td>${dataRow['Régions'] || ''}</td>`;
+                            row += `<td>${dataRow['Départements'] || ''}</td>`;
+                            row += `<td>${dataRow['Sous-préfectures/Communes'] || ''}</td>`;
+                            resultat.columns.forEach(function(columnName) {
+                                row += '<td>' + (dataRow[columnName] ?? '') + '</td>';
+                            });
+                            row += `<td>${dataRow['Nb de ménages desservis'] || ''}</td>`;
+                            row += `<td>${dataRow['Coût en F CFA (XOF)'] || ''}</td>`;
+                            row += '</tr>';
+                            $('#table-body').append(row);
+                        });
+                    }
+                }
 
-        // Récupérer le contenu de la section à convertir en PDF
-        const pdfContent = document.getElementById('pdfContent');
+                if ($.fn.DataTable.isDataTable('#table1')) {
+                    $('#table1').DataTable().clear().destroy();
+                }
+                $('#table1').DataTable({
+                    dom: 'Bfrtip',
+                    buttons: [
+                        {
+                            extend: 'excelHtml5',
+                            title: 'Annexe 3',
+                            messageTop: '{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}'
+                        }
+                    ]
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Erreur AJAX:', {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText,
+                    statusCode: xhr.status,
+                    headers: xhr.getAllResponseHeaders()
+                });
 
-        // Convertir le contenu HTML de la section en PDF
-        doc.html(pdfContent, {
-            callback: function (doc) {
-                // Enregistrer le PDF
-                doc.save('document.pdf');
+                let errorMessage = 'Une erreur inconnue est survenue.';
+                if (xhr.status === 404) {
+                    errorMessage = 'Page non trouvée (404). Vérifiez l\'URL.';
+                } else if (xhr.status === 500) {
+                    errorMessage = 'Erreur interne du serveur (500).';
+                } else if (xhr.responseJSON) {
+                    errorMessage = xhr.responseJSON.error || xhr.responseJSON.message || errorMessage;
+                } else {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || response.message || errorMessage;
+                    } catch (e) {
+                        errorMessage = xhr.responseText || errorMessage;
+                    }
+                }
+                alert('Erreur: ' + errorMessage);
             }
         });
-    }
-
-    function printerDocument(){
-        {
-            window.print(); 
+    });
+});
 
 
-        }
-    }
 </script>
+
 
 @endsection

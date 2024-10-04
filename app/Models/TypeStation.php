@@ -13,4 +13,5 @@ class TypeStation extends Model
     protected $table = 'type_station'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
+    protected $fillable = ['code', 'libelle'];
 }

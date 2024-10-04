@@ -134,8 +134,6 @@ class ProjetController extends Controller
                    // Récupérer la région et le district
                 $regions = Region::where('code', $codeRegion->code_region)->get();
                  $districts = District::where('code', $codeDistrict->code_district)->get();
-
-
         }
 
         $codeProjet = $request->input('code_projet');

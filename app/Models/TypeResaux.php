@@ -13,4 +13,5 @@ class TypeResaux extends Model
     protected $table = 'type_reseau'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
+    protected $fillable = ['code', 'libelle'];
 }

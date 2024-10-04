@@ -164,7 +164,44 @@
     header img {
         height: 57px;
     }
+      /* Responsivité */
+      @media (min-width: 768px) {
+            header img {
+                max-width: 150px;
+            }
 
+            .centrale {
+                grid-template-columns: auto 1fr;
+            }
+
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="date"],
+            select,
+            textarea {
+                font-size: 16px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="date"],
+            select,
+            textarea {
+                font-size: 18px;
+            }
+
+            .container {
+                padding: 30px;
+            }
+
+            h4 {
+                margin-top: 30px;
+            }
+        }
 
 </style>
 <body>

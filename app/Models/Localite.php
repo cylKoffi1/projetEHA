@@ -10,7 +10,7 @@ class Localite extends Model
     use HasFactory;
     public $timestamps = false;
     protected $table = 'localite'; // Nom de la table
-    protected $primaryKey = 'code'; 
+    protected $primaryKey = 'code';
     protected $keyType = 'string';
 
     public function Sous_prefecture()

@@ -285,26 +285,26 @@
                                     </div>
 
                                 </div>
-                                <div class="row">
-                                    <div class="col">
-                                            <label for="domaine">Domaine:</label>
-                                            <select id="domaine" class="form-select" name="domaine">
-                                                <option value="">Sélectionner un domaine</option>
-                                                @foreach ($domaine_Info as $domaine)
-                                                <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
+                                    <div class="row">
+                                        <div class="col">
+                                                <label for="domaine">Domaine:</label>
+                                                <select id="domaine" class="form-select" name="domaine">
+                                                    <option value="">Sélectionner un domaine</option>
+                                                    @foreach ($domaine_Info as $domaine)
+                                                    <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        <div class="col">
+                                            <label for="sous_domaine">Sous-domaine:</label>
+                                            <select id="sous_domaine" name="sous_domaine" class="form-select">
+                                                <option value="">Sélectionner un sous-domaine</option>
+                                                @foreach ($sous_domaine_Info as $sous_dom)
+                                                <option value="{{$sous_dom->code}}">{{$sous_dom->libelle}}</option>
                                                 @endforeach
                                             </select>
                                         </div>
-                                    <div class="col">
-                                        <label for="sous_domaine">Sous-domaine:</label>
-                                        <select id="sous_domaine" name="sous_domaine" class="form-select">
-                                            <option value="">Sélectionner un sous-domaine</option>
-                                            @foreach ($sous_domaine_Info as $sous_dom)
-                                            <option value="{{$sous_dom->code}}">{{$sous_dom->libelle}}</option>
-                                            @endforeach
-                                        </select>
                                     </div>
-                                </div>
 
                             </div>
 

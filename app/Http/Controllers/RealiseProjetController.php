@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Acquifere;
 use App\Models\ActionBeneficiairesProjet;
+use App\Models\Bassin;
 use App\Models\Beneficiaire;
 use App\Models\Caracteristique;
 use App\Models\CaractInstrumentation;
@@ -14,6 +16,7 @@ use App\Models\CaractReseau;
 use App\Models\CaractReseauCollect;
 use App\Models\CaractReservoir;
 use App\Models\CaractUniteTraitement;
+use App\Models\CourDeau;
 use App\Models\CouvrirRegion;
 use App\Models\DateDebutEffective;
 use App\Models\DateFinEffective;
@@ -35,6 +38,7 @@ use App\Models\NiveauAccesDonnees;
 use App\Models\ProjetActionAMener;
 use App\Models\ProjetEha2;
 use App\Models\ProjetStatutProjet;
+use App\Models\Station;
 use App\Models\typeCaptage;
 use App\Models\TypeInstrument;
 use App\Models\TypeResaux;
@@ -58,6 +62,10 @@ class RealiseProjetController extends Controller
 
     public function PramatreRealise(Request $request)
     {
+        $coursEaux = CourDeau::all();
+        $aquiferes = Acquifere::all();
+        $bassins = Bassin::all();
+
         $typeCaptages = TypeCaptage::all();
         $uniteTraitements = UniteTraitement::all();
         $materielStockages = MaterielStockage::all();
@@ -85,6 +93,9 @@ class RealiseProjetController extends Controller
 
         // Transmettre les données à la vue
         return view('parametreRealise', ['ecran' => $ecran,
+            'bassins'=>$bassins,
+            'aquiferes'=>$aquiferes,
+            'coursEaux'=>$coursEaux,
             'codeProjet2'=>$codeProjet2,
             'typeInstruments' => $typeInstruments,
             'codeFamilleInfrastructure' => $codeFamilleInfrastructure,
@@ -483,6 +494,14 @@ class RealiseProjetController extends Controller
                         'nombre' => $request->input('nombreInstrument'),
                         'natureTraveaux' => $request->input('natureTravauxCaptage9'),
 
+                    ]);
+                    Station::create([
+                        'CodeProjet'=> $request->input('code_projet'),
+                        'Nom' => $request->input('nomStation'),
+                        'Code_international' => $request->input('codeInternational'),
+                        'ID_Aquifère' => $request->input('aquifere'),
+                        'ID_Bassin' => $request->input('bassin'),
+                        'ID_Cours_d_eau' => $request->input('coursEau'),
                     ]);
                     break;
 

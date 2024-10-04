@@ -11,7 +11,7 @@ class SousDomaine extends Model
 
     public $timestamps = false;
 
-    protected $table = 'sous_domaine'; // Nom de la table   
+    protected $table = 'sous_domaine'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
 
@@ -19,4 +19,5 @@ class SousDomaine extends Model
     {
         return $this->belongsTo(Domaine::class, 'code_domaine', 'code');
     }
+
 }

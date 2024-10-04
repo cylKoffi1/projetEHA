@@ -117,11 +117,11 @@
                                                 <select name="code_projet" id="code_projet" class="form-select col-35" onchange="checkProjectDetails()" oninput="updateCodeProjetValue()">
                                                     <option value=""></option>
                                                     @foreach ($tousLesProjets as $projet)
-                                                        <option value="{{ $projet }}" 
-                                                            @if(in_array($projet, $projetsNonTrouves)) 
-                                                                class="non-trouves" 
+                                                        <option value="{{ $projet }}"
+                                                            @if(in_array($projet, $projetsNonTrouves))
+                                                                class="non-trouves"
                                                             @endif>
-                                                            {{ $projet }}       
+                                                            {{ $projet }}
                                                         </option>
                                                     @endforeach
                                                 </select>
@@ -196,8 +196,8 @@
                                             <div class="row">
                                                 <div class="row">
                                                     <label for="structure_ratache">Bénéficiaire :</label>
-                                                    <input type="text" name="CodeProjetBene" id="CodeProjetBene">
-                                                    <input type="text" name="numOrdreBene" id="numOrdreBene">
+                                                    <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
+                                                    <input type="hidden" name="numOrdreBene" id="numOrdreBene">
 
                                                     <div class="col-2" style="width: 16%;">
                                                         <label for="age">Localité :</label>

@@ -13,4 +13,6 @@ class TypeMateriauxConduite extends Model
     protected $table = 'type_materiaux_conduite'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
+    protected $fillable = ['code', 'libelle'];
+
 }

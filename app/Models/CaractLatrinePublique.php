@@ -5,18 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class CaractReservoir extends Model
+class CaractLatrinePublique extends Model
 {
     use HasFactory;
     public $timestamps = false;
-    protected $table = 'caractreservoir';
+    protected $table = 'caractlatrinefamillial';
     protected $primaryKey = 'CodeCaractFamille';
 
     protected $fillable = [
         'CodeCaractFamille',
-        'typeReservoir',
-        'materiaux',
-        'capacite',
+        'nombre',
         'natureTraveaux'
     ];
 
@@ -24,5 +22,4 @@ class CaractReservoir extends Model
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');
     }
-    
 }

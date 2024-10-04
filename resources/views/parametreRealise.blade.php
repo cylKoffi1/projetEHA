@@ -407,33 +407,115 @@
                                                                 </select>
                                                         </div>
                                                     </div>
-                                                    @endif
-                                                    <!--  Instrumentation -->
-                                                    @if($codeFamilleInfrastructure == 10)
-                                                    <div class="row">
+                                                    <div class="row mt-3">
                                                         <div class="col">
-                                                            <label for="typeInstrument">Type d'instrument</label>
-                                                            <select name="typeInstrument" class="form-control">
+                                                            <label for="coursEau">Cours d'eau</label>
+                                                            <select name="coursEau" class="form-control">
                                                                 <option value=""></option>
-                                                                @foreach ($typeInstruments as $typeInstrument)
-                                                                    <option value="{{ $typeInstrument->code }}">{{ $typeInstrument->libelle }}</option>
-                                                                    @endforeach
+                                                                @foreach ($coursEaux as $cours)
+                                                                    <option value="{{ $cours->code }}">{{ $cours->libelle }}</option>
+                                                                @endforeach
                                                             </select>
                                                         </div>
                                                         <div class="col">
-                                                            <label for="nombreInstrument">Nombre</label>
-                                                            <input type="number" name="nombreInstrument" class="form-control">
+                                                            <label for="aquifere">Aquifère</label>
+                                                            <select name="aquifere" class="form-control">
+                                                                <option value=""></option>
+                                                                @foreach ($aquiferes as $aquifere)
+                                                                    <option value="{{ $aquifere->code }}">{{ $aquifere->libelle }}</option>
+                                                                @endforeach
+                                                            </select>
                                                         </div>
                                                         <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage9" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
+                                                            <label for="bassin">Bassin</label>
+                                                            <select name="bassin" class="form-control">
+                                                                <option value=""></option>
+                                                                @foreach ($bassins as $bassin)
+                                                                    <option value="{{ $bassin->code }}">{{ $bassin->libelle }}</option>
+                                                                @endforeach
+                                                            </select>
                                                         </div>
                                                     </div>
+
+                                                    <div class="row mt-3">
+                                                        <div class="col">
+                                                            <label for="codeInternational">Code international</label>
+                                                            <input type="text" name="codeInternational" class="form-control">
+                                                        </div>
+                                                        <div class="col">
+                                                            <label for="nomStation">Nom de la station</label>
+                                                            <input type="text" name="nomStation" class="form-control">
+                                                        </div>
+                                                    </div>
+                                                    @endif
+                                                    <!--  Instrumentation -->
+                                                    @if($codeFamilleInfrastructure == 10)
+                                                <div class="row">
+                                                    <div class="col">
+                                                        <label for="typeInstrument">Type d'instrument</label>
+                                                        <select name="typeInstrument" class="form-control">
+                                                            <option value=""></option>
+                                                            @foreach ($typeInstruments as $typeInstrument)
+                                                                <option value="{{ $typeInstrument->code }}">{{ $typeInstrument->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col">
+                                                        <label for="nombreInstrument">Nombre</label>
+                                                        <input type="number" name="nombreInstrument" class="form-control">
+                                                    </div>
+                                                    <div class="col">
+                                                        <label for="natureTravauxCaptage">Nature des travaux</label>
+                                                        <select name="natureTravauxCaptage" class="form-select">
+                                                            <option value=""></option>
+                                                            @foreach ($natureTravaux as $natureTravau)
+                                                                <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row mt-3">
+                                                    <div class="col">
+                                                        <label for="coursEau">Cours d'eau</label>
+                                                        <select name="coursEau" class="form-control">
+                                                            <option value=""></option>
+                                                            @foreach ($coursEaux as $cours)
+                                                                <option value="{{ $cours->code }}">{{ $cours->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col">
+                                                        <label for="aquifere">Aquifère</label>
+                                                        <select name="aquifere" class="form-control">
+                                                            <option value=""></option>
+                                                            @foreach ($aquiferes as $aquifere)
+                                                                <option value="{{ $aquifere->code }}">{{ $aquifere->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col">
+                                                        <label for="bassin">Bassin</label>
+                                                        <select name="bassin" class="form-control">
+                                                            <option value=""></option>
+                                                            @foreach ($bassins as $bassin)
+                                                                <option value="{{ $bassin->code }}">{{ $bassin->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row mt-3">
+                                                    <div class="col">
+                                                        <label for="codeInternational">Code international</label>
+                                                        <input type="text" name="codeInternational" class="form-control">
+                                                    </div>
+                                                    <div class="col">
+                                                        <label for="nomStation">Nom de la station</label>
+                                                        <input type="text" name="nomStation" class="form-control">
+                                                    </div>
+                                                </div>
+
                                                     @endif
 
 
