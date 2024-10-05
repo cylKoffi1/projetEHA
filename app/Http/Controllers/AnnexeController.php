@@ -398,14 +398,16 @@ class AnnexeController extends Controller
                 ];
             }
 
-            // Passer les résultats à la vue
-            return view('annexe3', compact('sousDomaines', 'headerConfig', 'resultats', 'sousDomaine', 'year'));
-
+                  // Retourner une réponse JSON
+            return response()->json([
+                'success' => true,
+                'headerConfig' => $headerConfig,
+                'resultats' => $resultats
+            ]);
+            return view('annexe3', compact('headerConfig','resultats'));
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de l\'exécution de filterAnnexe: ' . $e->getMessage());
-            return response()->json(['error' => 'Une erreur est survenue lors du traitement.'. $e->getMessage()], 500);
-            return response()->json(['error' => 'Message d\'erreur'], 400);
-
+        \Log::error('Erreur dans filterAnnexe: ' . $e->getMessage());
+        return response()->json(['error' => 'Une erreur est survenue lors du traitement : ' . $e->getMessage()], 500);
         }
     }
 

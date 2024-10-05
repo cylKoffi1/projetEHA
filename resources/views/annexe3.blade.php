@@ -97,7 +97,7 @@
                 <div class="card-content">
                     <div class="card-body">
                         <div id="result-container" class="mt-4">
-                            <table class="table table-striped table-bordered" id="table1" cellspacing="0" style="width: 100%">
+                            <table class="table table-striped table-bordered display nowrap" id="table1" cellspacing="0" style="width: 100%">
                                 <thead id="table-header">
                                     <!-- Les en-têtes seront insérés ici via JavaScript -->
                                 </thead>
@@ -133,128 +133,117 @@ $(document).ready(function() {
         console.log("Année: ", year); // Ajouter un log pour l'année
         console.log("Ecran ID: ", ecranId); // Ajouter un log pour l'ID de l'écran
 
-        // Envoi de la requête AJAX
-        $.ajax({
-            url: `{{ route("filterAnnexe") }}`, // Correct usage of template literals
-            type: 'GET', // Changer à GET
-            dataType: 'json',
-            data: {
-                sous_domaine: sousDomaine,
-                year: year,
-                ecran_id: ecranId
-            },
-            success: function(response) {
-                console.log(response);
+// Envoi de la requête AJAX
+$.ajax({
+    url: `{{ route("filterAnnexe") }}`, // Correct usage of template literals
+    type: 'GET', // Changer à GET
+    dataType: 'json',
+    headers: {
+        'Accept': 'application/json'
+    },
+    data: {
+        sous_domaine: sousDomaine,
+        year: year,
+        ecran_id: ecranId
+    },
+    success: function(response) {
+        console.log('Réponse du serveur', response);
+        if (response.error) {
+            alert(response.error);
+            return;
+        }
 
-                if (response.error) {
-                    alert(response.error);
-                    return;
-                }
+        // Vider les anciens résultats
+        $('#table-header').empty();
+        $('#table-body').empty();
 
-                // Vider les anciens résultats
-                $('#table-header').empty();
-                $('#table-body').empty();
+        // Construire les en-têtes du tableau
+        var headerRow1 = '<tr>';
+        var headerRow2 = '<tr>';
+        headerRow1 += `
+            <th rowspan="2">N°</th>
+            <th rowspan="2">Districts</th>
+            <th rowspan="2">Régions</th>
+            <th rowspan="2">Départements</th>
+            <th rowspan="2">Sous-préfectures/Communes</th>
+        `;
 
-                // Construire les en-têtes du tableau
-                var headerRow1 = '<tr>';
-                var headerRow2 = '<tr>';
-                headerRow1 += `
-                    <th rowspan="2">N°</th>
-                    <th rowspan="2">Districts</th>
-                    <th rowspan="2">Régions</th>
-                    <th rowspan="2">Départements</th>
-                    <th rowspan="2">Sous-préfectures/Communes</th>
-                `;
-
-                response.headerConfig.forEach(function(header) {
-                    headerRow1 += '<th colspan="' + header.colspan + '">' + header.name + '</th>';
-                });
-
-                headerRow1 += `
-                    <th rowspan="2">Nb de ménages desservis</th>
-                    <th rowspan="2">Coût en F CFA (XOF)</th>
-                `;
-                headerRow1 += '</tr>';
-
-                // Ajouter les en-têtes des colonnes dynamiques
-                headerRow2 = '<tr>';
-                for (var key in response.resultats) {
-                    if (response.resultats.hasOwnProperty(key)) {
-                        var resultat = response.resultats[key];
-                        resultat.columns.forEach(function(columnName) {
-                            headerRow2 += '<th>' + columnName + '</th>';
-                        });
-                    }
-                }
-                headerRow2 += '</tr>';
-
-                $('#table-header').append(headerRow1);
-                $('#table-header').append(headerRow2);
-
-                // Remplir le corps du tableau
-                var rowIndex = 1;
-                for (var key in response.resultats) {
-                    if (response.resultats.hasOwnProperty(key)) {
-                        var resultat = response.resultats[key];
-                        resultat.data.forEach(function(dataRow) {
-                            var row = '<tr>';
-                            row += `<td>${rowIndex++}</td>`;
-                            row += `<td>${dataRow['Districts'] || ''}</td>`;
-                            row += `<td>${dataRow['Régions'] || ''}</td>`;
-                            row += `<td>${dataRow['Départements'] || ''}</td>`;
-                            row += `<td>${dataRow['Sous-préfectures/Communes'] || ''}</td>`;
-                            resultat.columns.forEach(function(columnName) {
-                                row += '<td>' + (dataRow[columnName] ?? '') + '</td>';
-                            });
-                            row += `<td>${dataRow['Nb de ménages desservis'] || ''}</td>`;
-                            row += `<td>${dataRow['Coût en F CFA (XOF)'] || ''}</td>`;
-                            row += '</tr>';
-                            $('#table-body').append(row);
-                        });
-                    }
-                }
-
-                if ($.fn.DataTable.isDataTable('#table1')) {
-                    $('#table1').DataTable().clear().destroy();
-                }
-                $('#table1').DataTable({
-                    dom: 'Bfrtip',
-                    buttons: [
-                        {
-                            extend: 'excelHtml5',
-                            title: 'Annexe 3',
-                            messageTop: '{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}'
-                        }
-                    ]
-                });
-            },
-            error: function(xhr, status, error) {
-                console.error('Erreur AJAX:', {
-                    status: status,
-                    error: error,
-                    responseText: xhr.responseText,
-                    statusCode: xhr.status,
-                    headers: xhr.getAllResponseHeaders()
-                });
-
-                let errorMessage = 'Une erreur inconnue est survenue.';
-                if (xhr.status === 404) {
-                    errorMessage = 'Page non trouvée (404). Vérifiez l\'URL.';
-                } else if (xhr.status === 500) {
-                    errorMessage = 'Erreur interne du serveur (500).';
-                } else if (xhr.responseJSON) {
-                    errorMessage = xhr.responseJSON.error || xhr.responseJSON.message || errorMessage;
-                } else {
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMessage = response.error || response.message || errorMessage;
-                    } catch (e) {
-                        errorMessage = xhr.responseText || errorMessage;
-                    }
-                }
-                alert('Erreur: ' + errorMessage);
-            }
+        response.headerConfig.forEach(function(header) {
+            headerRow1 += '<th colspan="' + header.colspan + '">' + header.name + '</th>';
         });
+
+        headerRow1 += `
+            <th rowspan="2">Nb de ménages desservis</th>
+            <th rowspan="2">Coût en F CFA (XOF)</th>
+        `;
+        headerRow1 += '</tr>';
+
+        // Ajouter les en-têtes des colonnes dynamiques
+        headerRow2 = '<tr>';
+        for (var key in response.resultats) {
+            if (response.resultats.hasOwnProperty(key)) {
+                var resultat = response.resultats[key];
+
+                // Convertir les colonnes en tableau
+                var columns = Object.values(resultat.columns);
+
+                // Utiliser forEach sur les colonnes converties en tableau
+                columns.forEach(function(columnName) {
+                    headerRow2 += '<th>' + columnName + '</th>';
+                });
+            }
+        }
+        headerRow2 += '</tr>';
+
+        $('#table-header').append(headerRow1);
+        $('#table-header').append(headerRow2);
+
+        // Remplir le corps du tableau
+        var rowIndex = 1;
+        for (var key in response.resultats) {
+            if (response.resultats.hasOwnProperty(key)) {
+                var resultat = response.resultats[key];
+
+                // Convertir les colonnes en tableau pour itérer
+                var columns = Object.values(resultat.columns);
+
+                resultat.data.forEach(function(dataRow) {
+                    var row = '<tr>';
+                    row += `<td>${rowIndex++}</td>`;
+                    row += `<td>${dataRow['Districts'] || ''}</td>`;
+                    row += `<td>${dataRow['Régions'] || ''}</td>`;
+                    row += `<td>${dataRow['Départements'] || ''}</td>`;
+                    row += `<td>${dataRow['Sous-préfectures/Communes'] || ''}</td>`;
+
+                    columns.forEach(function(columnName) {
+                        row += '<td>' + (dataRow[columnName] ?? '') + '</td>';
+                    });
+
+                    row += `<td>${dataRow['Nb de ménages desservis'] || ''}</td>`;
+                    row += `<td>${dataRow['Coût en F CFA (XOF)'] || ''}</td>`;
+                    row += '</tr>';
+                    $('#table-body').append(row);
+                });
+            }
+        }
+
+        // Détruire et réinitialiser DataTable
+        if ($.fn.DataTable.isDataTable('#table1')) {
+            $('#table1').DataTable().clear().destroy();
+        }
+        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe 3: Fiche de collecte');
+    },
+
+    error: function(xhr, status, error) {
+        console.error('Erreur AJAX:', {
+            status: status,
+            error: error,
+            responseText: xhr.responseText
+        });
+        alert('Erreur: ' + xhr.responseText);
+    }
+});
+
     });
 });
 
