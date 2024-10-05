@@ -83,118 +83,127 @@ function initDataTable(userNameReplace, table, title) {
                 },
             },
             {
-                extend: "pdfHtml5",
-                text: "Imprimer",
-                orientation: 'landscape',
-                title: "",
-                filename: title,
-                exportOptions: {
-                    columns: function (index, data, node) {
-                        // Vérifier si la dernière colonne est "Action"
-                        var lastColumnAction = $("#" + table + " thead tr:first-child th").last().text().trim() === "Action";
-                        // Exclure la dernière colonne si "Action" est présente
-                        if (lastColumnAction && index === $(node).closest('tr').find('th').length - 1) {
-                            return false;
+                    extend: "pdfHtml5",
+                    text: "Imprimer",
+                    orientation: "landscape",
+                    pageSize: "A4",
+                    title: " ",
+                    filename: title,
+                    exportOptions: {
+                        columns: function (index, data, node) {
+                            // Vérifier si la dernière colonne est "Action"
+                            var lastColumnAction = $("#" + table + " thead tr:first-child th").last().text().trim() === "Action";
+                            // Exclure la dernière colonne si "Action" est présente
+                            if (lastColumnAction && index === $(node).closest('tr').find('th').length - 1) {
+                                return false;
+                            }
+                            return true;
                         }
-                        return true;
-                    }
-                },
-                customize: function (doc) {
-                    var headerHeight = 20; // Hauteur du header en pourcentage
-                    var footerHeight = 10; // Hauteur du footer en pourcentage
-                    var bodyHeight = 70; // Hauteur du contenu principal en pourcentage
+                    },
+                    customize: function(doc) {
+                        doc.content[1].table.widths = '*'.repeat(doc.content[1].table.body[0].length).split(''); // Ajuster les colonnes à la largeur totale
+                        doc.defaultStyle.fontSize = 8; // Taille de police plus petite pour tout le document
+                        doc.content[1].layout = 'fullWidth'; // S'assurer que le tableau prend toute la largeur
+                        // Ajouter le header
+                        var headerHeight = 20; // Hauteur du header en pourcentage
+                        var footerHeight = 10; // Hauteur du footer en pourcentage
+                        var bodyHeight = 70; // Hauteur du contenu principal en pourcentage
 
-                    var headerMargin = [30, 30]; // Marge du header
-                    var bodyMargin = [0, 0]; // Marge du contenu principal
-                    var footerMargin = [10, 0]; // Marge du footer
+                        var headerMargin = [30, 30]; // Marge du header
+                        var bodyMargin = [0, 0]; // Marge du contenu principal
+                        var footerMargin = [10, 0]; // Marge du footer
 
-                    var totalHeight = 100; // Hauteur totale de la page
+                        var totalHeight = 100; // Hauteur totale de la page
 
-                    // Calculer les hauteurs en points
-                    var headerHeightPoints = (headerHeight / totalHeight) * 100;
-                    var bodyHeightPoints = (bodyHeight / totalHeight) * 100;
-                    var footerHeightPoints = (footerHeight / totalHeight) * 100;
-                    /*text: [
-                        'Image \n',
-                            { text: ' \n ', fontSize: 9 },
-                            { text: 'GERAC-EHA', fontSize: 9 }
-                        ],*/
-                        function htmlDecode(input) {
-                            var doc = new DOMParser().parseFromString(input, "text/html");
-                            return doc.documentElement.textContent;
-                          }
+                        // Calculer les hauteurs en points
+                        var headerHeightPoints = (headerHeight / totalHeight) * 100;
+                        var bodyHeightPoints = (bodyHeight / totalHeight) * 100;
+                        var footerHeightPoints = (footerHeight / totalHeight) * 100;
+                        /*text: [
+                            'Image \n',
+                                { text: ' \n ', fontSize: 9 },
+                                { text: 'GERAC-EHA', fontSize: 9 }
+                            ],*/
+                            function htmlDecode(input) {
+                                var doc = new DOMParser().parseFromString(input, "text/html");
+                                return doc.documentElement.textContent;
+                              }
 
-                    // Ajuster les marges pour correspondre aux hauteurs
-                    headerMargin[1] = headerHeightPoints;
-                    bodyMargin[1] = bodyHeightPoints;
-                    footerMargin[1] = footerHeightPoints;
-                    // Définir le header avec les marges ajustées
-                    doc['header'] = function() {
-                        return {
-                            columns: [
-                                {
-                                    alignment: 'center',
-                                    table: {
-                                        widths: ['33.33%', '33.33%', '33.33%'],
-                                        body: [
-                                            // Première ligne
-                                            [
-                                                {
-                                                    alignment: 'left',
-                                                    stack: [
-                                                        {
-                                                            image: imagePath, // chemin de l'image
-                                                            width: 25 // largeur de l'image en pourcentage
-                                                        },
-                                                        {
-                                                            text: 'GERAC-EHA', // texte à afficher à côté de l'image
-                                                            fontSize: 9 // taille de la police du texte
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    text: [{ text: '\n' }, { text: title.toUpperCase(), bold: true, fontSize: 12 }],
-                                                    alignment: 'center',hLineWidth: 0,
-                                                    border: false,
-                                                    vLineWidth: 0
-                                                },
-                                                {
-                                                    text: [
-                                                        'Impression le ' + dateTime,
-                                                        { text: '\n' },
-                                                        { text: '\nImprimé par: ' + htmlDecode(userName), fontSize: 9 }
-                                                    ],
-                                                    alignment: 'right',hLineWidth: 0,
-                                                    border: false,
-                                                    vLineWidth: 0
-                                                },
-                                            ]
-                                        ],
-                                    },hLineWidth: 0,
-                                    border: false,
-                                    vLineWidth: 0
-                                },
-                            ],
-                        };
-                    };
+                        // Ajuster les marges pour correspondre aux hauteurs
+                        headerMargin[1] = headerHeightPoints;
+                        bodyMargin[1] = bodyHeightPoints;
+                        footerMargin[1] = footerHeightPoints;
+                        // Définir le header avec les marges ajustées
+                        doc['header'] = function() {
+                            return {
+                                columns: [
+                                    {
+                                        alignment: 'center',
+                                        table: {
+                                            widths: ['33.33%', '33.33%', '33.33%'],
+                                            body: [
+                                                // Première ligne
+                                                [
+                                                    {
+                                                        alignment: 'left',
+                                                        stack: [
+                                                            {
+                                                                image: imagePath, // chemin de l'image
+                                                                width: 25 // largeur de l'image en pourcentage
+                                                            },
+                                                            {
+                                                                text: 'GERAC-EHA', // texte à afficher à côté de l'image
+                                                                fontSize: 9 // taille de la police du texte
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        text: [{ text: '\n' }, { text: title.toUpperCase(), bold: true, fontSize: 12 }],
+                                                        alignment: 'center',
+                                                        hLineWidth: 0,
+                                                        border: false,
+                                                        vLineWidth: 0
+                                                    },
+                                                    {
+                                                        text: [
+                                                            'Impression le ' + dateTime,
+                                                            { text: '\n' },
+                                                            { text: '\nImprimé par: ' + htmlDecode(userName), fontSize: 9 }
+                                                        ],
+                                                        alignment: 'right',
+                                                        hLineWidth: 0,
+                                                        border: false,
+                                                        vLineWidth: 0
+                                                    },
+                                                ]
+                                            ]
+                                        },
+                                        hLineWidth: 0, // Pas de ligne horizontale
+                                        border: false,
+                                        vLineWidth: 0 // Pas de ligne verticale
+                                    },
+                                ]
+                            };
+                        };
 
 
 
-                    // Définir le footer avec les marges ajustées
-                    doc['footer'] = function(page, pages) {
-                        return {
-                            columns: [
-                                {
-                                    // This is the right column
-                                    alignment: 'right',
-                                    text: ['page ', { text: page.toString() },  ' sur ', { text: pages.toString() }]
-                                }
-                            ],
-                            margin: footerMargin
-                        };
-                    };
-                },
-            },
+
+                        // Définir le footer avec les marges ajustées
+                        doc['footer'] = function(page, pages) {
+                            return {
+                                columns: [
+                                    {
+                                        // This is the right column
+                                        alignment: 'right',
+                                        text: ['page ', { text: page.toString() },  ' sur ', { text: pages.toString() }]
+                                    }
+                                ],
+                                margin: footerMargin
+                            };
+                        };
+                    },
+                },
         ],
     });
 }

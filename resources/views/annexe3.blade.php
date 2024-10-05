@@ -84,6 +84,13 @@
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="col-3">
+                                <input type="radio" name="etablissement" value="sante">
+                                <label>Établissement de santé </label><br>
+
+                                <input type="radio" name="etablissement" value="scolaire">
+                                <label>Établissement scolaire</label>
+                            </div>
 
                             <!-- Bouton Filtrer sur la même ligne -->
                             <div class="col-2">
@@ -133,116 +140,116 @@ $(document).ready(function() {
         console.log("Année: ", year); // Ajouter un log pour l'année
         console.log("Ecran ID: ", ecranId); // Ajouter un log pour l'ID de l'écran
 
-// Envoi de la requête AJAX
-$.ajax({
-    url: `{{ route("filterAnnexe") }}`, // Correct usage of template literals
-    type: 'GET', // Changer à GET
-    dataType: 'json',
-    headers: {
-        'Accept': 'application/json'
-    },
-    data: {
-        sous_domaine: sousDomaine,
-        year: year,
-        ecran_id: ecranId
-    },
-    success: function(response) {
-        console.log('Réponse du serveur', response);
-        if (response.error) {
-            alert(response.error);
-            return;
-        }
+        // Envoi de la requête AJAX
+        $.ajax({
+            url: `{{ route("filterAnnexe") }}`, // Correct usage of template literals
+            type: 'GET', // Changer à GET
+            dataType: 'json',
+            headers: {
+                'Accept': 'application/json'
+            },
+            data: {
+                sous_domaine: sousDomaine,
+                year: year,
+                ecran_id: ecranId
+            },
+            success: function(response) {
+                console.log('Réponse du serveur', response);
+                if (response.error) {
+                    alert(response.error);
+                    return;
+                }
 
-        // Vider les anciens résultats
-        $('#table-header').empty();
-        $('#table-body').empty();
+                // Vider les anciens résultats
+                $('#table-header').empty();
+                $('#table-body').empty();
 
-        // Construire les en-têtes du tableau
-        var headerRow1 = '<tr>';
-        var headerRow2 = '<tr>';
-        headerRow1 += `
-            <th rowspan="2">N°</th>
-            <th rowspan="2">Districts</th>
-            <th rowspan="2">Régions</th>
-            <th rowspan="2">Départements</th>
-            <th rowspan="2">Sous-préfectures/Communes</th>
-        `;
+                // Construire les en-têtes du tableau
+                var headerRow1 = '<tr>';
+                var headerRow2 = '<tr>';
+                headerRow1 += `
+                    <th rowspan="2">N°</th>
+                    <th rowspan="2">Districts</th>
+                    <th rowspan="2">Régions</th>
+                    <th rowspan="2">Départements</th>
+                    <th rowspan="2">Sous-préfectures/Communes</th>
+                `;
 
-        response.headerConfig.forEach(function(header) {
-            headerRow1 += '<th colspan="' + header.colspan + '">' + header.name + '</th>';
-        });
-
-        headerRow1 += `
-            <th rowspan="2">Nb de ménages desservis</th>
-            <th rowspan="2">Coût en F CFA (XOF)</th>
-        `;
-        headerRow1 += '</tr>';
-
-        // Ajouter les en-têtes des colonnes dynamiques
-        headerRow2 = '<tr>';
-        for (var key in response.resultats) {
-            if (response.resultats.hasOwnProperty(key)) {
-                var resultat = response.resultats[key];
-
-                // Convertir les colonnes en tableau
-                var columns = Object.values(resultat.columns);
-
-                // Utiliser forEach sur les colonnes converties en tableau
-                columns.forEach(function(columnName) {
-                    headerRow2 += '<th>' + columnName + '</th>';
+                response.headerConfig.forEach(function(header) {
+                    headerRow1 += '<th colspan="' + header.colspan + '">' + header.name + '</th>';
                 });
-            }
-        }
-        headerRow2 += '</tr>';
 
-        $('#table-header').append(headerRow1);
-        $('#table-header').append(headerRow2);
+                headerRow1 += `
+                    <th rowspan="2">Nb de ménages desservis</th>
+                    <th rowspan="2">Coût en F CFA (XOF)</th>
+                `;
+                headerRow1 += '</tr>';
 
-        // Remplir le corps du tableau
-        var rowIndex = 1;
-        for (var key in response.resultats) {
-            if (response.resultats.hasOwnProperty(key)) {
-                var resultat = response.resultats[key];
+                // Ajouter les en-têtes des colonnes dynamiques
+                headerRow2 = '<tr>';
+                for (var key in response.resultats) {
+                    if (response.resultats.hasOwnProperty(key)) {
+                        var resultat = response.resultats[key];
 
-                // Convertir les colonnes en tableau pour itérer
-                var columns = Object.values(resultat.columns);
+                        // Convertir les colonnes en tableau
+                        var columns = Object.values(resultat.columns);
 
-                resultat.data.forEach(function(dataRow) {
-                    var row = '<tr>';
-                    row += `<td>${rowIndex++}</td>`;
-                    row += `<td>${dataRow['Districts'] || ''}</td>`;
-                    row += `<td>${dataRow['Régions'] || ''}</td>`;
-                    row += `<td>${dataRow['Départements'] || ''}</td>`;
-                    row += `<td>${dataRow['Sous-préfectures/Communes'] || ''}</td>`;
+                        // Utiliser forEach sur les colonnes converties en tableau
+                        columns.forEach(function(columnName) {
+                            headerRow2 += '<th>' + columnName + '</th>';
+                        });
+                    }
+                }
+                headerRow2 += '</tr>';
 
-                    columns.forEach(function(columnName) {
-                        row += '<td>' + (dataRow[columnName] ?? '') + '</td>';
-                    });
+                $('#table-header').append(headerRow1);
+                $('#table-header').append(headerRow2);
 
-                    row += `<td>${dataRow['Nb de ménages desservis'] || ''}</td>`;
-                    row += `<td>${dataRow['Coût en F CFA (XOF)'] || ''}</td>`;
-                    row += '</tr>';
-                    $('#table-body').append(row);
+                // Remplir le corps du tableau
+                var rowIndex = 1;
+                for (var key in response.resultats) {
+                    if (response.resultats.hasOwnProperty(key)) {
+                        var resultat = response.resultats[key];
+
+                        // Convertir les colonnes en tableau pour itérer
+                        var columns = Object.values(resultat.columns);
+
+                        resultat.data.forEach(function(dataRow) {
+                            var row = '<tr>';
+                            row += `<td>${rowIndex++}</td>`;
+                            row += `<td>${dataRow['Districts'] || ''}</td>`;
+                            row += `<td>${dataRow['Régions'] || ''}</td>`;
+                            row += `<td>${dataRow['Départements'] || ''}</td>`;
+                            row += `<td>${dataRow['Sous-préfectures/Communes'] || ''}</td>`;
+
+                            columns.forEach(function(columnName) {
+                                row += '<td>' + (dataRow[columnName] ?? '') + '</td>';
+                            });
+
+                            row += `<td>${dataRow['Nb de ménages desservis'] || ''}</td>`;
+                            row += `<td>${dataRow['Coût en F CFA (XOF)'] || ''}</td>`;
+                            row += '</tr>';
+                            $('#table-body').append(row);
+                        });
+                    }
+                }
+
+                // Détruire et réinitialiser DataTable
+                if ($.fn.DataTable.isDataTable('#table1')) {
+                    $('#table1').DataTable().clear().destroy();
+                }
+                initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe 3: Fiche de collecte');
+            },
+
+            error: function(xhr, status, error) {
+                console.error('Erreur AJAX:', {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText
                 });
+                alert('Erreur: ' + xhr.responseText);
             }
-        }
-
-        // Détruire et réinitialiser DataTable
-        if ($.fn.DataTable.isDataTable('#table1')) {
-            $('#table1').DataTable().clear().destroy();
-        }
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe 3: Fiche de collecte');
-    },
-
-    error: function(xhr, status, error) {
-        console.error('Erreur AJAX:', {
-            status: status,
-            error: error,
-            responseText: xhr.responseText
         });
-        alert('Erreur: ' + xhr.responseText);
-    }
-});
 
     });
 });

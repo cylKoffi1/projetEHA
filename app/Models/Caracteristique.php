@@ -14,6 +14,10 @@ class Caracteristique extends Model
 
     protected $fillable = ['CodeProjet', 'Ordre', 'codeInfrastructure', 'codeFamille','CodeCaractFamille'];
 
+    public function Infrastructure(){
+        return $this->belongsTo(Infrastructure::class, 'codeInfrastructure', 'code');
+    }
+
     public function caractUniteTraitement()
     {
         return $this->hasOne(CaractUniteTraitement::class, 'CodeCaractFamille');

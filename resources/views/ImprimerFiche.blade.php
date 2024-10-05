@@ -407,7 +407,7 @@
         const pdfHeight = pdf.internal.pageSize.getHeight();
 
         // Définir la largeur de l'image à 80% de la largeur du PDF
-        const imgWidth = pdfWidth * 1.1; // 80% de la largeur du PDF
+        const imgWidth = pdfWidth * 1;
 
         // Obtenir la taille de l'image capturée
         const canvasWidth = canvas.width;

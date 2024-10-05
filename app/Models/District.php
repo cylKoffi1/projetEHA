@@ -16,4 +16,5 @@ class District extends Model
     {
         return $this->belongsTo(Pays::class, 'id_pays');
     }
+
 }
