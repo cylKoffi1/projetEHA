@@ -10,6 +10,7 @@ use App\Models\Caracteristique;
 use App\Models\Departement;
 use App\Models\District;
 use App\Models\Ecran;
+use App\Models\FamilleInfrastructure;
 use App\Models\Localite;
 use App\Models\NatureTravaux;
 use App\Models\ProjetAgence;
@@ -199,9 +200,41 @@ class AnnexeController extends Controller
             return substr($code, 12, 4); // Extraire le code sous-domaine à partir de la position 11, longueur de 4 caractères
         })->unique()->filter(); // Filtrer pour avoir des codes distincts
 
+        //famille d'infrastructurex
+
+        // Supposons que $sousDomaineCode contienne le code du sous-domaine (par exemple, '0101')
+
+        $sousDomaineCode = $request->input('sous_domaine');
+        $familles = FamilleInfrastructure::select('famille_infrastructure.nom_famille', 'famille_infrastructure.code as famille_code')
+            ->distinct()
+            ->join('infrastructures as inf', 'inf.code_famille_infrastructure', '=', 'famille_infrastructure.code')
+            ->join('domaine_intervention as dom', 'dom.code', '=', 'inf.code_domaine')
+            ->join('sous_domaine as sdom', 'sdom.code_domaine', '=', 'dom.code')
+            ->where('sdom.code', $sousDomaineCode) // Utilisation de la variable avec les guillemets
+            ->get();
+
+
+
+
+
         // 5. Passer les données récupérées à la vue
-        return view('annexe3', compact('ecran', 'sousDomaines', 'years', 'codeSousDomaines'));
+        return view('annexe3', compact('ecran', 'sousDomaines', 'years', 'codeSousDomaines', 'familles'));
     }
+    public function getFamilles(Request $request)
+{
+    $sousDomaineCode = $request->input('sous_domaine');
+
+    $familles = FamilleInfrastructure::select('famille_infrastructure.nom_famille', 'famille_infrastructure.code as famille_code')
+        ->distinct()
+        ->join('infrastructures as inf', 'inf.code_famille_infrastructure', '=', 'famille_infrastructure.code')
+        ->join('domaine_intervention as dom', 'dom.code', '=', 'inf.code_domaine')
+        ->join('sous_domaine as sdom', 'sdom.code_domaine', '=', 'dom.code')
+        ->where('sdom.code', $sousDomaineCode)
+        ->get();
+
+    return response()->json(['familles' => $familles]);
+}
+
     public function filterAnnexe(Request $request){
     try {
         // Pour vérifier les données envoyées, ajoutez des logs

@@ -364,6 +364,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Route basique pour accéder à la page annexe3
     Route::get('admin/annexe3', [AnnexeController::class, 'annexe3'])->name('annexe.page');
     Route::get('/filter-annexe', [AnnexeController::class, 'filterAnnexe'])->name('filterAnnexe');
+    Route::get('admin/get-familles', [AnnexeController::class, 'getFamilles'])->name('get.familles');
+
+
 
     //***************** REALISATION ************* */
     Route::get('admin/realise/PramatreRealise', [RealiseProjetController::class, 'PramatreRealise']);

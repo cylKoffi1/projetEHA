@@ -65,8 +65,8 @@
                 <div class="card-content">
                     <div class="card-body">
                         <!-- Sélecteur pour le sous-domaine -->
-                        <div class="row align-items-end">
-                            <div class="col-4">
+                        <div class="row align-items-end justify-content-center">
+                            <div class="col-3">
                                 <label for="sous_domaine">Sous-Domaine :</label>
                                 <select id="sous_domaine" name="sous_domaine" class="form-control" required>
                                     @foreach($sousDomaines as $sousDomaine)
@@ -75,6 +75,14 @@
                                 </select>
                             </div>
 
+                            <div class="col-3">
+                                <label for="famille">Famille Infrastructure</label>
+                                <select name="famille" id="famille" class="form-select">
+                                    @foreach ($familles as $famille)
+                                        <option value="{{ $famille->code }}">{{ $famille->nom_famille }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <!-- Sélecteur pour l'année -->
                             <div class="col-2">
                                 <label for="year">Année :</label>
@@ -84,19 +92,20 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-3">
+                            <div class="col-2">
+                                <label for="etablissement">Établissement</label><br>
                                 <input type="radio" name="etablissement" value="sante">
-                                <label>Établissement de santé </label><br>
-
+                                <label>santé</label><br>
                                 <input type="radio" name="etablissement" value="scolaire">
-                                <label>Établissement scolaire</label>
+                                <label>scolaire</label>
                             </div>
 
                             <!-- Bouton Filtrer sur la même ligne -->
                             <div class="col-2">
-                                <button id="filter-button" class="btn btn-primary w-100">Filtrer</button>
+                                <button id="filter-button" class="btn btn-primary w-50">Filtrer</button>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -257,5 +266,36 @@ $(document).ready(function() {
 
 </script>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sousDomaineSelect = document.getElementById('sous_domaine');
 
+        sousDomaineSelect.addEventListener('change', function () {
+            const sousDomaineCode = sousDomaineSelect.value; // Récupérer le code du sous-domaine
+            console.log('Code Sous-Domaine sélectionné :', sousDomaineCode);
+
+            // Appel AJAX pour récupérer les familles d'infrastructure
+            $.ajax({
+                url: '/admin/get-familles', // Remplacez ceci par votre route pour récupérer les familles
+                method: 'GET',
+                data: { sous_domaine: sousDomaineCode },
+                success: function (response) {
+                    // Mettre à jour le select des familles avec les nouvelles données
+                    const familleSelect = document.getElementById('famille');
+                    familleSelect.innerHTML = ''; // Réinitialiser les options
+
+                    response.familles.forEach(function (famille) {
+                        const option = document.createElement('option');
+                        option.value = famille.code;
+                        option.textContent = famille.nom_famille;
+                        familleSelect.appendChild(option);
+                    });
+                },
+                error: function (error) {
+                    console.error('Erreur lors de la récupération des familles :', error);
+                }
+            });
+        });
+    });
+    </script>
 @endsection
