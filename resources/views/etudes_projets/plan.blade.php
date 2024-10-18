@@ -6,7 +6,7 @@
 
         #gantt_here {
             width: 100%;
-            height: 40vh;
+            height: 50vh;
         }
         .gantt-info{
             display: none !important;

@@ -316,10 +316,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
         /********************PLANIFICATION***************** */
             Route::get('admin/planifierProjet', [GanttController::class, 'index']);
-
-            Route::get('/gantt/load/{projectId}', [GanttController::class, 'load']);
-            Route::post('/gantt/save/{projectId}', [GanttController::class, 'save']);
-            Route::delete('/gantt/delete/{projectId}', [GanttController::class, 'delete']);
+            Route::get('/data', [GanttController::class ,'get']);
         /********************RENFORCEMENT***************** */
             Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
             Route::delete('/renforcementDelete/{id}', [EtudeProjet::class, 'deleteRenforcement']);
@@ -516,11 +513,3 @@ Route::get('/sig', [GeoJSONController::class, 'showSIG'])->name('carte.sig');
 Route::get('/filter-maps', [GeoJSONController::class, 'filter'])->name('filter.maps');
 Route::get('/filtered-data', [GeoJSONController::class, 'showFilteredData'])->name('filtered.data');
 Route::get('test', [AdminController::class, 'test']);
-Route::get('/data', [GanttController::class ,'get']);
-
-/* Vue principale du Gantt
-Route::get('/', function () {
-    return view('gantt');
-});
-
-*/
