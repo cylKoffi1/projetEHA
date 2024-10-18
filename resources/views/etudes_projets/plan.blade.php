@@ -8,6 +8,10 @@
             width: 100%;
             height: 40vh;
         }
+        .gantt-info{
+            display: none !important;
+            visibility: none !important;
+        }
 
         .red_color { background: red; }
         .blue_color { background: blue; }
@@ -77,486 +81,267 @@
             </div>
             <div class="card-content">
                 <div class="col-12">
-                    <div class="col-4"><br>
-                        <select id="projectSelect" class="form-select" name="projectSelect">
-                            <option value="">-- Sélectionner un projet --</option>
-                            @foreach ($projects as $project)
-                                <option value="{{ $project->CodeProjet }}">{{ $project->CodeProjet }}</option>
-                            @endforeach
-                        </select><br>
+                    <div class="row">
+                        <div class="col-4">
+                            <label for="projectSelect">Code Projets :</label>
+                            <select id="projectSelect" class="form-select" name="projectSelect">
+                                <option value="">-- Sélectionner un projet --</option>
+                                @foreach ($projects as $project)
+                                        <option value="{{ $project->CodeProjet }}">{{ $project->CodeProjet }}</option>
+                                    @endforeach
+                                </select>
+
+                            <br>
+                        </div>
+
+                        <div class="col-2">
+                            <div id="controls">
+                            <label for="scale_select">Echelle :</label>
+                                <select id="scale_select" class="form-control">
+                                    <option value="day">Jour</option>
+                                    <option value="week">Semaine</option>
+                                    <option value="month">Mois</option>
+                                    <option value="quarter">Trimestre</option>
+                                    <option value="year">Année</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
+
 
                     <!-- Conteneur Gantt -->
-                    <div id="gantt_here"></div>
+                    <div id="gantt_here" ></div>
 
-                    <!-- Boutons pour Enregistrer et Supprimer -->
-                    <div class="mt-3 d-flex justify-content-end">
-                        <button id="saveButton" class="btn btn-primary">Enregistrer le Gantt  </button>
-                        <button id="deleteButton" class="btn btn-danger">Supprimer le Projet</button>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
-<script>
-   /* document.addEventListener("DOMContentLoaded", function () {
+    <script type="text/javascript">
+        gantt.config.xml_date = "%Y-%m-%d %H:%i:%s"; // format pour charger les données
+        gantt.config.date_format = "%d %F %Y"; // format d'affichage des dates dans les tâches
+        // Configurer la locale en français
+        gantt.i18n.setLocale({
+            date: {
+                month_full: ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+                month_short: ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil",
+                    "Aoû", "Sep", "Oct", "Nov", "Déc"],
+                day_full: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
+                day_short: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
+            },
+            labels: {
+                new_task: "Nouvelle tâche",
+                icon_save: "Enregistrer",
+                icon_cancel: "Annuler",
+                icon_details: "Détails",
+                icon_edit: "Modifier",
+                icon_delete: "Supprimer",
+                gantt_save_btn: "Enregistrer",
+                gantt_cancel_btn: "Annuler",
+                gantt_delete_btn: "Supprimer",
+                confirm_closing: "Vos modifications seront perdues, êtes-vous sûr ?",
+                confirm_deleting: "La tâche sera supprimée définitivement, êtes-vous sûr ?",
+                section_description: "Description",
+                section_time: "Période",
+                section_type: "Type",
+
+                /* Colonnes de la grille */
+                column_wbs: "WBS",
+                column_text: "Nom de la tâche",
+                column_start_date: "Date de début",
+                column_duration: "Durée",
+                column_add: "",
+
+                /* Confirmation pour les liens */
+                link: "Lien",
+                confirm_link_deleting: "sera supprimé",
+                link_start: " (début)",
+                link_end: " (fin)",
+
+                type_task: "Tâche",
+                type_project: "Projet",
+                type_milestone: "Jalon",
+
+                minutes: "Minutes",
+                hours: "Heures",
+                days: "Jours",
+                weeks: "Semaines",
+                months: "Mois",
+                years: "Années",
+
+                /* Popup de messages */
+                message_ok: "OK",
+                message_cancel: "Annuler",
+
+                /* Contraintes */
+                section_constraint: "Contrainte",
+                constraint_type: "Type de contrainte",
+                constraint_date: "Date de contrainte",
+                asap: "Dès que possible",
+                alap: "Aussi tard que possible",
+                snet: "Ne pas commencer avant",
+                snlt: "Ne pas commencer après",
+                fnet: "Ne pas terminer avant",
+                fnlt: "Ne pas terminer après",
+                mso: "Doit commencer le",
+                mfo: "Doit terminer le",
+
+                /* Gestion des ressources */
+                resources_filter_placeholder: "tapez pour filtrer",
+                resources_filter_label: "cacher les vides"
+            }
+        });
+
+        // Configuration de l'échelle de temps
+        gantt.config.start_date = new Date(new Date().getFullYear() - 10, 0, 1);  // 25 ans dans le passé
+        gantt.config.end_date = new Date(new Date().getFullYear() + 35, 11, 31);  // 25 ans dans le futur
+
+        gantt.config.xml_date = "%Y-%m-%d %H:%i:%s";
         gantt.init("gantt_here");
 
-            gantt.templates.task_class = function (start, end, task) {
-                switch (task.priority) {
-                    case "high": return "red_color";
-                    case "medium": return "blue_color";
-                    case "low": return "gray_color";
-                }
-            };
-        /* Fonction pour convertir les dates au format ISO
-        function formatDateForGantt(dateStr) {
-            const match = dateStr.match(/^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2})$/);
-            if (match) {
-                return `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00`;
-            } else {
-                throw new Error('Format de date invalide');
+        // Charge les données de l'API
+        gantt.load("/api/data");
+
+        // Ajoute un écouteur d'événement sur l'ajout d'une nouvelle tâche
+
+
+        // Configure le dataProcessor pour synchroniser les actions (CRUD)
+        var dp = new gantt.dataProcessor("/api/");
+
+        dp.init(gantt);
+
+        // Ajoute CodeProjet à la tâche avant l'envoi des données
+        dp.attachEvent("onBeforeUpdate", function(id, state, data) {
+            // Récupère le CodeProjet sélectionné dans le menu déroulant
+            var codeProjet = document.getElementById('projectSelect').value;
+
+            // Ajoute le CodeProjet à l'objet de tâche
+            data.CodeProjet = codeProjet;
+            //console.log("Enregistrement avec CodeProjet:", data);
+
+            // Renvoie true pour continuer le processus de mise à jour/enregistrement
+            return true;
+        });
+        gantt.attachEvent("onTaskCreated", function(task) {
+            // Récupère le CodeProjet sélectionné
+            var codeProjet = document.getElementById('projectSelect').value;
+
+            // Ajoute le CodeProjet à la tâche
+            task.CodeProjet = codeProjet;
+
+            // Ajoute les autres données de la tâche ici
+            dp.sendData();  // Envoie les données au serveur
+            return true;
+        });
+
+
+        gantt.attachEvent("onTaskCreated", function(link) {
+            // Récupère le CodeProjet sélectionné
+            var codeProjet = document.getElementById('projectSelect').value;
+
+            // Ajoute le CodeProjet à la tâche
+            link.CodeProjet = codeProjet;
+
+            // Ajoute les autres données de la tâche ici
+            dp.sendData();  // Envoie les données au serveur
+            return true;
+        });
+
+        dp.setTransactionMode("REST");
+
+        dp.attachEvent("onAfterUpdate", function(id, action, tid, response) {
+            if (action === "inserted") {
+                $('#alertMessage').text('Ajout éffectué.');
+                $('#alertModal').modal('show');
+                // console.log("Succès:", response);
+            } else if (action === "updated") {
+                $('#alertMessage').text('Modification effectué.');
+                $('#alertModal').modal('show');
+            } else if (action === "deleted") {
+                $('#alertMessage').text('Suppression effectué.');
+                $('#alertModal').modal('show');
+            } else if (action === "error") {
+                //console.log("Échec:", response);
+                alert("Une erreur est survenue lors de l'opération : " + response); // Alerte pour les erreurs
             }
-        }*//*
-        function formatDateForGantt(dateStr) {
-            if (!dateStr) return null;  // Gérer les cas où la date est null ou undefined
+        });
 
-            // Essayer de créer un objet Date avec la chaîne donnée
-            let date = new Date(dateStr);
 
-            // Vérifier si la date est valide
-            if (isNaN(date.getTime())) {
-                throw new Error('Format de date invalide: ' + dateStr);
+        // Nouvelle méthode pour configurer les échelles
+        function setScaleConfig(scale) {
+            switch (scale) {
+                case "day":
+                    gantt.config.scales = [
+                        {unit: "day", step: 1, format: "%d %M"},
+                    ];
+                    break;
+                case "week":
+                    gantt.config.scales = [
+                        {unit: "week", step: 1, format: "Semaine #%W"},
+                        {unit: "day", step: 1, format: "%d %M"}
+                    ];
+                    break;
+                case "month":
+                    gantt.config.scales = [
+                        {unit: "month", step: 1, format: "%F %Y"},
+                        {unit: "week", step: 1, format: "Semaine #%W"}
+                    ];
+                    break;
+                case "quarter":
+                    gantt.config.scales = [
+                        {unit: "quarter", step: 1, format: function(date) {
+                            var month = date.getMonth();
+                            var q_num = Math.floor(month / 3) + 1;
+                            return "T" + q_num;  // Trimestre
+                        }},
+                        {unit: "month", step: 1, format: "%M"}
+                    ];
+                    break;
+                case "year":
+                    gantt.config.scales = [
+                        {unit: "year", step: 1, format: "%Y"},
+                        {unit: "month", step: 1, format: "%M"}
+                    ];
+                    break;
             }
-
-            // Retourner la date au format ISO 8601
-            return date.toISOString();
+            gantt.render();  // Réinitialise l'échelle avec les nouvelles configurations
         }
 
+        // Liste déroulante pour le changement d'échelle
+        document.getElementById("scale_select").addEventListener("change", function() {
+            var scale = this.value;
+            setScaleConfig(scale);
+        });
 
-        // Récupérer la sélection de projet
-        document.getElementById('projectSelect').addEventListener('change', function () {
-            var projectId = this.value;
-            var saveButton = document.getElementById('saveButton');
+        // Définir l'échelle initiale
+        setScaleConfig("day");
 
-            if (projectId) {
-                fetch(`/gantt/check/${projectId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.exists) {
-                            saveButton.textContent = 'Modifier le Gantt';
-                        } else {
-                            saveButton.textContent = 'Enregistrer le Gantt';
-                        }
+
+    </script>
+    <script>
+        document.getElementById("projectSelect").addEventListener("change", function() {
+            var codeProjet = this.value;
+
+            // Effacer les données précédentes
+            gantt.clearAll();
+
+            if (codeProjet) {
+                // Charger les données associées au projet sélectionné
+                gantt.load(`/api/data?CodeProjet=${codeProjet}`, "json")
+                    .then(function() {
+                        //console.log("Données chargées avec succès.");
+                        //console.log(codeProjet)
                     })
-                    .catch(error => {
-                        console.error('Erreur lors de la vérification des données:', error);
-                        alert('Erreur lors de la vérification des données.');
+                    .catch(function(error) {
+                        //console.error("Erreur lors du chargement des données:", error);
+                        alert("Erreur lors du chargement des données pour ce projet.");
                     });
-
-                    fetch(`/gantt/load/${projectId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(`Erreur HTTP ${response.status}: ${text}`);
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.data && Array.isArray(data.data.tasks)) {
-                            // Assurez-vous que les dates sont correctement formatées
-                            data.data.tasks.forEach(task => {
-                                if (task.start_date) {
-                                    task.start_date = formatDateForGantt(task.start_date);
-                                }
-                                if (task.end_date) {
-                                    task.end_date = formatDateForGantt(task.end_date);
-                                }
-                            });
-
-                            gantt.clearAll();
-                            gantt.parse(data.data);
-                        } else {
-                            console.error('Format de données invalide:', data);
-                            alert('Erreur lors du chargement des données Gantt.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur lors du chargement des données Gantt:', error);
-                        alert('Erreur lors du chargement des données Gantt : ' + error.message);
-                    });
-
-            } else {
-                gantt.clearAll();
-                saveButton.textContent = 'Enregistrer le Gantt';
             }
         });
-
-
-        gantt.attachEvent("onAfterTaskAdd", function (id, item) {
-            var projectSelect = document.getElementById('projectSelect');
-            item.project_id = projectSelect.value;
-
-            fetch('/gantt/task', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(item)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.tid) {
-                    gantt.changeTaskId(id, data.tid);
-                } else {
-                    alert('Erreur: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur lors de l\'ajout de la tâche.');
-            });
-        });
-
-        gantt.attachEvent("onAfterTaskUpdate", function (id, item) {
-            fetch(`/gantt/task/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(item)
-            })
-            .catch(error => {
-                console.error('Erreur lors de la mise à jour de la tâche :', error);
-            });
-        });
-
-        gantt.attachEvent("onAfterTaskDelete", function (id) {
-            fetch(`/gantt/task/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            })
-            .catch(error => {
-                console.error('Erreur lors de la suppression de la tâche :', error);
-            });
-        });
-
-        gantt.attachEvent("onAfterLinkAdd", function (id, item) {
-            fetch('/gantt/link', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(item)
-            })
-            .then(response => response.json())
-            .then(data => {
-                gantt.changeLinkId(id, data.tid);
-            })
-            .catch(error => {
-                console.error('Erreur lors de l\'ajout du lien :', error);
-            });
-        });
-
-        gantt.attachEvent("onAfterLinkUpdate", function (id, item) {
-            fetch(`/gantt/link/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(item)
-            })
-            .catch(error => {
-                console.error('Erreur lors de la mise à jour du lien :', error);
-            });
-        });
-
-        gantt.attachEvent("onAfterLinkDelete", function (id) {
-            fetch(`/gantt/link/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            })
-            .catch(error => {
-                console.error('Erreur lors de la suppression du lien :', error);
-            });
-        });
-
-        document.getElementById('saveButton').addEventListener('click', function () {
-            var tasks = gantt.serialize().data;
-            var links = gantt.serialize().links;
-
-            // Exemple de traitement des tâches avant l'envoi au serveur
-            tasks = tasks.map(task => {
-                try {
-                    // Formatage de la date de début
-                    if (task.start_date) {
-                        task.start_date = formatDateForGantt(task.start_date);
-                    }
-
-                    // Formatage de la date de fin
-                    if (task.end_date) {
-                        task.end_date = formatDateForGantt(task.end_date);
-                    }
-
-                    // Optionnel : Calculer la date de fin si elle n'est pas fournie
-                    if (!task.end_date && task.start_date && task.duration) {
-                        let startDate = new Date(task.start_date);
-                        let endDate = new Date(startDate);
-                        endDate.setDate(startDate.getDate() + task.duration); // Ajouter la durée à la date de début
-                        task.end_date = endDate.toISOString();
-                    }
-
-                    return task;
-                } catch (error) {
-                    console.error('Date invalide pour la tâche : ', task);
-                    alert('Une tâche contient une date invalide.');
-                    return null;  // Exclure la tâche invalide
-                }
-            }).filter(task => task !== null); // Exclure les tâches invalides
-
-
-            var projectId = document.getElementById('projectSelect').value;
-            if (!projectId) {
-                alert('Veuillez sélectionner un projet.');
-                return;
-            }
-
-            fetch('/gantt/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    project_id: projectId,
-                    tasks: tasks,
-                    links: links
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(error => {
-                        throw new Error(error.error || "Erreur inconnue");
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    alert('Gantt enregistré avec succès');
-                } else {
-                    alert('Erreur lors de la sauvegarde');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la sauvegarde : ' + error.message);
-            });
-        });
-
-    });
-
-*/
-        document.addEventListener("DOMContentLoaded", function () {
-            gantt.init("gantt_here");
-                gantt.templates.task_class = function (start, end, task) {
-                    switch (task.priority) {
-                        case "high": return "red_color";
-                        case "medium": return "blue_color";
-                        case "low": return "gray_color";
-                    }
-                };
+        var projectCode = document.getElementById("projectSelect").value;
 
 
 
-
-                // Initialisation de Gantt
-                gantt.config.xml_date = "%Y-%m-%d %H:%i:%s";
-                gantt.config.date_format = "%Y-%m-%d %H:%i:%s";
-
-                gantt.config.xml_date = "%Y-%m-%dT%H:%i:%s";
-                gantt.config.date_format = "%Y-%m-%dT%H:%i:%s";
-                gantt.init("gantt_here");
-                function isValidDate(dateStr) {
-                    const date = new Date(dateStr);
-                    return !isNaN(date.getTime());
-                }
-
-                function formatDateForGantt(dateStr) {
-                    if (!dateStr) {
-                        console.error('Date non définie ou vide:', dateStr);
-                        return null;
-                    }
-
-                    const date = new Date(dateStr);  // Conversion en objet Date
-                    if (isNaN(date.getTime())) {
-                        console.error('Date invalide:', dateStr);
-                        return null;
-                    }
-
-                    return date.toISOString();  // Conversion en format ISO 8601
-                }
-
-        // Charger les données du Gantt
-
-        document.getElementById('projectSelect').addEventListener('change', (event) => {
-            const projectId = event.target.value;
-
-            const url = `/gantt/load/${projectId}`;
-            console.log(`URL appelée : ${url}`);
-
-            fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (!data || !data.data || !data.links) {
-                    console.error("Format de données invalide :", data);
-                    return;
-                }
-
-                console.log("Données du projet avant formatage :", data);
-
-                // Formater les dates
-                data.data.forEach(task => {
-                    task.start_date = formatDateForGantt(task.start_date);
-                    task.end_date = formatDateForGantt(task.end_date);
-                });
-
-                console.log("Données du projet après formatage :", data);
-
-                gantt.clearAll();
-                gantt.parse(data);  // Charger les données dans Gantt
-            })
-            .catch(error => {
-                console.error('Erreur lors du chargement des données Gantt :', error);
-            });
-
-
-        });
-
-        function getDuration(startDate, endDate) {
-            let start = new Date(startDate);
-            let end = new Date(endDate);
-
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                console.error('Dates invalides pour le calcul de durée:', startDate, endDate);
-                return null;
-            }
-
-            return (end - start) / (1000 * 60 * 60 * 24); // Durée en jours
-        }
-
-        function _getStartEndConfig(task) {
-            if (!task.start_date || !task.end_date) {
-                console.error('Start date ou end date manquante pour la tâche:', task);
-                return null;
-            }
-
-            let start = new Date(task.start_date);
-            let end = new Date(task.end_date);
-
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                console.error('Dates invalides:', task.start_date, task.end_date);
-                return null;
-            }
-
-            return {
-                start: start,
-                end: end
-            };
-        }
-
-        function saveGanttData(projectId) {
-            const tasks = gantt.serialize().data;
-            const links = gantt.serialize().links;
-
-            fetch(`/gantt/save/${projectId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    data: {
-                        tasks: tasks,
-                        links: links
-                    }
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.status === 'success') {
-                    alert('Données sauvegardées avec succès.');
-                } else {
-                    console.error('Erreur lors de la sauvegarde des données Gantt:', result);
-                    alert('Erreur lors de la sauvegarde des données Gantt.');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur lors de la sauvegarde des données Gantt:', error);
-                alert('Erreur lors de la sauvegarde des données Gantt : ' + error.message);
-            });
-        }
-
-        function deleteProject(projectId) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce projet?')) return;
-
-            fetch(`/gantt/delete/${projectId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Erreur de réseau');
-                return response.json();
-            })
-            .then(result => {
-                if (result.status === 'success') {
-                    gantt.clearAll();
-                    document.getElementById('projectSelect').value = '';
-                    alert('Projet supprimé avec succès.');
-                } else {
-                    console.error('Erreur lors de la suppression du projet:', result);
-                    alert('Erreur lors de la suppression du projet.');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur lors de la suppression du projet:', error);
-                alert('Erreur lors de la suppression du projet : ' + error.message);
-            });
-        }
-
-        document.getElementById('saveButton').addEventListener('click', () => {
-            const projectId = document.getElementById('projectSelect').value;
-            if (projectId) {
-                saveGanttData(projectId);
-            } else {
-                alert('Veuillez sélectionner un projet avant de sauvegarder.');
-            }
-        });
-
-        document.getElementById('deleteButton').addEventListener('click', () => {
-            const projectId = document.getElementById('projectSelect').value;
-            if (projectId) {
-                deleteProject(projectId);
-            } else {
-                alert('Veuillez sélectionner un projet avant de supprimer.');
-            }
-        });
-
-    });
-</script>
-
-
+    </script>
 @endsection
