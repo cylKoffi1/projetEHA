@@ -19,10 +19,23 @@ class CaractReservoir extends Model
         'capacite',
         'natureTraveaux'
     ];
+    public function typeCaptage()
+    {
+        return $this->belongsTo(typeCaptage::class, 'typeReservoir', 'code');
+    }
+
+    public function natureTravaux()
+    {
+        return $this->belongsTo(NatureTravaux::class, 'natureTraveaux', 'code');
+    }
+    
+    public function materielStockage(){
+        return $this->belongsTo(MaterielStockage::class, 'materiaux', 'code');
+    }
 
     public function caracteristique()
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');
     }
-    
+
 }

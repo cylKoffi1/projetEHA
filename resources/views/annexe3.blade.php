@@ -64,27 +64,34 @@
                 </div>
                 <div class="card-content">
                     <div class="card-body">
+                        <form id="filterForm">
                         <!-- Sélecteur pour le sous-domaine -->
-                        <div class="row align-items-end justify-content-center">
+                        <div class="row align-items-end">
+                            <div class="col-3">
+                                <label for="domaine">Domaine :</label>
+                                <select id="domaine" name="domaine" class="form-control" required>
+                                    <option value="">Selectionner domaine</option>
+                                    @foreach($Domaines as $Domaine)
+                                        <option value="{{ $Domaine->code }}">{{ $Domaine->libelle }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             <div class="col-3">
                                 <label for="sous_domaine">Sous-Domaine :</label>
                                 <select id="sous_domaine" name="sous_domaine" class="form-control" required>
-                                    @foreach($sousDomaines as $sousDomaine)
-                                        <option value="{{ $sousDomaine->code }}">{{ $sousDomaine->libelle }}</option>
-                                    @endforeach
+                                    <option value="">Sélectionner un sous-domaine</option>
                                 </select>
                             </div>
 
                             <div class="col-3">
                                 <label for="famille">Famille Infrastructure</label>
                                 <select name="famille" id="famille" class="form-select">
-                                    @foreach ($familles as $famille)
-                                        <option value="{{ $famille->code }}">{{ $famille->nom_famille }}</option>
-                                    @endforeach
+                                    <option value="">Sélectionner une famille</option>
                                 </select>
                             </div>
-                            <!-- Sélecteur pour l'année -->
-                            <div class="col-2">
+
+                            <div class="col-1">
                                 <label for="year">Année :</label>
                                 <select id="year" name="year" class="form-control" required>
                                     @foreach($years as $year)
@@ -92,20 +99,22 @@
                                     @endforeach
                                 </select>
                             </div>
+
                             <div class="col-2">
                                 <label for="etablissement">Établissement</label><br>
-                                <input type="radio" name="etablissement" value="sante">
-                                <label>santé</label><br>
-                                <input type="radio" name="etablissement" value="scolaire">
-                                <label>scolaire</label>
-                            </div>
-
-                            <!-- Bouton Filtrer sur la même ligne -->
-                            <div class="col-2">
-                                <button id="filter-button" class="btn btn-primary w-50">Filtrer</button>
+                                <input type="radio" name="etablissement" value="sante" id="sante">
+                                <label for="sante">Santé</label><br>
+                                <input type="radio" name="etablissement" value="scolaire" id="scolaire">
+                                <label for="scolaire">Scolaire</label>
                             </div>
                         </div>
-
+                        <!-- Bouton Filtrer -->
+                         <div class="row">
+                            <div class="col-2 text-end">
+                                <button id="filter-button" class="btn btn-primary w-100">Filtrer</button>
+                            </div>
+                         </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -121,6 +130,8 @@
                                     <!-- Les données seront insérées ici via JavaScript -->
                                 </tbody>
                             </table>
+                            <h2>Résultats</h2>
+                            <div id="results"></div>
                         </div>
                     </div>
                 </div>
@@ -133,7 +144,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
 <script>
-$(document).ready(function() {
+/*$(document).ready(function() {
     $('#filter-button').on('click', function() {
         var sousDomaine = $('#sous_domaine').val();
         var year = $('#year').val();
@@ -145,9 +156,7 @@ $(document).ready(function() {
             return;
         }
 
-        console.log("Sous-domaine: ", sousDomaine); // Ajouter un log pour le sous-domaine
-        console.log("Année: ", year); // Ajouter un log pour l'année
-        console.log("Ecran ID: ", ecranId); // Ajouter un log pour l'ID de l'écran
+         // Ajouter un log pour l'ID de l'écran
 
         // Envoi de la requête AJAX
         $.ajax({
@@ -262,31 +271,56 @@ $(document).ready(function() {
 
     });
 });
-
+*/
 
 </script>
 
 <script>
+
     document.addEventListener('DOMContentLoaded', function () {
+        const domaineSelect = document.getElementById('domaine');
         const sousDomaineSelect = document.getElementById('sous_domaine');
 
+        domaineSelect.addEventListener('change', function () {
+            const domaineCode = domaineSelect.value;
+            console.log('Code Domaine sélectionné :', domaineCode);
+
+            // Appel AJAX pour récupérer les sous-domaines
+            $.ajax({
+                url: '/admin/get-sous-domaines', // Route pour récupérer les sous-domaines
+                method: 'GET',
+                data: { domaine: domaineCode },
+                success: function (response) {
+                    // Mettre à jour le select des sous-domaines avec les nouvelles données
+                    sousDomaineSelect.innerHTML = '<option value="">Sélectionner un sous-domaine</option>';
+                    response.sousDomaines.forEach(function (sousDomaine) {
+                        const option = document.createElement('option');
+                        option.value = sousDomaine.code;
+                        option.textContent = sousDomaine.libelle;
+                        sousDomaineSelect.appendChild(option);
+                    });
+                },
+                error: function (error) {
+                    console.error('Erreur lors de la récupération des sous-domaines :', error);
+                }
+            });
+        });
+
         sousDomaineSelect.addEventListener('change', function () {
-            const sousDomaineCode = sousDomaineSelect.value; // Récupérer le code du sous-domaine
-            console.log('Code Sous-Domaine sélectionné :', sousDomaineCode);
+            const sousDomaineCode = sousDomaineSelect.value;
 
             // Appel AJAX pour récupérer les familles d'infrastructure
             $.ajax({
-                url: '/admin/get-familles', // Remplacez ceci par votre route pour récupérer les familles
+                url: '/admin/get-familles',
                 method: 'GET',
                 data: { sous_domaine: sousDomaineCode },
                 success: function (response) {
-                    // Mettre à jour le select des familles avec les nouvelles données
                     const familleSelect = document.getElementById('famille');
-                    familleSelect.innerHTML = ''; // Réinitialiser les options
+                    familleSelect.innerHTML = '<option value="">Sélectionner une famille</option>'; // Ajouter une option vide par défaut
 
                     response.familles.forEach(function (famille) {
                         const option = document.createElement('option');
-                        option.value = famille.code;
+                        option.value = famille.famille_code; // Utiliser famille_code pour être cohérent avec les noms des colonnes
                         option.textContent = famille.nom_famille;
                         familleSelect.appendChild(option);
                     });
@@ -296,6 +330,191 @@ $(document).ready(function() {
                 }
             });
         });
+
     });
-    </script>
+</script>
+<script>
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Empêcher le comportement par défaut du formulaire
+
+    // Récupérer les données du formulaire
+    var sousDomaine = document.getElementById('sous_domaine').value;
+    var year = document.getElementById('year').value;
+    var ecranId = document.getElementById('ecran_id').value;
+    var famille = document.getElementById('famille').value;
+
+    if (!famille) {
+        alert("Veuillez sélectionner une famille.");
+        return; // Arrêter la soumission si 'famille' est vide
+    }
+
+    // Préparer les données pour la requête AJAX
+    var formData = {
+        _token: '{{ csrf_token() }}',
+        sous_domaine: sousDomaine,
+        year: year,
+        ecran_id: ecranId,
+        famille: famille
+    };
+
+    // Requête AJAX vers le contrôleur pour récupérer les données JSON
+    fetch('{{ route("filterAnnexe") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': formData._token
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        var resultsContainer = document.getElementById('results');
+        resultsContainer.innerHTML = ''; // Vider les résultats précédents
+
+        if (data.status === 'success') {
+            data.resultats.forEach(result => {
+                var caracteristique = result.caracteristique || {};
+                var sousTable = result.sous_table || 'Non défini';
+                var sousTableData = result.sous_table_data || [];
+
+                // Créer un conteneur pour chaque caractéristique
+                var resultDiv = document.createElement('div');
+                resultDiv.innerHTML = `<h3>Caractéristique: ${caracteristique.CodeCaractFamille || 'Non défini'}</h3>
+                                       <p>Sous-table: ${sousTable}</p>`;
+
+                // Créer un tableau pour chaque type de sous-table
+                var table = document.createElement('table');
+                table.className = 'table table-striped table-bordered display nowrap';
+                table.id = 'table1'; // Ajouter l'ID
+                table.style.width = '100%';
+
+                // Créer l'en-tête du tableau en fonction de la sous-table
+                var thead = document.createElement('thead');
+                var headerRow = document.createElement('tr');
+
+                // Gestion des différentes sous-tables
+                if (sousTable === 'Unité de traitement') {
+                    headerRow.innerHTML = `
+                        <th>Nature</th>
+                        <th>Unité</th>
+                        <th>Débit Capacité</th>
+                    `;
+                } else if (sousTable === 'Réservoir') {
+                    headerRow.innerHTML = `
+                        <th>Type de Captage</th>
+                        <th>Nature</th>
+                        <th>Stockage</th>
+                        <th>Capacité</th>
+                    `;
+                } else if (sousTable === 'Réseau de collecte et de transport') {
+                    headerRow.innerHTML = `
+                        <th>Réseaux</th>
+                        <th>Nature</th>
+                        <th>Ouvrage</th>
+                        <th>Classe</th>
+                        <th>Linéraire</th>
+                    `;
+                } else if (sousTable === "Ouvrage de captage d'eau") {
+                    headerRow.innerHTML = `
+                        <th>Type de Captage</th>
+                        <th>Nature</th>
+                        <th>Débit Capacité</th>
+                        <th>Profondeur</th>
+                    `;
+                } else if (sousTable === "Ouvrage d'assainissement") {
+                    headerRow.innerHTML = `
+                        <th>Ouvrage</th>
+                        <th>Nature</th>
+                        <th>Capacité</th>
+                    `;
+                } else if (sousTable === 'Instrumentation') {
+                    headerRow.innerHTML = `
+                        <th>Instrument</th>
+                        <th>Nature</th>
+                        <th>Nombre</th>
+                    `;
+                }
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Créer le corps du tableau
+                var tbody = document.createElement('tbody');
+                sousTableData.forEach(data => {
+                    var row = document.createElement('tr');
+                    if (sousTable === 'Unité de traitement') {
+                        row.innerHTML = `
+                            <td>${data.nature || 'Non spécifié'}</td>
+                            <td>${data.unite || 'Non spécifié'}</td>
+                            <td>${data.debitCapacite || 'Non spécifié'}</td>
+                        `;
+                    } else if (sousTable === 'Réservoir') {
+                        row.innerHTML = `
+                            <td>${data.captage || 'Non spécifié'}</td>
+                            <td>${data.nature || 'Non spécifié'}</td>
+                            <td>${data.Stockage || 'Non spécifié'}</td>
+                            <td>${data.capacite || 'Non spécifié'}</td>
+                        `;
+                    } else if (sousTable === 'Réseau de collecte et de transport') {
+                        row.innerHTML = `
+                            <td>${data.Reseaux || 'Non spécifié'}</td>
+                            <td>${data.nature || 'Non spécifié'}</td>
+                            <td>${data.ouvrage || 'Non spécifié'}</td>
+                            <td>${data.classe || 'Non spécifié'}</td>
+                            <td>${data.lineaire || 'Non spécifié'}</td>
+                        `;
+                    } else if (sousTable === "Ouvrage de captage d'eau") {
+                        row.innerHTML = `
+                            <td>${data.type_captage.libelle || 'Non spécifié'}</td>
+                            <td>${data.nature_travaux.libelle || 'Non spécifié'}</td>
+                            <td>${data.debitCapacite || 'Non spécifié'}</td>
+                            <td>${data.profondeur || 'Non spécifié'}</td>
+                        `;
+                    } else if (sousTable === "Ouvrage d'assainissement") {
+                        row.innerHTML = `
+                            <td>${data.ouvrage || 'Non spécifié'}</td>
+                            <td>${data.nature || 'Non spécifié'}</td>
+                            <td>${data.capacite || 'Non spécifié'}</td>
+                        `;
+                    } else if (sousTable === 'Instrumentation') {
+                        row.innerHTML = `
+                            <td>${data.instrument || 'Non spécifié'}</td>
+                            <td>${data.nature || 'Non spécifié'}</td>
+                            <td>${data.nombre || 'Non spécifié'}</td>
+                        `;
+                    }
+                    tbody.appendChild(row);
+                });
+
+                table.appendChild(tbody);
+                resultDiv.appendChild(table);
+                resultsContainer.appendChild(resultDiv);
+
+                // Initialiser DataTables après avoir ajouté le tableau au DOM
+                $('#' + table.id).DataTable({
+                    paging: true,
+                    searching: true,
+                    info: true,
+                    responsive: true
+                });
+            });
+        } else {
+            resultsContainer.innerHTML = '<p>Aucun résultat trouvé.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        document.getElementById('results').innerHTML = '<p>Une erreur est survenue lors de la récupération des données.</p>';
+    });
+});
+
+// Initialisation de DataTables après l'ajout du tableau
+$(document).ready(function() {
+    $('#table1').DataTable();
+});
+$(document).ready(function() {
+        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe3');
+    });
+
+</script>
+
 @endsection

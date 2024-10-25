@@ -18,6 +18,14 @@ class CaractInstrumentation extends Model
         'natureTraveaux'
     ];
 
+    public function typeInstrument(){
+        return $this->belongsTo(TypeInstrument::class, 'typeInstrument', 'code');
+    }
+
+    public function natureTravaux(){
+        return $this->belongsTo(NatureTravaux::class, 'natureTraveaux', 'code');
+    }
+
     public function caracteristique()
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');

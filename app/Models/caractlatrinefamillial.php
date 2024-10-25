@@ -18,6 +18,10 @@ class caractlatrinefamillial extends Model
         'natureTraveaux'
     ];
 
+    public function natureTravaux(){
+        return $this->belongsTo(NatureTravaux::class, 'natureTraveaux', 'code');
+    }
+    
     public function caracteristique()
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');

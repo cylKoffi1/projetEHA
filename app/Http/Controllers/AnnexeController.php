@@ -7,8 +7,18 @@ use App\Models\ActionMener;
 use App\Models\AgenceExecution;
 use App\Models\BailleursProjet;
 use App\Models\Caracteristique;
+use App\Models\CaractInstrumentation;
+use App\Models\caractlatrinefamillial;
+use App\Models\CaractLatrinePublique;
+use App\Models\CaractOuvrageAssainiss;
+use App\Models\CaractOuvrageCaptageEau;
+use App\Models\CaractReseau;
+use App\Models\CaractReseauCollect;
+use App\Models\CaractReservoir;
+use App\Models\CaractUniteTraitement;
 use App\Models\Departement;
 use App\Models\District;
+use App\Models\Domaine;
 use App\Models\Ecran;
 use App\Models\FamilleInfrastructure;
 use App\Models\Localite;
@@ -24,6 +34,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DomPDFPDF;
+use Symfony\Component\Console\Input\Input;
+use Illuminate\Support\Facades\Log;
 
 class AnnexeController extends Controller
 {
@@ -184,7 +196,7 @@ class AnnexeController extends Controller
     {
         // 1. Récupérer l'écran en fonction de l'ID passé dans la requête
         $ecran = Ecran::find($request->input('ecran_id'));
-
+        $Domaines = Domaine::all();
         // 2. Récupérer tous les sous-domaines
         $sousDomaines = SousDomaine::all();
 
@@ -218,24 +230,300 @@ class AnnexeController extends Controller
 
 
         // 5. Passer les données récupérées à la vue
-        return view('annexe3', compact('ecran', 'sousDomaines', 'years', 'codeSousDomaines', 'familles'));
+        return view('annexe3', compact('ecran','Domaines', 'sousDomaines', 'years', 'codeSousDomaines', 'familles'));
     }
     public function getFamilles(Request $request)
-{
-    $sousDomaineCode = $request->input('sous_domaine');
+    {
+        $sousDomaineCode = $request->input('sous_domaine');
 
-    $familles = FamilleInfrastructure::select('famille_infrastructure.nom_famille', 'famille_infrastructure.code as famille_code')
-        ->distinct()
-        ->join('infrastructures as inf', 'inf.code_famille_infrastructure', '=', 'famille_infrastructure.code')
-        ->join('domaine_intervention as dom', 'dom.code', '=', 'inf.code_domaine')
-        ->join('sous_domaine as sdom', 'sdom.code_domaine', '=', 'dom.code')
-        ->where('sdom.code', $sousDomaineCode)
-        ->get();
+        $familles = FamilleInfrastructure::select('famille_infrastructure.nom_famille', 'famille_infrastructure.code as famille_code')
+            ->distinct()
+            ->join('infrastructures as inf', 'inf.code_famille_infrastructure', '=', 'famille_infrastructure.code')
+            ->join('domaine_intervention as dom', 'dom.code', '=', 'inf.code_domaine')
+            ->join('sous_domaine as sdom', 'sdom.code_domaine', '=', 'dom.code')
+            ->where('sdom.code', $sousDomaineCode)
+            ->get();
 
-    return response()->json(['familles' => $familles]);
-}
+        return response()->json(['familles' => $familles]);
+    }
+    public function getSousDomaines(Request $request)
+    {
+        $domaineCode = $request->input('domaine');
 
-    public function filterAnnexe(Request $request){
+        // Récupérer les sous-domaines liés au domaine
+        $sousDomaines = SousDomaine::where('code_domaine', $domaineCode)->get();
+
+        // Retourner les sous-domaines au format JSON
+        return response()->json(['sousDomaines' => $sousDomaines]);
+    }
+    public function getCaracteristiqueData(Request $request)
+    {
+        try {
+            // Journalisation pour déboguer les valeurs d'entrée du client
+            Log::info('Requête reçue: ', $request->all());
+
+            // Récupérer la caractéristique basée sur 'famille'
+            $caracteristique = Caracteristique::where('CodeFamille', $request->input('famille'))->first();
+
+            if (!$caracteristique) {
+                Log::warning('Aucune caractéristique trouvée pour la famille: ' . $request->input('famille'));
+                return response()->json(['error' => 'Aucune caractéristique trouvée'], 404);
+            }
+
+            Log::info('Caractéristique trouvée: ', ['caracteristique' => $caracteristique]);
+
+            $codeCaractFamille = $caracteristique->CodeCaractFamille;
+            $subTableData = null;
+            $tableName = null;
+
+            // Exemple pour `caractunitetraitement`
+            if (CaractUniteTraitement::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractUniteTraitement trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractUniteTraitement::with(['uniteTraitement', 'natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                        'nature'=> $item->natureTravaux->libelle ?? 'Non spécifié',
+                        'unite'=>$item->uniteTraitement->libelle ?? 'Non spécifié',
+                        'debitCapacite' => $item->debitCapacite,
+                        ];
+                    });
+                $tableName = 'Unité de traitement';
+            }
+
+            // Exemple pour `caractreservoir`
+            elseif (CaractReservoir::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractReservoir trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractReservoir::with(['typeCaptage', 'natureTravaux', 'materielStockage'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                        'nature'=> $item->natureTravaux->libelle ?? 'Non spécifié',
+                        'captage'=>$item->typeCaptage->libelle ?? 'Non spécifié',
+                        'Stockage' => $item->materielStockage->libelle ?? 'Non spécifié',
+                        'capacite' => $item->capacite
+                        ];
+                    });
+
+                $tableName = 'Réservoir';
+            }
+            // Exemple pour `caractreseaucollecttransport`
+            elseif (CaractReseauCollect::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractReseauCollect trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractReseauCollect::with(['typeOuvrage', 'typeReseaux', 'natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    // Transformez les données pour ajouter les libellés
+                $formattedData = $subTableData->map(function ($item) {
+                    return [
+                        'Reseaux' => $item->typeReseaux->libelle ?? 'Non spécifié',
+                        'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                        'ouvrage' => $item->typeOuvrage->libelle ?? 'Non spécifié',
+                        'classe' => $item->classe,
+                        'lineaire' => $item->lineaire,
+                    ];
+                });
+                $tableName = 'Réseau de collecte et de transport';
+            }
+            // Exemple pour `caractreseau`
+            elseif (CaractReseau::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractReseau trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractReseau::with(['ouvrageTransport', 'materielStockage', 'natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    // Transformez les données pour ajouter les libellés
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                            'captage' => $item->ouvrageTransport->libelle ?? 'Non spécifié',
+                            'stockage' => $item->materielStockage->libelle ?? 'Non spécifique',
+                            'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                            'Diametre' => $item->Diametre,
+                            'lineaire' => $item->lineaire,
+                        ];
+                    });
+                $tableName = 'Réseau';
+            }
+            // Exemple pour `caractouvragecaptageeau`
+            elseif (CaractOuvrageCaptageEau::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractOuvrageCaptageEau trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+
+                // Chargez les relations avec 'with()'
+                $subTableData = CaractOuvrageCaptageEau::with(['typeCaptage', 'natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)
+                    ->get(); // On ne spécifie pas les colonnes ici
+
+                // Transformez les données pour ajouter les libellés
+                $formattedData = $subTableData->map(function ($item) {
+                    return [
+                        'captage' => $item->typeCaptage->libelle ?? 'Non spécifié',
+                        'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                        'debitCapacite' => $item->debitCapacite,
+                        'profondeur' => $item->profondeur,
+                    ];
+                });
+
+                $tableName = 'Ouvrage de captage d\'eau';
+            }
+            // Exemple pour `caractouvrageassainiss`
+            elseif (CaractOuvrageAssainiss::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractOuvrageAssainiss trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractOuvrageAssainiss::with(['typeOuvrage', 'natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    // Transformez les données pour ajouter les libellés
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                            'ouvrage' => $item->typeOuvrage->libelle ?? 'Non spécifié',
+                            'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                            'capacite' => $item->capaciteVolume,
+                        ];
+                    });
+                $tableName = 'Ouvrage d\'assainissement';
+            }
+            // Exemple pour `caractlatrinepublique`
+            elseif (CaractLatrinePublique::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractLatrinePublique trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractLatrinePublique::with(['natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    // Transformez les données pour ajouter les libellés
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                            'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                            'nombre' => $item->nombre,
+                        ];
+                    });
+                $tableName = 'Latrine publique';
+            }
+            // Exemple pour `caractlatrinefamillial`
+            elseif (CaractLatrineFamillial::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractLatrineFamillial trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractLatrineFamillial::with(['natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    // Transformez les données pour ajouter les libellés
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                            'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                            'nombre' => $item->nombre,
+                        ];
+                    });
+                $tableName = 'Latrine familiale';
+            }
+            // Exemple pour `caractinstrumentation`
+            elseif (CaractInstrumentation::where('CodeCaractFamille', $codeCaractFamille)->exists()) {
+                Log::info('Table CaractInstrumentation trouvée pour CodeCaractFamille: ' . $codeCaractFamille);
+                $subTableData = CaractInstrumentation::with(['typeInstrument', 'natureTravaux'])
+                    ->where('CodeCaractFamille', $codeCaractFamille)->get();
+
+                    // Transformez les données pour ajouter les libellés
+                    $formattedData = $subTableData->map(function ($item) {
+                        return [
+                            'instrument' => $item->typeInstrument->libelle ?? 'Non spécifié',
+                            'nature' => $item->natureTravaux->libelle ?? 'Non spécifié',
+                            'nombre' => $item->nombre,
+                        ];
+                    });
+                $tableName = 'Instrumentation';
+            }
+
+            // Journaliser si aucune sous-table correspondante n'a été trouvée
+            if (!$subTableData) {
+                Log::warning('Aucune sous-table ne correspond à CodeCaractFamille: ' . $codeCaractFamille);
+                return response()->json(['error' => 'Aucune sous-table ne correspond à CodeCaractFamille'], 404);
+            }
+
+            // Retourner les données fusionnées (caracteristique + sous-table)
+            Log::info('Données de sous-table récupérées avec succès pour ' . $tableName);
+
+            return response()->json([
+                'caracteristique' => $caracteristique,
+                'sous_table' => $tableName,
+                'sous_table_data' => $subTableData
+            ]);
+
+        } catch (\Exception $e) {
+            // Log the error with the full stack trace for better debugging
+            Log::error('Erreur dans getCaracteristiqueData: ' . $e->getMessage(), [
+                'exception' => $e
+            ]);
+
+            // Return a JSON response with the error details
+            return response()->json([
+                'error' => 'Une erreur est survenue lors du traitement.',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function filterAnnexe(Request $request)
+    {
+        try {
+            // Validation des entrées
+            $validatedData = $request->validate([
+                'sous_domaine' => 'required|string',
+                'year' => 'required|integer',
+                'ecran_id' => 'required|integer',
+                'famille' => 'required|integer',
+            ]);
+
+            $sousDomaine = $request->input('sous_domaine');
+            $year = $request->input('year');
+            $familleCode = $request->input('famille');
+
+            // Récupérer les projets
+            $projets = ProjetEha2::all();
+            $projetsFiltres = $projets->filter(function ($projet) use ($sousDomaine, $year) {
+                $codeSousDomaine = substr($projet->CodeProjet, 12, 4);
+                $projectYear = substr($projet->CodeProjet, 17, 4);
+                return $codeSousDomaine == $sousDomaine && $projectYear == $year;
+            });
+
+            // Extraire les codes de projet pour filtrer les caractéristiques
+            $projetCodes = $projetsFiltres->pluck('CodeProjet');
+
+            // Récupérer les caractéristiques
+            $caracteristiques = Caracteristique::whereIn('CodeProjet', $projetCodes)
+                ->where('codeFamille', $familleCode)
+                ->get();
+
+            if ($caracteristiques->isEmpty()) {
+                return response()->json(['error' => 'Aucune caractéristique trouvée pour les projets sélectionnés.'], 404);
+            }
+
+            $resultats = [];
+
+            foreach ($caracteristiques as $caracteristique) {
+                $sousTableResult = $this->getCaracteristiqueData(new Request([
+                    'famille' => $familleCode,
+                    'CodeCaractFamille' => $caracteristique->CodeCaractFamille
+                ]));
+
+                // Vérifier si la sous-table a bien été trouvée
+                if (!isset($sousTableResult->original['sous_table']) || empty($sousTableResult->original['sous_table_data'])) {
+                    \Log::warning('Aucune sous-table trouvée pour CodeCaractFamille : ' . $caracteristique->CodeCaractFamille);
+                }
+
+                $resultats[] = [
+                    'caracteristique' => $caracteristique,
+                    'sous_table' => $sousTableResult->original['sous_table'] ?? 'Non défini',
+                    'sous_table_data' => $sousTableResult->original['sous_table_data'] ?? []
+                ];
+            }
+
+
+            return response()->json(['status' => 'success', 'resultats' => $resultats], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur dans filterAnnexe: ', ['message' => $e->getMessage()]);
+            return response()->json(['error' => 'Une erreur est survenue lors du traitement.', 'details' => $e->getMessage()], 500);
+        }
+    }
+
+
+    /*public function filterAnnexe(Request $request){
     try {
         // Pour vérifier les données envoyées, ajoutez des logs
         \Log::info('Données reçues: ', $request->all());
@@ -246,6 +534,52 @@ class AnnexeController extends Controller
             'year' => 'required|integer',
             'ecran_id' => 'required|integer'
         ]);
+        $sousDomaine = $request->input('sous_domaine');
+        $year = $request->input('year');
+        $familleCode = $request->input('famille');
+
+        // Récupérer les projets selon les critères de sous-domaine et d'année
+        $projets = ProjetEha2::all();
+        $projetsFiltres = $projets->filter(function ($projet) use ($sousDomaine, $year) {
+            $codeSousDomaine = substr($projet->CodeProjet, 12, 4);
+            $projectYear = substr($projet->CodeProjet, 17, 4);
+            return $codeSousDomaine == $sousDomaine && $projectYear == $year;
+        });
+
+        // Extraire les codes de projet pour filtrer dans les caractéristiques
+        $projetCodes = $projetsFiltres->pluck('CodeProjet');
+
+        // Récupérer les caractéristiques des projets filtrés
+        $caracteristiques = Caracteristique::whereIn('CodeProjet', $projetCodes)
+        ->where('codeFamille', $familleCode)
+        ->get();
+
+        // Vérifier les bénéficiaires associés et les sous-caractéristiques
+        if ($caracteristiques->isEmpty()) {
+            return back()->withErrors(['error' => 'Aucune caractéristique trouvée pour les projets sélectionnés.']);
+        }else{
+            // Si des caractéristiques existent, on va traiter chaque caractéristique
+            $resultats = [];
+
+            foreach ($caracteristiques as $caracteristique) {
+                // Appel de la méthode getCaracteristiqueData
+                // On simule une requête pour chaque caractéristique avec les données nécessaires.
+                $request = new Request();
+                $request->replace([
+                    'codeFamille' => $familleCode,
+                    'CodeCaractFamille' => $caracteristique->CodeCaractFamille
+                ]);
+
+                // Appel de la fonction getCaracteristiqueData pour chaque caractéristique
+                $resultat = $this->getCaracteristiqueData($request);
+
+                // Stocker le résultat
+                $resultats[] = $resultat;
+            }
+
+            // Retourner ou traiter les résultats
+            return view('resultats', ['resultats' => $resultats]);
+        }
 
         // Logique pour récupérer les données en fonction des paramètres
         $sousDomaine = $validatedData['sous_domaine'];
@@ -442,18 +776,7 @@ class AnnexeController extends Controller
         \Log::error('Erreur dans filterAnnexe: ' . $e->getMessage());
         return response()->json(['error' => 'Une erreur est survenue lors du traitement : ' . $e->getMessage()], 500);
         }
-    }
-
-
-
-
-
-
-
-
-
-
-
+    }*/
 
     private function formatHeaderName($type)
     {

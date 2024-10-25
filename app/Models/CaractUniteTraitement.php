@@ -16,9 +16,17 @@ class CaractUniteTraitement extends Model
         'CodeCaractFamille',
         'typeUnite',
         'debitCapacite',
-        'natureTraveaux'
+        'natureTravaux'
     ];
+    public function uniteTraitement()
+    {
+        return $this->belongsTo(UniteTraitement::class, 'typeUnite', 'code');
+    }
 
+    public function natureTravaux()
+    {
+        return $this->belongsTo(NatureTravaux::class, 'natureTravaux', 'code');
+    }
     public function caracteristique()
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');

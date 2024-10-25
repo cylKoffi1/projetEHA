@@ -11,7 +11,7 @@ class Domaine extends Model
 
     public $timestamps = false;
 
-    protected $table = 'domaine_intervention'; // Nom de la table   
+    protected $table = 'domaine_intervention'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
 }

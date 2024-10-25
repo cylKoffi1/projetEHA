@@ -19,7 +19,12 @@ class CaractOuvrageAssainiss extends Model
         'capaciteVolume',
         'natureTraveaux'
     ];
-
+    public function typeOuvrage(){
+        return $this->belongsTo(Infrastructure::class, 'typeOuvrage', 'code');
+    }
+    public function natureTravaux(){
+        return $this->belongsTo(NatureTravaux::class, 'natureTraveaux', 'code');
+    }
     public function caracteristique()
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');

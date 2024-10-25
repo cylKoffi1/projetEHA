@@ -9,7 +9,7 @@ class CaractLatrinePublique extends Model
 {
     use HasFactory;
     public $timestamps = false;
-    protected $table = 'caractlatrinefamillial';
+    protected $table = 'caractlatrinepublique';
     protected $primaryKey = 'CodeCaractFamille';
 
     protected $fillable = [
@@ -17,6 +17,10 @@ class CaractLatrinePublique extends Model
         'nombre',
         'natureTraveaux'
     ];
+
+    public function natureTravaux(){
+        return $this->belongsTo(NatureTravaux::class, 'natureTraveaux', 'code');
+    }
 
     public function caracteristique()
     {

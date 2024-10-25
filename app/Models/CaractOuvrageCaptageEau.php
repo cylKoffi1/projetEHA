@@ -18,8 +18,16 @@ class CaractOuvrageCaptageEau extends Model
         'typeCaptage',
         'debitCapacite',
         'profondeur',
-        'natureTraveaux'
+        'natureTravaux'
     ];
+
+    public function typeCaptage(){
+        return $this->belongsTo(typeCaptage::class, 'typeCaptage', 'code');
+    }
+
+    public function natureTravaux(){
+        return $this->belongsTo(NatureTravaux::class, 'natureTravaux', 'code');
+    }           
 
     public function caracteristique()
     {

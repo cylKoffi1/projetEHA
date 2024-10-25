@@ -14,4 +14,15 @@ class Infrastructure extends Model
     protected $keyType = 'string';
     protected $primaryKey = 'code';
     protected $fillable = ['code', 'libelle','code_domaine', 'code_famille_infrastructure'];
+
+    public function caractReseauCollect()
+    {
+        return $this->hasMany(CaractReseauCollect::class, 'typeOuvrage', 'code');
+    }
+
+    // Méthode pour obtenir les infrastructures avec code_domaine == 02
+    public static function getOuvragesByDomaine($codeDomaine = 02)
+    {
+        return self::where('code_domaine', $codeDomaine)->get();
+    }
 }

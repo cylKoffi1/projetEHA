@@ -22,6 +22,19 @@ class CaractReseau extends Model
         'natureTravaux'
     ];
 
+    public function ouvrageTransport(){
+        return $this->belongsTo(OuvrageTransport::class, 'typeTransport', 'code');
+    }
+
+    public function materielStockage(){
+        return $this->belongsTo(MaterielStockage::class, 'materiaux', 'code');
+    }
+
+    public function natureTravaux()
+    {
+        return $this->belongsTo(NatureTravaux::class, 'natureTravaux', 'code');
+    }
+
     public function caracteristique()
     {
         return $this->belongsTo(Caracteristique::class, 'CodeCaractFamille');

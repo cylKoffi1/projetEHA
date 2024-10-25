@@ -349,10 +349,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/getProjectDetails', [AnnexeController::class, 'getProjectDetails']);
 
          /**************************** GESTION DES ANNEXE 3 ******************************/
-    // Route basique pour accéder à la page annexe3
-    Route::get('admin/annexe3', [AnnexeController::class, 'annexe3'])->name('annexe.page');
-    Route::get('/filter-annexe', [AnnexeController::class, 'filterAnnexe'])->name('filterAnnexe');
-    Route::get('admin/get-familles', [AnnexeController::class, 'getFamilles'])->name('get.familles');
+        // Route basique pour accéder à la page annexe3
+        Route::get('admin/annexe3', [AnnexeController::class, 'annexe3'])->name('annexe.page');
+        Route::post('/filter-annexe', [AnnexeController::class, 'filterAnnexe'])->name('filterAnnexe');
+        Route::get('admin/get-familles', [AnnexeController::class, 'getFamilles'])->name('get.familles');
+        Route::get('admin/get-sous-domaines', [AnnexeController::class, 'getSousDomaines']);
+        Route::get('/caracteristique', [AnnexeController::class, 'getCaracteristiqueData']);
 
 
 
