@@ -355,7 +355,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('admin/get-familles', [AnnexeController::class, 'getFamilles'])->name('get.familles');
         Route::get('admin/get-sous-domaines', [AnnexeController::class, 'getSousDomaines']);
         Route::get('/caracteristique', [AnnexeController::class, 'getCaracteristiqueData']);
-
+        Route::get('/beneficiaire', [AnnexeController::class, 'getBeneficiaire']);
 
 
     //***************** REALISATION ************* */

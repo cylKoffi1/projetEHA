@@ -122,7 +122,7 @@
                 <div class="card-content">
                     <div class="card-body">
                         <div id="result-container" class="mt-4">
-                            <table class="table table-striped table-bordered display nowrap" id="table1" cellspacing="0" style="width: 100%">
+                            <table class="table table-striped table-bordered display nowrap" id="table" cellspacing="0" style="width: 100%">
                                 <thead id="table-header">
                                     <!-- Les en-têtes seront insérés ici via JavaScript -->
                                 </thead>
@@ -130,7 +130,6 @@
                                     <!-- Les données seront insérées ici via JavaScript -->
                                 </tbody>
                             </table>
-                            <h2>Résultats</h2>
                             <div id="results"></div>
                         </div>
                     </div>
@@ -143,139 +142,9 @@
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
-<script>
-/*$(document).ready(function() {
-    $('#filter-button').on('click', function() {
-        var sousDomaine = $('#sous_domaine').val();
-        var year = $('#year').val();
-        var ecranId = "{{ $ecran->id }}"; // Récupération de l'ID de l'écran dynamique
-
-        // Vérifier si les champs obligatoires sont vides avant l'envoi de la requête
-        if (!sousDomaine || !year || !ecranId) {
-            alert('Veuillez sélectionner tous les champs obligatoires.');
-            return;
-        }
-
-         // Ajouter un log pour l'ID de l'écran
-
-        // Envoi de la requête AJAX
-        $.ajax({
-            url: `{{ route("filterAnnexe") }}`, // Correct usage of template literals
-            type: 'GET', // Changer à GET
-            dataType: 'json',
-            headers: {
-                'Accept': 'application/json'
-            },
-            data: {
-                sous_domaine: sousDomaine,
-                year: year,
-                ecran_id: ecranId
-            },
-            success: function(response) {
-                console.log('Réponse du serveur', response);
-                if (response.error) {
-                    alert(response.error);
-                    return;
-                }
-
-                // Vider les anciens résultats
-                $('#table-header').empty();
-                $('#table-body').empty();
-
-                // Construire les en-têtes du tableau
-                var headerRow1 = '<tr>';
-                var headerRow2 = '<tr>';
-                headerRow1 += `
-                    <th rowspan="2">N°</th>
-                    <th rowspan="2">Districts</th>
-                    <th rowspan="2">Régions</th>
-                    <th rowspan="2">Départements</th>
-                    <th rowspan="2">Sous-préfectures/Communes</th>
-                `;
-
-                response.headerConfig.forEach(function(header) {
-                    headerRow1 += '<th colspan="' + header.colspan + '">' + header.name + '</th>';
-                });
-
-                headerRow1 += `
-                    <th rowspan="2">Nb de ménages desservis</th>
-                    <th rowspan="2">Coût en F CFA (XOF)</th>
-                `;
-                headerRow1 += '</tr>';
-
-                // Ajouter les en-têtes des colonnes dynamiques
-                headerRow2 = '<tr>';
-                for (var key in response.resultats) {
-                    if (response.resultats.hasOwnProperty(key)) {
-                        var resultat = response.resultats[key];
-
-                        // Convertir les colonnes en tableau
-                        var columns = Object.values(resultat.columns);
-
-                        // Utiliser forEach sur les colonnes converties en tableau
-                        columns.forEach(function(columnName) {
-                            headerRow2 += '<th>' + columnName + '</th>';
-                        });
-                    }
-                }
-                headerRow2 += '</tr>';
-
-                $('#table-header').append(headerRow1);
-                $('#table-header').append(headerRow2);
-
-                // Remplir le corps du tableau
-                var rowIndex = 1;
-                for (var key in response.resultats) {
-                    if (response.resultats.hasOwnProperty(key)) {
-                        var resultat = response.resultats[key];
-
-                        // Convertir les colonnes en tableau pour itérer
-                        var columns = Object.values(resultat.columns);
-
-                        resultat.data.forEach(function(dataRow) {
-                            var row = '<tr>';
-                            row += `<td>${rowIndex++}</td>`;
-                            row += `<td>${dataRow['Districts'] || ''}</td>`;
-                            row += `<td>${dataRow['Régions'] || ''}</td>`;
-                            row += `<td>${dataRow['Départements'] || ''}</td>`;
-                            row += `<td>${dataRow['Sous-préfectures/Communes'] || ''}</td>`;
-
-                            columns.forEach(function(columnName) {
-                                row += '<td>' + (dataRow[columnName] ?? '') + '</td>';
-                            });
-
-                            row += `<td>${dataRow['Nb de ménages desservis'] || ''}</td>`;
-                            row += `<td>${dataRow['Coût en F CFA (XOF)'] || ''}</td>`;
-                            row += '</tr>';
-                            $('#table-body').append(row);
-                        });
-                    }
-                }
-
-                // Détruire et réinitialiser DataTable
-                if ($.fn.DataTable.isDataTable('#table1')) {
-                    $('#table1').DataTable().clear().destroy();
-                }
-                initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe 3: Fiche de collecte');
-            },
-
-            error: function(xhr, status, error) {
-                console.error('Erreur AJAX:', {
-                    status: status,
-                    error: error,
-                    responseText: xhr.responseText
-                });
-                alert('Erreur: ' + xhr.responseText);
-            }
-        });
-
-    });
-});
-*/
-
-</script>
 
 <script>
+
 
     document.addEventListener('DOMContentLoaded', function () {
         const domaineSelect = document.getElementById('domaine');
@@ -357,163 +226,136 @@ document.getElementById('filterForm').addEventListener('submit', function(e) {
         famille: famille
     };
 
-    // Requête AJAX vers le contrôleur pour récupérer les données JSON
-    fetch('{{ route("filterAnnexe") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': formData._token
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        var resultsContainer = document.getElementById('results');
-        resultsContainer.innerHTML = ''; // Vider les résultats précédents
+// Requête AJAX vers le contrôleur pour récupérer les données JSON
+fetch('{{ route("filterAnnexe") }}', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': formData._token
+    },
+    body: JSON.stringify(formData)
+})
+.then(response => response.json())
+.then(data => {
+    // Afficher toutes les données dans la console
+    console.log("Données reçues:", data);
 
-        if (data.status === 'success') {
-            data.resultats.forEach(result => {
-                var caracteristique = result.caracteristique || {};
-                var sousTable = result.sous_table || 'Non défini';
-                var sousTableData = result.sous_table_data || [];
+    var resultsContainer = document.getElementById('results');
+    resultsContainer.innerHTML = ''; // Vider les résultats précédents
 
-                // Créer un conteneur pour chaque caractéristique
-                var resultDiv = document.createElement('div');
-                resultDiv.innerHTML = `<h3>Caractéristique: ${caracteristique.CodeCaractFamille || 'Non défini'}</h3>
-                                       <p>Sous-table: ${sousTable}</p>`;
+    if (data.status === 'success') {
+        data.resultats.forEach((result, index) => {
+            var caracteristique = result.caracteristique || {};
+            var sousTable = result.sous_table || 'Non défini';
+            var sousTableData = result.sous_table_data || [];
+            var beneficiaire = result.beneficiaire || { nom: 'Non défini', type: 'Non défini' };
+            var codeProjet = result.CodeProjet || 'Non défini';
 
-                // Créer un tableau pour chaque type de sous-table
-                var table = document.createElement('table');
-                table.className = 'table table-striped table-bordered display nowrap';
-                table.id = 'table1'; // Ajouter l'ID
-                table.style.width = '100%';
+            // Affichage des informations dans la console pour vérification
+            console.log(`Caractéristique ${index + 1}:`, caracteristique);
+            console.log(`Bénéficiaire:`, beneficiaire);
+            console.log(`Code Projet: ${codeProjet}`);
+            console.log(`Données de la sous-table (${sousTable}):`, sousTableData);
 
-                // Créer l'en-tête du tableau en fonction de la sous-table
-                var thead = document.createElement('thead');
-                var headerRow = document.createElement('tr');
+            // Créer un conteneur pour chaque résultat
+            var resultDiv = document.createElement('div');
+            resultDiv.innerHTML = `
+                <h3>Caractéristique: ${caracteristique.CodeCaractFamille || 'Non défini'}</h3>
+                <p><strong>Code Projet:</strong> ${codeProjet}</p>
+            `;
 
-                // Gestion des différentes sous-tables
-                if (sousTable === 'Unité de traitement') {
-                    headerRow.innerHTML = `
-                        <th>Nature</th>
-                        <th>Unité</th>
-                        <th>Débit Capacité</th>
-                    `;
-                } else if (sousTable === 'Réservoir') {
-                    headerRow.innerHTML = `
-                        <th>Type de Captage</th>
-                        <th>Nature</th>
-                        <th>Stockage</th>
-                        <th>Capacité</th>
-                    `;
-                } else if (sousTable === 'Réseau de collecte et de transport') {
-                    headerRow.innerHTML = `
-                        <th>Réseaux</th>
-                        <th>Nature</th>
-                        <th>Ouvrage</th>
-                        <th>Classe</th>
-                        <th>Linéraire</th>
-                    `;
-                } else if (sousTable === "Ouvrage de captage d'eau") {
-                    headerRow.innerHTML = `
-                        <th>Type de Captage</th>
-                        <th>Nature</th>
-                        <th>Débit Capacité</th>
-                        <th>Profondeur</th>
-                    `;
-                } else if (sousTable === "Ouvrage d'assainissement") {
-                    headerRow.innerHTML = `
-                        <th>Ouvrage</th>
-                        <th>Nature</th>
-                        <th>Capacité</th>
-                    `;
-                } else if (sousTable === 'Instrumentation') {
-                    headerRow.innerHTML = `
-                        <th>Instrument</th>
-                        <th>Nature</th>
-                        <th>Nombre</th>
-                    `;
-                }
-                thead.appendChild(headerRow);
-                table.appendChild(thead);
+            // Créer le tableau avec un ID unique
+            var tableId = 'table' + index;
+            var table = document.createElement('table');
+            table.className = 'table table-striped table-bordered display nowrap';
+            table.id = tableId;
+            table.style.width = '100%';
 
-                // Créer le corps du tableau
-                var tbody = document.createElement('tbody');
-                sousTableData.forEach(data => {
-                    var row = document.createElement('tr');
-                    if (sousTable === 'Unité de traitement') {
-                        row.innerHTML = `
-                            <td>${data.nature || 'Non spécifié'}</td>
-                            <td>${data.unite || 'Non spécifié'}</td>
-                            <td>${data.debitCapacite || 'Non spécifié'}</td>
-                        `;
-                    } else if (sousTable === 'Réservoir') {
-                        row.innerHTML = `
-                            <td>${data.captage || 'Non spécifié'}</td>
-                            <td>${data.nature || 'Non spécifié'}</td>
-                            <td>${data.Stockage || 'Non spécifié'}</td>
-                            <td>${data.capacite || 'Non spécifié'}</td>
-                        `;
-                    } else if (sousTable === 'Réseau de collecte et de transport') {
-                        row.innerHTML = `
-                            <td>${data.Reseaux || 'Non spécifié'}</td>
-                            <td>${data.nature || 'Non spécifié'}</td>
-                            <td>${data.ouvrage || 'Non spécifié'}</td>
-                            <td>${data.classe || 'Non spécifié'}</td>
-                            <td>${data.lineaire || 'Non spécifié'}</td>
-                        `;
-                    } else if (sousTable === "Ouvrage de captage d'eau") {
-                        row.innerHTML = `
-                            <td>${data.type_captage.libelle || 'Non spécifié'}</td>
-                            <td>${data.nature_travaux.libelle || 'Non spécifié'}</td>
-                            <td>${data.debitCapacite || 'Non spécifié'}</td>
-                            <td>${data.profondeur || 'Non spécifié'}</td>
-                        `;
-                    } else if (sousTable === "Ouvrage d'assainissement") {
-                        row.innerHTML = `
-                            <td>${data.ouvrage || 'Non spécifié'}</td>
-                            <td>${data.nature || 'Non spécifié'}</td>
-                            <td>${data.capacite || 'Non spécifié'}</td>
-                        `;
-                    } else if (sousTable === 'Instrumentation') {
-                        row.innerHTML = `
-                            <td>${data.instrument || 'Non spécifié'}</td>
-                            <td>${data.nature || 'Non spécifié'}</td>
-                            <td>${data.nombre || 'Non spécifié'}</td>
-                        `;
-                    }
-                    tbody.appendChild(row);
-                });
+            var thead = document.createElement('thead');
+            var headerRow = document.createElement('tr');
 
-                table.appendChild(tbody);
-                resultDiv.appendChild(table);
-                resultsContainer.appendChild(resultDiv);
+            // Ajouter les en-têtes de colonne, y compris la colonne "Bénéficiaire"
+            headerRow.innerHTML = `
+                <th>Bénéficiaire</th>
+                ${sousTable === 'Unité de traitement' ? '<th>Nature</th><th>Unité</th><th>Débit Capacité</th>' : ''}
+                ${sousTable === 'Réservoir' ? '<th>Type de Captage</th><th>Nature</th><th>Stockage</th><th>Capacité</th>' : ''}
+                ${sousTable === 'Réseau de collecte et de transport' ? '<th>Réseaux</th><th>Nature</th><th>Ouvrage</th><th>Classe</th><th>Linéraire</th>' : ''}
+                ${sousTable === "Ouvrage de captage d'eau" ? '<th>Type de Captage</th><th>Nature</th><th>Débit Capacité</th><th>Profondeur</th>' : ''}
+                ${sousTable === "Ouvrage d'assainissement" ? '<th>Ouvrage</th><th>Nature</th><th>Capacité</th>' : ''}
+                ${sousTable === 'Instrumentation' ? '<th>Instrument</th><th>Nature</th><th>Nombre</th>' : ''}
+            `;
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
 
-                // Initialiser DataTables après avoir ajouté le tableau au DOM
-                $('#' + table.id).DataTable({
-                    paging: true,
-                    searching: true,
-                    info: true,
-                    responsive: true
-                });
+            // Créer le corps du tableau
+            var tbody = document.createElement('tbody');
+            sousTableData.forEach(data => {
+                var row = document.createElement('tr');
+
+                // Ajouter les cellules de données, incluant le bénéficiaire
+                row.innerHTML = `
+                    <td>${beneficiaire.libelle || 'Non spécifié'} (${beneficiaire.type_beneficiaire})</td>
+                    ${sousTable === 'Unité de traitement' ? `
+                        <td>${data.nature || 'Non spécifié'}</td>
+                        <td>${data.unite || 'Non spécifié'}</td>
+                        <td>${data.debitCapacite || 'Non spécifié'}</td>
+                    ` : ''}
+                    ${sousTable === 'Réservoir' ? `
+                        <td>${data.captage || 'Non spécifié'}</td>
+                        <td>${data.nature || 'Non spécifié'}</td>
+                        <td>${data.Stockage || 'Non spécifié'}</td>
+                        <td>${data.capacite || 'Non spécifié'}</td>
+                    ` : ''}
+                    ${sousTable === 'Réseau de collecte et de transport' ? `
+                        <td>${data.Reseaux || 'Non spécifié'}</td>
+                        <td>${data.nature || 'Non spécifié'}</td>
+                        <td>${data.ouvrage || 'Non spécifié'}</td>
+                        <td>${data.classe || 'Non spécifié'}</td>
+                        <td>${data.lineaire || 'Non spécifié'}</td>
+                    ` : ''}
+                    ${sousTable === "Ouvrage de captage d'eau" ? `
+                        <td>${data.type_captage.libelle || 'Non spécifié'}</td>
+                        <td>${data.nature_travaux.libelle || 'Non spécifié'}</td>
+                        <td>${data.debitCapacite || 'Non spécifié'}</td>
+                        <td>${data.profondeur || 'Non spécifié'}</td>
+                    ` : ''}
+                    ${sousTable === "Ouvrage d'assainissement" ? `
+                        <td>${data.ouvrage || 'Non spécifié'}</td>
+                        <td>${data.nature || 'Non spécifié'}</td>
+                        <td>${data.capacite || 'Non spécifié'}</td>
+                    ` : ''}
+                    ${sousTable === 'Instrumentation' ? `
+                        <td>${data.instrument || 'Non spécifié'}</td>
+                        <td>${data.nature || 'Non spécifié'}</td>
+                        <td>${data.nombre || 'Non spécifié'}</td>
+                    ` : ''}
+                `;
+                tbody.appendChild(row);
             });
-        } else {
-            resultsContainer.innerHTML = '<p>Aucun résultat trouvé.</p>';
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        document.getElementById('results').innerHTML = '<p>Une erreur est survenue lors de la récupération des données.</p>';
-    });
+
+            table.appendChild(tbody);
+            resultDiv.appendChild(table);
+            resultsContainer.appendChild(resultDiv);
+
+            // Appeler DataTables avec les bons paramètres
+            var userName = '{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}';
+            var title = "Annexe3";
+            initDataTable(userName, tableId, title); // Appeler la fonction d'initialisation avec les paramètres corrects
+        });
+    } else {
+        resultsContainer.innerHTML = '<p>Aucun résultat trouvé.</p>';
+    }
+})
+.catch(error => {
+    console.error('Erreur:', error);
+    document.getElementById('results').innerHTML = '<p>Une erreur est survenue lors de la récupération des données.</p>';
 });
 
-// Initialisation de DataTables après l'ajout du tableau
-$(document).ready(function() {
-    $('#table1').DataTable();
+
+
 });
-$(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Annexe3');
-    });
+
+
 
 </script>
 

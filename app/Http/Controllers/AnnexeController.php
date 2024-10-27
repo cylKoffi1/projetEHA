@@ -20,6 +20,7 @@ use App\Models\Departement;
 use App\Models\District;
 use App\Models\Domaine;
 use App\Models\Ecran;
+use App\Models\Etablissement;
 use App\Models\FamilleInfrastructure;
 use App\Models\Localite;
 use App\Models\NatureTravaux;
@@ -256,6 +257,107 @@ class AnnexeController extends Controller
         // Retourner les sous-domaines au format JSON
         return response()->json(['sousDomaines' => $sousDomaines]);
     }
+    public function getBeneficiaire(Request $request)
+    {
+        try {
+            // Journalisation pour déboguer les valeurs d'entrée
+            Log::info('Requête reçue: ', $request->all());
+
+            // Filtrage des projets selon le domaine et l'année
+            $sousDomaine = $request->input('sous_domaine');
+            $year = $request->input('year');
+            $projets = ProjetEha2::all();
+
+            // Filtrer les projets basés sur le sous-domaine et l'année
+            $projetsFiltres = $projets->filter(function ($projet) use ($sousDomaine, $year) {
+                $codeSousDomaine = substr($projet->CodeProjet, 12, 4);
+                $projectYear = substr($projet->CodeProjet, 17, 4);
+                return $codeSousDomaine == $sousDomaine && $projectYear == $year;
+            });
+
+            // Récupérer les bénéficiaires associés aux projets filtrés
+            $beneficiaires = ActionBeneficiairesProjet::whereIn('CodeProjet', $projetsFiltres->pluck('CodeProjet'))->get();
+
+            if ($beneficiaires->isEmpty()) {
+                Log::warning('Aucun bénéficiaire trouvé pour les projets filtrés.');
+                return response()->json(['error' => 'Aucun bénéficiaire trouvé'], 404);
+            }
+
+            $resultats = [];
+
+            // Pour chaque bénéficiaire, récupérer les détails selon le type
+            foreach ($beneficiaires as $beneficiaire) {
+                $details = $this->fetchBeneficiaireDetails($beneficiaire);
+
+                // Ajouter les détails du bénéficiaire au résultat
+                if ($details) {
+                    $resultats[] = [
+                        'type_beneficiaire' => $beneficiaire->type_beneficiaire,
+                        'code' => $beneficiaire->CodeProjet,
+                        'nom' => $details->libelle ?? $details->nom_etablissement,
+                        'details_niveaux' => $details,
+                    ];
+                }
+            }
+
+            Log::info('Bénéficiaires trouvés: ', ['beneficiaires' => $resultats]);
+            return response()->json(['beneficiaires' => $resultats], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur dans getBeneficiaire: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'error' => 'Une erreur est survenue lors du traitement.',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Méthode auxiliaire pour obtenir les détails du bénéficiaire
+    protected function fetchBeneficiaireDetails($beneficiaire)
+    {
+        $details = null;
+
+        switch ($beneficiaire->type_beneficiaire) {
+            case 'district':
+                $details = District::where('code', $beneficiaire->beneficiaire_id)->select('libelle')->first();
+                break;
+            case 'departement':
+                $details = Departement::where('code', $beneficiaire->beneficiaire_id)->select('libelle')->first();
+                break;
+            case 'region':
+                $details = Region::where('code', $beneficiaire->beneficiaire_id)->select('libelle')->first();
+                break;
+            case 'sous_prefecture':
+                $details = Sous_prefecture::where('code', $beneficiaire->beneficiaire_id)->select('libelle')->first();
+                break;
+            case 'localite':
+                $details = Localite::where('code', $beneficiaire->beneficiaire_id)->select('libelle')->first();
+                break;
+            case 'etablissement':
+                $details = Etablissement::where('code', $beneficiaire->beneficiaire_id)
+                    ->select('nom_etablissement', 'code_localite', 'code_niveau')
+                    ->first();
+
+                // Récupérer les informations de niveau supérieurs si c'est un établissement
+                if ($details) {
+                    $localite = Localite::where('code', $details->code_localite)->select('libelle', 'code_sous_prefecture')->first();
+                    $sousPrefecture = $localite ? Sous_prefecture::where('code', $localite->code_sous_prefecture)->select('libelle', 'code_departement')->first() : null;
+                    $departement = $sousPrefecture ? Departement::where('code', $sousPrefecture->code_departement)->select('libelle', 'code_region')->first() : null;
+                    $region = $departement ? Region::where('code', $departement->code_region)->select('libelle')->first() : null;
+
+                    // Ajouter les niveaux hiérarchiques
+                    $details->localite = $localite ? $localite->libelle : null;
+                    $details->sous_prefecture = $sousPrefecture ? $sousPrefecture->libelle : null;
+                    $details->departement = $departement ? $departement->libelle : null;
+                    $details->region = $region ? $region->libelle : null;
+                }
+                break;
+        }
+
+        return $details;
+    }
+
+
     public function getCaracteristiqueData(Request $request)
     {
         try {
@@ -465,7 +567,6 @@ class AnnexeController extends Controller
             $validatedData = $request->validate([
                 'sous_domaine' => 'required|string',
                 'year' => 'required|integer',
-                'ecran_id' => 'required|integer',
                 'famille' => 'required|integer',
             ]);
 
@@ -473,51 +574,55 @@ class AnnexeController extends Controller
             $year = $request->input('year');
             $familleCode = $request->input('famille');
 
-            // Récupérer les projets
-            $projets = ProjetEha2::all();
-            $projetsFiltres = $projets->filter(function ($projet) use ($sousDomaine, $year) {
+            // Étape 1 : Filtrer les projets selon le domaine et l'année
+            $projets = ProjetEha2::all()->filter(function ($projet) use ($sousDomaine, $year) {
                 $codeSousDomaine = substr($projet->CodeProjet, 12, 4);
                 $projectYear = substr($projet->CodeProjet, 17, 4);
                 return $codeSousDomaine == $sousDomaine && $projectYear == $year;
             });
 
-            // Extraire les codes de projet pour filtrer les caractéristiques
-            $projetCodes = $projetsFiltres->pluck('CodeProjet');
+            $projetCodes = $projets->pluck('CodeProjet');
 
-            // Récupérer les caractéristiques
+            // Étape 2 : Récupérer les bénéficiaires et caractéristiques liées aux projets filtrés
+            $beneficiaires = ActionBeneficiairesProjet::whereIn('CodeProjet', $projetCodes)->get();
             $caracteristiques = Caracteristique::whereIn('CodeProjet', $projetCodes)
-                ->where('codeFamille', $familleCode)
-                ->get();
+                                ->where('codeFamille', $familleCode)
+                                ->get();
 
-            if ($caracteristiques->isEmpty()) {
-                return response()->json(['error' => 'Aucune caractéristique trouvée pour les projets sélectionnés.'], 404);
+            if ($beneficiaires->isEmpty() && $caracteristiques->isEmpty()) {
+                return response()->json(['error' => 'Aucune donnée trouvée pour les projets sélectionnés.'], 404);
             }
 
             $resultats = [];
 
+            // Étape 3 : Regrouper les bénéficiaires et leurs caractéristiques
             foreach ($caracteristiques as $caracteristique) {
                 $sousTableResult = $this->getCaracteristiqueData(new Request([
                     'famille' => $familleCode,
                     'CodeCaractFamille' => $caracteristique->CodeCaractFamille
                 ]));
 
-                // Vérifier si la sous-table a bien été trouvée
+                // Vérifier si les données de la sous-table existent
                 if (!isset($sousTableResult->original['sous_table']) || empty($sousTableResult->original['sous_table_data'])) {
-                    \Log::warning('Aucune sous-table trouvée pour CodeCaractFamille : ' . $caracteristique->CodeCaractFamille);
+                    Log::warning('Aucune sous-table trouvée pour CodeCaractFamille : ' . $caracteristique->CodeCaractFamille);
                 }
+
+                // Associer le bénéficiaire correspondant à chaque caractéristique
+                $beneficiaire = $beneficiaires->firstWhere('CodeProjet', $caracteristique->CodeProjet);
+                $beneficiaireDetails = $beneficiaire ? $this->fetchBeneficiaireDetails($beneficiaire) : null;
 
                 $resultats[] = [
                     'caracteristique' => $caracteristique,
                     'sous_table' => $sousTableResult->original['sous_table'] ?? 'Non défini',
-                    'sous_table_data' => $sousTableResult->original['sous_table_data'] ?? []
+                    'sous_table_data' => $sousTableResult->original['sous_table_data'] ?? [],
+                    'beneficiaire' => $beneficiaireDetails
                 ];
             }
-
 
             return response()->json(['status' => 'success', 'resultats' => $resultats], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur dans filterAnnexe: ', ['message' => $e->getMessage()]);
+            Log::error('Erreur dans filterAnnexe: ', ['message' => $e->getMessage()]);
             return response()->json(['error' => 'Une erreur est survenue lors du traitement.', 'details' => $e->getMessage()], 500);
         }
     }
