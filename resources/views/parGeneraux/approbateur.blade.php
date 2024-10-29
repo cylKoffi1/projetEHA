@@ -227,11 +227,11 @@
                                 </td>
                                 <td>{{ $approbateur->numOrdre }}</td>
                                 <td>
-                                    <div class="dropdown">
-                                        <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
-                                            <span style="color: white"></span>
-                                        </a>
-                                        <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                <div class="dropdown">
+                                    <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
+                                        <span style="color: white">Options</span>
+                                    </a>
+                                    <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="editApprobateur(
                                                 '{{ $approbateur->numOrdre }}',
@@ -246,12 +246,14 @@
                                                 <i class="bi bi-pencil-fill me-3"></i> Modifier
                                             </a>
                                         </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="deleteApprobateur('{{ $approbateur->codeAppro }}')">
+                                                <i class="bi bi-trash3-fill me-3"></i> Supprimer
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
 
-
-
-                                            <li><a class="dropdown-item" href="#" onclick="deleteApprobateur('{{ $approbateur->codeAppro }}')"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                        </ul>
-                                    </div>
                                 </td>
                             </tr>
                             @endforeach
