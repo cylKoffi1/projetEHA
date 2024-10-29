@@ -152,7 +152,7 @@
 
         domaineSelect.addEventListener('change', function () {
             const domaineCode = domaineSelect.value;
-            console.log('Code Domaine sélectionné :', domaineCode);
+            //console.log('Code Domaine sélectionné :', domaineCode);
 
             // Appel AJAX pour récupérer les sous-domaines
             $.ajax({
@@ -170,7 +170,7 @@
                     });
                 },
                 error: function (error) {
-                    console.error('Erreur lors de la récupération des sous-domaines :', error);
+                    //console.error('Erreur lors de la récupération des sous-domaines :', error);
                 }
             });
         });
@@ -195,7 +195,7 @@
                     });
                 },
                 error: function (error) {
-                    console.error('Erreur lors de la récupération des familles :', error);
+                    //console.error('Erreur lors de la récupération des familles :', error);
                 }
             });
         });
@@ -238,8 +238,9 @@ fetch('{{ route("filterAnnexe") }}', {
 .then(response => response.json())
 .then(data => {
     // Afficher toutes les données dans la console
-    console.log("Données reçues:", data);
+    //console.log("Données reçues:", data);
 
+    // Récupération des données et création des tableaux dans le conteneur 'resultsContainer'
     var resultsContainer = document.getElementById('results');
     resultsContainer.innerHTML = ''; // Vider les résultats précédents
 
@@ -248,38 +249,25 @@ fetch('{{ route("filterAnnexe") }}', {
             var caracteristique = result.caracteristique || {};
             var sousTable = result.sous_table || 'Non défini';
             var sousTableData = result.sous_table_data || [];
-            var beneficiaire = result.beneficiaire || { nom: 'Non défini', type: 'Non défini' };
-            var codeProjet = result.CodeProjet || 'Non défini';
+            var beneficiaires = result.beneficiaires || [];
+            var codeProjet = caracteristique.CodeProjet || 'Non défini';
 
-            // Affichage des informations dans la console pour vérification
-            console.log(`Caractéristique ${index + 1}:`, caracteristique);
-            console.log(`Bénéficiaire:`, beneficiaire);
-            console.log(`Code Projet: ${codeProjet}`);
-            console.log(`Données de la sous-table (${sousTable}):`, sousTableData);
-
-            // Créer un conteneur pour chaque résultat
             var resultDiv = document.createElement('div');
-            resultDiv.innerHTML = `
-                <h3>Caractéristique: ${caracteristique.CodeCaractFamille || 'Non défini'}</h3>
-                <p><strong>Code Projet:</strong> ${codeProjet}</p>
-            `;
-
-            // Créer le tableau avec un ID unique
             var tableId = 'table' + index;
             var table = document.createElement('table');
             table.className = 'table table-striped table-bordered display nowrap';
+            table.setAttribute("cellspacing", "0");
             table.id = tableId;
             table.style.width = '100%';
 
             var thead = document.createElement('thead');
             var headerRow = document.createElement('tr');
-
-            // Ajouter les en-têtes de colonne, y compris la colonne "Bénéficiaire"
             headerRow.innerHTML = `
+                <th>Code projet</th>
                 <th>Bénéficiaire</th>
                 ${sousTable === 'Unité de traitement' ? '<th>Nature</th><th>Unité</th><th>Débit Capacité</th>' : ''}
                 ${sousTable === 'Réservoir' ? '<th>Type de Captage</th><th>Nature</th><th>Stockage</th><th>Capacité</th>' : ''}
-                ${sousTable === 'Réseau de collecte et de transport' ? '<th>Réseaux</th><th>Nature</th><th>Ouvrage</th><th>Classe</th><th>Linéraire</th>' : ''}
+                ${sousTable === 'Réseau de collecte et de transport' ? '<th>Réseaux</th><th>Nature</th><th>Ouvrage</th><th>Classe</th><th>Linéaire</th>' : ''}
                 ${sousTable === "Ouvrage de captage d'eau" ? '<th>Type de Captage</th><th>Nature</th><th>Débit Capacité</th><th>Profondeur</th>' : ''}
                 ${sousTable === "Ouvrage d'assainissement" ? '<th>Ouvrage</th><th>Nature</th><th>Capacité</th>' : ''}
                 ${sousTable === 'Instrumentation' ? '<th>Instrument</th><th>Nature</th><th>Nombre</th>' : ''}
@@ -287,67 +275,71 @@ fetch('{{ route("filterAnnexe") }}', {
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            // Créer le corps du tableau
             var tbody = document.createElement('tbody');
-            sousTableData.forEach(data => {
-                var row = document.createElement('tr');
-
-                // Ajouter les cellules de données, incluant le bénéficiaire
-                row.innerHTML = `
-                    <td>${beneficiaire.libelle || 'Non spécifié'} (${beneficiaire.type_beneficiaire})</td>
-                    ${sousTable === 'Unité de traitement' ? `
-                        <td>${data.nature || 'Non spécifié'}</td>
-                        <td>${data.unite || 'Non spécifié'}</td>
-                        <td>${data.debitCapacite || 'Non spécifié'}</td>
-                    ` : ''}
-                    ${sousTable === 'Réservoir' ? `
-                        <td>${data.captage || 'Non spécifié'}</td>
-                        <td>${data.nature || 'Non spécifié'}</td>
-                        <td>${data.Stockage || 'Non spécifié'}</td>
-                        <td>${data.capacite || 'Non spécifié'}</td>
-                    ` : ''}
-                    ${sousTable === 'Réseau de collecte et de transport' ? `
-                        <td>${data.Reseaux || 'Non spécifié'}</td>
-                        <td>${data.nature || 'Non spécifié'}</td>
-                        <td>${data.ouvrage || 'Non spécifié'}</td>
-                        <td>${data.classe || 'Non spécifié'}</td>
-                        <td>${data.lineaire || 'Non spécifié'}</td>
-                    ` : ''}
-                    ${sousTable === "Ouvrage de captage d'eau" ? `
-                        <td>${data.type_captage.libelle || 'Non spécifié'}</td>
-                        <td>${data.nature_travaux.libelle || 'Non spécifié'}</td>
-                        <td>${data.debitCapacite || 'Non spécifié'}</td>
-                        <td>${data.profondeur || 'Non spécifié'}</td>
-                    ` : ''}
-                    ${sousTable === "Ouvrage d'assainissement" ? `
-                        <td>${data.ouvrage || 'Non spécifié'}</td>
-                        <td>${data.nature || 'Non spécifié'}</td>
-                        <td>${data.capacite || 'Non spécifié'}</td>
-                    ` : ''}
-                    ${sousTable === 'Instrumentation' ? `
-                        <td>${data.instrument || 'Non spécifié'}</td>
-                        <td>${data.nature || 'Non spécifié'}</td>
-                        <td>${data.nombre || 'Non spécifié'}</td>
-                    ` : ''}
-                `;
-                tbody.appendChild(row);
+            beneficiaires.forEach(beneficiaire => {
+                sousTableData.forEach(data => {
+                    var row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${codeProjet}</td>
+                        <td>${beneficiaire.nom} (${beneficiaire.type})</td>
+                        ${sousTable === 'Unité de traitement' ? `<td>${data.nature || 'Non spécifié'}</td><td>${data.unite || 'Non spécifié'}</td><td>${data.debitCapacite || 'Non spécifié'}</td>` : ''}
+                        ${sousTable === 'Réservoir' ? `<td>${data.captage || 'Non spécifié'}</td><td>${data.nature || 'Non spécifié'}</td><td>${data.Stockage || 'Non spécifié'}</td><td>${data.capacite || 'Non spécifié'}</td>` : ''}
+                        ${sousTable === 'Réseau de collecte et de transport' ? `<td>${data.Reseaux || 'Non spécifié'}</td><td>${data.nature || 'Non spécifié'}</td><td>${data.ouvrage || 'Non spécifié'}</td><td>${data.classe || 'Non spécifié'}</td><td>${data.lineaire || 'Non spécifié'}</td>` : ''}
+                        ${sousTable === "Ouvrage de captage d'eau" ? `<td>${data.type_captage.libelle || 'Non spécifié'}</td><td>${data.nature_travaux.libelle || 'Non spécifié'}</td><td>${data.debitCapacite || 'Non spécifié'}</td><td>${data.profondeur || 'Non spécifié'}</td>` : ''}
+                        ${sousTable === "Ouvrage d'assainissement" ? `<td>${data.ouvrage || 'Non spécifié'}</td><td>${data.nature || 'Non spécifié'}</td><td>${data.capacite || 'Non spécifié'}</td>` : ''}
+                        ${sousTable === 'Instrumentation' ? `<td>${data.instrument || 'Non spécifié'}</td><td>${data.nature || 'Non spécifié'}</td><td>${data.nombre || 'Non spécifié'}</td>` : ''}
+                    `;
+                    tbody.appendChild(row);
+                });
             });
-
             table.appendChild(tbody);
             resultDiv.appendChild(table);
             resultsContainer.appendChild(resultDiv);
 
-            // Appeler DataTables avec les bons paramètres
-            var userName = '{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}';
-            var title = "Annexe3";
-            initDataTable(userName, tableId, title); // Appeler la fonction d'initialisation avec les paramètres corrects
+            // Initialisation de DataTables avec les boutons et autres paramètres
+            $(`#${tableId}`).DataTable({
+                dom: "Bfrtip",
+                language: { url: '//cdn.datatables.net/plug-ins/2.1.8/i18n/fr-FR.json' },
+                responsive: true,
+                paging: true,
+                ordering: true,
+                info: true,
+                scrollX: true,
+                buttons: [
+                    {
+                        extend: 'colvis',
+                        columns: ':not(.noVis)',
+                        popoverTitle: 'Column visibility selector'
+                    },
+                    { extend: 'pageLength', text: 'Afficher les lignes' },
+                    { extend: 'excelHtml5', text: 'Exporter', title: "Annexe3" },
+                    {
+                        extend: 'pdfHtml5',
+                        text: 'Imprimer',
+                        orientation: 'landscape',
+                        pageSize: 'A4',
+                        filename: 'Annexe3',
+                        customize: function(doc) {
+                            doc.content[1].table.widths = '*'.repeat(doc.content[1].table.body[0].length).split('');
+                            doc.defaultStyle.fontSize = 8;
+                            doc['footer'] = function(page, pages) {
+                                return {
+                                    columns: [{ alignment: 'right', text: ['page ', { text: page.toString() }, ' sur ', { text: pages.toString() }] }],
+                                    margin: [10, 0]
+                                };
+                            };
+                        }
+                    }
+                ]
+            });
         });
     } else {
         resultsContainer.innerHTML = '<p>Aucun résultat trouvé.</p>';
     }
+
 })
 .catch(error => {
-    console.error('Erreur:', error);
+    //console.error('Erreur:', error);
     document.getElementById('results').innerHTML = '<p>Une erreur est survenue lors de la récupération des données.</p>';
 });
 
