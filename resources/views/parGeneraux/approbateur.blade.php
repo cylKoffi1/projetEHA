@@ -232,7 +232,23 @@
                                             <span style="color: white"></span>
                                         </a>
                                         <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                            <li><a class="dropdown-item" href="#" onclick="editApprobateur('{{ $approbateur->numOrdre }}', '{{ $approbateur->personnel->nom }} {{ $approbateur->personnel->prenom }}', '{{ $approbateur->personnel->code_personnel }}')"> <i class="bi bi-pencil-fill me-3"></i> Modifier</a></li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="editApprobateur(
+                                                '{{ $approbateur->numOrdre }}',
+                                                '{{ $approbateur->personnel->nom }} {{ $approbateur->personnel->prenom }}',
+                                                '{{ $approbateur->codeStructure }}',
+                                                '{{ $approbateur->structure ? $approbateur->structure->type_structure : '' }}',
+                                                '{{ $approbateur->structure && $approbateur->structure->type_structure == "agence" ? $approbateur->structure->agence->nom_agence : '' }}',
+                                                '{{ $approbateur->structure && $approbateur->structure->type_structure == "ministere" ? $approbateur->structure->ministere->libelle : '' }}',
+                                                '{{ $approbateur->structure && $approbateur->structure->type_structure == "bailleur" ? $approbateur->structure->bailleur->libelle_long : '' }}',
+                                                '{{ $approbateur->personnel->code_personnel }}'
+                                            )">
+                                                <i class="bi bi-pencil-fill me-3"></i> Modifier
+                                            </a>
+                                        </li>
+
+
+
                                             <li><a class="dropdown-item" href="#" onclick="deleteApprobateur('{{ $approbateur->codeAppro }}')"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
                                         </ul>
                                     </div>
@@ -265,7 +281,7 @@
                         <fieldset class="border p-3 mt-5 rounded">
                             <div class="row align-items-center">
                                 <div class="col-2">
-                                    <label for="editNordre" class="form-label">Niveau approbation:</label>
+                                    <label for="editNordre" class="form-label">Niveau :</label>
                                     <input type="number" name="editNordre" id="editNordre" readonly class="form-control">
                                 </div>
                                 <div class="col-5">
@@ -276,6 +292,12 @@
                                         <option value="{{ $personnes->code_personnel }}">{{ $personnes->nom }} {{ $personnes->prenom }}</option>
                                         @endforeach
                                     </select>
+
+                                </div>
+                                <div class="col-4">
+                                        <label for="structure">Structure:</label>
+                                        <input type="text" id="editStructure" name="editStructure" class="form-control" readonly>
+                                        <input type="hidden" id="editCodeStructure" name="editCodeStructure" class="form-control" readonly>
                                 </div>
                                 <div class="col-12 mt-3">
                                     <button type="submit" class="btn btn-primary float-end">
@@ -414,15 +436,30 @@
             });
         }
     }
-    function editApprobateur(numOrdre, nomPrenom, userCode) {
+    function editApprobateur(numOrdre, nomPrenom, codeStructure, typeStructure, agenceLibelle, ministereLibelle, bailleurLibelle, userCode) {
         // Remplir les champs du modal avec les données existantes
         $('#editNordre').val(numOrdre);
         $('#editUser').val(userCode);
-        $('#numOrdreId').val(numOrdre); // Enregistrer l'ID de l'approbateur pour la modification
+        $('#numOrdreId').val(numOrdre);
+        $('#editCodeStructure').val(codeStructure);
+
+        // Vérifiez le type de structure et remplissez le champ `editStructure` avec le bon libellé
+        let structureLibelle = "Non défini";
+        if (typeStructure === 'agence') {
+            structureLibelle = agenceLibelle;
+        } else if (typeStructure === 'ministere') {
+            structureLibelle = ministereLibelle;
+        } else if (typeStructure === 'bailleur') {
+            structureLibelle = bailleurLibelle;
+        }
+
+        $('#editStructure').val(structureLibelle);
 
         // Ouvrir le modal
         $('#editApprobateurModal').modal('show');
     }
+
+
 
     $('#editApproveForm').on('submit', function(e) {
         e.preventDefault();
@@ -452,6 +489,27 @@
                 .catch(error => console.error('Erreur:', error));
         } else {
             structureInput.value = '';
+        }
+    });
+    document.getElementById('editUser').addEventListener('change', function () {
+        var editCodePersonnel = this.value;
+        var editStructureInput = document.getElementById('editStructure');
+        var editCodeStructureInput = document.getElementById('editCodeStructure');
+        if (editCodePersonnel) {
+            fetch(`/get-structure/${editCodePersonnel}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.libelle) {
+                        editStructureInput.value = data.libelle;
+                        editCodeStructureInput.value = data.code;
+                    } else {
+                        editStructureInput.value = 'Aucune structure trouvée.';
+                        editCodeStructureInput.value = 'Aucun code';
+                    }
+                })
+                .catch(error => console.error('Erreur:', error));
+        } else {
+            editStructureInput.value =  "";
         }
     });
 </script>

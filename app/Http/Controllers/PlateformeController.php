@@ -912,7 +912,7 @@ class PlateformeController extends Controller
         // Mettre à jour les champs
         $approbateur->numOrdre = $request->input('editNordre'); // Assurez-vous de mettre à jour le numéro d'ordre si nécessaire
         $approbateur->code_personnel = $request->input('editUserapp');
-
+        $approbateur->codeStructure = $request->input('editCodeStructure');
         // Sauvegarder les modifications
         $approbateur->save();
 
@@ -928,13 +928,22 @@ class PlateformeController extends Controller
             return response()->json(['error' => 'L\'approbateur que vous essayez de supprimer n\'existe pas.'], 404);
         }
 
+        $numOrdreToDelete = $approbateur->numOrdre; // Récupérer le numOrdre de l'approbateur à supprimer
+
         try {
+            // Supprimer l'approbateur
             $approbateur->delete();
+
+            // Mettre à jour les numOrdre des approbateurs restants
+            Approbateur::where('numOrdre', '>', $numOrdreToDelete)
+                ->decrement('numOrdre');
+
             return response()->json(['success' => 'Approbateur supprimé avec succès'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur lors de la suppression de l\'approbateur.'], 500);
         }
     }
+
     public function getStructure($code_personnel)
     {
         // Récupérer la structure de rattachement
