@@ -137,6 +137,7 @@
                             <div class="col-4">
                                 <label for="structure">Structure:</label>
                                 <input type="text" id="structure" name="structure" class="form-control" readonly>
+                                <input type="hidden" id="CodeStructure" name="CodeStructure" class="form-control" readonly>
                             </div>
                             <div class="col-2 ms-auto">
                                 <label for="nordre" class="form-label">Niveau :</label>
@@ -315,6 +316,7 @@
             var userCode = $('#user').val();
             var userText = $('#user option:selected').text();
             var structure = $('#structure').val();
+            var structureCode = $('#CodeStructure').val();
 
             // Vérifier si toutes les données sont sélectionnées ou saisies
             if (userCode) {
@@ -332,7 +334,7 @@
                     // Ajouter les données récupérées au tableau #tableActionMener
                     var tableActionMener = $('#tableActionMener tbody');
                     tableActionMener.append(
-                        '<tr><td>' + nordre + '</td><td>' + userText + '</td><td>'+structure+'</td><td hidden>' + userCode + '</td><td><button type="button" class="btn btn-danger btn-sm delete-action">Supprimer</button></td></tr>'
+                        '<tr><td>' + nordre + '</td><td>' + userText + '</td><td hidden>' + structureCode + '</td><td>'+structure+'</td><td hidden>' + userCode + '</td><td><button type="button" class="btn btn-danger btn-sm delete-action">Supprimer</button></td></tr>'
                     );
 
                     // Incrémenter le champ #nordre
@@ -357,10 +359,14 @@
             $('#tableActionMener tbody tr').each(function() {
                 var nordre = $(this).find('td:eq(0)').text();
                 var userText = $(this).find('td:eq(1)').text();
-                var userCode = $(this).find('td:eq(2)').text();
+                var CodeStructure = $(this).find('td:eq(2)').text();
+                var structure = $(this).find('td:eq(3)').text();
+                var userCode = $(this).find('td:eq(4)').text();
                 approbateurs.push({
                     nordre: nordre,
                     userText: userText,
+                    CodeStructure: CodeStructure,
+                    structure: structure,
                     userCode: userCode
                 });
             });
@@ -430,15 +436,17 @@
     document.getElementById('user').addEventListener('change', function () {
         var codePersonnel = this.value;
         var structureInput = document.getElementById('structure');
-
+        var codeStructureInput = document.getElementById('CodeStructure');
         if (codePersonnel) {
             fetch(`/get-structure/${codePersonnel}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.libelle) {
-                        structureInput.value = data.libelle; // Affiche le libellé de la structure
+                        structureInput.value = data.libelle;
+                        codeStructureInput.value = data.code;
                     } else {
                         structureInput.value = 'Aucune structure trouvée.';
+                        codeStructureInput.value = 'Aucun code';
                     }
                 })
                 .catch(error => console.error('Erreur:', error));

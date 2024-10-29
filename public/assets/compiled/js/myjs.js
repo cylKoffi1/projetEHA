@@ -55,11 +55,6 @@ function initDataTable(userNameReplace, table, title) {
                     return "Afficher les lignes";
                 },
             },
-            {
-                extend: 'colvis',
-                columns: ':not(.noVis)',
-                popoverTitle: 'Column visibility selector'
-            },
             {
                 extend: "excelHtml5",
                 text: "Exporter",

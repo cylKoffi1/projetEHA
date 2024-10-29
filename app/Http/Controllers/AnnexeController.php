@@ -619,7 +619,7 @@ class AnnexeController extends Controller
                             'type' => $beneficiaire->type_beneficiaire,
                             'beneficiaire_id' => $beneficiaire->beneficiaire_id,
                             'nom' => $details->libelle ?? $details->nom_etablissement,
-                            'details_niveaux' => $details,
+                             'details_niveaux' => $details,
                         ];
                     }
                 }

@@ -48,6 +48,7 @@ use App\Models\UniteSurface;
 use App\Models\UniteTraitement;
 use App\Models\uniteVolume;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
@@ -842,24 +843,25 @@ class PlateformeController extends Controller
     public function storeApprobation(Request $request)
     {
         $approbateurs = json_decode($request->input('approbateurs'), true);
-        \Log::info('Request Data:', $request->all()); // Log all request data
+        Log::info('Request Data:', $request->all()); // Log all request data
         $errors = [];
 
         DB::beginTransaction();
         try {
             foreach ($approbateurs as $approbateur) {
-                \Log::info('Processing Approver:', $approbateur);
+                Log::info('Processing Approver:', $approbateur);
 
                 // Recherche de l'utilisateur par code personnel
                 $user = Personnel::where('code_personnel', $approbateur['userCode'])->first();
 
                 if ($user) {
-                    \Log::info('User Found:', $user->toArray());
+                    Log::info('User Found:', $user->toArray());
 
                     // Vérification de l'existence de l'approbateur avec le même code personnel
                     $existingApprobateur = Approbateur::where('code_personnel', $user->code_personnel)->first();
                     if ($existingApprobateur) {
                         $errors[] = "L'utilisateur {$user->nom} {$user->prenom} est déjà un approbateur.";
+                        Log::info("L'utilisateur {$user->nom} {$user->prenom} est déjà un approbateur.");
                         continue;
                     }
 
@@ -867,16 +869,18 @@ class PlateformeController extends Controller
                     $existingOrder = Approbateur::where('numOrdre', $approbateur['nordre'])->first();
                     if ($existingOrder) {
                         $errors[] = "Le numéro d'ordre {$approbateur['nordre']} est déjà utilisé.";
+                        Log::info("Le numéro d'ordre {$approbateur['nordre']} est déjà utilisé.");
                         continue;
                     }
 
                     // Enregistrement de l'approbateur
                     Approbateur::create([
                         'code_personnel' => $user->code_personnel,
-                        'numOrdre' => $approbateur['nordre']
+                        'numOrdre' => $approbateur['nordre'],
+                        'codeStructure' => $approbateur['CodeStructure']
                     ]);
                 } else {
-                    \Log::warning('User Not Found:', $approbateur);
+                    Log::warning('User Not Found:', $approbateur);
                 }
             }
 
@@ -890,7 +894,7 @@ class PlateformeController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error during saving approbateurs:', ['exception' => $e]);
+            Log::error('Error during saving approbateurs:', ['exception' => $e]);
             return redirect()->back()->withErrors(['error' => 'Une erreur est survenue lors de l\'enregistrement: ' . $e->getMessage()])->withInput();
         }
     }
@@ -942,25 +946,30 @@ class PlateformeController extends Controller
                 case 'ministere':
                     $data = Ministere::where('code', $structure->code_structure)->first();
                     $libelle = $data ? $data->libelle : 'Structure non trouvée';
+                    $code = $structure->code_structure;
                     break;
 
                 case 'bailleurss':
                     $data = Bailleur::where('code_bailleur', $structure->code_structure)->first();
                     $libelle = $data ? $data->libelle_long : 'Structure non trouvée';
+                    $code = $structure->code_structure;
                     break;
 
                 case 'agence_execution':
                     $data = AgenceExecution::where('code_agence_execution', $structure->code_structure)->first();
                     $libelle = $data ? $data->nom_agence : 'Structure non trouvée';
+                    $code = $structure->code_structure;
                     break;
 
                 default:
                     $libelle = 'Type de structure inconnu';
+                    $code = 'Code non trouvé';
                     break;
             }
 
             return response()->json([
-                'libelle' => $libelle
+                'libelle' => $libelle,
+                'code'=> $code
             ]);
         } else {
             return response()->json(['message' => 'Aucune structure trouvée.'], 404);
@@ -1025,7 +1034,7 @@ class PlateformeController extends Controller
         if (!$courdeau) {
             return response()->json(['error' => 'Cour d\'eau non trouvé'], 404);
         }
-        
+
         $courdeau->delete();
 
         return response()->json(['success' => 'Cour d\'eau supprimé avec succès']);

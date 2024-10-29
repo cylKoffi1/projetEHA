@@ -13,7 +13,7 @@ class Approbateur extends Model
 
     protected $table = 'approbateur';
     protected $primaryKey = 'codeAppro';
-    protected $fillable = ['code_personnel', 'numOrdre'];
+    protected $fillable = ['code_personnel', 'numOrdre', 'codeStructure'];
 
     public function Personnel()
     {
