@@ -5,28 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Particulier extends Model
+class EnntrepriseMorale extends Model
 {
     use HasFactory;
 
     // Table associée au modèle
-    protected $table = 'particuliers';
+    protected $table = 'entreprisemorale';
 
     // Les attributs qui peuvent être assignés en masse
     protected $fillable = [
         'codeEtudeProjets',
-        'nomPrenom',
-        'statutProfessionnel',
-        'numeroImmatriculationIndividuelle',
-        'adresseEntreprise',
+        'nomEntreprise',
+        'raisonSociale',
+        'numeroImmatriculation',
+        'adresseSiegeSocial',
         'numeroTelephone',
         'adresseEmail',
-        'activitePrincipale',
-        'nomCommercial',
-        'coordonneesBancaires',
-        'references',
-        'infoSupplementaire3',
-        'infoSupplementaire4',
+        'siteWeb',
+        'nomResponsableProjet',
+        'fonctionResponsable',
+        'capitalSocial',
+        'infoSupplementaire1',
+        'infoSupplementaire2',
+        'is_deleted'
     ];
 
     // Les attributs qui devraient être cachés dans les tableaux

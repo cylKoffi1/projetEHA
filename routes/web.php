@@ -27,6 +27,7 @@ use App\Http\Controllers\RealiseProjetController;
 use App\Http\Controllers\representationGraphique;
 use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
+use App\Models\EtudeProject;
 use App\Models\Renforcement;
 use Laravel\Ui\Presets\React;
 use PasswordResetController as GlobalPasswordResetController;
@@ -308,6 +309,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
         Route::post('/projects/store', [EtudeProjet::class, 'storeNaissance'])->name('project.store');
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
+        Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
 
         /***********************VALIDATION***************** */
 

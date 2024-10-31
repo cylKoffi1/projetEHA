@@ -58,7 +58,7 @@ class EtudeProjet extends Controller
                 $category = 'EHA'; // Fixe pour le moment
 
                 // Générer le code projet
-                $codeEtudeProjets = $this->generateProjectCode($location, $category);
+                $codeEtudeProjets = $request->input('codeProjet');
 
                 // Créer le projet
                 $project = EtudeProject::create([
@@ -482,4 +482,14 @@ class EtudeProjet extends Controller
             return response()->json(['error' => 'Erreur lors de la suppression. Détails : ' . $e->getMessage()], 500);
         }
     }
+    ///////////////MODELISER
+    public function modelisation(Request $request)
+    {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        return view('etudes_projets.modeliser', compact('ecran'));
+    }
 }
+
+
+
+

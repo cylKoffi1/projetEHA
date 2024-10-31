@@ -95,7 +95,7 @@
                 <div class="col-12">
 
                     <div class="container">
-                        @foreach ($projects as $project)
+                        <!--@foreach ($projects as $project)
                             <div class="mb-4">
                                 <h5>{{ $project->title }}</h5>
 
@@ -152,7 +152,12 @@
                                     </form>
                                 @endif
                             </div>
-                        @endforeach
+                        @endforeach-->
+                        <table>
+                            <thead>
+
+                            </thead>
+                        </table>
                     </div>
 
 

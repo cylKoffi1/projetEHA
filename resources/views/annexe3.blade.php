@@ -64,7 +64,7 @@
                 </div>
                 <div class="card-content">
                     <div class="card-body">
-                        <form id="filterForm">
+                    <form id="filterForm">
                         <!-- Sélecteur pour le sous-domaine -->
                         <div class="row align-items-end">
                             <div class="col-3">
@@ -91,7 +91,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-1">
+                            <div class="col-2">
                                 <label for="year">Année :</label>
                                 <select id="year" name="year" class="form-control" required>
                                     @foreach($years as $year)
@@ -100,17 +100,10 @@
                                 </select>
                             </div>
 
-                            <div class="col-2">
-                                <label for="etablissement">Établissement</label><br>
-                                <input type="radio" name="etablissement" value="sante" id="sante">
-                                <label for="sante">Santé</label><br>
-                                <input type="radio" name="etablissement" value="scolaire" id="scolaire">
-                                <label for="scolaire">Scolaire</label>
-                            </div>
-                        </div>
+                        </div><br>
                         <!-- Bouton Filtrer -->
-                         <div class="row">
-                            <div class="col-2 text-end">
+                         <div class="row text-end d-flex justify-content-end">
+                            <div class="col-2 text-end d-flex justify-content-end">
                                 <button id="filter-button" class="btn btn-primary w-100">Filtrer</button>
                             </div>
                          </div>

@@ -12,7 +12,7 @@ class EtudeProject extends Model
     protected $table = 'etudeprojects'; // Nom de la table
     protected $primaryKey = 'codeEtudeProjets'; // Clé primaire
     public $incrementing = false; // La clé primaire n'est pas incrémentée automatiquement
-    protected $fillable = ['codeEtudeProjets', 'title', 'status', 'current_approver', 'typeDemandeur']; // Champs remplissables
+    protected $fillable = ['codeEtudeProjets', 'natureTravaux', 'codeStatus', 'current_approver', 'typeDemandeur','is_deleted']; // Champs remplissables
 
     public function files()
     {
@@ -21,15 +21,12 @@ class EtudeProject extends Model
 
     public function entreprise()
     {
-        return $this->hasOne(Entreprise::class, 'codeEtudeProjets', 'codeEtudeProjets');
+        return $this->hasOne(EnntrepriseMorale::class, 'codeEtudeProjets', 'codeEtudeProjets');
     }
 
     public function particulier()
     {
-        return $this->hasOne(Particulier::class, 'codeEtudeProjets', 'codeEtudeProjets');
+        return $this->hasOne(EntrepriseParticulier::class, 'codeEtudeProjets', 'codeEtudeProjets');
     }
-    public function tasks()
-    {
-        return $this->hasMany(Task::class, 'etude_project_id', 'codeEtudeProjets');
-    }
+
 }

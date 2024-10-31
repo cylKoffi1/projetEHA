@@ -106,12 +106,12 @@
                                         <div class="col" style="text-align: left;">
                                             <!-- Radio for Public -->
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="maitreOuvrage" id="public" value="1" checked>
+                                                <input class="form-check-input" type="radio" name="maitreOuvrage" id="public" value="1" checked onchange="updateMaitreOuvrage()">
                                                 <label class="form-check-label" for="public">Public</label>
                                             </div>
                                             <!-- Radio for Private -->
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="maitreOuvrage" id="prive" value="2">
+                                                <input class="form-check-input" type="radio" name="maitreOuvrage" id="prive" value="2" onchange="updateMaitreOuvrage()">
                                                 <label class="form-check-label" for="prive">Privé</label>
                                             </div>
                                         </div>
@@ -123,6 +123,7 @@
                                             <div class="mb-3">
                                                 <label for="ministere" class="form-label">Ministère</label>
                                                 <select class="form-select" id="ministere">
+                                                    <option value="">Sélectionner le ministère</option>
                                                     @foreach ($ministeres as $min)
                                                     <option value="{{$min->code}}">{{$min->libelle}}</option>
                                                     @endforeach
@@ -131,6 +132,7 @@
                                             <div class="mb-3">
                                             <label for="collectivite" class="form-label">Collectivité Territoriale</label>
                                                 <select class="form-select" id="collectivite">
+                                                    <option value="">Sélectionner la collectivité</option>
                                                     @foreach ($collectivites as $collectivite)
                                                         <option value="{{ $collectivite->code_bailleur }}">{{ $collectivite->libelle_long }}</option>
                                                     @endforeach
@@ -143,11 +145,11 @@
                                         <div class="col" id="priveFields">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="typeDemandeur" id="radioEntreprise" value="entreprise" checked>
-                                                <label class="form-check-label" for="radioEntreprise">Entreprise</label>
+                                                <label class="form-check-label" for="radioEntreprise">Morale</label>
                                             </div>
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="typeDemandeur" id="radioParticulier" value="particulier">
-                                                <label class="form-check-label" for="radioParticulier">Particulier</label>
+                                                <label class="form-check-label" for="radioParticulier">Physique</label>
                                             </div>
                                         </div>
                                         <div class="col-3">
@@ -303,25 +305,25 @@
                                     </button><br>
                                 </div>
                                 <div class="d-flex justify-content-end">
-    <div class="col text-end">
-        <label for="files" class="form-label"></label>
-        <div class="file-card ms-auto" id="file-card-0">
-            <div id="file-icon-0" class="file-icon">
-                <span class="upload-icon" onclick="document.getElementById('files-0').click()">
-                    <img src="{{ asset('armoiries/files-data.png') }}" alt="File Icon" id="file-icon-img-0">
-                </span>
-            </div>
-            <div id="file-name-0" class="file-name">Aucune pièce sélectionné</div>
-        </div>
-        <input class="form-control d-none" type="file" id="files-0" name="files[]" multiple required>
-    </div>
-</div>
+                                    <div class="col text-end">
+                                        <label for="files" class="form-label"></label>
+                                        <div class="file-card ms-auto" id="file-card-0">
+                                            <div id="file-icon-0" class="file-icon">
+                                                <span class="upload-icon" onclick="document.getElementById('files-0').click()">
+                                                    <img src="{{ asset('armoiries/files-data.png') }}" alt="File Icon" id="file-icon-img-0">
+                                                </span>
+                                            </div>
+                                            <div id="file-name-0" class="file-name">Aucune pièce sélectionné</div>
+                                        </div>
+                                        <input class="form-control d-none" type="file" id="files-0" name="files[]" multiple required>
+                                    </div>
+                                </div>
 
-<div class="d-flex justify-content-end">
-    <button type="submit" class="btn btn-primary -mb-2 text-end">Enregistrer</button>
-</div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary -mb-2 text-end">Enregistrer</button>
+                                </div>
 
-</form>
+                    </form>
                 </div>
             </div>
         </div>

@@ -206,7 +206,7 @@ class AnnexeController extends Controller
         $years = $projets->pluck('CodeProjet')->map(function ($code) {
             // Extraire l'année en utilisant substr pour prendre les bons caractères
             return substr($code, 17, 4); // Extraire l'année à partir de la position 17, longueur de 4 caractères
-        })->unique()->filter(); // Filtrer pour ne conserver que les années distinctes et non nulles
+        })->unique()->filter()->sort(); // Filtrer pour ne conserver que les années distinctes et non nulles
 
         // 4. Extraire également les codes sous-domaine depuis le CodeProjet (position 11 à 15)
         $codeSousDomaines = $projets->pluck('CodeProjet')->map(function ($code) {
