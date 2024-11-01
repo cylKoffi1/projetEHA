@@ -10,10 +10,11 @@ class EtudeProject extends Model
     use HasFactory;
 
     protected $table = 'etudeprojects'; // Nom de la table
-    protected $primaryKey = 'codeEtudeProjets'; // Clé primaire
-    public $incrementing = false; // La clé primaire n'est pas incrémentée automatiquement
     protected $fillable = ['codeEtudeProjets', 'natureTravaux', 'codeStatus', 'current_approver', 'typeDemandeur','is_deleted']; // Champs remplissables
-
+    public function approvals()
+    {
+        return $this->hasMany(ProjectApproval::class, 'codeEtudeProjets', 'codeEtudeProjets'); // Adaptez les clés selon votre schéma
+    }
     public function files()
     {
         return $this->hasMany(EtudeProjectFile::class, 'codeEtudeProjets');

@@ -54,7 +54,7 @@
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="">Approbation</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Approuver</li>
+                            <li class="breadcrumb-item active" aria-current="page">suivre aprobation</li>
                         </ol>
                         <div class="row">
                             <script>
@@ -76,7 +76,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title">Approuver projets</h5>
+                <h5 class="card-title">Suivit des projets approuvés</h5>
+            </div>
 
             @if (session('success'))
                 <div class="alert alert-success">
@@ -89,53 +90,44 @@
                     {{ session('error') }}
                 </div>
             @endif
-
-            </div>
             <div class="card-content">
                 <div class="col-12">
-
                     <div class="container">
-                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table">
+                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
+
+                                    <th>Approuvé Par</th>
                                     <th>Code Projet</th>
                                     <th>Nature des Travaux</th>
-                                    <th>Statut</th>
-                                    <th>Approver Actuel</th>
                                     <th>Date de Création</th>
-                                    <th>Actions</th>
+                                    <th>Date d'Approbation</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($projects as $project)
+                                @foreach($approvedProjects as $project)
                                     <tr>
+                                    <td>{{ $project->approbateurs }}</td> <!-- Affichage des approbateurs -->
                                         <td>{{ $project->codeEtudeProjets }}</td>
                                         <td>{{ $project->natureTravaux }}</td>
-                                        <td>{{ $project->codeStatus }}</td>
-                                        <td>{{ $project->current_approver }}</td>
                                         <td>{{ $project->created_at }}</td>
-                                        <td>
-                                            <a href="{{ route('planning.show', $project->codeEtudeProjets) }}" class="btn btn-info">Détails</a>
-                                            <form action="{{ route('projects.approve', $project->codeEtudeProjets) }}" method="POST" style="display: inline;">
-                                                @csrf
-                                                <button type="submit" class="btn btn-success">Valider</button>
-                                            </form>
-                                        </td>
+                                        <td>{{ $project->approved_at }}</td> <!-- Affichage de la date d'approbation -->
+
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+
                     </div>
-
-
                 </div>
             </div>
+
         </div>
     </div>
 </section>
 <script>
         $(document).ready(function() {
-            initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table', 'Listes des renforcements de capacités');
+            initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Suivit des projets approuvés');
         });
 </script>
 @endsection

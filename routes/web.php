@@ -315,6 +315,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
             Route::get('admin/validationProjet', [EtudeProjet::class, 'validation'])->name('projects.validate');
             Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
+            Route::post('/planning/{id}/approve', [EtudeProjet::class, 'approve'])->name('projects.approve');
+
+        /************************SUIVRE APPROBATION************* */
+            Route::get('admin/Svapprob', [EtudeProjet::class, 'suivreApp']);
+        /************************Historique approbation ************* */
+            Route::get('admin/histAppb', [EtudeProjet::class, 'historiqueApp'])->name('approval.history');
 
         /********************PLANIFICATION***************** */
             Route::get('admin/planifierProjet', [GanttController::class, 'index']);

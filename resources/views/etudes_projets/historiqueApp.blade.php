@@ -54,7 +54,7 @@
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="">Approbation</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Approuver</li>
+                            <li class="breadcrumb-item active" aria-current="page">historique des approbations</li>
                         </ol>
                         <div class="row">
                             <script>
@@ -76,7 +76,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title">Approuver projets</h5>
+                <h5 class="card-title">Historique des approbations </h5>
+            </div>
 
             @if (session('success'))
                 <div class="alert alert-success">
@@ -89,53 +90,39 @@
                     {{ session('error') }}
                 </div>
             @endif
-
-            </div>
             <div class="card-content">
                 <div class="col-12">
-
                     <div class="container">
-                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table">
+                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
                                     <th>Code Projet</th>
                                     <th>Nature des Travaux</th>
-                                    <th>Statut</th>
-                                    <th>Approver Actuel</th>
-                                    <th>Date de Création</th>
-                                    <th>Actions</th>
+                                    <th>Approuvé par</th>
+                                    <th>Date d'Approbation</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($projects as $project)
+                                @foreach($approvalHistory as $approval)
                                     <tr>
-                                        <td>{{ $project->codeEtudeProjets }}</td>
-                                        <td>{{ $project->natureTravaux }}</td>
-                                        <td>{{ $project->codeStatus }}</td>
-                                        <td>{{ $project->current_approver }}</td>
-                                        <td>{{ $project->created_at }}</td>
-                                        <td>
-                                            <a href="{{ route('planning.show', $project->codeEtudeProjets) }}" class="btn btn-info">Détails</a>
-                                            <form action="{{ route('projects.approve', $project->codeEtudeProjets) }}" method="POST" style="display: inline;">
-                                                @csrf
-                                                <button type="submit" class="btn btn-success">Valider</button>
-                                            </form>
-                                        </td>
+                                        <td>{{ $approval->codeEtudeProjets }}</td>
+                                        <td>{{ $approval->natureTravaux }}</td>
+                                        <td>{{ $approval->nom }} {{ $approval->prenom }}</td> <!-- Affichage de l'approbateur -->
+                                        <td>{{ $approval->approved_at }}</td> <!-- Date d'approbation -->
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
-
-
                 </div>
             </div>
+
         </div>
     </div>
 </section>
 <script>
         $(document).ready(function() {
-            initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table', 'Listes des renforcements de capacités');
+            initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Suivit des projets approuvés');
         });
 </script>
 @endsection

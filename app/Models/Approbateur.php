@@ -22,4 +22,9 @@ class Approbateur extends Model
     public function structure(){
         return $this->belongsTo(StructureRattachement::class, 'code_personnel','code_personnel');
     }
+    public function projectApprovals()
+{
+    return $this->hasMany(ProjectApproval::class, 'codeAppro', 'codeAppro');
+}
+
 }

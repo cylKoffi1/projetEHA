@@ -10,7 +10,7 @@ class Validations extends Model
     use HasFactory;
 
     protected $table = 'validations'; // Nom de la table
-    protected $fillable = ['project_code', 'user_id', 'created_at', 'updated_at'];
+    protected $fillable = ['codeEtudeProjets', 'codeAppro','is_approved', 'created_at', 'updated_at'];
 
     public function user()
     {

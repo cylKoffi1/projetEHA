@@ -13,6 +13,7 @@ use App\Models\MotDePasseUtilisateur;
 use App\Models\NatureTravaux;
 use App\Models\Particulier;
 use App\Models\Personnel;
+use App\Models\ProjectApproval;
 use App\Models\ProjetEha2;
 use App\Models\Renforcement;
 use App\Models\Task;
@@ -23,6 +24,7 @@ use App\Models\Validations;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class EtudeProjet extends Controller
@@ -173,21 +175,66 @@ class EtudeProjet extends Controller
 
         ////////////////////////////////////Validation de projet/////////////////////////////////
 
-        public function validation(Request $request){
+        public function validation(Request $request)
+        {
             $ecran = Ecran::find($request->input('ecran_id'));
             $user = auth()->user();
+
+            // Vérifier si l'utilisateur est connecté et est un approbateur
             if (!$user || !$user->approbateur) {
                 return redirect()->route('projets.index')->with('error', 'Vous devez être un approbateur pour accéder à cette page.');
             }
 
-            $currentApprover = $user->approbateur->codeAppro;
-            $projects = EtudeProject::with(['files', 'entreprise', 'particulier'])
-            ->where('status', 'pending')
-            ->where('current_approver', auth()->user()->approbateur->codeAppro)
+            // Récupérer l'approbateur actuel
+            $approver = Approbateur::where('code_personnel', $user->approbateur->code_personnel)->first();
+
+            // Vérifier que l'approbateur existe
+            if (!$approver) {
+                return redirect()->route('projets.index')->with('error', 'Vous devez être un approbateur pour accéder à cette page.');
+            }
+
+            // Récupérer les projets qui n'ont pas encore été approuvés par l'approbateur ou qui ont été approuvés par un approbateur précédent
+            $projects = EtudeProject::select('etudeprojects.*')
+            ->where('etudeprojects.is_deleted', 0)
+            ->whereNotExists(function($query) use ($approver) {
+                // Sous-requête pour vérifier si l'approbateur actuel a déjà approuvé le projet
+                $query->select(DB::raw(1))
+                    ->from('project_approbation as pa')
+                    ->whereColumn('pa.codeEtudeProjets', 'etudeprojects.codeEtudeProjets') // Assure que nous comparons les bonnes colonnes
+                    ->where('pa.codeAppro', $approver->codeAppro)
+                    ->where('pa.is_approved', true);
+            })
             ->get();
 
-            return view('etudes_projets.validation', compact('ecran','projects'));
+            return view('etudes_projets.validation', compact('ecran',  'projects'));
+        }
 
+        public function suivreApp(Request $request){
+            $ecran = Ecran::find($request->input('ecran_id'));
+            $approvedProjects = EtudeProject::select('etudeprojects.codeEtudeProjets', 'etudeprojects.natureTravaux', 'etudeprojects.created_at', 'pa.approved_at')
+                ->join('project_approbation as pa', 'etudeprojects.codeEtudeProjets', '=', 'pa.codeEtudeProjets')
+                ->join('approbateur as app', 'app.codeAppro', '=', 'pa.codeAppro')
+                ->join('personnel as pers', 'pers.code_personnel', '=', 'app.code_personnel')
+                ->where('pa.is_approved', true) // Filtre pour les projets approuvés
+                ->where('etudeprojects.is_deleted', 0) // Assurez-vous que le projet n'est pas supprimé
+                ->groupBy('etudeprojects.codeEtudeProjets', 'etudeprojects.natureTravaux', 'etudeprojects.created_at', 'pa.approved_at') // Grouper par projet
+                ->addSelect(DB::raw('GROUP_CONCAT(CONCAT("N°", app.numOrdre, ": ", pers.nom, " ", pers.prenom) SEPARATOR "; ") as approbateurs')) // Concaténation des approbateurs
+                ->get();
+            return view('etudes_projets.suivreApp', compact('ecran',  'approvedProjects'));
+        }
+        public function historiqueApp(Request $request)
+        {
+            $ecran = Ecran::find($request->input('ecran_id'));
+            // Récupérer tous les projets approuvés avec les approbations
+            $approvalHistory = ProjectApproval::select('project_approbation.*', 'etudeprojects.natureTravaux', 'pers.nom', 'pers.prenom')
+                ->join('etudeprojects', 'project_approbation.codeEtudeProjets', '=', 'etudeprojects.codeEtudeProjets')
+                ->join('approbateur as app', 'project_approbation.codeAppro', '=', 'app.codeAppro')
+                ->join('personnel as pers', 'app.code_personnel', '=', 'pers.code_personnel')
+                ->where('project_approbation.is_approved', true) // Filtre pour les approbations
+                ->orderBy('project_approbation.approved_at', 'desc') // Trier par date d'approbation
+                ->get();
+
+            return view('etudes_projets.historiqueApp', compact('ecran','approvalHistory'));
         }
         // Afficher les détails du projet
         public function show($codeEtudeProjets)
@@ -195,7 +242,7 @@ class EtudeProjet extends Controller
             try {
                 $project = EtudeProject::where('codeEtudeProjets', $codeEtudeProjets)->firstOrFail();
                 $files = $project->files;
-                $validations = Validations::where('project_code', $codeEtudeProjets)
+                $validations = Validations::where('codeEtudeProjets', $codeEtudeProjets)
                     ->with('user')
                     ->orderBy('created_at')
                     ->get();
@@ -203,15 +250,15 @@ class EtudeProjet extends Controller
 
                 // Vérifier si l'utilisateur a déjà validé le projet
                 $user = auth()->user();
-                $userHasValidated = Validations::where('project_code', $codeEtudeProjets)
+                $userHasValidated = Validations::where('codeEtudeProjets', $codeEtudeProjets)
                     ->where('user_id', $user->id)
                     ->exists();
 
                 // Récupérer les projets en attente si l'utilisateur n'a pas encore validé
                 $projects = $userHasValidated ? collect([]) : EtudeProject::with(['files', 'entreprise', 'particulier'])
-                    ->where('status', 'pending')
+
                     ->where('current_approver', $user->approbateur->codeAppro)
-                    ->get();
+                     ->get();
 
                 return view('etudes_projets.validation', compact('project', 'files', 'validations', 'users', 'userHasValidated', 'projects'));
             } catch (ModelNotFoundException $e) {
@@ -221,7 +268,7 @@ class EtudeProjet extends Controller
 
 
         // Valider le projet
-        public function validateProject(Request $request, $codeEtudeProjets)
+        /*public function validateProject(Request $request, $codeEtudeProjets)
         {
             $approbateur = $request->user()->approbateur; // Récupérer l'approbateur actuel
 
@@ -247,6 +294,60 @@ class EtudeProjet extends Controller
 
             } catch (ModelNotFoundException $e) {
                 return redirect()->back()->with('error', 'Projet non trouvé.');
+            }
+        }*/
+        public function approve(Request $request, $id)
+        {
+            $userId = auth()->user();
+
+            // Récupérer l'approbateur actuel en fonction de l'utilisateur connecté
+            $approver = Approbateur::where('code_personnel', $userId->approbateur->code_personnel)->first();
+
+            if (!$approver) {
+                return back()->with('error', 'Vous n\'êtes pas un approbateur valide pour ce projet.');
+            }
+            // Vérifier l'existence de projets dans ProjectApproval
+            $projectExists = ProjectApproval::where('codeEtudeProjets', $id)->exists();
+
+            if (!$projectExists) {
+                // Aucun projet n'existe, seul l'approbateur avec numOrdre = 1 peut enregistrer
+                if ($approver->numOrdre === 1) {
+                    // Enregistrement d'approbation
+                    ProjectApproval::create([
+                        'codeEtudeProjets' => $id,
+                        'codeAppro' => $approver->codeAppro,
+                        'is_approved' => true,
+                        'approved_at' => now(),
+                    ]);
+                    return back()->with('success', 'Projet approuvé ');
+                } else {
+                    return back()->with('error', 'Vous ne pouvez pas encore valider le projet.');
+                }
+            } else {
+                // Un projet existe, vérifier si l'approbateur précédent a approuvé
+                $previousApproverNumOrdre = $approver->numOrdre - 1;
+
+                // Vérifier si l'approbateur précédent a approuvé
+                $previousApproverApproved = ProjectApproval::where('codeEtudeProjets', $id)
+                    ->join('approbateur', 'project_approbation.codeAppro', '=', 'approbateur.codeAppro')
+                    ->where('approbateur.numOrdre', $previousApproverNumOrdre)
+                    ->where('project_approbation.is_approved', true)
+                    ->exists();
+
+                if (!$previousApproverApproved) {
+                    // L'approbateur avec numOrdre inférieur n'a pas encore validé
+                    return back()->with('error', 'Vous ne pouvez pas encore valider le projet.');
+                }
+
+                // Enregistrement d'approbation
+                ProjectApproval::create([
+                    'codeEtudeProjets' => $id,
+                    'codeAppro' => $approver->codeAppro,
+                    'is_approved' => true,
+                    'approved_at' => now(),
+                ]);
+
+                return back()->with('success', 'Projet approuvé .');
             }
         }
 
