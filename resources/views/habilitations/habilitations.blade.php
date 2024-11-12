@@ -193,9 +193,11 @@
                             {{-- <button type="reset" class="btn btn-light-secondary me-1 mb-1">
                                         Annuler
                                     </button> --}}
+                        @can("ajouter_ecran_" . $ecran->id)
                             <button type="submit" id="soumettre_personnel" class="btn btn-primary me-1 mb-1">
                                 Enregistrer
                             </button>
+                        @endcan
 
                         </div>
                     </div>

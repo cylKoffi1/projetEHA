@@ -92,6 +92,15 @@
                     {{ session('error') }}
                 </div>
             @endif
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul>0
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             </div>
             <div class="card-content">
@@ -122,7 +131,7 @@
                                         <div class="col hidden" id="publicFields">
                                             <div class="mb-3">
                                                 <label for="ministere" class="form-label">Ministère</label>
-                                                <select class="form-select" id="ministere">
+                                                <select class="form-select" name="ministere" id="ministere">
                                                     <option value="">Sélectionner le ministère</option>
                                                     @foreach ($ministeres as $min)
                                                     <option value="{{$min->code}}">{{$min->libelle}}</option>
@@ -131,7 +140,7 @@
                                             </div>
                                             <div class="mb-3">
                                             <label for="collectivite" class="form-label">Collectivité Territoriale</label>
-                                                <select class="form-select" id="collectivite">
+                                                <select class="form-select" id="collectivite" name="collectivite">
                                                     <option value="">Sélectionner la collectivité</option>
                                                     @foreach ($collectivites as $collectivite)
                                                         <option value="{{ $collectivite->code_bailleur }}">{{ $collectivite->libelle_long }}</option>
@@ -176,148 +185,153 @@
 
                             </div>
 
-                        </div><br>
-                        <div id="formEntreprise">
-                            <div class="row">
-                                <div class="col">
-                                    <label for="companyName">Nom de l'entreprise :</label>
-                                    <input type="text" class="form-control" id="companyName" name="companyName">
+                        </div>
+                        <div class="row">
+                            <div id="formEntreprise">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="companyName">Nom de l'entreprise :</label>
+                                        <input type="text" class="form-control" id="companyName" name="companyName">
+                                    </div>
+                                    <div class="col">
+                                        <label for="legalStatus">Raison sociale :</label>
+                                        <input type="text" id="legalStatus" class="form-control" name="legalStatus">
+                                    </div>
+                                    <div class="col">
+                                        <label for="registrationNumber">Numéro d'immatriculation :</label>
+                                        <input type="text" class="form-control" id="registrationNumber" name="registrationNumber">
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <label for="legalStatus">Raison sociale :</label>
-                                    <input type="text" id="legalStatus" class="form-control" name="legalStatus">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="headOfficeAddress">Adresse du siège social :</label>
+                                        <input type="text" class="form-control" id="headOfficeAddress" name="headOfficeAddress">
+                                    </div>
+                                    <div class="col">
+                                        <label for="phoneNumber">Numéro de téléphone :</label>
+                                        <input type="text" class="form-control" id="phoneNumber" name="phoneNumber">
+                                    </div>
+                                    <div class="col">
+                                        <label for="emailAddress">Adresse e-mail :</label>
+                                        <input type="email" class="form-control" id="emailAddress" name="emailAddress">
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <label for="registrationNumber">Numéro d'immatriculation :</label>
-                                    <input type="text" class="form-control" id="registrationNumber" name="registrationNumber">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="website">Site web :</label>
+                                        <input type="url" class="form-control" id="website" name="website">
+                                    </div>
+                                    <div class="col">
+                                        <label for="projectManager">Nom du responsable de projet :</label>
+                                        <input type="text" class="form-control" id="projectManager" name="projectManager">
+                                    </div>
+                                    <div class="col">
+                                        <label for="managerRole">Fonction du responsable :</label>
+                                        <input type="text" class="form-control" id="managerRole" name="managerRole">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="capital">Capital social :</label>
+                                        <input type="text" class="form-control" id="capital" name="capital">
+                                    </div>
+                                    <div class="col">
+                                        <label for="additionalInfo1">Information supplémentaire 1 :</label>
+                                        <input type="text" class="form-control" id="additionalInfo1" name="additionalInfo1">
+                                    </div>
+                                    <div class="col">
+                                        <label for="additionalInfo2">Information supplémentaire 2 :</label>
+                                        <input type="text" class="form-control" id="additionalInfo2" name="additionalInfo2">
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label for="headOfficeAddress">Adresse du siège social :</label>
-                                    <input type="text" class="form-control" id="headOfficeAddress" name="headOfficeAddress">
+                            <div id="formParticulier" style="display:none;">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="name">Nom :</label>
+                                        <input type="text" class="form-control" id="nom" name="nom">
+                                    </div>
+                                    <div class="col">
+                                        <label for="prenom">Pénoms :</label>
+                                        <input type="text" class="form-control" id="prenom" name="prenom">
+                                    </div>
+                                    <div class="col">
+                                        <label for="professionalStatus">Statut professionnel :</label>
+                                        <input type="text" class="form-control" id="professionalStatus" name="professionalStatus">
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <label for="phoneNumber">Numéro de téléphone :</label>
-                                    <input type="text" class="form-control" id="phoneNumber" name="phoneNumber">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="individualAddress">Adresse de l'entreprise :</label>
+                                        <input type="text" class="form-control" id="individualAddress" name="individualAddress">
+                                    </div>
+                                    <div class="col">
+                                        <label for="individualPhone">Numéro de téléphone :</label>
+                                        <input type="text" class="form-control" id="individualPhone" name="individualPhone">
+                                    </div>
+                                    <div class="col">
+                                        <label for="individualEmail">Adresse e-mail :</label>
+                                        <input type="email" class="form-control" id="individualEmail" name="individualEmail">
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <label for="emailAddress">Adresse e-mail :</label>
-                                    <input type="email" class="form-control" id="emailAddress" name="emailAddress">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="mainActivity">Activité principale :</label>
+                                        <input type="text" class="form-control" id="mainActivity" name="mainActivity">
+                                    </div>
+                                    <div class="col">
+                                        <label for="tradeName">Nom commercial (si applicable) :</label>
+                                        <input type="text" class="form-control" id="tradeName" name="tradeName">
+                                    </div>
+                                    <div class="col">
+                                        <label for="bankDetails">Coordonnées bancaires :</label>
+                                        <input type="text" class="form-control" id="bankDetails" name="bankDetails">
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label for="website">Site web :</label>
-                                    <input type="url" class="form-control" id="website" name="website">
-                                </div>
-                                <div class="col">
-                                    <label for="projectManager">Nom du responsable de projet :</label>
-                                    <input type="text" class="form-control" id="projectManager" name="projectManager">
-                                </div>
-                                <div class="col">
-                                    <label for="managerRole">Fonction du responsable :</label>
-                                    <input type="text" class="form-control" id="managerRole" name="managerRole">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label for="capital">Capital social :</label>
-                                    <input type="text" class="form-control" id="capital" name="capital">
-                                </div>
-                                <div class="col">
-                                    <label for="additionalInfo1">Information supplémentaire 1 :</label>
-                                    <input type="text" class="form-control" id="additionalInfo1" name="additionalInfo1">
-                                </div>
-                                <div class="col">
-                                    <label for="additionalInfo2">Information supplémentaire 2 :</label>
-                                    <input type="text" class="form-control" id="additionalInfo2" name="additionalInfo2">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="individualRegistrationNumber">Numéro d'immatriculation :</label>
+                                        <input type="text" class="form-control" id="individualRegistrationNumber" name="individualRegistrationNumber">
+                                    </div>
+                                    <div class="col">
+                                        <label for="references">Références professionnelles :</label>
+                                        <input type="text" class="form-control" id="references" name="references">
+                                    </div>
+                                    <div class="col">
+                                        <label for="additionalInfo3">Information supplémentaire  :</label>
+                                        <input type="text" class="form-control" id="additionalInfo3" name="additionalInfo3">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="formParticulier" style="display:none;">
-                            <div class="row">
-                                <div class="col">
-                                    <label for="name">Nom :</label>
-                                    <input type="text" class="form-control" id="nom" name="nom">
-                                </div>
-                                <div class="col">
-                                    <label for="prenom">Pénoms :</label>
-                                    <input type="text" class="form-control" id="prenom" name="prenom">
-                                </div>
-                                <div class="col">
-                                    <label for="professionalStatus">Statut professionnel :</label>
-                                    <input type="text" class="form-control" id="professionalStatus" name="professionalStatus">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label for="individualAddress">Adresse de l'entreprise :</label>
-                                    <input type="text" class="form-control" id="individualAddress" name="individualAddress">
-                                </div>
-                                <div class="col">
-                                    <label for="individualPhone">Numéro de téléphone :</label>
-                                    <input type="text" class="form-control" id="individualPhone" name="individualPhone">
-                                </div>
-                                <div class="col">
-                                    <label for="individualEmail">Adresse e-mail :</label>
-                                    <input type="email" class="form-control" id="individualEmail" name="individualEmail">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label for="mainActivity">Activité principale :</label>
-                                    <input type="text" class="form-control" id="mainActivity" name="mainActivity">
-                                </div>
-                                <div class="col">
-                                    <label for="tradeName">Nom commercial (si applicable) :</label>
-                                    <input type="text" class="form-control" id="tradeName" name="tradeName">
-                                </div>
-                                <div class="col">
-                                    <label for="bankDetails">Coordonnées bancaires :</label>
-                                    <input type="text" class="form-control" id="bankDetails" name="bankDetails">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col">
-                                    <label for="individualRegistrationNumber">Numéro d'immatriculation :</label>
-                                    <input type="text" class="form-control" id="individualRegistrationNumber" name="individualRegistrationNumber">
-                                </div>
-                                <div class="col">
-                                    <label for="references">Références professionnelles :</label>
-                                    <input type="text" class="form-control" id="references" name="references">
-                                </div>
-                                <div class="col">
-                                    <label for="additionalInfo3">Information supplémentaire  :</label>
-                                    <input type="text" class="form-control" id="additionalInfo3" name="additionalInfo3">
-                                </div>
-                            </div>
-                        </div>
+
                         <div class="col text-end">
                             <div class="card-body text-end">
                                 <div class="col text-end">
                                     <button type="button" id="addFileType" class="btn btn-primary">
-                                        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
                                         <i class="fas fa-folder"></i>
                                         <i class="fas fa-plus" style="position: relative; left: -15px; top: 5px; font-size: 1em; color: black;"></i>
                                         pièce à fournir
                                     </button><br>
                                 </div>
+
                                 <div class="d-flex justify-content-end">
-                                    <div class="col text-end">
-                                        <label for="files" class="form-label"></label>
-                                        <div class="file-card ms-auto" id="file-card-0">
-                                            <div id="file-icon-0" class="file-icon">
-                                                <span class="upload-icon" onclick="document.getElementById('files-0').click()">
-                                                    <img src="{{ asset('armoiries/files-data.png') }}" alt="File Icon" id="file-icon-img-0">
-                                                </span>
+                                    <div id="additionalFileTypes" class="d-flex flex-wrap"> <!-- Flex container for inline layout -->
+                                        <div class="col text-end">
+                                            <label for="files" class="form-label"></label>
+                                            <div class="file-card ms-auto" id="file-card-0">
+                                                <div id="file-icon-0" class="file-icon">
+                                                    <span class="upload-icon" onclick="document.getElementById('files-0').click()">
+                                                        <img src="{{ asset('armoiries/files-data.png') }}" alt="File Icon" id="file-icon-img-0">
+                                                    </span>
+                                                </div>
+                                                <div id="file-name-0" class="file-name">Aucune pièce sélectionné</div>
                                             </div>
-                                            <div id="file-name-0" class="file-name">Aucune pièce sélectionné</div>
+                                            <input class="form-control d-none" type="file" id="files-0" name="files[]" multiple required>
                                         </div>
-                                        <input class="form-control d-none" type="file" id="files-0" name="files[]" multiple required>
                                     </div>
                                 </div>
+
 
                                 <div class="d-flex justify-content-end">
                                     <button type="submit" class="btn btn-primary -mb-2 text-end">Enregistrer</button>

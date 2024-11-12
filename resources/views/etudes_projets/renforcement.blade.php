@@ -177,11 +177,13 @@
                         </div>
 
                         <!-- Submit Button -->
+                         @can("ajouter_ecran_" . $ecran->id)
                         <div class="row text-end">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">Enregistrer</button>
                             </div>
                         </div>
+                        @endcan
                     </form>
 
                     <!-- Hidden Edit Form -->
@@ -238,12 +240,13 @@
                                     </select>
                                 </div>
                             </div>
-
+                            @can("modifier_ecran_" . $ecran->id)
                             <div class="row text-end">
                                 <div class="col-12">
                                     <button type="submit" id="formButton" class="btn btn-primary">Modifier</button>
                                 </div>
                             </div>
+                            @endcan
                         </form>
                     </div>
 
@@ -316,6 +319,7 @@
                                         <span style="color: white"></span>
                                     </a>
                                     <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                        @can("modifier_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#"
                                                onclick="editRenforcement('{{ $renforcement->code_renforcement }}',
@@ -328,11 +332,14 @@
                                                <i class="bi bi-pencil-fill me-3"></i> Modifier
                                             </a>
                                         </li>
+                                        @endcan
+                                        @can("supprimer_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="deleteRenforcement('{{ $renforcement->code_renforcement }}')">
                                                 <i class="bi bi-trash3-fill me-3"></i> Supprimer
                                             </a>
                                         </li>
+                                        @endcan
                                     </ul>
                                 </div>
                             </td>

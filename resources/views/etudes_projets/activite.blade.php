@@ -176,9 +176,11 @@
                                     <textarea name="commentaire" id="commentaire" class="form-control"></textarea>
                                 </div>
                                 <div class="col-12 mt-4">
+                                @can("ajouter_ecran_" . $ecran->id)
                                 <div class="d-flex justify-content-end">
                                     <button type="submit" class="btn btn-primary text-end">Enregistrer</button>
                                 </div>
+                                @endcan
                                 </div>
                             </div>
                         </form>
@@ -237,9 +239,11 @@
 
                                 <label for="edit_commentaire">Commentaire :</label>
                                 <textarea id="edit_commentaire" name="commentaire" class="form-control"></textarea>
+                                @can("modifier_ecran_" . $ecran->id)
                                 <div class="d-flex justify-content-end">
                                     <button type="submit" class="btn btn-primary -mb-2 text-end">Modifier</button>
                                 </div>
+                                @endcan
                             </form>
                         </div>
 
@@ -293,7 +297,7 @@
                                         <span style="color: white"></span>
                                     </a>
                                     <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                        <li>
+                                    @can("modifier_ecran_" . $ecran->id)<li>
                                             <a class="dropdown-item" href="#"
                                             onclick="editActivite(
                                                 '{{ $travail->codeActivite }}',
@@ -309,11 +313,14 @@
                                          </a>
 
                                         </li>
+                                    @endcan
+                                    @can("supprimer_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="deleteActivite('{{ $travail->codeActivite }}')">
                                                 <i class="bi bi-trash3-fill me-3"></i> Supprimer
                                             </a>
                                         </li>
+                                    @endcan
                                     </ul>
                                 </div>
                             </td>

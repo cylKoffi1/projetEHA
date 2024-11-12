@@ -115,10 +115,14 @@
                                         <td>{{ $project->current_approver }}</td>
                                         <td>{{ $project->created_at }}</td>
                                         <td>
+                                            @can("ajouter_ecran_" . $ecran->id)
                                             <a href="{{ route('planning.show', $project->codeEtudeProjets) }}" class="btn btn-info">Détails</a>
+                                            @endcan
                                             <form action="{{ route('projects.approve', $project->codeEtudeProjets) }}" method="POST" style="display: inline;">
                                                 @csrf
+                                                @can("ajouter_ecran_" . $ecran->id)
                                                 <button type="submit" class="btn btn-success">Valider</button>
+                                                @endcan
                                             </form>
                                         </td>
                                     </tr>
@@ -126,7 +130,6 @@
                             </tbody>
                         </table>
                     </div>
-
 
                 </div>
             </div>

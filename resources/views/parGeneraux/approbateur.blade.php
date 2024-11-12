@@ -144,15 +144,19 @@
                                 <input type="number" name="Nordre" id="nordre" value="{{ $nextOrder }}"  readonly class="form-control">
                             </div>
                             <div class="col-12 mt-3">
+                                @can("ajouter_ecran_" . $ecran->id)
                                 <button type="button" class="btn btn-primary" id="addAction">
                                     <i class="fa fa-plus"></i> Ajouter
                                 </button>
+                                @endcan
                                 <form id="approveForm" method="POST" action="{{ route('approbateur.store') }}">
                                     @csrf
                                     <input type="hidden" name="approbateurs" id="approbateursInput">
+                                    @can("ajouter_ecran_" . $ecran->id)
                                     <button type="submit" class="btn btn-primary float-end">
                                         <i class="fa fa-save"></i> Enregistrer
                                     </button>
+                                    @endcan
                                 </form>
                             </div>
                         </div>
@@ -232,6 +236,7 @@
                                         <span style="color: white">Options</span>
                                     </a>
                                     <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                        @can("modifier_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="editApprobateur(
                                                 '{{ $approbateur->numOrdre }}',
@@ -246,11 +251,14 @@
                                                 <i class="bi bi-pencil-fill me-3"></i> Modifier
                                             </a>
                                         </li>
+                                        @endcan
+                                        @can("supprimer_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="deleteApprobateur('{{ $approbateur->codeAppro }}')">
                                                 <i class="bi bi-trash3-fill me-3"></i> Supprimer
                                             </a>
                                         </li>
+                                        @endcan
                                     </ul>
                                 </div>
 
@@ -302,9 +310,11 @@
                                         <input type="hidden" id="editCodeStructure" name="editCodeStructure" class="form-control" readonly>
                                 </div>
                                 <div class="col-12 mt-3">
+                                    @can("modifier_ecran_" . $ecran->id)
                                     <button type="submit" class="btn btn-primary float-end">
                                         <i class="fa fa-save"></i> Enregistrer
                                     </button>
+                                    @endcan
                                 </div>
                             </div>
                         </fieldset>

@@ -6,6 +6,7 @@ use App\Models\Approbateur;
 use App\Models\Bailleur;
 use App\Models\Ecran;
 use App\Models\Entreprise;
+use App\Models\EntrepriseParticulier;
 use App\Models\EtudeProject;
 use App\Models\EtudeProjectFile;
 use App\Models\Ministere;
@@ -26,6 +27,7 @@ use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EtudeProjet extends Controller
 {
@@ -49,12 +51,7 @@ class EtudeProjet extends Controller
         {
             DB::beginTransaction();
             try {
-                // Validation des données
-                $validatedData = $request->validate([
-                    'title' => 'required|string|max:255',
-                    'description' => 'required|string',
-                    'files.*' => 'required|file|mimes:zip,pdf,docx,xlsx,jpeg,png|max:' . self::MAX_FILE_SIZE_KB,
-                ]);
+
 
                 $location = 'CI';  // Fixe pour le moment
                 $category = 'EHA'; // Fixe pour le moment
@@ -65,84 +62,97 @@ class EtudeProjet extends Controller
                 // Créer le projet
                 $project = EtudeProject::create([
                     'codeEtudeProjets' => $codeEtudeProjets,
-                    'title' => $validatedData['title'],
+                    'natureTravaux' => $request->input('nature_travaux'),
                     'typeDemandeur' => $request->typeDemandeur,
+                    'public' =>  $request->has('maitreOuvrage') ? true : false,
+                    'collectivite_territoriale' => $request->input('collectivite'),
+                    'ministere' =>$request->input('ministere')
                 ]);
 
                 // Sauvegarder les informations en fonction du type de demandeur
-                if ($request->typeDemandeur == 'entreprise') {
-                    Entreprise::create([
-                        'codeEtudeProjets' => $project->codeEtudeProjets,
-                        'nomEntreprise' => $request->companyName,
-                        'raisonSociale' => $request->legalStatus,
-                        'numeroImmatriculation' => $request->registrationNumber,
-                        'adresseSiegeSocial' => $request->headOfficeAddress,
-                        'numeroTelephone' => $request->phoneNumber,
-                        'adresseEmail' => $request->emailAddress,
-                        'siteWeb' => $request->website,
-                        'nomResponsableProjet' => $request->projectManager,
-                        'fonctionResponsable' => $request->managerRole,
-                        'capitalSocial' => $request->capital,
-                        'infoSupplementaire1' => $request->additionalInfo1,
-                        'infoSupplementaire2' => $request->additionalInfo2,
-                    ]);
-                } elseif ($request->typeDemandeur == 'particulier') {
-                    Particulier::create([
-                        'codeEtudeProjets' => $project->codeEtudeProjets,
-                        'nomPrenom' => $request->fullName,
-                        'statutProfessionnel' => $request->professionalStatus,
-                        'numeroImmatriculationIndividuelle' => $request->individualRegistrationNumber,
-                        'adresseEntreprise' => $request->individualAddress,
-                        'numeroTelephone' => $request->individualPhone,
-                        'adresseEmail' => $request->individualEmail,
-                        'activitePrincipale' => $request->mainActivity,
-                        'nomCommercial' => $request->tradeName,
-                        'coordonneesBancaires' => $request->bankDetails,
-                        'references' => $request->references,
-                        'infoSupplementaire3' => $request->additionalInfo3,
-                        'infoSupplementaire4' => $request->additionalInfo4,
-                    ]);
-                }
+                $this->storeDemandeurInfo($request, $codeEtudeProjets);
 
                 // Traiter chaque fichier uploadé
                 if ($request->hasFile('files')) {
-                    $errorFiles = [];
-
-                    foreach ($request->file('files') as $file) {
-                        if ($file->getSize() > self::MAX_FILE_SIZE_KB * 1024) {
-                            $errorFiles[] = $file->getClientOriginalName();
-                            continue;
-                        }
-
-                        $fileName = $file->getClientOriginalName();
-                        $filePath = $file->storeAs('uploads/projects', $fileName, 'public');
-
-                        // Sauvegarder les informations du fichier dans la base de données
-                        EtudeProjectFile::create([
-                            'codeEtudeProjets' => $project->codeEtudeProjets,
-                            'file_path' => $filePath,
-                            'file_name' => $fileName,
-                        ]);
-                    }
-
-                    if (!empty($errorFiles)) {
-                        $errorFileNames = implode(', ', $errorFiles);
-                        return redirect()->back()->withErrors([
-                            'files' => "Les fichiers suivants dépassent la taille maximale autorisée de " . self::MAX_FILE_SIZE_MB . " Mo : $errorFileNames"
-                        ]);
-                    }
+                    $this->handleFileUploads($request, $project->codeEtudeProjets);
                 }
+
                 DB::commit();
                 return redirect()->back()->with('success', 'Projet enregistré avec succès');
             } catch (PostTooLargeException $e) {
-                return redirect()->back()->withErrors([
-                    'files' => 'Le fichier dépasse la taille maximale autorisée de ' . self::MAX_FILE_SIZE_MB . ' Mo.'
-                ]);
+                Log::error('Fichier trop volumineux : ' . $e->getMessage());
+                return redirect()->back()->withErrors(['files' => 'Le fichier dépasse la taille maximale autorisée de ' . self::MAX_FILE_SIZE_MB . ' Mo.']);
             } catch (\Exception $e) {
                 DB::rollback();
-                return redirect()->back()->withErrors([
-                    'general' => 'Une erreur est survenue lors de l\'enregistrement du projet : ' . $e->getMessage()
+                Log::error('Erreur lors de l\'enregistrement du projet : ' . $e->getMessage(), [
+                    'request' => $request->all(),
+                    'stack_trace' => $e->getTraceAsString(),
                 ]);
+                return redirect()->back()->withErrors(['general' => 'Une erreur est survenue lors de l\'enregistrement du projet : ' . $e->getMessage()]);
+            }
+        }
+
+
+        private function storeDemandeurInfo($request, $codeEtudeProjets)
+        {
+            if ($request->typeDemandeur == 'entreprise') {
+                EntrepriseParticulier::create([
+                    'codeEtudeProjets' =>  $codeEtudeProjets,
+                    'nomEntreprise' => $request->input('companyName'),
+                    'raisonSociale' => $request->input('legalStatus'),
+                    'numeroImmatriculation' => $request->input('registrationNumber'),
+                    'adresseSiegeSocial' => $request->input('headOfficeAddress'),
+                    'numeroTelephone' => $request->input('phoneNumber'),
+                    'adresseEmail' => $request->input('emailAddress'),
+                    'siteWeb' => $request->input('website'),
+                    'nomResponsableProjet' => $request->input('projectManager'),
+                    'fonctionResponsable' => $request->input('managerRole'),
+                    'capitalSocial' => $request->input('capital'),
+                    'infoSupplementaire1' => $request->input('additionalInfo1'),
+                    'infoSupplementaire2' => $request->input('additionalInfo2'),
+                ]);
+            } elseif ($request->typeDemandeur == 'particulier') {
+                EntrepriseParticulier::create([
+                    'codeEtudeProjets' => $codeEtudeProjets,
+                    'nom' => $request->input('nom'),
+                    'prenom' => $request->input('prenom'),
+                    'statutProfessionnel' => $request->input('professionalStatus'),
+                    'numeroImmatriculationIndividuelle' => $request->input('individualRegistrationNumber'),
+                    'adresseEntreprise' => $request->input('individualAddress'),
+                    'numeroTelephone' => $request->input('individualPhone'),
+                    'adresseEmail' => $request->input('individualEmail'),
+                    'activitePrincipale' => $request->input('mainActivity'),
+                    'nomCommercial' => $request->input('tradeName'),
+                    'coordonneesBancaires' => $request->input('bankDetails'),
+                    'references' => $request->input('references'),
+                    'infoSupplementaire3' => $request->input('additionalInfo3'), // Fix typo: $request->inpu -> $request->input
+                ]);
+            }
+        }
+
+        private function handleFileUploads($request, $codeEtudeProjets)
+        {
+            $errorFiles = [];
+            foreach ($request->file('files') as $file) {
+                if ($file->getSize() > self::MAX_FILE_SIZE_KB * 1024) {
+                    $errorFiles[] = $file->getClientOriginalName();
+                    continue;
+                }
+
+                $fileName = $file->getClientOriginalName();
+                $filePath = $file->storeAs('uploads/projects', $fileName, 'public');
+
+                // Sauvegarder les informations du fichier dans la base de données
+                EtudeProjectFile::create([
+                    'codeEtudeProjets' => $codeEtudeProjets,
+                    'file_path' => $filePath,
+                    'file_name' => $fileName,
+                ]);
+            }
+
+            if (!empty($errorFiles)) {
+                $errorFileNames = implode(', ', $errorFiles);
+                throw new \Exception("Les fichiers suivants dépassent la taille maximale autorisée de " . self::MAX_FILE_SIZE_MB . " Mo : $errorFileNames");
             }
         }
 
