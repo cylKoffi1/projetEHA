@@ -523,3 +523,14 @@ Route::get('/sig', [GeoJSONController::class, 'showSIG'])->name('carte.sig');
 Route::get('/filter-maps', [GeoJSONController::class, 'filter'])->name('filter.maps');
 Route::get('/filtered-data', [GeoJSONController::class, 'showFilteredData'])->name('filtered.data');
 Route::get('test', [AdminController::class, 'test']);
+
+// routes/web.php
+
+// Routes pour la réinitialisation de mot de passe
+Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
+
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
