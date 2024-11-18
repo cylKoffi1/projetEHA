@@ -24,6 +24,10 @@ use App\Models\User;
 use App\Models\NiveauAccesDonnees;
 use App\Models\StructureRattachement;
 use App\Models\UtilisateurDomaine;
+use App\Models\PaysUser;
+use App\Models\DecoupageAdministratif;
+use App\Models\DecoupageAdminPays;
+use App\Models\LocalitesPays;
 use Exception;
 use Faker\Provider\ar_EG\Person;
 use Illuminate\Http\Request;
@@ -32,6 +36,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -72,25 +77,34 @@ class UserController extends Controller
         }
         $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
         $ecran = Ecran::find($request->input('ecran_id'));
-        $districts = District::where('id_pays', config('app_settings.id_pays'))->get();
-        $regions = Region::whereHas('district', function ($query) {
-            $query->where('id_pays', config('app_settings.id_pays'));
-        })->get();
-        $departements = Departement::whereHas('region.district.pays', function ($query) {
-            $query->where('id', config('app_settings.id_pays'));
-        })->get();
-        $sous_prefectures = Sous_prefecture::whereHas('departement.region.district.pays', function ($query) {
-            $query->where('id', config('app_settings.id_pays'));
-        })->get();
-        return view('users.create-personne', compact('ecran','sous_prefectures', 'niveauxAcces', 'pays',  'districts', 'regions', 'departements', 'groupe_utilisateur', 'domaines', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'fonctions'));
+
+        // Récupérer le pays de l'utilisateur connecté via la table pays_user
+        $userCountry = PaysUser::where('code_user', auth()->user()->personnel->code_personnel)->first();
+        $userCountryId = $userCountry ? $userCountry->code_pays : null;
+
+        // Vérifier si l'utilisateur a un code pays
+        if (!$userCountryId) {
+            return redirect()->route('users.personnel', ['ecran_id' => $request->input('ecran_id')])->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un code pays. avant de pouvoir créer un utilisateur.');
+        }
+        $codePays = Pays::where('alpha3', $userCountryId)->first();
+
+        // Récupérer les libellés de découpage administratif
+        $decoupages = DecoupageAdministratif::join('decoupage_admin_pays', 'decoupage_administratif.code_decoupage', '=', 'decoupage_admin_pays.code_decoupage')
+        ->where('decoupage_admin_pays.id_pays', $codePays->id)
+        ->get();
+        $localites = LocalitesPays::where('id_pays', $userCountryId)->get();
+
+        return view('users.create-personne', compact('ecran', 'niveauxAcces', 'pays', 'groupe_utilisateur', 'domaines', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'fonctions', 'userCountryId', 'decoupages', 'localites'));
     }
     public function storePersonnel(Request $request)
     {
+        try {
+            Log::info('Début de la création d\'une nouvelle personne.');
 
-        try{
             $code = CodeGenerator::generateCode();
+            Log::info('Code généré pour la personne : ' . $code);
 
-            Personnel::create([
+            $personnel = Personnel::create([
                 'code_personnel' => $code,
                 'nom' => $request->input('nom'),
                 'prenom' => $request->input('prenom'),
@@ -98,66 +112,75 @@ class UserController extends Controller
                 'telephone' => $request->input('tel'),
                 'email' => $request->input('email'),
             ]);
-            // Déterminer la valeur de 'code_structure' et 'type_structure' en fonction de la structure sélectionnée
-            if ($request->input('structure') == "bai") {
-                StructureRattachement::create([
-                    'code_personnel' => $code,
-                    'code_structure' => $request->input('bailleur'),
-                    'type_structure' => 'bailleurss',
-                    'date' => now(),
-                ]);
-            } elseif ($request->input('structure') == "age") {
-                StructureRattachement::create([
-                    'code_personnel' => $code,
-                    'code_structure' => $request->input('agence'),
-                    'type_structure' => 'agence_execution',
-                    'date' => now(),
-                ]);
-            } else {
-                StructureRattachement::create([
-                    'code_personnel' => $code,
-                    'code_structure' => $request->input('ministere'),
-                    'type_structure' => 'ministere',
-                    'date' => now(),
-                ]);
-            }
-            if ($request->input('niveau_acces_id') == "de") {
-                CouvrirRegion::create([
-                    'code_personnel' => $code,
-                    'code_departement' => $request->input('dep'),
-                    'date' => now(),
-                ]);
+            Log::info('Personnel créé avec succès : ', ['personnel' => $personnel]);
 
-            } else if ($request->input('niveau_acces_id') == "di") {
-                CouvrirRegion::create([
-                    'code_personnel' => $code,
-                    'code_district' => $request->input('dis'),
-                    'date' => now(),
-                ]);
-            } else if ($request->input('niveau_acces_id') == "re") {
-                CouvrirRegion::create([
-                    'code_personnel' => $code,
-                    'code_region' => $request->input('reg'),
-                    'date' => now(),
-                ]);
-            } else {
-                CouvrirRegion::create([
-                    'code_personnel' => $code,
-                    'id_pays' => $request->input('na'),
-                    'date' => now(),
-                ]);
+            $codeStructure = null;
+            $typeStructure = null;
+
+            switch ($request->input('structure_type')) {
+                case 'bailleur':
+                    $codeStructure = $request->input('bailleur');
+                    $typeStructure = 'bailleurss';
+                    break;
+                case 'agence':
+                    $codeStructure = $request->input('agence');
+                    $typeStructure = 'agence_execution';
+                    break;
+                case 'ministere':
+                    $codeStructure = $request->input('ministere');
+                    $typeStructure = 'ministere';
+                    break;
             }
+
+            if (!$codeStructure) {
+                Log::error('Le champ code_structure ne peut pas être vide.');
+                return redirect()->route('personnel.create', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('error', 'Veuillez sélectionner une structure valide.');
+            }
+
+            StructureRattachement::create([
+                'code_personnel' => $code,
+                'code_structure' => $codeStructure,
+                'type_structure' => $typeStructure,
+                'date' => now(),
+            ]);
+            Log::info('Structure de rattachement créée pour ' . $typeStructure . '.');
+
+            // Récupérer le code_niveau_administratif associé au code_decoupage
+            $codeDecoupage = $request->input('niveau_acces_id');
+            $decoupageAdmin = DecoupageAdminPays::where('code_decoupage', $codeDecoupage)->first();
+
+            if (!$decoupageAdmin) {
+                throw new Exception('Niveau administratif non trouvé pour le code de découpage : ' . $codeDecoupage);
+            }
+            
+            CouvrirRegion::create([
+                'code_personnel' => $code,
+                'code_niveau_administratif' => $decoupageAdmin->num_niveau_decoupage,
+                'date' => now(),
+                'id_pays' => $request->input('pays'),
+            ]);
+            Log::info('CouvrirRegion créé avec succès.');
+
             OccuperFonction::create([
                 'code_personnel' => $code,
                 'code_fonction' => $request->input('fonction'),
                 'date' => now(),
             ]);
+            Log::info('OccuperFonction créé avec succès.');
 
+            PaysUser::create([
+                'code_user' => $code,
+                'code_pays' => $request->input('pays'),
+            ]);
+            Log::info('PaysUser créé avec succès.');
 
-                return redirect()->route('personnel.create', ['ecran_id' => $request->input('ecran_id')])
+            Log::info('Fin de la création de la personne.');
+
+            return redirect()->route('personnel.create', ['ecran_id' => $request->input('ecran_id')])
                 ->with('success', 'Personne créée avec succès.');
         } catch (\Exception $e) {
-            // En cas d'erreur, retourner la redirection avec un message d'erreur
+            Log::error('Erreur lors de la création de la personne : ' . $e->getMessage());
             return redirect()->route('personnel.create', ['ecran_id' => $request->input('ecran_id')])
                 ->with('error', 'Erreur lors de l\'enregistrement du formulaire.');
         }
@@ -170,7 +193,7 @@ class UserController extends Controller
         $user = User::find($personneId);
         if (!$personne) {
             // Gérer le cas où l'utilisateur n'est pas trouvé
-            return redirect()->route('users.personnel')->with('error', 'Personne non trouvée.');
+            return redirect()->route('users.personnel', ['ecran_id' => $ecran_id])->with('error', 'Personne non trouvée.');
         }
         $ecran = Ecran::find($request->input('ecran_id'));
         $niveauxAcces = NiveauAccesDonnees::all();
@@ -185,7 +208,7 @@ class UserController extends Controller
 
         if (!$personne) {
             // Gérer le cas où l'utilisateur n'est pas trouvé
-            return redirect()->route('users.personnel')->with('error', 'Personne non trouvé.');
+            return redirect()->route('users.personnel', ['ecran_id' => $ecran_id])->with('error', 'Personne non trouvé.');
         }
         $niveauxAcces = NiveauAccesDonnees::all();
         $groupe_utilisateur = Role::all();
@@ -1016,7 +1039,7 @@ class UserController extends Controller
             'email' => $request->input('email'),
         ]);
 
-        // Vérifiez si un nouveau fichier photo a été téléchargé
+        // Vrifiez si un nouveau fichier photo a été téléchargé
         if ($request->hasFile('photo')) {
             // Supprimez l'ancienne photo s'il en existe une
             if ($user->personnel->photo) {

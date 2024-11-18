@@ -3,7 +3,7 @@
 		<link href="https://fonts.googleapis.com/css?family=Rufina:400,700" rel="stylesheet">
 
         <!-- title of site -->
-        <title>EHA_Projet</title>
+        <title>BTP-projeCT</title>
 
 
 
