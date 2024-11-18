@@ -6,6 +6,7 @@ use App\Models\Bailleur;
 use App\Models\Departement;
 use App\Models\District;
 use App\Models\Domaine;
+use App\Models\Pays;
 use App\Models\ProjetEha2;
 use App\Models\Region;
 use App\Models\StatutProjet;
@@ -1506,10 +1507,10 @@ class GeoJSONController extends Controller
             $statut = $request->input('status');
             $bailleur = $request->input('bailleur');
             $type = $request->input('type');
-        
+
             // Vérifier si aucun filtre n'est sélectionné
             $noFiltersSelected = empty($date_debut) && empty($date_fin) && empty($statut) && empty($bailleur) && empty($type);
-        
+
             // Initialisation de la requête de base avec les conditions communes
             $query = ProjetEha2::query()
                 ->leftJoin('region', 'region.code', '=', 'projet_eha2.code_region')
@@ -1531,14 +1532,14 @@ class GeoJSONController extends Controller
                       ->where('dep.code', '=', $geoCode)
                       ->where('abp.type_beneficiaire', '=', 'departement');
             }
-            
-            
-        
+
+
+
             // Appliquer le filtre de domaine
             if ($domaine) {
                 $query->where('projet_eha2.code_domaine', '=', $domaine);
             }
-        
+
             // Appliquer les filtres si au moins un filtre est sélectionné
             if (!$noFiltersSelected) {
                 // Filtrage des projets en fonction du type de date sélectionné
@@ -1553,14 +1554,14 @@ class GeoJSONController extends Controller
                                 $q->where('date', '<=', $date_fin);
                             });
                 }
-        
+
                 // Filtrage par statut
                 if ($statut) {
                     $query->whereHas('projetStatutProjet', function ($q) use ($statut) {
                         $q->where('code_statut_projet', $statut);
                     });
                 }
-        
+
                 // Filtrage par bailleur
                 if ($bailleur) {
                     $query->whereHas('bailleursProjets', function ($q) use ($bailleur) {
@@ -1568,10 +1569,10 @@ class GeoJSONController extends Controller
                     });
                 }
             }
-        
+
             // Récupération des projets filtrés
             $projects = $query->get();
-        
+
             // Récupérer le nom de l'entité géographique
             $geoName = '';
             if ($geoType === 'district') {
@@ -1581,15 +1582,15 @@ class GeoJSONController extends Controller
             } elseif ($geoType === 'departement') {
                 $geoName = Departement::where('code', $geoCode)->value('libelle');
             }
-        
+
             // Récupérer les domaines pour affichage
             $domainess = Domaine::where('code', $domaine)->get();
-        
+
             return view('entite', compact('projects', 'domainess', 'geoName'));
         }
-        
-        
-        
+
+       
+
 
 
 

@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Model;
 
 class User extends Authenticatable
 {
@@ -55,7 +56,7 @@ class User extends Authenticatable
     }
     public function personnel()
     {
-        return $this->belongsTo(Personnel::class, 'code_personnel', 'code_personnel');
+        return $this->hasOne(Personnel::class, 'code_personnel', 'code_personnel');
     }
 
     public function utilisateurDomaines()
@@ -107,6 +108,11 @@ class User extends Authenticatable
         return $this->hasOne(CouvrirRegion::class, 'code_personnel', 'code_personnel')
             ->latest('date')
             ->orderBy('date', 'desc');
+    }
+
+    public function paysUser()
+    {
+        return $this->hasOne(PaysUser::class, 'code_user', 'code_personnel');
     }
 
 }

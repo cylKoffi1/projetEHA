@@ -120,7 +120,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 
 </style>
+<!-- Inclure le CSS de Toastify -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
+<!-- Inclure le JavaScript de Toastify -->
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
 @if (session('success'))
 <script>
@@ -231,10 +235,20 @@ svg.leaflet-image-layer.leaflet-interactive path {
             </div>
         </div>
     </div>
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title">Carte du pays</h4>
+        </div>
+        <div class="card-content">
+            <div class="card-body">
+                <div id="countryMap" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
 </section>
 
 <script>
-    // Récupérez les éléments d'entrée
+    // Récuprez les éléments d'entrée
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
     var statusInput = document.getElementById('status');
@@ -371,8 +385,25 @@ svg.leaflet-image-layer.leaflet-interactive path {
             // Handle the case where the checkbox is unchecked if necessary
         }
     }
-</script>
 
+
+
+</script>
+<!-- Inclure le CSS de Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+<!-- Inclure le JavaScript de Leaflet -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Inclure votre fichier JavaScript -->
+<script src="{{ asset('geojsonCode/map.js') }}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var countryAlpha3Code = '{{ $codeAlpha3 }}'; // Code alpha3 passé depuis le contrôleur
+        initCountryMap(countryAlpha3Code);
+    });
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
 <script src="{{ asset('leaflet/leaflet.js')}}"></script>
 <script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
