@@ -11,7 +11,6 @@ class Pays extends Model
 
     public $timestamps = false;
 
-    protected $table = 'pays'; // Nom de la table
     protected $table = 'pays';
     protected $primaryKey = 'id';
     // Définir les colonnes qui peuvent être remplies
