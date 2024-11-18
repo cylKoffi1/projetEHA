@@ -125,36 +125,49 @@
                                         @enderror
                                     </div>
                                     <div class="col">
-                                        <div class="form-group">
-                                            <label for="structure_ratache">Structure :</label>
-                                            <label for="bai">B :</label>
-                                            <input type="radio" value="bai" name="structure" id="bai" checked="true" onclick="showSelect('bailleur')" style="margin-right: 15px;">
-                                            <label for="age">A :</label>
-                                            <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" style="margin-right: 15px;">
-                                            <label for="min">M :</label>
-                                            <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')">
+                                        <label for="pays">Pays :</label>
+                                        <select name="pays_display" id="pays" class="form-select" disabled>
+                                            <option value="">Sélectionner le pays</option>
+                                            @foreach($pays as $ppay)
+                                            <option value="{{ $ppay->id }}" {{ $ppay->alpha3 == $userCountryId ? 'selected' : '' }}>{{ $ppay->nom_fr_fr }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="pays" value="{{ $userCountryId }}">
+                                        @error('pays')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col">
+                                        <label for="structure_type">Type de Structure :</label>
+                                        <select name="structure_type" id="structure_type" class="form-select" onchange="showSelect(this.value)" required>
+                                            <option value="">Sélectionner le type</option>
+                                            <option value="bailleur">Bailleur</option>
+                                            <option value="agence">Agence</option>
+                                            <option value="ministere">Ministère</option>
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <label for="structure">Structure :</label>
+                                        <select name="bailleur" id="bailleur" class="form-select" style="display: none;" onclick="filterOptions('bailleurss')">
+                                            <option value="">Sélectionner le bailleur</option>
+                                            @foreach($bailleurs as $bailleur)
+                                            <option value="{{ $bailleur->code_bailleur }}">{{ $bailleur->libelle_long }}</option>
+                                            @endforeach
+                                        </select>
 
-                                            <select name="bailleur" id="bailleur" class="form-select" onclick="filterOptions('bailleurss')"  style="display: none;">
-                                                <option value="">Selectionner le bailleur</option>
-                                                @foreach($bailleurs as $bailleur)
-                                                <option value="{{ $bailleur->code_bailleur }}">{{ $bailleur->libelle_long }}</option>
-                                                @endforeach
-                                            </select>
+                                        <select name="agence" id="agence" class="form-select" style="display: none;" onclick="filterOptions('agence_execution')">
+                                            <option value="">Sélectionner l'agence</option>
+                                            @foreach($agences as $agence)
+                                            <option value="{{ $agence->code_agence_execution }}">{{ $agence->nom_agence }}</option>
+                                            @endforeach
+                                        </select>
 
-                                            <select name="agence" id="agence" class="form-select" onclick="filterOptions('agence_execution')" style="display: none;">
-                                                <option value="">Selectionner l'agence</option>
-                                                @foreach($agences as $agence)
-                                                <option value="{{ $agence->code_agence_execution }}">{{ $agence->nom_agence }}</option>
-                                                @endforeach
-                                            </select>
-
-                                            <select name="ministere" id="ministere" class="form-select" onclick="filterOptions('ministere')" style="display: none;">
-                                                <option value="">Selectionner le ministère</option>
-                                                @foreach($ministeres as $ministere)
-                                                <option value="{{ $ministere->code }}">{{ $ministere->libelle }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <select name="ministere" id="ministere" class="form-select" style="display: none;" onclick="filterOptions('ministere')">
+                                            <option value="">Sélectionner le ministère</option>
+                                            @foreach($ministeres as $ministere)
+                                            <option value="{{ $ministere->code }}">{{ $ministere->libelle }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                             </div>
                             <div class="row">
@@ -177,39 +190,18 @@
                                         <label for="niveau_acces_id">Champ d'exercice :</label>
                                         <select name="niveau_acces_id" id="niveau_acces_id" class="form-select" required>
                                             <option value="">--- ---</option>
-                                            @foreach($niveauxAcces as $niveauAcces)
-                                            <option value="{{ $niveauAcces->id }}">{{ $niveauAcces->libelle }}</option>
+                                            @foreach($decoupages as $decoupage)
+                                            <option value="{{ $decoupage->code_decoupage }}">{{ $decoupage->libelle_decoupage }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col">
                                     <div class="form-group">
-                                        <label for="niveau_acces_id" id="niveau_acces_id_label">Lieu d'exercice :</label>
-                                        <select name="reg" id="reg" class="form-select" style="display: none;">
+                                        <label for="lieu_exercice">Lieu d'exercice :</label>
+                                        <select name="lieu_exercice" id="lieu_exercice" class="form-select" required>
                                             <option value="">--- ---</option>
-                                            @foreach($regions as $region)
-                                            <option value="{{ $region->code }}">{{ $region->libelle }}</option>
-
-                                            @endforeach
-                                        </select>
-                                        <select name="dis" id="dis" class="form-select" style="display: none;">
-                                            <option value="">--- ---</option>
-                                            @foreach($districts as $district)
-                                            <option value="{{ $district->code }}">{{ $district->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                        <select name="dep" id="dep" class="form-select" style="display: none;">
-                                            <option value="">--- ---</option>
-                                            @foreach($departements as $dep)
-                                            <option value="{{ $dep->code }}" >{{ $dep->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                        <select name="na" id="na" class="form-select" style="display: none;">
-                                            <option value="">--- ---</option>
-                                            @foreach($pays as $ppay)
-                                            <option value="{{ $ppay->id }}">{{ $ppay->nom_fr_fr }}</option>
-                                            @endforeach
+                                            <!-- Les options seront ajoutées dynamiquement -->
                                         </select>
                                     </div>
                                 </div>
@@ -259,9 +251,11 @@
                                     {{-- <button type="reset" class="btn btn-light-secondary me-1 mb-1">
                                         Annuler
                                     </button> --}}
+                                    @can("ajouter_ecran_".$ecran->id)
                                     <button type="submit" id="soumettre_personnel" class="btn btn-primary me-1 mb-1">
                                         Enregistrer
                                     </button>
+                                    @endcan
                                 </div>
                             </div>
                         </form>
@@ -302,8 +296,6 @@
 
 
 
-        $("#bai").prop("checked", true);
-        showSelect('bailleur');
 
         $('#personne').on('change', function() {
             updateEmail($(this));
@@ -358,5 +350,41 @@
         });
     });
 
+    function showSelect(type) {
+        // Cacher tous les selects
+        document.getElementById('bailleur').style.display = 'none';
+        document.getElementById('agence').style.display = 'none';
+        document.getElementById('ministere').style.display = 'none';
+
+        // Afficher le select correspondant au type choisi
+        if (type) {
+            document.getElementById(type).style.display = 'block';
+        }
+    }
+
+    document.getElementById('structure_type').addEventListener('change', function() {
+        showSelect(this.value);
+    });
+
+
+    $(document).ready(function() {
+        $('#niveau_acces_id').on('change', function() {
+            var selectedDecoupage = $(this).val();
+            var lieuExerciceSelect = $('#lieu_exercice');
+
+            // Vider les options actuelles
+            lieuExerciceSelect.empty();
+            lieuExerciceSelect.append('<option value="">--- ---</option>');
+
+            if (selectedDecoupage) {
+                // Filtrer les localités en fonction du découpage sélectionné
+                @foreach($localites as $localite)
+                if ('{{ $localite->code_decoupage }}' === selectedDecoupage) {
+                    lieuExerciceSelect.append('<option value="{{ $localite->id }}">{{ $localite->libelle }}</option>');
+                }
+                @endforeach
+            }
+        });
+    });
 </script>
 @endsection

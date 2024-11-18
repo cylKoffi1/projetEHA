@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     @include('layouts.lurl')
-    <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/animate/animate.css')}}">
+  {{-- <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/animate/animate.css')}}">
     <!--===============================================================================================-->
     <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/css-hamburgers/hamburgers.min.css')}}">
     <!--===============================================================================================-->
@@ -19,8 +19,82 @@
     <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/daterangepicker/daterangepicker.css')}}">
     <!--===============================================================================================-->
     <link rel="stylesheet" type="text/css" href="{{asset('assets/compiled/css/util.css')}}">
-    <link rel="stylesheet" type="text/css" href="{{asset('assets/compiled/css/main.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{asset('assets/compiled/css/main.css')}}">--}}
     <!--===============================================================================================-->
+
+<style>
+    /* styles.css */
+
+/* Style général pour le conteneur */
+.container-login100 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Style pour le formulaire */
+.wrap-login100 {
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+}
+
+/* Style pour le titre */
+.login100-form-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Style pour les champs de saisie */
+.input100 {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    transition: border-color 0.3s ease;
+}
+
+.input100:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Style pour le bouton */
+.login100-form-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.login100-form-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Style pour le lien "Mot de passe oublié" */
+.text-right {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.text-right:hover {
+    text-decoration: underline;
+}
+</style>
 </head>
 
 <body>
@@ -43,7 +117,7 @@
                     <form class="login100-form validate-form" action="{{ route('login.login') }}" method="post">
                         @csrf
                         <span class="login100-form-title p-b-26">
-                            GERAC-EHA
+                            BTP-PROJECT
                         </span>
                         <span class="login100-form-title p-b-48">
                             @if ($errors->has('login')) <i class="zmdi zmdi-font"></i>

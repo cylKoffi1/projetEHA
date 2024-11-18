@@ -11,8 +11,8 @@
 				                    <i class="fa fa-bars"></i>
 				                </button>
 								<a class="navbar-brand" href="/">
-									<img src="{{ asset('betsa/assets/images/ehaImages/armoirie.png')}}"  width="50" alt="" />
-									GERAC-EHA<span></span>
+									{{-- <img src="{{ asset('betsa/assets/images/ehaImages/armoirie.png')}}"  width="50" alt="" /> --}}
+									BTP Project<span></span>
 								  </a>
 
 				            </div><!--/.navbar-header-->
@@ -22,13 +22,7 @@
 				            <div class="collapse navbar-collapse menu-ui-design" id="navbar-menu">
 				                <ul class="nav navbar-nav navbar-right" data-in="fadeInDown" data-out="fadeOutUp">
 				                    <li ><a href="{{ url('/sig') }} ">SIG-EHA</a></li>
-                                    <li class="dropdown">
-                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Projets &dtrif;</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a href="{{ url('/projetDistricts')}}">Districts</a></li>
-                                            <li><a href="#">Régions</a></li>
-                                        </ul>
-                                    </li>
+                                    
 				                    <li ><a href="{{ url('/connexion') }}">Connexion</a></li>
 
 
