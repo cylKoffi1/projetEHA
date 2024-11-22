@@ -26,34 +26,31 @@
     /* styles.css */
 
 /* Style général pour le conteneur */
-.container-login100 {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
 
-/* Style pour le formulaire */
-.wrap-login100 {
-    width: 100%;
-    max-width: 400px;
-    background: #fff;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    padding: 40px;
 }
 
-/* Style pour le titre */
-.login100-form-title {
+/* Style pour la carte */
+.card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Style pour le titre de la carte */
+.card-body h3 {
     font-size: 24px;
     font-weight: bold;
     color: #333;
-    text-align: center;
-    margin-bottom: 20px;
 }
 
 /* Style pour les champs de saisie */
-.input100 {
+.form-control {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
@@ -62,15 +59,14 @@
     transition: border-color 0.3s ease;
 }
 
-.input100:focus {
+.form-control:focus {
     border-color: #007bff;
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
 
+
 /* Style pour le bouton */
-.login100-form-btn {
-    width: 100%;
-    padding: 10px;
+.btn-primary {
     background-color: #007bff;
     border: none;
     border-radius: 5px;
@@ -80,19 +76,41 @@
     transition: background-color 0.3s ease;
 }
 
-.login100-form-btn:hover {
+.btn-primary:hover {
     background-color: #0056b3;
 }
 
-/* Style pour le lien "Mot de passe oublié" */
-.text-right {
-    color: #007bff;
-    text-decoration: none;
+/* Style pour les messages d'erreur */
+.text-danger {
     font-size: 14px;
+    color: #dc3545;
 }
 
-.text-right:hover {
+/* Style pour le lien "Mot de passe oublié" */
+.link-secondary {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.link-secondary:hover {
     text-decoration: underline;
+}
+
+/* Espacement pour les éléments */
+.mb-5 {
+    margin-bottom: 3rem;
+}
+
+.mt-5 {
+    margin-top: 3rem;
+}
+
+.gy-3 {
+    gap: 1rem; /* Espacement vertical */
+}
+
+.gy-md-4 {
+    gap: 1.5rem; /* Espacement vertical pour les écrans moyens et plus */
 }
 </style>
 </head>
@@ -111,64 +129,64 @@
 
         @include('layouts.menu')
 
-        <div class="limiter">
-            <div class="container-login100">
-                <div class="wrap-login100">
-                    <form class="login100-form validate-form" action="{{ route('login.login') }}" method="post">
-                        @csrf
-                        <span class="login100-form-title p-b-26">
-                            BTP-PROJECT
-                        </span>
-                        <span class="login100-form-title p-b-48">
-                            @if ($errors->has('login')) <i class="zmdi zmdi-font"></i>
-                            <p class="text-danger">{{ $errors->first('login') }}</p>
-                            @endif
-                            @if (session('success'))
-                            <p class="text-danger">{{ session('success') }}</p>
-                            @endif
-                        </span>
-
-                        <div class="wrap-input100 validate-input" data-validate="Login invalide">
-                            <input class="input100 @error('login') is-invalid @enderror" type="text" name="login">
-                            <span class="focus-input100" data-placeholder="Login"></span>
-                        </div>
-                            </div>
-                        </div>
-                        <div class="col-8 col-md-6 ">
-                            <div class="card-body col-md-10 p-3 p-md-6 p-xl-8">
-                                <div class="row">
-                                    <div class="col-12">
-                                        <div class="mb-5">
-                                            <h3>Se connecter</h3>
-                                        </div>
-                                    </div>
+        <section class="d-flex align-items-center justify-content-center" style="margin-top: 150px;">
+            <div class="container" style="max-width: 800px;"> <!-- Limite la largeur globale -->
+                <div class="card border-light-subtle shadow-sm">
+                    <div class="row g-0">
+                        <div class="col-12 col-md-6 text-bg-primary">
+                            <div class="d-flex align-items-center justify-content-center h-100" style="margin-top: 50px;">
+                                <div class="text-center">
+                                    <img class="img-fluid rounded mb-4" loading="lazy" src="{{ asset('logoseul.png') }}" width="200" height="200" alt="Logo BTP Project">
+                                    <h2 class="h1 mb-4 text-white">BTP Project</h2>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6" style="background-color: #fff">
+                            <br>
+                            <div class="card-body p-4 col-md-12">
+                                <div class="mb-4">
+                                    <h3>Se connecter</h3>
+                                </div><br>
+
+                                <!-- Messages d'erreurs ou de succès -->
+                                <span class="login100-form-title p-b-48">
+                                    @if ($errors->has('login'))
+                                        <i class="zmdi zmdi-font"></i>
+                                        <p class="text-danger">{{ $errors->first('login') }}</p>
+                                    @endif
+                                    @if (session('success'))
+                                        <p class="text-success">{{ session('success') }}</p>
+                                    @endif
+                                </span>
+
                                 <form action="{{ route('login.login') }}" method="post">
-                                    <input type="hidden" name="_token" value="I3KGMjGAJUhP6s5bPq8Xb4cg05xPoApajFW1sdCy" autocomplete="off">                                    <div class="row gy-3 gy-md-4 overflow-hidden">
-                                        <div class="col-8">
-                                            <label for="login" class="form-label">Login <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control " name="login" id="login" placeholder="Votre login" required="">
-                                                                                    </div>
+                                    @csrf
+                                    <div class="mb-3">
+                                        <label for="login" class="form-label">Login <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control @error('login') is-invalid @enderror" name="login" id="login" placeholder="Votre login" required>
 
-                        <div class="container-login100-form-btn">
-                            <div class="wrap-login100-form-btn">
-                                <div class="login100-form-bgbtn"></div>
-                                <button class="login100-form-btn" type="submit">
-                                    Se connecter
-                                </button>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Mot de passe <span class="text-danger">*</span></label>
+                                        <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" required>
+
+                                    </div>
+                                    <div class="mb-3">
+                                        <button class="btn btn-primary w-100" type="submit">Se connecter</button>
+                                    </div>
+                                </form>
+                                <hr class="mt-4">
+                                <div class="text-end">
+                                    <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>
+                                </div><br>
                             </div>
                         </div>
-
-
-                        <div class="text-center p-t-115">
-                            <div class="d-flex justify-content-between align-items-top mb-4">
-                                <div><a href="{{ route('password.request') }}" class="small text-right">Mot de passe oublié ?</a></div>
-                            </div>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
+
+
 
         </div>
     </section>

@@ -20,7 +20,7 @@ var statesDataLevel2 ={
                 "NAME_2": "Abidjan",
                 "VARNAME_2": "NA",
                 "NL_NAME_2": "NA",
-                "TYPE_2": "Districtautonome",
+                "TYPE_2": "Région",
                 "ENGTYPE_2": "Autonomousdistrict",
                 "CC_2": "NA",
                 "HASC_2": "CI.AB.AB"
@@ -48666,7 +48666,7 @@ var statesDataLevel2 ={
                 "NAME_2": "Yamoussoukro",
                 "VARNAME_2": "NA",
                 "NL_NAME_2": "NA",
-                "TYPE_2": "Districtautonome",
+                "TYPE_2": "Région",
                 "ENGTYPE_2": "Autonomousdistrict",
                 "CC_2": "NA",
                 "HASC_2": "CI.YM.YM"

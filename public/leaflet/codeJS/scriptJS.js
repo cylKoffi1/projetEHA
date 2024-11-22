@@ -424,7 +424,7 @@ var statesDataRegionsGeoJs = L.geoJson(statesDataRegions, {
                     .setContent(contextMenu)
                     .openOn(map);
             });
-             
+
             function createContextMenu(items, geoCode, geoType, props) {
                 var container = L.DomUtil.create('div', 'context-menu');
                 var table = L.DomUtil.create('table', '', container);
