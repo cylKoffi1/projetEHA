@@ -132,17 +132,23 @@
                             <input class="input100 @error('login') is-invalid @enderror" type="text" name="login">
                             <span class="focus-input100" data-placeholder="Login"></span>
                         </div>
-
-                        <div class="wrap-input100 validate-input" data-validate="Entrer le mot de passe">
-                            <span class="btn-show-pass">
-                                <i class="zmdi zmdi-eye"></i>
-                            </span>
-                            <input class="input100 @error('password') is-invalid @enderror" type="password" name="password" autocomplete="current-password">
-                            <span class="focus-input100" data-placeholder="Mot de passe" autofocus></span>
-                            @if ($errors->has('password'))
-                            <span class="text-danger">{{ $errors->first('password') }}</span>
-                            @endif
+                            </div>
                         </div>
+                        <div class="col-8 col-md-6 ">
+                            <div class="card-body col-md-10 p-3 p-md-6 p-xl-8">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="mb-5">
+                                            <h3>Se connecter</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <form action="{{ route('login.login') }}" method="post">
+                                    <input type="hidden" name="_token" value="I3KGMjGAJUhP6s5bPq8Xb4cg05xPoApajFW1sdCy" autocomplete="off">                                    <div class="row gy-3 gy-md-4 overflow-hidden">
+                                        <div class="col-8">
+                                            <label for="login" class="form-label">Login <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control " name="login" id="login" placeholder="Votre login" required="">
+                                                                                    </div>
 
                         <div class="container-login100-form-btn">
                             <div class="wrap-login100-form-btn">
