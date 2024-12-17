@@ -67,6 +67,8 @@ use SebastianBergmann\Template\Template;
 use Throwable;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class PhptTestCase implements Reorderable, SelfDescribing, Test
@@ -186,7 +188,9 @@ final class PhptTestCase implements Reorderable, SelfDescribing, Test
         $jobResult    = $this->phpUtil->runJob($code, $this->stringifyIni($settings));
         $this->output = $jobResult['stdout'] ?? '';
 
-        if (CodeCoverage::instance()->isActive() && ($coverage = $this->cleanupForCoverage())) {
+        if (CodeCoverage::instance()->isActive()) {
+            $coverage = $this->cleanupForCoverage();
+
             CodeCoverage::instance()->codeCoverage()->start($this->filename, TestSize::large());
 
             CodeCoverage::instance()->codeCoverage()->append(
@@ -196,6 +200,8 @@ final class PhptTestCase implements Reorderable, SelfDescribing, Test
                 TestStatus::unknown(),
             );
         }
+
+        $passed = true;
 
         try {
             $this->assertPhptExpectation($sections, $this->output);
@@ -230,8 +236,16 @@ final class PhptTestCase implements Reorderable, SelfDescribing, Test
             } else {
                 $emitter->testFailed($this->valueObjectForEvents(), ThrowableBuilder::from($failure), null);
             }
+
+            $passed = false;
         } catch (Throwable $t) {
             $emitter->testErrored($this->valueObjectForEvents(), ThrowableBuilder::from($t));
+
+            $passed = false;
+        }
+
+        if ($passed) {
+            $emitter->testPassed($this->valueObjectForEvents());
         }
 
         $this->runClean($sections, CodeCoverage::instance()->isActive());
@@ -345,7 +359,7 @@ final class PhptTestCase implements Reorderable, SelfDescribing, Test
         foreach (explode("\n", trim($content)) as $e) {
             $e = explode('=', trim($e), 2);
 
-            if (!empty($e[0]) && isset($e[1])) {
+            if ($e[0] !== '' && isset($e[1])) {
                 $env[$e[0]] = $e[1];
             }
         }
@@ -638,7 +652,11 @@ final class PhptTestCase implements Reorderable, SelfDescribing, Test
         $coverage = RawCodeCoverageData::fromXdebugWithoutPathCoverage([]);
         $files    = $this->getCoverageFiles();
 
-        $buffer = @file_get_contents($files['coverage']);
+        $buffer = false;
+
+        if (is_file($files['coverage'])) {
+            $buffer = @file_get_contents($files['coverage']);
+        }
 
         if ($buffer !== false) {
             $coverage = @unserialize($buffer);

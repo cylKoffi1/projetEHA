@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\cloturerProjetController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\EtatController;
 use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
 use App\Http\Controllers\PaysController;
@@ -21,12 +22,18 @@ use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\SigController;
 use App\Http\Controllers\GeoJSONController;
 use App\Http\Controllers\Naissance;
+use App\Http\Controllers\ParGeneraux\FonctionTypeActeurController;
+use App\Http\Controllers\ParGeneraux\GroupProjectPermissionsController;
+use App\Http\Controllers\ParGeneraux\RolePermissionsController;
+use App\Http\Controllers\ParGeneraux\TypeActeurController;
+use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\pibController;
 use App\Http\Controllers\ProjectStatusController;
 use App\Http\Controllers\RealiseProjetController;
 use App\Http\Controllers\representationGraphique;
 use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
+use App\Http\Controllers\UtilisateurController;
 use App\Models\EtudeProject;
 use App\Models\Renforcement;
 use Laravel\Ui\Presets\React;
@@ -60,6 +67,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/admin/initSidebar', [AdminController::class, 'initSidebar']);
     // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
     Route::get('admin/pays', [PaysController::class, 'pays'])->name('pays');
+    Route::put('/pays/{id}/update', [PaysController::class, 'updatePays'])->name('pays.update');
+    Route::delete('/pays/{id}', [PaysController::class, 'deletePays'])->name('pays.destroy');
     Route::post('admin/pays', [PaysController::class, 'storePays'])->name('pays.store');
     Route::get('admin/district', [PaysController::class, 'district'])->name('district');
     Route::get('admin/departement', [PaysController::class, 'departement'])->name('departement');
@@ -477,6 +486,56 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+    /*************************TYPE ACTEURS */
+    Route::get('admin/type-acteurs', [TypeActeurController::class, 'index'])->name('type-acteurs.index');
+    Route::post('/type-acteurs', [TypeActeurController::class, 'store'])->name('type-acteurs.store');
+    Route::put('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'update'])->name('type-acteurs.update');
+    Route::delete('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'destroy'])->name('type-acteurs.destroy');
+
+    /*************************ACTEURS *******/
+    Route::get('admin/acteurs', [ActeurController::class, 'index'])->name('acteurs.index');
+    Route::post('/acteurs', [ActeurController::class, 'store'])->name('acteurs.store');
+    Route::put('/acteurs/{id}', [ActeurController::class, 'update'])->name('acteurs.update');
+    Route::delete('/acteurs/{id}', [ActeurController::class, 'destroy'])->name('acteurs.destroy');
+    Route::patch('admin/acteurs/{id}/restore', [ActeurController::class, 'restore'])->name('acteurs.restore');
+
+    /************************FONCTION TYPE ACTEUR */
+    Route::get('admin/fonction-type-acteur', [FonctionTypeActeurController::class, 'index'])->name('fonction-type-acteur.index');
+    Route::post('/fonction-type-acteur', [FonctionTypeActeurController::class, 'store'])->name('fonction-type-acteur.store');
+    Route::delete('/fonction-type-acteur/{id}', [FonctionTypeActeurController::class, 'destroy'])->name('fonction-type-acteur.destroy');
+
+    /*************************UTILISATEUR */
+    Route::get('admin/utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
+    Route::post('/utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');
+    Route::put('/utilisateurs/{id}', [UtilisateurController::class, 'update'])->name('utilisateurs.update');
+    Route::patch('/utilisateurs/{id}/restore', [UtilisateurController::class, 'restore'])->name('utilisateurs.restore');
+    Route::delete('/utilisateurs/{id}', [UtilisateurController::class, 'destroy'])->name('utilisateurs.destroy');
+    Route::get('/fonctions-par-type-acteur/{typeActeur}', [UtilisateurController::class, 'getFonctionsByTypeActeur']);
+
+    /*************************PERMISSIONS */
+    // Gestion des permissions de rôles
+    Route::get('admin/role_permissions', [RolePermissionsController::class, 'index'])->name('role_permissions.index'); // Affichage des permissions
+    Route::post('/role_permissions', [RolePermissionsController::class, 'store'])->name('role_permissions.store'); // Création d'une nouvelle permission
+    Route::put('/role_permissions/{id}', [RolePermissionsController::class, 'store'])->name('role_permissions.update'); // Mise à jour d'une permission
+    Route::delete('/role_permissions/{id}', [RolePermissionsController::class, 'destroy'])->name('role_permissions.destroy'); // Suppression d'une permission
+
+    // Gestion des permissions pour groupes projets
+    Route::get('admin/group_project_permissions', [GroupProjectPermissionsController::class, 'index'])->name('group_project_permissions.index'); // Affichage des permissions
+    Route::post('/group_project_permissions', [GroupProjectPermissionsController::class, 'store'])->name('group_project_permissions.store'); // Création d'une nouvelle permission
+    Route::put('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'store'])->name('group_project_permissions.update'); // Mise à jour d'une permission
+    Route::delete('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'destroy'])->name('group_project_permissions.destroy'); // Suppression d'une permission
 });
 
 
@@ -534,3 +593,4 @@ Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('
 
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
+Route::get('/etat/pdf', [EtatController::class, 'generatePDF'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);

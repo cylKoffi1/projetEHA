@@ -12,7 +12,7 @@ use App\Models\Region;
 use App\Models\Departement;
 use App\Models\Sous_prefecture;
 use App\Models\Localite;
-
+use Illuminate\Support\Facades\Log;
 
 class PaysController extends Controller
 {
@@ -45,32 +45,73 @@ class PaysController extends Controller
         $pays->nom_fr_fr = $request->input('nom_fr_fr');
         $pays->codeTel = $request->input('codeTel');
 
-        if ($request->hasfile('armoirie')){
-            $file = $request->file('armoirie');
-            $extension = $file->getClientOriginalExtension();
-            $filename = time().'.'.$extension;
-            $file->move('armoiries', $filename);
-            $pays->armoirie = $filename;
+        if ($request->hasFile('armoirie')) {
+            $filename = 'armoirie_' . time() . '.' . $request->file('armoirie')->getClientOriginalExtension();
+            $path = $request->file('armoirie')->storeAs('public/armoiries', $filename);
+            $pays->armoirie = str_replace('public/', '', $path);
+        }
 
+        if ($request->hasFile('flag')) {
+            $filename = 'flag_' . time() . '.' . $request->file('flag')->getClientOriginalExtension();
+            $path = $request->file('flag')->storeAs('public/drapeaux', $filename);
+            $pays->flag = str_replace('public/', '', $path);
         }
-        else{
 
-            $pays->flag = "";
-        }
-        if ($request->hasfile('flag')){
-            $file = $request->file('flag');
-            $extension = $file->getClientOriginalExtension();
-            $filename = time().'.'.$extension;
-            $file->move('drapeaux', $filename);
-            $pays->flag = $filename;
-        }
-        else {
 
-            $pays->flag = "";
-        }
 
         $pays->save();
         $ecran_id = $request->input('ecran_id');
+    }
+    public function updatePays(Request $request, $id)
+    {
+        try {
+            // Trouver le pays
+            $pays = Pays::findOrFail($id);
+
+            // Mettre à jour les champs texte
+            $pays->code = $request->input('code-update');
+            $pays->alpha2 = $request->input('alpha2-update');
+            $pays->alpha3 = $request->input('alpha3-update');
+            $pays->nom_en_gb = $request->input('nom_en_gb-update');
+            $pays->nom_fr_fr = $request->input('nom_fr_fr-update');
+            $pays->codeTel = $request->input('codeTel-update');
+
+            if ($request->hasFile('armoirie-update')) {
+                $filename = 'armoirie_' . time() . '.' . $request->file('armoirie-update')->getClientOriginalExtension();
+                $path = $request->file('armoirie-update')->storeAs('public/armoiries', $filename);
+                $pays->armoirie = str_replace('public/', '', $path);
+            }
+
+            if ($request->hasFile('flag-update')) {
+                $filename = 'flag_' . time() . '.' . $request->file('flag-update')->getClientOriginalExtension();
+                $path = $request->file('flag-update')->storeAs('public/drapeaux', $filename);
+                $pays->flag = str_replace('public/', '', $path);
+            }
+
+
+            // Enregistrement des modifications
+            $pays->save();
+
+            return redirect()->back()->with('success', 'Pays mis à jour avec succès.');
+        } catch (\Exception $e) {
+            // Log de l'erreur pour le debug
+            Log::error("Erreur lors de la mise à jour du pays : " . $e->getMessage());
+            return redirect()->back()->withErrors('Erreur lors de la mise à jour.');
+        }
+    }
+
+
+    public function deletePays($id)
+    {
+        try {
+            $pays = Pays::findOrFail($id);
+            $pays->delete();
+
+            return redirect()->back()->with('success', 'Pays supprimé avec succès.');
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la suppression du pays : " . $e->getMessage());
+            return redirect()->back()->withErrors('Erreur lors de la suppression.');
+        }
     }
 
 

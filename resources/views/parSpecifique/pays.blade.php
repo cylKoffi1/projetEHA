@@ -53,10 +53,10 @@
                         <a  href="#" data-toggle="modal" data-target="#paysModal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                     @endcan
 
-                   
+
 
                 </h5>
-               
+
                 @if (count($errors) > 0)
                 <div class="alert alert-danger">
                     <ul>
@@ -83,7 +83,7 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-               
+
                 <tbody>
                     @foreach ($pays as $p)
                     <tr>
@@ -92,24 +92,45 @@
                         <td>{{ $p->codeTel }}</td>
                         <td>
                             @if ($p->armoirie)
-                                <img style="width: 30px; height: 30px;" src="{{ asset("armoiries/$p->armoirie") }}" alt="Armoirie du pays">
+                                <img style="width: 30px; height: 30px;"
+                                    src="{{ asset('storage/' . $p->armoirie) }}"
+                                    alt="Armoirie du pays">
                             @endif
                         </td>
-                        
+
                         <td>
                             @if ($p->flag)
-                                <img style="width: 30px; height: 30px;" src="{{ asset("drapeaux/$p->flag") }}" alt="Drapeau du pays">
+                                <img style="width: 30px; height: 30px;"
+                                    src="{{ asset('storage/' . $p->flag) }}"
+                                    alt="Drapeau du pays">
                             @endif
                         </td>
+
                         <td>
                             <div class="dropdown">
                                 <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
                                     <span style="color: white"></span>
                                 </a>
                                 <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
-                                    <li><a class="dropdown-item" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                    <li><a class="dropdown-item" href="#"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
+                                    <li>
+                                        <a class="dropdown-item edit-button" href="#"
+                                        data-id="{{ $p->id }}"
+                                        data-code="{{ $p->code }}"
+                                        data-alpha2="{{ $p->alpha2 }}"
+                                        data-alpha3="{{ $p->alpha3 }}"
+                                        data-nom-en-gb="{{ $p->nom_en_gb }}"
+                                        data-nom-fr-fr="{{ $p->nom_fr_fr }}"
+                                        data-code-tel="{{ $p->codeTel }}">
+                                            <i class="bi bi-pencil-square me-3"></i> Modifier
+                                        </a>
+                                    </li>
+                                    <!-- Lien pour la suppression -->
+                                    <li>
+                                        <a class="dropdown-item delete-button" href="#"
+                                        data-id="{{ $p->id }}">
+                                            <i class="bi bi-trash3-fill me-3"></i> Supprimer
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </td>
@@ -144,7 +165,7 @@
                                         <div class="card-body">
                                             <form class="form" method="POST" enctype="multipart/form-data" data-parsley-validate action="{{ route('pays.store') }}">
                                                 @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
                                                 <div class="row">
                                                     <div class="col-md-6 col-12">
                                                         <div class="form-group mandatory">
@@ -224,14 +245,138 @@
             </div>
         </div>
     </div>
+    <!-- Modal de modification -->
+    <div class="modal fade" id="paysEditModal" tabindex="-1" role="dialog" aria-labelledby="editModalTitle" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalTitle">Modifier un Pays</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-pays-form" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" id="edit-ecran-id" name="ecran_id" value="{{ $ecran->id }}">
+                        <input type="hidden" id="edit-pays-id" name="id">
+                        <div class="row">
+                            <div class="col-md-6 col-12">
+                                <div class="form-group mandatory">
+                                    <label class="form-label" for="edit-code">Code :</label>
+                                    <input type="text" class="form-control" id="edit-code-update" name="code-update" placeholder="Code" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group mandatory">
+                                    <label class="form-label" for="edit-alpha2">Code alpha-2 :</label>
+                                    <input type="text" class="form-control" id="edit-alpha2-update" name="alpha2-update" placeholder="Alpha-2" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group">
+                                    <label class="form-label" for="edit-alpha3">Code alpha-3 :</label>
+                                    <input type="text" placeholder="Code alpha-3" class="form-control" id="edit-alpha3-update" name="alpha3-update" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group">
+                                    <label class="form-label" for="edit-nom-en-gb">Nom (en anglais) :</label>
+                                    <input type="text" class="form-control" id="edit-nom-en-gb-update" name="nom_en_gb-update" placeholder="Nom anglais" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group">
+                                    <label class="form-label" for="edit-nom-fr-fr">Nom (en français) :</label>
+                                    <input type="text" class="form-control" id="edit-nom-fr-fr-update" name="nom_fr_fr-update" placeholder="Nom français" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group mandatory">
+                                    <label for="edit-code-tel">Code téléphonique :</label>
+                                    <input type="text" class="form-control" id="edit-code-tel-update" name="codeTel-update" placeholder="Code téléphonique">
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group mandatory">
+                                    <label for="edit-armoirie">Armoirie</label>
+                                    <input class="form-control" type="file" id="edit-armoirie-update" name="armoirie-update">
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="form-group mandatory">
+                                    <label for="edit-drapeaux">Drapeaux</label>
+                                    <input class="form-control" type="file" id="edit-drapeaux-update" name="flag-update">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de suppression -->
+    <div class="modal fade" id="paysDeleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalTitle" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalTitle">Confirmer la suppression</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer ce pays ?</p>
+                    <form id="delete-pays-form" method="POST">
+                        @csrf
+                        @method('DELETE')
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger" form="delete-pays-form">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
 </section>
 
+<script>
+    $(document).ready(function () {
+        $('.edit-button').click(function () {
+            const pays = $(this).data();
+            $('#edit-pays-id-update').val(pays.id);
+            $('#edit-code-update').val(pays.code);
+            $('#edit-alpha2-update').val(pays.alpha2);
+            $('#edit-alpha3-update').val(pays.alpha3);
+            $('#edit-nom-en-gb-update').val(pays.nomEnGb);
+            $('#edit-nom-fr-fr-update').val(pays.nomFrFr);
+            $('#edit-code-tel-update').val(pays.codeTel);
+
+            $('#edit-pays-form').attr('action', `/pays/${pays.id}/update`);
+
+            $('#paysEditModal').modal('show');
+        });
+
+        $('.delete-button').click(function () {
+            const id = $(this).data('id');
+            $('#delete-pays-form').attr('action', `/pays/${id}`);
+            $('#paysDeleteModal').modal('show');
+        });
+    });
+</script>
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des pays')
+        initDataTable('{{ auth()->user()->acteur->code_acteur }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des pays')
         $('#code').on('input', function() {
             // Get the input value
             var code = $(this).val();

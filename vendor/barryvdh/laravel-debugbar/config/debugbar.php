@@ -15,6 +15,7 @@ return [
      */
 
     'enabled' => env('DEBUGBAR_ENABLED', null),
+    'hide_empty_tabs' => false, // Hide tabs until they have content
     'except' => [
         'telescope*',
         'horizon*',
@@ -34,10 +35,11 @@ return [
      | Warning: Enabling storage.open will allow everyone to access previous
      | request, do not enable open storage in publicly available environments!
      | Specify a callback if you want to limit based on IP or authentication.
+     | Leaving it to null will allow localhost only.
      */
     'storage' => [
         'enabled'    => true,
-        'open'       => env('DEBUGBAR_OPEN_STORAGE', false), // bool/callback.
+        'open'       => env('DEBUGBAR_OPEN_STORAGE'), // bool/callback.
         'driver'     => 'file', // redis, file, pdo, socket, custom
         'path'       => storage_path('debugbar'), // For file driver
         'connection' => null,   // Leave null for default connection (Redis/PDO)
@@ -124,6 +126,7 @@ return [
     'capture_ajax' => true,
     'add_ajax_timing' => false,
     'ajax_handler_auto_show' => true,
+    'ajax_handler_enable_tab' => true,
 
     /*
      |--------------------------------------------------------------------------
@@ -181,6 +184,7 @@ return [
         'models'          => true,  // Display models
         'livewire'        => true,  // Display Livewire (when available)
         'jobs'            => false, // Display dispatched jobs
+        'pennant'         => false, // Display Pennant feature flags
     ],
 
     /*
@@ -206,19 +210,22 @@ return [
         ],
         'auth' => [
             'show_name' => true,   // Also show the users name/email in the debugbar
+            'show_guards' => true, // Show the guards that are used
         ],
         'db' => [
             'with_params'       => true,   // Render SQL with the parameters substituted
+            'exclude_paths'     => [       // Paths to exclude entirely from the collector
+//                'vendor/laravel/framework/src/Illuminate/Session', // Exclude sessions queries
+            ],
             'backtrace'         => true,   // Use a backtrace to find the origin of the query in your files.
             'backtrace_exclude_paths' => [],   // Paths to exclude from backtrace. (in addition to defaults)
             'timeline'          => false,  // Add the queries to the timeline
             'duration_background'  => true,   // Show shaded background on each query relative to how long it took to execute.
             'explain' => [                 // Show EXPLAIN output on queries
                 'enabled' => false,
-                'types' => ['SELECT'],     // Deprecated setting, is always only SELECT
             ],
-            'hints'             => false,    // Show hints for common mistakes
-            'show_copy'         => false,    // Show copy button next to the query,
+            'hints'             => false,   // Show hints for common mistakes
+            'show_copy'         => true,    // Show copy button next to the query,
             'slow_threshold'    => false,   // Only track queries that last longer than this time in ms
             'memory_usage'      => false,   // Show queries memory usage
             'soft_limit'       => 100,      // After the soft limit, no parameters/backtrace are captured
@@ -308,7 +315,7 @@ return [
      | Switches between light and dark theme. If set to auto it will respect system preferences
      | Possible values: auto, light, dark
      */
-    'theme' => env('DEBUGBAR_THEME', 'dark'),
+    'theme' => env('DEBUGBAR_THEME', 'auto'),
 
     /*
      |--------------------------------------------------------------------------

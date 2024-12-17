@@ -162,19 +162,18 @@
                                 <form action="{{ route('login.login') }}" method="post">
                                     @csrf
                                     <div class="mb-3">
-                                        <label for="login" class="form-label">Login <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control @error('login') is-invalid @enderror" name="login" id="login" placeholder="Votre login" required>
-
+                                        <label for="email" class="form-label">Adresse email <span class="text-danger">*</span></label>
+                                        <input type="email" class="form-control @error('email') is-invalid @enderror" name="email" id="email" placeholder="Votre email" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="password" class="form-label">Mot de passe <span class="text-danger">*</span></label>
                                         <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" required>
-
                                     </div>
-                                    <div class="mb-3">
-                                        <button class="btn btn-primary w-100" type="submit">Se connecter</button>
+                                    <div class="mb-3 d-flex">
+                                        <button class="btn btn-primary" type="submit">Se connecter</button>
                                     </div>
                                 </form>
+
                                 <hr class="mt-4">
                                 <div class="text-end">
                                     <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>

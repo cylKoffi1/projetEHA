@@ -17,3 +17,6 @@ class LocalitesPays extends Model
         return $this->belongsTo(DecoupageAdministratif::class, 'code_decoupage', 'code_decoupage');
     }
 }
+
+
+

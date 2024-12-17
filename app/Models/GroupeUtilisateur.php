@@ -12,7 +12,13 @@ class GroupeUtilisateur extends Model
 
     public $timestamps = false;
 
-    protected $table = 'groupe_utilisateur'; // Nom de la table   
+    protected $table = 'groupe_utilisateur'; // Nom de la table
     protected $keyType = 'string';
     protected $primaryKey = 'code';
+    public $incrementing = false;
+    protected $fillable = ['code', 'libelle_groupe'];
+    public function utilisateurs()
+    {
+        return $this->hasMany(Users::class, 'groupe_utilisateur_id', 'code');
+    }
 }

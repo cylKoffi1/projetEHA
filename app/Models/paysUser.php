@@ -11,7 +11,9 @@ class PaysUser extends Model
 
     protected $table = 'pays_user';
 
-    protected $fillable = ['code', 'code_pays', 'code_user'];
+    protected $fillable = ['code_pays', 'code_user'];
+
+    public $timestamps = false; // Pas de colonnes created_at ou updated_at
 
     public function pays()
     {
@@ -20,6 +22,6 @@ class PaysUser extends Model
 
     public function user()
     {
-        return $this->belongsTo(Personnel::class, 'code_user', 'code_personnel');
+        return $this->belongsTo(User::class, 'code_user', 'acteur_id');
     }
 }

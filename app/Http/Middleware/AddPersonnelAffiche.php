@@ -20,6 +20,9 @@ class AddPersonnelAffiche
 
         // Assurez-vous que l'utilisateur est connecté avant de récupérer ses informations
         if (Auth::check()) {
+            if (!auth()->user()->latestFonction) {
+                $personnelAffiche = '';
+            } else {
             // Logique pour déterminer la valeur de $personnelAffiche en fonction du rôle de l'utilisateur
             switch (auth()->user()->latestFonction->fonctionUtilisateur->code) {
                 case 'cp': // Chef de projet
@@ -132,6 +135,7 @@ class AddPersonnelAffiche
                     $personnelAffiche = 'Autre';
                     break;
             }
+        }
         }
 
         // Partagez la variable avec toutes les vues

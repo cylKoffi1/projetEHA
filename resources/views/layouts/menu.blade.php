@@ -11,8 +11,7 @@
 				                    <i class="fa fa-bars"></i>
 				                </button>
 								<a class="navbar-brand" href="/">
-									{{-- <img src="{{ asset('betsa/assets/images/ehaImages/armoirie.png')}}"  width="50" alt="" /> --}}
-									BTP Project<span></span>
+									BTP-PROJECT<span></span>
 								  </a>
 
 				            </div><!--/.navbar-header-->
@@ -21,9 +20,9 @@
 				            <!-- Collect the nav links, forms, and other content for toggling -->
 				            <div class="collapse navbar-collapse menu-ui-design" id="navbar-menu">
 				                <ul class="nav navbar-nav navbar-right" data-in="fadeInDown" data-out="fadeOutUp">
-				                    <li ><a href="{{ url('/sig') }} ">SIG-EHA</a></li>
-                                    
-				                    <li ><a href="{{ url('/connexion') }}">Connexion</a></li>
+
+
+				                    <li ><a href="{{ url('/connexion') }}">Demande d'autorisation</a></li>
 
 
 				                </ul><!--/.nav -->

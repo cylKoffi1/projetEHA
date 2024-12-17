@@ -100,6 +100,45 @@
                             <div class="row">
 
                                     <div class="col">
+                                        <label for="pays">Pays :</label>
+                                        <select name="pays_display" id="pays" class="form-select" disabled>
+                                            <option value="">Sélectionner le pays</option>
+                                            @foreach($pays as $ppay)
+                                            <option value="{{ $ppay->id }}" {{ $ppay->alpha3 == $userCountryId ? 'selected' : '' }}>{{ $ppay->nom_fr_fr }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="pays" value="{{ $userCountryId }}">
+                                        @error('pays')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col">
+                                        <label for="pays">Groupe utilisateur :</label>
+                                        <select name="pays_display" id="pays" class="form-select" >
+                                            <option value="">Sélectionner le groupe</option>
+                                            @foreach($grpUser as $grpUsers)
+                                            <option value="{{ $grpUsers->code }}">{{ $grpUsers->libelle_groupe }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="pays" value="{{ $userCountryId }}">
+                                        @error('pays')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col">
+                                        <label for="pays">Groupe Projet :</label>
+                                        <select name="pays_display" id="pays" class="form-select" >
+                                            <option value="">Sélectionner le groupe projet</option>
+                                            @foreach($groupe_projet as $groupe_proje)
+                                            <option value="{{ $groupe_proje->code }}" >{{ $groupe_proje->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="pays" value="{{ $userCountryId }}">
+                                        @error('pays')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col">
                                         <label>Nom</label>
                                         <div class="form-group position-relative has-icon-left">
                                             <input type="text" id="nom" name="nom" class="form-control" placeholder="Nom">
@@ -124,21 +163,11 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                    <div class="col">
-                                        <label for="pays">Pays :</label>
-                                        <select name="pays_display" id="pays" class="form-select" disabled>
-                                            <option value="">Sélectionner le pays</option>
-                                            @foreach($pays as $ppay)
-                                            <option value="{{ $ppay->id }}" {{ $ppay->alpha3 == $userCountryId ? 'selected' : '' }}>{{ $ppay->nom_fr_fr }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input type="hidden" name="pays" value="{{ $userCountryId }}">
-                                        @error('pays')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                    <div class="col">
-                                        <label for="structure_type">Type de Structure :</label>
+
+                            </div>
+                            <div class="row">
+                            <div class="col">
+                                        <label for="structure_type">Type acteur :</label>
                                         <select name="structure_type" id="structure_type" class="form-select" onchange="showSelect(this.value)" required>
                                             <option value="">Sélectionner le type</option>
                                             <option value="bailleur">Bailleur</option>
@@ -147,7 +176,7 @@
                                         </select>
                                     </div>
                                     <div class="col">
-                                        <label for="structure">Structure :</label>
+                                        <label for="structure">Acteur :</label>
                                         <select name="bailleur" id="bailleur" class="form-select" style="display: none;" onclick="filterOptions('bailleurss')">
                                             <option value="">Sélectionner le bailleur</option>
                                             @foreach($bailleurs as $bailleur)
@@ -169,8 +198,6 @@
                                             @endforeach
                                         </select>
                                     </div>
-                            </div>
-                            <div class="row">
                                 <div class="col">
                                     <div class="form-group">
                                         <label for="fonction">Fonction :</label>
@@ -201,7 +228,7 @@
                                         <label for="lieu_exercice">Lieu d'exercice :</label>
                                         <select name="lieu_exercice" id="lieu_exercice" class="form-select" required>
                                             <option value="">--- ---</option>
-                                            <!-- Les options seront ajoutées dynamiquement -->
+                                            <option value="{{ $lieu->id }}">{{ $lieu->libelle }}</option>
                                         </select>
                                     </div>
                                 </div>

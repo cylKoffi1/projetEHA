@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html class="no-js" lang="en">
 
@@ -50,6 +49,7 @@
                                 </div>
                             </div>
 
+
                             <div class="form-group row">
                                 <label for="password-confirm" class="col-md-4 col-form-label text-md-right">{{ __('Confirmer le nouveau mot de passe') }}</label>
 
@@ -79,6 +79,5 @@
     <script src="{{ asset('assets/compiled/js/myjs.js')}}"></script>
     <script src="{{ asset('assets/compiled/js/app.js')}}"></script>
 
-    </section>
 </body>
 </html>

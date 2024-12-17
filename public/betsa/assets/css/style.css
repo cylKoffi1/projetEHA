@@ -36,8 +36,10 @@ body{
     text-transform:initial;
     max-width:1920px;
     margin:0 auto;
-
-    background:url(../images/ehaImages/background2.jpg);
+    background:url(../../../assets/BTP-Image/a-wind-turbine-with-environment-ecology-sign-hologram-sustainable-clean-energy-free-video.jpg);
+    background-size: cover; /* ou 'contain' selon vos besoins */
+    background-position: center; /* pour centrer l'image */
+    overflow-x: hidden;
 	overflow-x:hidden;
 }
 

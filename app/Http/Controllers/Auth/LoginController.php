@@ -2,45 +2,26 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Models\Personnel;
+use App\Models\User;
+use App\Models\Acteur;
+use App\Models\Ecran;
 use Illuminate\Foundation\Auth\ResetsPasswords;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
-use App\Models\Ecran;
-use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
-use App\Providers\RouteServiceProvider;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Contracts\View\View;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request; // Utilisez la classe correcte pour la gestion des demandes HTTP
+use Illuminate\Http\Request;
 
 class LoginController extends Controller
 {
     use SendsPasswordResetEmails;
-    /*
-    |--------------------------------------------------------------------------
-    | Login Controller
-    |--------------------------------------------------------------------------
-    |
-    | This controller handles authenticating users for the application and
-    | redirecting them to your home screen. The controller uses a trait
-    | to conveniently provide its functionality to your applications.
-    |
-    // public function __construct()
-    // {
-    //     $this->middleware('guest');
-    // }
-
 
     /**
-     * Show the login form.
-     *
-     * @return \Illuminate\View\View
+     * Affiche le formulaire de connexion.
      */
     public function showLoginForm()
     {
@@ -48,88 +29,84 @@ class LoginController extends Controller
     }
 
     /**
-     * Handle a login request to the application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
+     * Gérer une tentative de connexion.
      */
+    public function login(Request $request)
+    {
+        $ecran = Ecran::find($request->input('ecran_id'));
 
-// Ajouter un utilisateur à la liste des utilisateurs connectés avec un token
-protected function addUserToConnectedUsers($user)
-{
-    $token = Str::random(60); // Génère un token unique
-    $user->update(['api_token' => hash('sha256', $token)]); // Stocke le token dans la base de données
-}
+        // Validation des données de connexion
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
 
-// Vérifie si l'utilisateur est déjà connecté
-protected function isUserAlreadyLoggedIn($login)
-{
-    $user = User::where('login', $login)->first();
-    return $user && $user->api_token !== null;
-}
+        $credentials = $request->only('email', 'password');
 
-public function login(Request $request)
-{
-    $ecran = Ecran::find($request->input('ecran_id'));
-    $request->validate([
-        'login' => 'required|string',
-        'password' => 'required|string',
-    ]);
+        // Vérifier si l'utilisateur est déjà connecté
+        if ($this->isUserAlreadyLoggedIn($credentials['email'])) {
+            Log::info('Tentative de connexion pour un utilisateur déjà connecté : ' . $credentials['email']);
+            return redirect()->route('login', ['ecran_id' => $ecran->id])
+                ->withErrors(['email' => 'Cet utilisateur est déjà connecté.']);
+        }
 
-    $credentials = $request->only('login', 'password');
+        // Vérification des identifiants
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            $this->addUserToConnectedUsers($user);
 
-    // Vérifie si l'utilisateur est déjà connecté avec les mêmes identifiants
-    if ($this->isUserAlreadyLoggedIn($credentials['login'])) {
-        return redirect()->route('login', ['ecran' => $ecran])->withErrors(['login' => 'Cet utilisateur est déjà connecté.']);
+            Log::info('Connexion réussie pour l\'utilisateur : ' . $user->email);
+
+            return redirect()->intended('/admin');
+        }
+
+        Log::error('Échec de la connexion pour l\'email : ' . $credentials['email']);
+        return redirect()->route('login', ['ecran_id' => $ecran->id])
+            ->withErrors(['email' => 'Adresse email ou mot de passe incorrect.']);
     }
-
-    if (Auth::attempt($credentials)) {
-        // Authentication passed
-        $user = Auth::user();
-        $personnel = $user->personnel;
-        $domaines = $personnel->domaines;
-        $groupesUtilisateur = $personnel->groupesUtilisateur;
-        $expertises = $personnel->expertises;
-
-        // Ajoute l'utilisateur à la liste des utilisateurs connectés avec un token
-        $this->addUserToConnectedUsers($user);
-
-        return redirect()->intended('/admin');
-    }
-
-    // Authentication failed
-    return redirect()->route('login', ['ecran' => $ecran])->withErrors(['login' => 'Login ou mot de passe incorrect']);
-}
-
-// Fonction de déconnexion
-public function logout(Request $request)
-{
-    $user = Auth::user();
-
-    // Supprimer le token de l'utilisateur lors de la déconnexion
-    $user->update(['api_token' => null]);
-
-    Auth::logout();
-
-    $request->session()->invalidate();
-
-    $request->session()->regenerateToken();
-
-    return redirect()->route('login')->with('succes', 'Vous êtes déconnecté.');
-}
-
-
-
-
 
     /**
-     * Log the user out of the application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
+     * Ajouter un utilisateur à la liste des utilisateurs connectés avec un token.
      */
+    protected function addUserToConnectedUsers($user)
+    {
+        $token = Str::random(60); // Génère un token unique
+        $user->update(['api_token' => hash('sha256', $token)]); // Stocke le token
+        Log::info('Utilisateur ajouté à la liste des connectés : ' . $user->email);
+    }
 
+    /**
+     * Vérifier si l'utilisateur est déjà connecté.
+     */
+    protected function isUserAlreadyLoggedIn($email)
+    {
+        $user = User::where('email', $email)->first();
+        return $user && $user->api_token !== null;
+    }
 
+    /**
+     * Gérer la déconnexion de l'utilisateur.
+     */
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+
+        // Supprimer le token de l'utilisateur lors de la déconnexion
+        $user->update(['api_token' => null]);
+
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        Log::info('Utilisateur déconnecté : ' . $user->email);
+
+        return redirect()->route('login')->with('success', 'Vous êtes déconnecté.');
+    }
+
+    /**
+     * Réinitialisation du mot de passe (formulaire d'envoi de lien).
+     */
     public function postResetForm(Request $request)
     {
         $request->validate(['email' => 'required|email']);
@@ -140,53 +117,21 @@ public function logout(Request $request)
             ? back()->with(['status' => __($response)])
             : back()->withErrors(['email' => __($response)]);
     }
-    protected function sendResetLinkEmail(Request $request)
-    {
-        $this->validateEmail($request);
 
-        // Use the relationship to get the user by email
-        $user = Personnel::where('email', $request->email)->first();
-
-        if (!$user) {
-            return $this->sendResetLinkFailedResponse($request, Password::INVALID_USER);
-        }
-
-        $response = $this->broker()->sendResetLink(
-            $this->credentials($request)
-        );
-
-        return $response;
-    }
-    protected function validateEmail(Request $request)
-{
-    $request->validate(['email' => 'required|email']);
-
-    $user = Personnel::where('email', $request->email)->first();
-
-    if (!$user) {
-        return $this->sendResetLinkFailedResponse($request, Password::INVALID_USER);
-    }
-}
-
-
-    protected function credentials(Request $request)
-    {
-        return ['email' => $request->email];
-    }
-
+    /**
+     * Réinitialisation du mot de passe (formulaire).
+     */
     public function showResetForm(Request $request, $token = null)
     {
-        return view('users.password-forgot')->with(
+        return view('users.reset-password')->with(
             ['token' => $token, 'email' => $request->email]
         );
     }
 
-    public function ResetPasswordToken(string $token)
-    {
-        return view('users.reset-password', ['token' => $token]);
-    }
-
-    public function ResetPassword(Request $request)
+    /**
+     * Réinitialiser le mot de passe.
+     */
+    public function resetPassword(Request $request)
     {
         $request->validate([
             'token' => 'required',
@@ -204,6 +149,7 @@ public function logout(Request $request)
                 $user->save();
 
                 event(new PasswordReset($user));
+                Log::info('Mot de passe réinitialisé pour l\'utilisateur : ' . $user->email);
             }
         );
 

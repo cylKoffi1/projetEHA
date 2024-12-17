@@ -119,170 +119,170 @@
 
 
 
-    <!-- Modal -->
-    <div class="modal fade" id="localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Enregistrement de localité</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form class="form" method="POST" action="" data-parsley-validate>
-                        @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                        <div class="row">
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_district">District :</label>
-                                    <select class="form-select" id="id_district" name="id_district" required>
-                                        <option value="">Sélectionner un district</option>
-                                        @foreach ($districts as $district)
-                                        <option value="{{ $district->code }}">{{ $district->libelle }}</option>
-                                        @endforeach
-                                    </select>
+        <!-- Modal -->
+        <div class="modal fade" id="localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Enregistrement de localité</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form class="form" method="POST" action="" data-parsley-validate>
+                            @csrf
+                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                            <div class="row">
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="id_district">District :</label>
+                                        <select class="form-select" id="id_district" name="id_district" required>
+                                            <option value="">Sélectionner un district</option>
+                                            @foreach ($districts as $district)
+                                            <option value="{{ $district->code }}">{{ $district->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="id_region">Région :</label>
+                                        <select class="form-select region-select" id="id_region" name="id_region" required>
+                                            <option value="">Sélectionner une région</option>
+                                            @foreach ($regions as $region)
+                                            <option value="{{ $region->code }}">{{ $region->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="id_departement">Département :</label>
+                                        <select class="form-select departement-select" id="id_departement" name="id_departement" required>
+                                            <option value="">Sélectionner un département</option>
+                                            @foreach ($departements as $departement)
+                                            <option value="{{ $departement->code }}">{{ $departement->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="id_sous_prefecture">Sous-Préfecture :</label>
+                                        <select class="form-select sous_prefecture-select" id="id_sous_prefecture" name="id_sous_prefecture" required>
+                                            <option value="">Sélectionner une sous-préfecture</option>
+                                            @foreach ($sous_prefectures as $sous_prefecture)
+                                            <option value="{{ $sous_prefecture->code }}">{{ $sous_prefecture->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="code">Code :</label>
+                                        <input type="text" class="form-control" id="code" name="code" placeholder="Code de la localité" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="libelle">Libellé :</label>
+                                        <input type="text" class="form-control" id="libelle" name="libelle" placeholder="Libellé" required>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_region">Région :</label>
-                                    <select class="form-select region-select" id="id_region" name="id_region" required>
-                                        <option value="">Sélectionner une région</option>
-                                        @foreach ($regions as $region)
-                                        <option value="{{ $region->code }}">{{ $region->libelle }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                                <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
                             </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_departement">Département :</label>
-                                    <select class="form-select departement-select" id="id_departement" name="id_departement" required>
-                                        <option value="">Sélectionner un département</option>
-                                        @foreach ($departements as $departement)
-                                        <option value="{{ $departement->code }}">{{ $departement->libelle }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="id_sous_prefecture">Sous-Préfecture :</label>
-                                    <select class="form-select sous_prefecture-select" id="id_sous_prefecture" name="id_sous_prefecture" required>
-                                        <option value="">Sélectionner une sous-préfecture</option>
-                                        @foreach ($sous_prefectures as $sous_prefecture)
-                                        <option value="{{ $sous_prefecture->code }}">{{ $sous_prefecture->libelle }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="code">Code :</label>
-                                    <input type="text" class="form-control" id="code" name="code" placeholder="Code de la localité" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Libellé :</label>
-                                    <input type="text" class="form-control" id="libelle" name="libelle" placeholder="Libellé" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                            <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal -->
-<div class="modal fade" id="edit-localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Modification de localité</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form class="form" method="POST" action="{{ route('localite.update') }}" data-parsley-validate>
-                    @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                    <div class="row">
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="edit_id_district">District :</label>
-                                <select class="form-select" id="edit_id_district" name="edit_id_district" required>
-                                    <option value="">Sélectionner un district</option>
-                                    @foreach ($districts as $district)
-                                    <option value="{{ $district->code }}">{{ $district->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="edit_id_region">Région :</label>
-                                <select class="form-select region-select" id="edit_id_region" name="edit_id_region" required>
-                                    <option value="">Sélectionner une région</option>
-                                    @foreach ($regions as $region)
-                                        <option value="{{ $region->code }}">{{ $region->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="edit_id_departement">Département :</label>
-                                <select class="form-select departement-select" id="edit_id_departement" name="edit_id_departement" required>
-                                    <option value="">Sélectionner un département</option>
-                                    @foreach ($departements as $departement)
-                                        <option value="{{ $departement->code }}">{{ $departement->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="edit_id_sous_prefecture">Sous-Préfecture :</label>
-                                <select class="form-select sous_prefecture-select" id="edit_id_sous_prefecture" name="edit_id_sous_prefecture" required>
-                                    <option value="">Sélectionner une sous-préfecture</option>
-                                    @foreach ($sous_prefectures as $sous_prefecture)
-                                        <option value="{{ $sous_prefecture->code }}">{{ $sous_prefecture->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="edit_code">Code :</label>
-                                <input type="text" class="form-control" id="edit_code" name="edit_code" placeholder="Code de la localité" readonly required>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="edit_libelle">Libellé :</label>
-                                <input type="text" class="form-control" id="edit_libelle" name="edit_libelle" placeholder="Libellé" required>
-                            </div>
-                        </div>
+        <!-- Modal -->
+        <div class="modal fade" id="edit-localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Modification de localité</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form class="form" method="POST" action="{{ route('localite.update') }}" data-parsley-validate>
+                            @csrf
+                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                            <div class="row">
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="edit_id_district">District :</label>
+                                        <select class="form-select" id="edit_id_district" name="edit_id_district" required>
+                                            <option value="">Sélectionner un district</option>
+                                            @foreach ($districts as $district)
+                                            <option value="{{ $district->code }}">{{ $district->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="edit_id_region">Région :</label>
+                                        <select class="form-select region-select" id="edit_id_region" name="edit_id_region" required>
+                                            <option value="">Sélectionner une région</option>
+                                            @foreach ($regions as $region)
+                                                <option value="{{ $region->code }}">{{ $region->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="edit_id_departement">Département :</label>
+                                        <select class="form-select departement-select" id="edit_id_departement" name="edit_id_departement" required>
+                                            <option value="">Sélectionner un département</option>
+                                            @foreach ($departements as $departement)
+                                                <option value="{{ $departement->code }}">{{ $departement->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="edit_id_sous_prefecture">Sous-Préfecture :</label>
+                                        <select class="form-select sous_prefecture-select" id="edit_id_sous_prefecture" name="edit_id_sous_prefecture" required>
+                                            <option value="">Sélectionner une sous-préfecture</option>
+                                            @foreach ($sous_prefectures as $sous_prefecture)
+                                                <option value="{{ $sous_prefecture->code }}">{{ $sous_prefecture->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="edit_code">Code :</label>
+                                        <input type="text" class="form-control" id="edit_code" name="edit_code" placeholder="Code de la localité" readonly required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <div class="form-group mandatory">
+                                        <label class="form-label" for="edit_libelle">Libellé :</label>
+                                        <input type="text" class="form-control" id="edit_libelle" name="edit_libelle" placeholder="Libellé" required>
+                                    </div>
+                                </div>
 
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                                <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
+                            </div>
+                        </form>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                        <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
 
 

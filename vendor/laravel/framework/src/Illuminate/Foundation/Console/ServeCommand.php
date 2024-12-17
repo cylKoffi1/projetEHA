@@ -295,7 +295,7 @@ class ServeCommand extends Command
 
                 $this->output->write(' '.str_repeat('<fg=gray>.</>', $dots));
                 $this->output->writeln(" <fg=gray>~ {$runTime}s</>");
-            } elseif (str($line)->contains(['Closed without sending a request'])) {
+            } elseif (str($line)->contains(['Closed without sending a request', 'Failed to poll event'])) {
                 // ...
             } elseif (! empty($line)) {
                 $position = strpos($line, '] ');
@@ -317,15 +317,24 @@ class ServeCommand extends Command
      */
     protected function getDateFromLine($line)
     {
-        $regex = env('PHP_CLI_SERVER_WORKERS', 1) > 1
-            ? '/^\[\d+]\s\[([a-zA-Z0-9: ]+)\]/'
-            : '/^\[([^\]]+)\]/';
+        // Utilisation d'une regex compatible avec le format des logs
+        $regex = '/^\[([A-Za-z]{3} [A-Za-z]{3} \d{1,2} \d{2}:\d{2}:\d{2} \d{4})\]/';
 
         $line = str_replace('  ', ' ', $line);
 
         preg_match($regex, $line, $matches);
 
-        return Carbon::createFromFormat('D M d H:i:s Y', $matches[1]);
+        if (!isset($matches[1])) {
+            $this->components->error('Le format de la ligne n’est pas valide : ' . $line);
+            return null; // Évitez une erreur fatale et renvoyez `null`
+        }
+
+        try {
+            return Carbon::createFromFormat('D M d H:i:s Y', $matches[1]);
+        } catch (\Exception $e) {
+            $this->components->error('Erreur lors du parsing de la date : ' . $matches[1]);
+            return null; // Retourner `null` si le format échoue
+        }
     }
 
     /**

@@ -13,6 +13,7 @@ class Pays extends Model
 
     protected $table = 'pays';
     protected $primaryKey = 'id';
+    protected $keyType = 'string';
     // Définir les colonnes qui peuvent être remplies
     protected $fillable = [
         'code',
@@ -27,7 +28,7 @@ class Pays extends Model
     ];
 
     // Définir les relations si nécessaire
-    public function utilisateurs()
+    public function PaysUser()
     {
         return $this->hasMany(PaysUser::class, 'code_pays', 'alpha3');
     }

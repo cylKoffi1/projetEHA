@@ -2,42 +2,46 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Database\Eloquent\Model;
 
-class User extends Authenticatable
+class User extends Authenticatable implements CanResetPasswordContract, MustVerifyEmail
 {
+    use Notifiable, CanResetPassword, MustVerifyEmailTrait;
     use HasFactory, Notifiable, HasRoles;
 
-    protected $table = 'mot_de_passe_utilisateur';
-
+    protected $table = 'utilisateurs';
     protected $fillable = [
-        'code_personnel',
+        'acteur_id',
+        'groupe_utilisateur_id',
+        'groupe_projet_id',
+        'fonction_utilisateur',
         'login',
-        'email',
         'password',
-        'niveau_acces_id',
-        'remember_token',
         'email_verified_at',
-        'created_at',
-        'updated_at',
+        'reset_password_token',
+        'reset_password_expires_at',
+        'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
         'is_active',
+        'email',
     ];
-
-    protected $hidden = [
-        'password',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
         'date' => 'date',
         'is_active' => 'boolean',
     ];
-
     public function activate()
     {
         $this->update(['is_active' => true]);
@@ -47,48 +51,45 @@ class User extends Authenticatable
     {
         $this->update(['is_active' => false]);
     }
-    public function structureRattachement()
+
+    public function pays()
     {
-        return $this->hasOne(StructureRattachement::class, 'code_personnel', 'code_personnel');
-    }
-    public function approbateur(){
-        return $this->belongsTo(Approbateur::class, 'code_personnel','code_personnel');
-    }
-    public function personnel()
-    {
-        return $this->hasOne(Personnel::class, 'code_personnel', 'code_personnel');
+        return $this->hasMany(PaysUser::class, 'code_user', 'acteur_id');
     }
 
-    public function utilisateurDomaines()
+    public function paysUser()
     {
-        return $this->hasMany(UtilisateurDomaine::class, 'code_personnel', 'code_personnel');
+        return $this->hasOne(PaysUser::class, 'code_user', 'acteur_id');
+    }
+    public function acteur()
+    {
+        return $this->belongsTo(Acteur::class, 'acteur_id', 'code_acteur');
     }
 
-    public function appartenirGroupeUtilisateurs()
+    public function groupeUtilisateur()
     {
-        return $this->hasMany(ApartenirGroupeUtilisateur::class, 'code_personnel', 'code_personnel');
+        return $this->belongsTo(GroupeUtilisateur::class, 'groupe_utilisateur_id', 'code');
     }
 
-    public function avoirExpertises()
+    public function groupeProjet()
     {
-        return $this->hasMany(AvoirExpertise::class, 'code_personnel', 'code_personnel');
+        return $this->belongsTo(GroupeProjet::class, 'groupe_projet_id', 'code');
     }
 
-    public function domaine()
+    public function lieuxExercice()
     {
-        return $this->belongsTo(Personnel::class, 'domaine_activite', 'code');
+        return $this->hasMany(UtilisateurLieuExercice::class, 'utilisatur_code' , 'acteur_id');
     }
 
-    public function niveauAcces()
+    public function champsExercice()
     {
-        return $this->belongsTo(NiveauAccesDonnees::class, 'niveau_acces_id', 'id');
+        return $this->hasMany(UtilisateurChampExercice::class, 'utilisatur_code', 'acteur_id');
     }
-
-    public function latestFonction()
+    public function resetPassword($newPassword)
     {
-        return $this->hasOne(OccuperFonction::class, 'code_personnel', 'code_personnel')
-            ->latest('date')
-            ->orderBy('date', 'desc');
+        $this->password = Hash::make($newPassword);
+        $this->reset_token = null;
+        $this->save();
     }
 
     public function generateResetToken()
@@ -96,23 +97,4 @@ class User extends Authenticatable
         $this->reset_token = Str::random(60);
         $this->save();
     }
-
-    public function resetPassword($newPassword)
-    {
-        $this->password = Hash::make($newPassword);
-        $this->reset_token = null;
-        $this->save();
-    }
-    public function latestRegion()
-    {
-        return $this->hasOne(CouvrirRegion::class, 'code_personnel', 'code_personnel')
-            ->latest('date')
-            ->orderBy('date', 'desc');
-    }
-
-    public function paysUser()
-    {
-        return $this->hasOne(PaysUser::class, 'code_user', 'code_personnel');
-    }
-
 }

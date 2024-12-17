@@ -27,6 +27,8 @@ use App\Models\UtilisateurDomaine;
 use App\Models\PaysUser;
 use App\Models\DecoupageAdministratif;
 use App\Models\DecoupageAdminPays;
+use App\Models\GroupeProjet;
+use App\Models\GroupeUtilisateur;
 use App\Models\LocalitesPays;
 use Exception;
 use Faker\Provider\ar_EG\Person;
@@ -87,14 +89,16 @@ class UserController extends Controller
             return redirect()->route('users.personnel', ['ecran_id' => $request->input('ecran_id')])->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un code pays. avant de pouvoir créer un utilisateur.');
         }
         $codePays = Pays::where('alpha3', $userCountryId)->first();
-
+        $grpUser = GroupeUtilisateur::all();
         // Récupérer les libellés de découpage administratif
         $decoupages = DecoupageAdministratif::join('decoupage_admin_pays', 'decoupage_administratif.code_decoupage', '=', 'decoupage_admin_pays.code_decoupage')
         ->where('decoupage_admin_pays.id_pays', $codePays->id)
         ->get();
-        $localites = LocalitesPays::where('id_pays', $userCountryId)->get();
+        $user = auth()->user();
 
-        return view('users.create-personne', compact('ecran', 'niveauxAcces', 'pays', 'groupe_utilisateur', 'domaines', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'fonctions', 'userCountryId', 'decoupages', 'localites'));
+        $localites = LocalitesPays::where('id_pays', $userCountryId)->get();
+        $groupe_projet = GroupeProjet::all();
+        return view('users.create-personne', compact('ecran','groupe_projet', 'niveauxAcces', 'grpUser','pays', 'groupe_utilisateur', 'domaines', 'sous_domaines', 'bailleurs', 'agences', 'ministeres', 'fonctions', 'userCountryId', 'decoupages', 'localites'));
     }
     public function storePersonnel(Request $request)
     {
@@ -153,7 +157,7 @@ class UserController extends Controller
             if (!$decoupageAdmin) {
                 throw new Exception('Niveau administratif non trouvé pour le code de découpage : ' . $codeDecoupage);
             }
-            
+
             CouvrirRegion::create([
                 'code_personnel' => $code,
                 'code_niveau_administratif' => $decoupageAdmin->num_niveau_decoupage,
