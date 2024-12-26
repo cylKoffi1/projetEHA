@@ -55,24 +55,29 @@
 
 </style>
 
-
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000; width: 100%; height: 90px; background-color: #435ebe;">
     <div class="container-fluid" style="align-items: center;">
         <div style="display: flex; flex-direction: column; align-items: center;">
             <a class="navbar-brand" href="{{ url('/')}}" style="color: white; display: flex; flex-direction: column; align-items: flex-start;">
-                <img src="{{ asset('storage/' . auth()->user()?->paysUser?->pays?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
+                <img src="{{ asset('storage/' . auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
                 <span>BTP-PROJECT</span>
             </a>
         </div>
         <span style="color: #F1C40F; display: flex; flex-direction: column; align-items: center;">
             <span>{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}</span>
-            @if(auth()->user()?->acteur?->latestFonction)
-                <span>{{ auth()->user()->personnel->latestFonction->fonctionUtilisateur->libelle_fonction ?? "" }}:  {{ $personnelAffiche }}</span>
+            @if(auth()->user()?->fonctionUtilisateur)
+                <span>{{ auth()->user()->fonctionUtilisateur->libelle_fonction ?? "" }}:  {{ $personnelAffiche }}</span>
             @endif
         </span>
 
-        <div style="flex-grow: 1; text-align: center; color: white;">
-            <span style="font-size: 18px; text-transform: uppercase;">Bâtiment travaux public</span>
+        <div style="flex-grow: 4; text-align: center; color: white;">
+            <span style="font-size: 18px; text-transform: uppercase;">
+                @if (session('projet_selectionne') && auth()->user())
+                <span>{{ auth()->user()?->groupeProjetSelectionne()?->libelle }}</span>
+            @else
+                <span>Aucun groupe projet sélectionné</span>
+            @endif
+            </span>
         </div>
         <header class="mb-3 navbar-toggler">
             <a href="{{ url('#')}}" class="burger-btn d-block d-xl-none">

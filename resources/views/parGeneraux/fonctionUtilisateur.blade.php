@@ -6,7 +6,7 @@
 @if (session('success'))
 <script>
     alert("{{ session('success') }}");
-    
+
 </script>
 @endif
 
@@ -248,7 +248,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des fonctions utlisateurs')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des fonctions utlisateurs')
 
         $('#code').on('input', function() {
             // Get the input value

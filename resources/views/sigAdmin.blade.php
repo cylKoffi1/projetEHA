@@ -177,9 +177,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                                     <center>Bailleur</center>
                                                     <select class="form-control" id="bailleur">
                                                         <option value="">Select bailleur</option>
-                                                        @foreach ($bailleur as $bail)
-                                                            <option value="{{ $bail->code_bailleur}}">{{$bail->libelle_long}}</option>
-                                                        @endforeach
+
                                                     </select>
                                                 </div>
                                             </div>
@@ -188,9 +186,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                                     <center>Statut</center>
                                                     <select class="form-control" id="status">
                                                         <option value="">Select Status</option>
-                                                        @foreach ($statut as $stat)
-                                                            <option value="{{ $stat->code}}">{{$stat->libelle}}</option>
-                                                        @endforeach
+
                                                     </select>
                                                 </div>
                                             </div>
@@ -241,7 +237,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <div class="card-content">
             <div class="card-body">
-                <div id="countryMap" style="height: 500px;"></div>
+                <div id="countryMap" style="height: 600px; outline-style: none;"></div>
             </div>
         </div>
     </div>
@@ -400,8 +396,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var countryAlpha3Code = '{{ $codeAlpha3 }}'; // Code alpha3 passé depuis le contrôleur
-        initCountryMap(countryAlpha3Code);
+        var countryAlpha3Code = '{{ $codeAlpha3 }}';
+        var codeGroupeProjet = '{{ $codeGroupeProjet }}';
+        var domainesAssocie = @json($domainesAssocie);
+        var niveau = @json($niveau);
+        var codeZoom = @json($codeZoom);
+        initCountryMap(countryAlpha3Code,codeZoom,  codeGroupeProjet, domainesAssocie, niveau);
     });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>

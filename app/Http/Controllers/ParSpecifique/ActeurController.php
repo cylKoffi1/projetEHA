@@ -18,8 +18,8 @@ class ActeurController extends Controller
     {
         try {
             // Récupérer le pays de l'utilisateur connecté via PaysUser
-            dd(auth()->user());
-            $userCountry = PaysUser::where('code_user', auth()->user()->code_personnel)->first();
+          
+            $userCountry = PaysUser::where('code_user', auth()->user()->acteur_id)->first();
             $userCountryId = $userCountry ? $userCountry->code_pays : null;
 
             // Vérifier si l'utilisateur a un pays attribué
@@ -49,7 +49,21 @@ class ActeurController extends Controller
             return redirect()->back()->withErrors('Une erreur est survenue lors du chargement des acteurs.');
         }
     }
-
+    public function testUpload(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+    
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('test/photos', 'public');
+            Log::info('Photo enregistrée à : ' . $path);
+            return response()->json(['message' => 'Photo uploadée avec succès', 'path' => $path]);
+        }
+    
+        return response()->json(['error' => 'Aucun fichier détecté'], 400);
+    }
+     
 
     public function store(Request $request)
     {
@@ -62,17 +76,52 @@ class ActeurController extends Controller
                 'telephone' => 'nullable|string|max:50',
                 'adresse' => 'nullable|string|max:255',
                 'code_pays' => 'required|exists:pays,alpha3', // Vérification du code pays
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validation stricte pour les fichiers image
+            ]);
+            
+    
+            $photoPath = null;
+
+            if ($request->hasFile('photo')) {
+                Log::info('Fichier photo détecté.');
+                Log::info('Type MIME : ' . $request->file('photo')->getMimeType());
+                Log::info('Extension : ' . $request->file('photo')->getClientOriginalExtension());
+                Log::info('Nom original : ' . $request->file('photo')->getClientOriginalName());
+            } else {
+                Log::warning('Aucun fichier photo reçu dans la requête.');
+            }
+            if ($request->hasFile('photo')) {
+                $photo = $request->file('photo');
+                if ($photo->isValid()) {
+                    Log::info('Photo est valide : ' . $photo->getClientOriginalName());
+                } else {
+                    Log::error('Fichier photo invalide.');
+                }
+            } else {
+                Log::warning('Aucun fichier photo fourni.');
+            }
+            
+
+            Acteur::create([
+                'libelle_long' => $request->libelle_long,
+                'libelle_court' => $request->libelle_court,
+                'type_acteur' => $request->type_acteur,
+                'email' => $request->email,
+                'telephone' => $request->telephone,
+                'adresse' => $request->adresse,
+                'code_pays' => $request->code_pays,
+                'is_user' => false,
+                'Photo' => $photoPath, // Stocker le chemin de la photo dans la base de données
             ]);
 
-
-            Acteur::create($request->all());
-
+    
             return redirect()->back()->with('success', 'Acteur ajouté avec succès.');
         } catch (\Exception $e) {
             Log::error("Erreur lors de l'enregistrement d'un acteur : " . $e->getMessage());
             return redirect()->back()->withErrors('Une erreur est survenue lors de l\'enregistrement de l\'acteur.');
         }
     }
+    
 
 
     public function update(Request $request, $id)

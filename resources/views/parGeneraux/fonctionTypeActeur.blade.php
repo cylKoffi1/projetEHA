@@ -1,3 +1,16 @@
+<link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+    .select2-container .select2-results__option {
+        padding-left: 20px; /* Espace pour les checkboxes */
+    }
+    .select2-container .select2-results__option input[type="checkbox"] {
+        margin-right: 10px; /* Espacement entre checkbox et texte */
+    }
+</style>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
 @extends('layouts.app')
 
 @section('content')
@@ -46,7 +59,7 @@
     </div>
 
 <section class="section">
-    <div class="card">
+    <div class="card" style="width: 50%;">
         <div class="card-header">
             <h5>Fonction Type d'Acteur</h5>
         </div>
@@ -54,26 +67,33 @@
             <form action="{{ route('fonction-type-acteur.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
-                <div class="row">
-                    <div class="form-group col-md-6">
+
+                    <div class="form-group row">
+                        <div class="col-8">
+                            <label for="type_acteur_code">Type d'Acteur</label>
+                            <select name="type_acteur_code" id="type_acteur_code" class="form-control" required>
+                                @foreach ($typesActeurs as $typeActeur)
+                                    <option value="{{ $typeActeur->cd_type_acteur }}">{{ $typeActeur->libelle_type_acteur }}</option>
+                                @endforeach
+                            </select>
+
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="mb-2">
+                            <input type="checkbox" id="select-all" class="btn btn-sm btn-primary">Tout sélectionner</input>
+                            <input type="checkbox" id="deselect-all" class="btn btn-sm btn-danger">Tout désélectionner</input>
+
+                        </div>
+
                         <label for="fonction_code">Fonction</label>
-                        <select name="fonction_code" id="fonction_code" class="form-control" required>
-                            <option value="">-- Sélectionner une Fonction --</option>
+                        <select name="fonction_code[]" id="fonction_code" class="form-control" multiple="multiple" required>
                             @foreach ($fonctions as $fonction)
                                 <option value="{{ $fonction->code }}">{{ $fonction->libelle_fonction }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="form-group col-md-6">
-                        <label for="type_acteur_code">Type d'Acteur</label>
-                        <select name="type_acteur_code" id="type_acteur_code" class="form-control" required>
-                            <option value="">-- Sélectionner un Type d'Acteur --</option>
-                            @foreach ($typesActeurs as $typeActeur)
-                                <option value="{{ $typeActeur->cd_type_acteur }}">{{ $typeActeur->libelle_type_acteur }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
+
                 <div class="col text-end">
                 <button type="submit" class="btn btn-primary mt-3">Enregistrer</button>
                 </div>
@@ -114,9 +134,43 @@
         </div>
     </div>
 </section>
+
+<script src="{{ asset('betsa/js/jquery.min.js')}} "></script>
+    <script src="{{ asset('betsa/js/popper.js')}} "></script>
+    <script src="{{ asset('betsa/js/bootstrap.min.js')}} "></script>
+    <script src="{{ asset('betsa/js/main.js')}} "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.min.js"></script>
+
 <script>
-    $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Fonction à un type acteur')
-    });
+        $('#select-all').click(function () {
+            $('#fonction_code > option').prop('selected', true);
+            $('#fonction_code').trigger('change'); // Mettre à jour l'affichage de Select2
+        });
+
+        $('#deselect-all').click(function () {
+            $('#fonction_code > option').prop('selected', false);
+            $('#fonction_code').trigger('change'); // Mettre à jour l'affichage de Select2
+        });
+
+        $(document).ready(function() {
+            initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Fonction à un type acteur')
+        });
+        $('#fonction_code').select2({
+            placeholder: "Sélectionnez une ou plusieurs fonctions",
+            closeOnSelect: false, // Empêche la fermeture automatique après chaque sélection
+            allowClear: true,
+            templateResult: function (data) {
+                // Si la donnée n'est pas une valeur, ignorer
+                if (!data.id) return data.text;
+
+                // Ajouter une checkbox à chaque option
+                return $(
+                    `<span><input type="checkbox" style="margin-right:10px;" /> ${data.text}</span>`
+                );
+            },
+            templateSelection: function (data) {
+                return data.text; // Personnalisation de la vue dans le champ sélectionné
+            }
+        });
 </script>
 @endsection

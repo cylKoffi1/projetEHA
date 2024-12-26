@@ -111,7 +111,7 @@
             <h5>Liste des Permissions de Rôles</h5>
         </div>
         <div class="card-body">
-            <table class="table table-striped table-bordered" id="permissions-table">
+            <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                 <thead>
                     <tr>
                         <th>Rôle Source</th>
@@ -163,6 +163,8 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des groupes utilisateurs')
+
         // Modifier une permission
         document.querySelectorAll('.edit-button').forEach(button => {
             button.addEventListener('click', function () {

@@ -519,8 +519,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     /*************************UTILISATEUR */
     Route::get('admin/utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
     Route::post('/utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');
+    Route::get('/utilisateurs/{id}', [UtilisateurController::class, 'show'])->name('utilisateurs.show');
     Route::put('/utilisateurs/{id}', [UtilisateurController::class, 'update'])->name('utilisateurs.update');
-    Route::patch('/utilisateurs/{id}/restore', [UtilisateurController::class, 'restore'])->name('utilisateurs.restore');
+    Route::patch('/utilisateurs/restore/{id}', [UtilisateurController::class, 'restore'])->name('utilisateurs.restore');
     Route::delete('/utilisateurs/{id}', [UtilisateurController::class, 'destroy'])->name('utilisateurs.destroy');
     Route::get('/fonctions-par-type-acteur/{typeActeur}', [UtilisateurController::class, 'getFonctionsByTypeActeur']);
 
@@ -536,10 +537,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/group_project_permissions', [GroupProjectPermissionsController::class, 'store'])->name('group_project_permissions.store'); // Création d'une nouvelle permission
     Route::put('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'store'])->name('group_project_permissions.update'); // Mise à jour d'une permission
     Route::delete('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'destroy'])->name('group_project_permissions.destroy'); // Suppression d'une permission
+
+
 });
-
-
-
 
 // MAP
 Route::get('/map', function () {
@@ -560,8 +560,15 @@ route::get('/geojson', function () {
 
 
 // Routes d'authentification
-Route::get('/connexion', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
-Route::post('/connexion', [LoginController::class, 'login'])->name('login.login');
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
+
+Route::post('/login/check', [LoginController::class, 'checkUserAssociations'])->name('login.check');
+Route::post('/login/select-country', [LoginController::class, 'selectCountry'])->name('login.selectCountry');
+Route::post('/login/select-group', [LoginController::class, 'selectGroup'])->name('login.selectGroup');
+Route::post('/login/finalize', [LoginController::class, 'finalizeLogin'])->name('login.finalize');
+//Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+//Route::post('/connexion', [LoginController::class, 'login'])->name('login.login');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
 // Routes des projets sur la page standard

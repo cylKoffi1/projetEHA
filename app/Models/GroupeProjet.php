@@ -18,8 +18,27 @@ class GroupeProjet extends Model
 
     protected $fillable = ['code', 'libelle'];
 
+    /**
+     * Récupère les utilisateurs associés à ce groupe projet.
+     */
     public function utilisateurs()
     {
-        return $this->hasMany(Users::class, 'groupe_projet_id');
+        return $this->hasMany(GroupeProjetPaysUser::class, 'groupe_projet_id', 'id');
     }
+
+    /**
+     * Récupère les pays associés à ce groupe projet.
+     */
+    public function pays()
+    {
+        return $this->utilisateurs()->distinct('pays_code')->pluck('pays_code');
+    }
+    /**
+     * Relation avec la table `domaine`.
+     */
+    public function domaine()
+    {
+        return $this->hasMany(Domaine::class, 'groupe_projet_code', 'code');
+    }
+
 }

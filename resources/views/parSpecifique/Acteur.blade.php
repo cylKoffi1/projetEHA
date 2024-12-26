@@ -1,7 +1,27 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .photo-preview {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #f9f9f9;
+    margin-top: 10px;
+}
 
+.photo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+}
+
+</style>
 @if (session('success'))
 <script>
     alert("{{ session('success') }}");
@@ -64,12 +84,14 @@
             </ul>
         </div>
         @endif
+        
+
 
         <div class="card-header">
             <h5> Acteurs</h5>
         </div>
         <div class="card-body">
-            <form id="acteur-form" action="{{ route('acteurs.store') }}" method="POST">
+            <form id="acteur-form" action="{{ route('acteurs.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" id="method" name="_method" value="POST">
                 <input type="hidden" id="acteur-id" name="id">
@@ -77,14 +99,27 @@
                 <div class="row">
 
 
-                <div class="row mt-3">
+                <div class="row ">
                     <!-- Pays -->
                     <div class="form-group col-md-4">
                         <label for="code_pays">Pays</label>
                         <input type="hidden" name="code_pays" id="code_pays" value="{{ $pays->alpha3 }}">
                         <input type="text" name="pays" class="form-control" id="pays" value="{{ $pays->nom_fr_fr }}" readonly>
                     </div>
+                    <div class="col-6"></div>
+                    <div class="form-group col-2 text-end">
+                        <label>Photo / Logo :</label>
+                        <div class="photo-preview">
+                            <img id="photo-preview" src="#" alt="Aperçu de la photo" style="display: none;">
+
+                        </div>
+                        <input type="file"  id="photo" name="photo" class="form-control" accept="image/*" style="width:100%">
+                    </div>
                 </div>
+
+
+                    <!-- Conteneur pour l'aperçu de la photo -->
+
                     <!-- Libellé court -->
                     <div class="form-group col-md-4">
                         <label for="libelle_court">Libellé court / Nom</label>
@@ -149,30 +184,40 @@
             <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                 <thead>
                     <tr>
+                        <th>Photo</th>
                         <th>Nom complet</th>
                         <th>Nom court</th>
                         <th>Type acteur</th>
                         <th>Pays</th>
                         <th>Email</th>
                         <th>Téléphone</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($acteurs as $acteur)
                     <tr>
+                        <td>
+                            @if ($acteur->photo)
+                                <img src="{{ asset('storage/' . $acteur->photo) }}" alt="Photo de {{ $acteur->libelle_long }}" style="width: 50px; height: 50px; object-fit: cover;">
+                            @else
+                                <span>Pas de photo</span>
+                            @endif
+                        </td>
                         <td class="col-2">{{ $acteur->libelle_long }}</td>
                         <td class="col-2">{{ $acteur->libelle_court }}</td>
                         <td class="col-2">{{ $acteur->type ? $acteur->type->libelle_type_acteur : 'Type non défini' }}</td>
                         <td class="col-2">{{ $acteur->pays ? $acteur->pays->nom_fr_fr : 'Pays non défini' }}</td>
                         <td >{{ $acteur->email }}</td>
                         <td >{{ $acteur->telephone }}</td>
-                        <td class="col-2">
-                            @if ($acteur->is_active)
+                        <td>@if ($acteur->is_active)
                                 <span class="badge bg-success">Actif</span>
                             @else
                                 <span class="badge bg-danger">Inactif</span>
-                            @endif
+                            @endif</td>
+                        <td class="col-2">
+
                             @if ($acteur->is_active)
                                 <!-- Désactivation -->
                                 <a href="#" class="delete-button" data-id="{{ $acteur->code_acteur }}" title="Supprimer">
@@ -222,7 +267,7 @@
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des acteurs')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des acteurs')
     });
     document.addEventListener('DOMContentLoaded', function () {
         // Gestion de la modification
@@ -265,6 +310,7 @@
                 if (confirm('Êtes-vous sûr de vouloir réactiver cet acteur ?')) {
                     const form = document.createElement('form');
                     form.method = 'POST';
+
                     form.action = `acteurs/${id}/restore?ecran_id=${ecranId}`;
                     form.innerHTML = `
                         @csrf
@@ -299,6 +345,23 @@
     });
 
 
+</script>
+<script>
+    document.getElementById('photo').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const preview = document.getElementById('photo-preview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+
+            reader.readAsDataURL(file); // Lire le fichier comme une URL de données
+        }
+    });
 </script>
 
 @endsection

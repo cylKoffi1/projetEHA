@@ -710,7 +710,7 @@ class UserController extends Controller
 
     public function detailsUser(Request $request, $userId)
     {
-        $user = User::with('personnel')->find($userId);
+        $user = User::with('acteur')->find($userId);
 
         if (!$user) {
             // Gérer le cas où l'utilisateur n'est pas trouvé

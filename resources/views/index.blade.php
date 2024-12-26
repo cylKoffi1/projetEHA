@@ -53,9 +53,9 @@
 
         <div class="container">
             <div class="welcome-hero-txt" >
-                <h2>GERAC-EHA</h2>
+                <h2>BTP-PROJECT</h2>
                 <h2>
-                    GESTION DES REVUES ANNUELLES CONJOINTES EAU HYGIENE ET ASSAINISSEMENT
+                    Bâtiment Travaux Public - Projects
                 </h2>
 
 

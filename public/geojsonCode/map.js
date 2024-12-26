@@ -1,13 +1,22 @@
-function initCountryMap(countryAlpha3Code) {
-    var map = L.map('countryMap').setView([0, 0], 2);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAssocie, niveau) {
+    var map = L.map('countryMap', {
+        zoomControl: false,
+        center: [-6.5, 7],
+        maxZoom: codeZoom.maxZoom,
+        minZoom: codeZoom.minZoom,        
+        dragging: true,
+        prefix: null
+    }).setView([4.54, -3.55], 4);
+   
+    // Ajustement pour pousser la carte vers la gauche
+    map.panBy([20, 0]);
 
     var currentLayers = {}; // Pour stocker les couches GeoJSON par niveau
-    var parentNames = {}; // Noms des entités parent
-    var parentTypes = {}; // Types des entités parent
+    var selectedLevels = {};
+    var maxLevels = 3; // Par défaut, limiter à 3 niveaux
+
+    // Vérifie si le pays est la RDC
+    const isRDC = countryAlpha3Code === "COD";
 
     // Contrôle d'information
     var info = L.control();
@@ -17,79 +26,74 @@ function initCountryMap(countryAlpha3Code) {
         return this._div;
     };
 
-    info.update = function (types, names) {
-        // Mise à jour avec TYPE_{level} uniquement
+    info.update = function (domaines = [], niveau = []) {
+        if (!Array.isArray(niveau)) {
+            console.error("Le paramètre 'niveau' n'est pas un tableau valide.");
+            return;
+        }
+
+        // Construction des informations fixes pour chaque niveau
+        const rows = [];
+
+        if (isRDC) {
+            rows.push(`
+                <tr>
+                    <th style="text-align: right;">Province:</th>
+                    <td>${selectedLevels["Province"] || 'Sélectionnez un niveau'}</td>
+                </tr>
+                <tr>
+                    <th style="text-align: right;">Territoire:</th>
+                    <td>${selectedLevels["Territoire"] || 'Sélectionnez un niveau'}</td>
+                </tr>
+                <tr>
+                    <th style="text-align: right;">Ville:</th>
+                    <td>${selectedLevels["Ville"] || 'Sélectionnez un niveau'}</td>
+                </tr>
+            `);
+        } else {
+            const limitedNiveaux = niveau.slice(0, maxLevels);
+            rows.push(...limitedNiveaux.map((n, index) => `
+                <tr>
+                    <th style="text-align: right;">${n.libelle_decoupage || `Niveau ${index + 1}`}:</th>
+                    <td>${selectedLevels[index + 1] || 'Sélectionnez un niveau'}</td>
+                </tr>
+            `));
+        }
+
         this._div.innerHTML = `
             <table>
                 <thead>
-                    ${types.map((type, index) => `
-                        <tr>
-                            <th style="text-align: left;">${type || 'N/A'}:</th>
-                            <td>${names[index] || 'N/A'}</td>
-                        </tr>
-                    `).join('')}
+                    ${rows.join('')}
                 </thead>
             </table>
             <table style="border-collapse: collapse; width: 100%;">
                 <thead>
                     <tr>
                         <th></th>
-                        <th>Nbr</th>
-                        <th>District</th>
-                        <th>Région</th>
-                        <th>Départ</th>
+                        <th></th>
+                        <th colspan="${isRDC ? 4 : maxLevels + 1}" style="border: 1px solid black; text-align: center;">%</th>
+                    </tr>
+                    <tr>
+                        <th class="col" style=""></th>
+                        <th class="col" style="border: 1px solid black; font-size:12px; text-align: center; width:40px;">Nbr</th>
+                        ${(isRDC
+                            ? ["Province", "Territoire", "Ville"]
+                            : niveau.slice(0, maxLevels).map(n => n.libelle_decoupage || '')
+                        ).map(name => `
+                            <th class="col" style="border: 1px solid black; text-align: center; font-size:12px; width:50px;">${name}</th>
+                        `).join('')}
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <th style="text-align: right;">Alimentation en eau potable:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align: right;">Assainissement et drainage:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align: right;">Hygiène:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align: right;">Ressource en eau:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align: right;">EHA établissement de Santé:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align: right;">EHA établissement d’Enseignement:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
-                    <tr>
-                        <th style="text-align: right;">EHA autres Entités:</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                        <th>-</th>
-                    </tr>
+                    ${domaines.map(domaine => `
+                        <tr>
+                            <th class="row22" style="text-align: right;">${domaine.libelle || ''}:</th>
+                            <th class="col" style="border: 1px solid black; text-align: center;"></th>
+                            ${(isRDC ? ["Province", "Territoire", "Ville"] : niveau.slice(0, maxLevels)).map(() => `
+                                <th class="col" style="border: 1px solid black; text-align: center;"></th>
+                            `).join('')}
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
         `;
@@ -97,9 +101,10 @@ function initCountryMap(countryAlpha3Code) {
 
     info.addTo(map);
 
-    // Charger le niveau 1 par défaut
-    loadGeoJsonLevel(1);
+    // Mettre à jour la bulle d'information avec des valeurs initiales
+    info.update(domainesAssocie, niveau);
 
+    // Charger le niveau 1 par défaut
     function loadGeoJsonLevel(level, parentName = null) {
         var geojsonPath = `/geojson/gadm41_${countryAlpha3Code}_${level}.json.js`;
 
@@ -139,43 +144,21 @@ function initCountryMap(countryAlpha3Code) {
                     onEachFeature: function (feature, layer) {
                         feature.properties.level = level;
 
+                        // Ajouter un tooltip sur survol
+                        layer.bindTooltip(feature.properties[`NAME_${level}`], { permanent: false, className: "tooltip-name" });
+
                         layer.on({
                             mouseover: function (e) {
                                 highlightFeature(e);
-                                var types = [];
-                                var names = [];
-
-                                // Dynamique TYPE_{level}
-                                for (let i = 1; i <= 3; i++) {
-                                    const typeKey = `TYPE_${i}`;
-                                    const nameKey = `NAME_${i}`;
-                                    if (feature.properties[typeKey]) {
-                                        types.push(feature.properties[typeKey]);
-                                        names.push(feature.properties[nameKey]);
-                                    }
-                                }
-
-                                info.update(types, names);
+                                layer.openTooltip(); // Affiche le tooltip
                             },
                             mouseout: function (e) {
                                 resetHighlight(e);
+                                layer.closeTooltip(); // Masque le tooltip
                             },
                             click: function (e) {
-                                var nameProperty = `NAME_${level}`;
-                                var parentInfo = parentNames[level - 1] ? ` (${level - 1}: ${parentNames[level - 1]})` : '';
-                                var parentType = level > 1 ? feature.properties[`TYPE_${level - 1}`] : 'N/A';
-                                console.log(`Niveau ${level} sélectionné: ${feature.properties[nameProperty]}${parentInfo} (Type: ${parentType})`);
-
-                                parentNames[level] = feature.properties[nameProperty];
-                                parentTypes[level] = parentType;
-
-                                var types = [
-                                    parentTypes[level - 1] || 'N/A',
-                                    parentType
-                                ];
-
-                                info.update(types, [parentNames[level - 1], feature.properties[nameProperty]]);
-
+                                var feature = e.target.feature;
+                                handleClick(feature, level);
                                 if (level < 5) {
                                     var nextNameProperty = `NAME_${level}`;
                                     loadGeoJsonLevel(level + 1, feature.properties[nextNameProperty]);
@@ -190,41 +173,11 @@ function initCountryMap(countryAlpha3Code) {
                 if (level === 1) {
                     map.fitBounds(geoJsonLayer.getBounds());
                 }
-
-                Toastify({
-                    text: `Niveau ${level} chargé avec succès`,
-                    duration: 3000,
-                    gravity: "top",
-                    position: 'right',
-                    style: {
-                        background: "linear-gradient(to right, #00b09b, #96c93d)",
-                    }
-                }).showToast();
-            } else {
-                console.error(`Erreur: Les données pour le niveau ${level} n'ont pas été chargées correctement.`);
-                Toastify({
-                    text: `Erreur lors du chargement du niveau ${level}`,
-                    duration: 3000,
-                    gravity: "top",
-                    position: 'right',
-                    style: {
-                        background: "linear-gradient(to right, #ff5f6d, #ffc371)",
-                    }
-                }).showToast();
             }
         };
 
         script.onerror = function () {
             console.error(`Erreur lors du chargement du fichier GeoJSON pour le niveau ${level}:`, geojsonPath);
-            Toastify({
-                text: `Erreur lors du chargement du fichier pour le niveau ${level}`,
-                duration: 3000,
-                gravity: "top",
-                position: 'right',
-                style: {
-                    background: "linear-gradient(to right, #ff5f6d, #ffc371)",
-                }
-            }).showToast();
         };
         document.head.appendChild(script);
     }
@@ -247,4 +200,34 @@ function initCountryMap(countryAlpha3Code) {
             currentLayers[level].resetStyle(layer);
         }
     }
+
+    // Lors du clic sur un niveau
+    function handleClick(feature, level) {
+        var nameProperty = `NAME_${level}`;
+        var name = feature.properties[nameProperty];
+
+        // Spécifique à la RDC
+        if (isRDC) {
+            var typeProperty = `TYPE_${level}`;
+            if (feature.properties[typeProperty] === "Province") {
+                selectedLevels["Province"] = name;
+            } else if (feature.properties[typeProperty] === "Territoire") {
+                selectedLevels["Territoire"] = name;
+            } else if (feature.properties[typeProperty] === "Ville") {
+                selectedLevels["Ville"] = name;
+            }
+        } else {
+            // Réinitialiser les niveaux supérieurs
+            for (let i = level + 1; i <= 3; i++) {
+                delete selectedLevels[i];
+            }
+            selectedLevels[level] = name;
+        }
+
+        // Mettre à jour l'affichage
+        info.update(domainesAssocie, niveau);
+    }
+
+    // Charger les fichiers GeoJSON
+    loadGeoJsonLevel(1);
 }

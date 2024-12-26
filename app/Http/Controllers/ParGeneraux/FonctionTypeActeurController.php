@@ -23,8 +23,15 @@ class FonctionTypeActeurController extends Controller
             $fonctionTypeActeurs = FonctionTypeActeur::with(['fonction', 'typeActeur'])->get();
             $fonctions = FonctionUtilisateur::all();
             $typesActeurs = TypeActeur::all();
+            $typeActeurCode = $request->input('type_acteur_code'); // Récupérer le code sélectionné
+            $selectedFonctions = [];
 
-            return view('parGeneraux.fonctionTypeActeur', compact('ecran', 'fonctionTypeActeurs', 'fonctions', 'typesActeurs'));
+            if ($typeActeurCode) {
+                $selectedFonctions = FonctionTypeActeur::where('type_acteur_code', $typeActeurCode)
+                    ->pluck('fonction_code')
+                    ->toArray();
+            }
+            return view('parGeneraux.fonctionTypeActeur', compact('ecran', 'fonctionTypeActeurs', 'fonctions', 'typesActeurs', 'selectedFonctions'));
         } catch (\Exception $e) {
             Log::error("Erreur lors du chargement des fonctions par type d'acteur : " . $e->getMessage());
             return redirect()->back()->withErrors('Une erreur est survenue lors du chargement.');
@@ -34,19 +41,55 @@ class FonctionTypeActeurController extends Controller
     public function store(Request $request)
     {
         try {
+            Log::info('Données reçues : ', $request->all());
+
             $request->validate([
-                'fonction_code' => 'required|exists:fonction_utilisateur,code',
+                'fonction_code' => 'required|array',
+                'fonction_code.*' => 'exists:fonction_utilisateur,code',
                 'type_acteur_code' => 'required|exists:type_acteur,cd_type_acteur',
             ]);
 
-            FonctionTypeActeur::create($request->only('fonction_code', 'type_acteur_code'));
+            $typeActeurCode = $request->input('type_acteur_code');
+            $fonctionCodes = $request->input('fonction_code');
+            $addedFunctions = []; // Stocker les fonctions ajoutées
+            $skippedFunctions = []; // Stocker les fonctions déjà existantes
 
-            return redirect()->back()->with('success', 'Association ajoutée avec succès.');
+            foreach ($fonctionCodes as $fonctionCode) {
+                // Vérifier si l'association existe déjà
+                $exists = FonctionTypeActeur::where('type_acteur_code', $typeActeurCode)
+                    ->where('fonction_code', $fonctionCode)
+                    ->exists();
+
+                if (!$exists) {
+                    // Ajouter l'association si elle n'existe pas
+                    FonctionTypeActeur::create([
+                        'fonction_code' => $fonctionCode,
+                        'type_acteur_code' => $typeActeurCode,
+                    ]);
+                    $addedFunctions[] = $fonctionCode;
+                } else {
+                    // Si elle existe déjà, ne pas l'ajouter
+                    $skippedFunctions[] = $fonctionCode;
+                }
+            }
+
+            // Construire un message pour l'utilisateur
+            $message = count($addedFunctions) > 0
+                ? count($addedFunctions) . ' fonction(s) ajoutée(s) avec succès.'
+                : 'Aucune nouvelle fonction ajoutée.';
+            if (count($skippedFunctions) > 0) {
+                $message .= ' ' . count($skippedFunctions) . ' fonction(s) déjà existante(s) ont été ignorée(s).';
+            }
+
+            return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
-            Log::error("Erreur lors de l'enregistrement de l'association : " . $e->getMessage());
-            return redirect()->back()->withErrors('Une erreur est survenue lors de l\'ajout.');
+            Log::error("Erreur lors de l'enregistrement des associations : " . $e->getMessage());
+            return redirect()->back()->withErrors('Une erreur est survenue lors de l\'enregistrement des associations.');
         }
     }
+
+
+
 
     public function destroy($id)
     {

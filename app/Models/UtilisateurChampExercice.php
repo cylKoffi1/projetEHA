@@ -10,11 +10,11 @@ class UtilisateurChampExercice extends Model
     use HasFactory;
 
     protected $table = 'utilisateur_champ_exercice';
-    protected $fillable = ['utilisatur_code', 'champ_exercice_id'];
+    protected $fillable = ['utilisateur_code', 'champ_exercice_id'];
 
     public function utilisateur()
     {
-        return $this->belongsTo(Users::class, 'utilisatur_code');
+        return $this->belongsTo(User::class, 'utilisateur_code');
     }
 
     public function champ()

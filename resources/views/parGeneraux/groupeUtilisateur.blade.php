@@ -71,7 +71,7 @@
                    <a  href="#" data-toggle="modal" data-target="#groupeUtilisateur-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                     @endcan
                         </h5>
-                       
+
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
                             <ul>
@@ -263,7 +263,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des groupes utilisateurs')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des groupes utilisateurs')
 
         $('#code').on('input', function() {
             // Get the input value

@@ -19,6 +19,6 @@ class DomaineUser extends Model
 
     public function user()
     {
-        return $this->belongsTo(Personnel::class, 'code_user', 'code_personnel');
+        return $this->belongsTo(User::class, 'code_user', 'acteur_id');
     }
 }

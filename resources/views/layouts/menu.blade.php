@@ -1,3 +1,4 @@
+
 <div class="top-area">
 				<div class="header-area">
 					<!-- Start Navigation -->
@@ -22,7 +23,7 @@
 				                <ul class="nav navbar-nav navbar-right" data-in="fadeInDown" data-out="fadeOutUp">
 
 
-				                    <li ><a href="{{ url('/connexion') }}">Demande d'autorisation</a></li>
+				                    <li ><a href="{{ url('/login') }}"> <i class="fas fa-sign-in-alt"></i>  Connexion</a></li>
 
 
 				                </ul><!--/.nav -->

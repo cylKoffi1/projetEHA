@@ -22,7 +22,6 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
     protected $fillable = [
         'acteur_id',
         'groupe_utilisateur_id',
-        'groupe_projet_id',
         'fonction_utilisateur',
         'login',
         'password',
@@ -35,6 +34,7 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         'two_factor_confirmed_at',
         'is_active',
         'email',
+
     ];
     protected $hidden = ['password', 'remember_token'];
 
@@ -52,23 +52,57 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         $this->update(['is_active' => false]);
     }
 
-    public function pays()
+/**
+     * Relation avec la table `groupe_projet_pays_user`.
+     */
+    public function projetsPays()
     {
-        return $this->hasMany(PaysUser::class, 'code_user', 'acteur_id');
+        return $this->hasMany(GroupeProjetPaysUser::class, 'user_id', 'acteur_id');
     }
 
-    public function paysUser()
+    /**
+     * Récupère les pays associés à l'utilisateur.
+     */
+    public function pays()
     {
-        return $this->hasOne(PaysUser::class, 'code_user', 'acteur_id');
+        return $this->projetsPays()->distinct('pays_code')->pluck('pays_code');
     }
+    public function paysSelectionne()
+    {
+        $paysCode = session('pays_selectionne'); // Récupère le code du pays depuis la session
+        return Pays::where('alpha3', $paysCode)->first();
+    }
+
+    /**
+     * Récupère les groupes projets associés à l'utilisateur dans un pays donné.
+     */
+    public function groupesParPays($paysCode)
+    {
+        return $this->projetsPays()->where('pays_code', $paysCode)->with('groupeProjet')->get();
+    }
+    public function groupeProjetSelectionne()
+    {
+        $projetId = session('projet_selectionne'); // Récupère l'ID du projet depuis la session
+        return GroupeProjet::where('code', $projetId)->first();
+    }
+
     public function acteur()
     {
         return $this->belongsTo(Acteur::class, 'acteur_id', 'code_acteur');
+    }
+    public function rolePermission(){
+        return $this->belongsTo(RolePermission::class, 'groupe_utilisateur_id', 'role_source');
     }
 
     public function groupeUtilisateur()
     {
         return $this->belongsTo(GroupeUtilisateur::class, 'groupe_utilisateur_id', 'code');
+    }
+
+
+
+    public function fonctionUtilisateur(){
+        return $this->belongsTo(FonctionUtilisateur::class, 'fonction_utilisateur', 'code');
     }
 
     public function groupeProjet()
@@ -78,12 +112,12 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
 
     public function lieuxExercice()
     {
-        return $this->hasMany(UtilisateurLieuExercice::class, 'utilisatur_code' , 'acteur_id');
+        return $this->hasMany(UtilisateurLieuExercice::class, 'utilisateur_code' , 'acteur_id');
     }
 
     public function champsExercice()
     {
-        return $this->hasMany(UtilisateurChampExercice::class, 'utilisatur_code', 'acteur_id');
+        return $this->hasMany(UtilisateurChampExercice::class, 'utilisateur_code', 'acteur_id');
     }
     public function resetPassword($newPassword)
     {
@@ -96,5 +130,12 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
     {
         $this->reset_token = Str::random(60);
         $this->save();
+    }
+       /**
+     * Inclure les utilisateurs inactifs.
+     */
+    public function scopeWithInactive($query)
+    {
+        return $query->where('is_active', false);
     }
 }

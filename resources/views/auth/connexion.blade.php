@@ -11,6 +11,7 @@
   {{-- <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/animate/animate.css')}}">
     <!--===============================================================================================-->
     <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/css-hamburgers/hamburgers.min.css')}}">
+    <link rel="stylesheet" href="{{ asset('betsa/vend/bootstrap/css/bootstrap.min.css') }}">
     <!--===============================================================================================-->
     <link rel="stylesheet" type="text/css" href="{{asset('betsa/vend/animsition/css/animsition.min.css')}}">
     <!--===============================================================================================-->
@@ -126,9 +127,12 @@
     <section id="home" class="welcome-hero">
 
         <!-- top-area Start -->
-
+        @if (session('error'))
+            <div class="alert alert-danger">
+                {{ session('error') }}
+            </div>
+        @endif
         @include('layouts.menu')
-
         <section class="d-flex align-items-center justify-content-center" style="margin-top: 150px;">
             <div class="container" style="max-width: 800px;"> <!-- Limite la largeur globale -->
                 <div class="card border-light-subtle shadow-sm">
@@ -147,8 +151,6 @@
                                 <div class="mb-4">
                                     <h3>Se connecter</h3>
                                 </div><br>
-
-                                <!-- Messages d'erreurs ou de succès -->
                                 <span class="login100-form-title p-b-48">
                                     @if ($errors->has('login'))
                                         <i class="zmdi zmdi-font"></i>
@@ -158,26 +160,54 @@
                                         <p class="text-success">{{ session('success') }}</p>
                                     @endif
                                 </span>
+                                <!-- Étape 1 : Identifiants -->
+                                <div id="step-login">
+                                    <div class="form-group">
+                                        <label> <i class="fas fa-envelope"></i> Email :</label>
+                                        <input type="email" id="email" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-lock"></i> Mot de passe :</label>
+                                        <input type="password" id="password" class="form-control" required>
+                                    </div>
 
-                                <form action="{{ route('login.login') }}" method="post">
-                                    @csrf
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">Adresse email <span class="text-danger">*</span></label>
-                                        <input type="email" class="form-control @error('email') is-invalid @enderror" name="email" id="email" placeholder="Votre email" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="password" class="form-label">Mot de passe <span class="text-danger">*</span></label>
-                                        <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" required>
-                                    </div>
-                                    <div class="mb-3 d-flex">
-                                        <button class="btn btn-primary" type="submit">Se connecter</button>
-                                    </div>
-                                </form>
+                                    <hr class="mt-4">
+                                    <button id="verify-login" class="btn btn-primary  w-100"  style="float: right;">Vérifier</button><br>
+                                    <div class="text-end">
+                                        <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>
+                                    </div><br>
+                                </div>
 
-                                <hr class="mt-4">
-                                <div class="text-end">
-                                    <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>
-                                </div><br>
+                                <!-- Étape 2 : Sélection du Pays -->
+                                <div id="step-country" class="hidden">
+                                    <div class="form-group">
+                                        <label><i class="fas fa-globe"></i> Pays :</label>
+                                        <select id="country-select" class="form-control" style="height: 100%;">
+                                            <option value="">Veuillez sélectionner un pays</option>
+                                        </select>
+                                    </div><br><br>
+                                    <hr class="mt-4">
+                                    <button id="next-country" class="btn btn-primary w-100" style="float: right;">Suivant</button><br>
+                                    <div class="text-end">
+                                        <br>
+                                    </div><br>
+                                </div>
+
+                                <!-- Étape 3 : Sélection du Groupe Projet -->
+                                <div id="step-group" class="hidden">
+                                    <div class="form-group">
+                                        <label><i class="fas fa-users"></i> Groupe Projet :</label>
+                                        <select id="group-select" class="form-control" style="height: 100%;">
+                                            <option value="">Veuillez sélectionner un groupe</option>
+                                        </select>
+                                    </div><br><br>
+                                    <hr class="mt-4">
+                                    <button id="next-group" class="btn btn-primary w-100" style="float: right;">Se connecter</button><br>
+                                    <div class="text-end">
+                                        <br>
+                                    </div><br>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -185,10 +215,6 @@
             </div>
         </section>
 
-
-
-        </div>
-    </section>
     <!--===============================================================================================-->
     <script src="{{asset('betsa/vend/jquery/jquery-3.2.1.min.js')}}"></script>
     <!--=============g==================================================================================-->
@@ -205,5 +231,131 @@
     <script src="{{asset('betsa/vend/countdowntime/countdowntime.js')}}"></script>
     <!--===============================================================================================-->
     <script src="{{asset('betsa/assets/js/main.js')}}"></script>
+<script src="{{ asset('betsa/vend/jquery/jquery-3.2.1.min.js') }}"></script>
+<script src="{{ asset('betsa/vend/bootstrap/js/bootstrap.min.js') }}"></script>
+<script>
+    $(document).ready(function () {
+        console.log('Vue initialisée : Étape 1 affichée.');
+
+        // Étape 1 : Vérification des identifiants
+        $('#verify-login').click(function () {
+            const email = $('#email').val();
+            const password = $('#password').val();
+
+            if (!email || !password) {
+                alert('Veuillez remplir les champs.');
+                console.log('Erreur : Champs email ou mot de passe vide.');
+                return;
+            }
+
+            console.log('Identifiants soumis :', { email, password });
+
+            $.post("{{ route('login.check') }}", { email, password, _token: '{{ csrf_token() }}' }, function (response) {
+                console.log('Réponse du serveur après vérification :', response);
+
+                if (response.step === 'choose_country') {
+                    console.log('Étape suivante : Sélection de pays.');
+                    populateCountries(response.data);
+                    $('#step-login').addClass('hidden');
+                    $('#step-country').removeClass('hidden');
+                } else if (response.step === 'finalize') {
+                    console.log('Connexion finalisée. Redirection...');
+                    window.location.href = `/admin`;
+                } 
+            }).fail(function (xhr) {
+                console.error('Erreur AJAX :', xhr.responseJSON.error);
+                alert(xhr.responseJSON.error);
+            });
+        });
+
+        // Étape 2 : Sélection d'un pays
+        $('#next-country').click(function () {
+            const selectedCountry = $('#country-select').val();
+
+            if (!selectedCountry) {
+                alert('Veuillez sélectionner un pays.');
+                console.log('Erreur : Aucun pays sélectionné.');
+                return;
+            }
+
+            console.log('Pays sélectionné :', selectedCountry);
+
+            $.post("{{ route('login.selectCountry') }}", { pays_code: selectedCountry, _token: '{{ csrf_token() }}' }, function (response) {
+                console.log('Réponse du serveur après sélection du pays :', response);
+
+                if (response.step === 'choose_group') {
+                    console.log('Étape suivante : Sélection de groupe projet.');
+                    populateGroups(response.data);
+                    $('#step-country').addClass('hidden');
+                    $('#step-group').removeClass('hidden');
+                } else if (response.step === 'finalize') {
+                    console.log('Connexion finalisée. Redirection...');
+                    window.location.href = `/admin`;
+                }
+            }).fail(function (xhr) {
+                console.error('Erreur AJAX :', xhr.responseJSON.error);
+                alert(xhr.responseJSON.error);
+            });
+        });
+
+        // Étape 3 : Sélection d'un groupe projet
+        $('#next-group').click(function () {
+            const selectedGroup = $('#group-select').val();
+
+            if (!selectedGroup) {
+                alert('Veuillez sélectionner un groupe projet.');
+                console.log('Erreur : Aucun groupe projet sélectionné.');
+                return;
+            }
+
+            console.log('Groupe projet sélectionné :', selectedGroup);
+
+            $.post("{{ route('login.selectGroup') }}", { projet_id: selectedGroup, _token: '{{ csrf_token() }}' }, function (response) {
+                console.log('Réponse du serveur après sélection du groupe projet :', response);
+
+                if (response.step === 'finalize') {
+                    console.log('Connexion finalisée. Redirection...');
+                    window.location.href = `/admin`;
+                }
+            }).fail(function (xhr) {
+                console.error('Erreur AJAX :', xhr.responseJSON.error);
+                alert(xhr.responseJSON.error);
+            });
+        });
+
+        // Peupler les options de pays
+        function populateCountries(countries) {
+            console.log('Peuplement des pays :', countries);
+
+            const select = $('#country-select');
+            select.empty();
+            select.append('<option value="" disabled selected>Veuillez sélectionner un pays</option>'); // Option par défaut
+            countries.forEach(country => {
+                select.append(`<option value="${country}">${country}</option>`);
+            });
+        }
+
+        // Peupler les options de groupes projets
+        function populateGroups(groups) {
+            console.log('Peuplement des groupes projets :', groups);
+
+            const select = $('#group-select');
+            select.empty();
+            select.append('<option value="" disabled selected>Veuillez sélectionner un groupe projet</option>'); // Option par défaut
+
+            groups.forEach(group => {
+                if (group.groupe_projet && group.groupe_projet.libelle) {
+                    // Si le libellé est présent, ajoutez l'option
+                    select.append(`<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`);
+                } else {
+                    // Si les données sont invalides, loguez une erreur et affichez une option par défaut
+                    console.error('Erreur : Données du groupe projet invalides.', group);
+                    select.append(`<option value="${group.groupe_projet_id}">Groupe projet ID: ${group.groupe_projet_id}</option>`);
+                }
+            });
+        }
+
+    });
+</script>
 </body>
 </html>
