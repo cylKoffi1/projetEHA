@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Personnel;
+use App\Models\User;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -18,7 +19,7 @@ class PasswordResetController extends Controller
         $request->validate(['email' => 'required|email']);
 
         // Rechercher l'utilisateur dans la base de données
-        $user = Personnel::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->first();
 
         if ($user) {
             // Stocker l'e-mail dans la session pour une utilisation ultérieure
@@ -26,7 +27,7 @@ class PasswordResetController extends Controller
 
             // Afficher le formulaire de confirmation d'identité
             return view('confirm_identity_form');
-        }       
+        }
 
         return redirect()->back()->withErrors(['email' => 'Aucun utilisateur trouvé avec cette adresse e-mail.']);
     }
@@ -65,7 +66,7 @@ class PasswordResetController extends Controller
         $email = Session::get('reset_email');
 
         // Rechercher l'utilisateur avec l'e-mail
-        $user = Personnel::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
 
         if ($user) {
             // Mettre à jour le mot de passe de l'utilisateur

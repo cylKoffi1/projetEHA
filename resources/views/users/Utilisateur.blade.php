@@ -40,10 +40,21 @@
                 @csrf
                 <input type="hidden" name="_method" value="POST" id="form-method">
                 <input type="hidden" id="user-id" name="id">
-
                 <div class="row">
-
-
+                    <div class="form-pays col-md-3 text-start">
+                        <label for="pays_id" class="text-start">Pays</label>
+                        <input type="text"  id="pays_id" name="pays_id[]" class="form-control" style="width: 100%;" value="{{ $codePays->nom_fr_fr }}" readonly>
+                    </div>
+                    <div class="col-5"></div>
+                    @if(auth()->user()->groupe_utilisateur_id != 'ag')
+                    <!-- Groupes Projets -->
+                    <div class="form-group col-md-4">
+                        <label for="groupe_projet_id">Groupe Projet</label>
+                        <input type="text"  id="groupe_projet_id" name="groupe_projet_id[]" class="form-control" value="{{ $groupProjects->libelle }}" readonly>
+                    </div>
+                    @endif
+                </div>
+                <div class="row">
                     <div class="row mt-3">
                         <div class="form-group col-md-4">
                             <label for="acteur_id">Acteur</label>
@@ -62,16 +73,27 @@
                                 @endforeach
                             </select>
                         </div>
-                        <!-- Email -->
-                        <div class="form-group col-md-4">
-                            <label for="email">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" readonly>
-                        </div>
 
-                        <!-- Téléphone -->
+                    </div>
+
+                    <div class="row mt-3">
+
                         <div class="form-group col-md-4">
-                            <label for="telephone">Téléphone</label>
-                            <input type="text" class="form-control" id="telephone" name="telephone" readonly>
+                            <label for="groupe_utilisateur_id">Groupe utilisateur</label>
+                            <select class="form-control" id="groupe_utilisateur_id" name="groupe_utilisateur_id" required>
+                                <option value="">Sélectionnez un rôle</option>
+                                @foreach ($roles as $role)
+                                    <option value="{{ $role->code }}">{{ $role->libelle_groupe }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="login">Login</label>
+                            <input type="text" class="form-control" id="login" name="login" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="login">Mot de passe </label>
+                            <input type="text" class="form-control" id="password" name="password" required>
                         </div>
 
                         <!-- Adresse -->
@@ -79,6 +101,8 @@
                             <label for="adresse">Adresse</label>
                             <input type="text" class="form-control" id="adresse" name="adresse" readonly>
                         </div>
+                        @if(auth()->user()->groupe_utilisateur_id != 'ab')
+                        @if(auth()->user()->groupe_utilisateur_id != 'ad')
                         <!-- Champs d'exercice -->
                         <div class="form-group col-md-4">
                             <label for="champs_exercice">Champs d'exercice</label>
@@ -96,39 +120,24 @@
 
                             </select>
                         </div>
+                        @endif
+
+                        @endif
+
+
+                        <!-- Email -->
                         <div class="form-group col-md-4">
-                            <label for="groupe_utilisateur_id">Rôle</label>
-                            <select class="form-control" id="groupe_utilisateur_id" name="groupe_utilisateur_id" required>
-                                <option value="">Sélectionnez un rôle</option>
-                                @foreach ($roles as $role)
-                                    <option value="{{ $role->code }}">{{ $role->libelle_groupe }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="form-group col-md-4">
-                            <label for="fonction_utilisateur">Fonction</label>
-                            <select class="form-control" id="fonction_utilisateur" name="fonction_utilisateur" required>
-                                <option value="">Sélectionnez une fonction</option>
-                            </select>
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" readonly>
                         </div>
 
-                        <!-- Groupes Projets -->
+                        <!-- Téléphone -->
                         <div class="form-group col-md-4">
-                            <label for="groupe_projet_id">Groupes Projets</label>
-                            <select  id="groupe_projet_id" name="groupe_projet_id[]" class="form-select js-select2" multiple="multiple" style="width: 100%;">
-                                @foreach ($groupProjects as $project)
-                                    <option value="{{ $project->code }}">{{ $project->libelle }}</option>
-                                @endforeach
-                            </select>
+                            <label for="telephone">Téléphone</label>
+                            <input type="text" class="form-control" id="telephone" name="telephone" readonly>
                         </div>
-                        <div class="form-group col-md-4">
-                            <label for="login">Login</label>
-                            <input type="text" class="form-control" id="login" name="login" required>
-                        </div>
-                        <div class="form-group col-md-4">
-                            <label for="login">Mot de passe </label>
-                            <input type="text" class="form-control" id="password" name="password" required>
-                        </div>
+
+
                     </div>
                 </div>
 
@@ -150,6 +159,7 @@
             <table class="table table-striped table-bordered" id="users-table">
                 <thead>
                     <tr>
+                        <th>Pays</th>
                         <th>Nom</th>
                         <th>Login</th>
                         <th>Rôle</th>
@@ -160,6 +170,12 @@
                 <tbody>
                     @foreach ($utilisateurs as $utilisateur)
                         <tr>
+                        <td>
+                            @foreach ($utilisateur->pays as $pays)
+                                {{ $pays->nom_fr_fr }}<br>
+                            @endforeach
+                        </td>
+
                             <td>{{ $utilisateur->acteur->libelle_long }}</td>
                             <td>{{ $utilisateur->login }}</td>
                             <td>{{ $utilisateur->groupeUtilisateur->libelle_groupe }}</td>
@@ -253,14 +269,6 @@
                                 </select>
                             </div>
 
-                            <div class="form-group col-md-4">
-                                <label for="edit-groupe_projet_id">Groupes Projets</label>
-                                <select id="edit-groupe_projet_id" name="groupe_projet_id[]" class="form-select js-select2" multiple="multiple">
-                                    @foreach ($groupProjects as $project)
-                                        <option value="{{ $project->code }}">{{ $project->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
                         </div>
 
                         <div class="modal-footer">
@@ -301,6 +309,7 @@
             document.getElementById('adresse').value = adresse ? adresse : '';
         });
     });
+
     document.addEventListener('DOMContentLoaded', function () {
         // Quand un acteur est sélectionné
         document.getElementById('acteur_id').addEventListener('change', function () {
@@ -339,14 +348,13 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         // Gestion du bouton Modifier
-        document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.edit-button').forEach(button => {
                 console.log('Le modal s\'affiche correctement.');
                 button.addEventListener('click', function () {
                     const userId = this.getAttribute('data-id');
                     console.log(`Chargement des données pour l'utilisateur ID : ${userId}`);
 
-                    fetch(`/utilisateurs/${userId}`)
+                    fetch(`{{ url('/utilisateurs')}}/${userId}`)
                         .then(response => {
                             if (!response.ok) {
                                 console.error('Erreur HTTP :', response.status);
@@ -380,7 +388,6 @@
                             alert('Erreur lors du chargement des données utilisateur.');
                         });
                 });
-            });
 
         });
 
@@ -389,7 +396,7 @@
         document.querySelectorAll('.delete-button').forEach(button => {
             button.addEventListener('click', function () {
                 const userId = this.getAttribute('data-id');
-                const url = `/utilisateurs/${userId}`;
+                const url = `{{ url('/utilisateurs')}}/${userId}`;
 
                 if (confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')) {
                     fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } })
@@ -417,7 +424,7 @@
                     return;
                 }
 
-                fetch(`/utilisateurs/restore/${userId}`, {
+                fetch(`{{ url('/utilisateurs')}}/restore/${userId}`, {
                     method: 'PATCH',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -484,6 +491,24 @@
                 console.log(values)
             }
 	    });
+        var pays = $('#pays_id').filterMultiSelect({
+            // displayed when no options are selected
+            placeholderText: "0 sélection",
+            // placeholder for search field
+            filterText: "Filtrer",
+            // Select All text
+            selectAllText: "Tout sélectionner",
+            // Label text
+            labelText: "",
+            // the number of items able to be selected
+            // 0 means no limit
+            selectionLimit: 0,
+            // determine if is case sensitive
+            caseSensitive: false,
+            // allows the user to disable and enable options programmatically
+            allowEnablingAndDisabling: true,
+
+        });
     });
     });
     $(document).ready(function () {

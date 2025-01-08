@@ -172,7 +172,7 @@
                                     </div>
 
                                     <hr class="mt-4">
-                                    <button id="verify-login" class="btn btn-primary  w-100"  style="float: right;">Vérifier</button><br>
+                                    <button id="verify-login" class="btn btn-primary  w-100"  style="float: right;">Suivant</button><br>
                                     <div class="text-end">
                                         <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>
                                     </div><br>
@@ -187,6 +187,7 @@
                                         </select>
                                     </div><br><br>
                                     <hr class="mt-4">
+                                    <button id="prev-country" class="btn btn-primary w-100">Retour</button>
                                     <button id="next-country" class="btn btn-primary w-100" style="float: right;">Suivant</button><br>
                                     <div class="text-end">
                                         <br>
@@ -202,6 +203,7 @@
                                         </select>
                                     </div><br><br>
                                     <hr class="mt-4">
+                                    <button id="prev-group" class="btn btn-primary w-100">Retour</button>
                                     <button id="next-group" class="btn btn-primary w-100" style="float: right;">Se connecter</button><br>
                                     <div class="text-end">
                                         <br>
@@ -260,8 +262,8 @@
                     $('#step-country').removeClass('hidden');
                 } else if (response.step === 'finalize') {
                     console.log('Connexion finalisée. Redirection...');
-                    window.location.href = `/admin`;
-                } 
+                    window.location.href = "{{ route('projets.index') }}";
+                }
             }).fail(function (xhr) {
                 console.error('Erreur AJAX :', xhr.responseJSON.error);
                 alert(xhr.responseJSON.error);
@@ -290,7 +292,7 @@
                     $('#step-group').removeClass('hidden');
                 } else if (response.step === 'finalize') {
                     console.log('Connexion finalisée. Redirection...');
-                    window.location.href = `/admin`;
+                    window.location.href = "{{ route('projets.index') }}";
                 }
             }).fail(function (xhr) {
                 console.error('Erreur AJAX :', xhr.responseJSON.error);
@@ -315,12 +317,23 @@
 
                 if (response.step === 'finalize') {
                     console.log('Connexion finalisée. Redirection...');
-                    window.location.href = `/admin`;
+                    window.location.href = "{{ route('projets.index') }}";
                 }
             }).fail(function (xhr) {
                 console.error('Erreur AJAX :', xhr.responseJSON.error);
                 alert(xhr.responseJSON.error);
             });
+        });
+        // Bouton Retour pour Pays -> Identifiants
+        $('#prev-country').click(function () {
+            $('#step-country').addClass('hidden');
+            $('#step-login').removeClass('hidden');
+        });
+
+        // Bouton Retour pour Groupe Projet -> Pays
+        $('#prev-group').click(function () {
+            $('#step-group').addClass('hidden');
+            $('#step-country').removeClass('hidden');
         });
 
         // Peupler les options de pays
@@ -331,7 +344,7 @@
             select.empty();
             select.append('<option value="" disabled selected>Veuillez sélectionner un pays</option>'); // Option par défaut
             countries.forEach(country => {
-                select.append(`<option value="${country}">${country}</option>`);
+                select.append(`<option value="${country.alpha3}">${country.nom_fr_fr}</option>`);
             });
         }
 

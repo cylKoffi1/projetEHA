@@ -25,25 +25,5 @@ class GroupeUtilisateur extends Model
         return $this->hasMany(User::class, 'groupe_utilisateur_id', 'code');
     }
 
-    // Relation pour les groupes qu'un groupe parent peut gérer
-    public function groupesEnfants()
-    {
-        return $this->belongsToMany(
-            GroupeUtilisateur::class,
-            'role_permissions', // Table pivot
-            'role_source',       // Colonne source
-            'role_target'        // Colonne cible
-        );
-    }
 
-    // Relation inverse pour récupérer le groupe parent
-    public function groupesParents()
-    {
-        return $this->belongsToMany(
-            GroupeUtilisateur::class,
-            'role_permissions',
-            'role_target',
-            'role_source'
-        );
-    }
 }

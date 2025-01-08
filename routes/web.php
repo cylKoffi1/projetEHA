@@ -188,6 +188,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/check-fonctionUtilisateur-code', [PlateformeController::class, 'checkFonctionUtilisateurCode']);
 
     //***************** Fonction groupes ************* */
+
     Route::get('admin/fonctionGroupe', [PlateformeController::class, 'fonctionGroupe'])->name('fonctionGroupe');
     Route::post('/admin/fg/store/', [PlateformeController::class, 'storeFonctionGroupe'])->name('fg.store');
     Route::delete('admin/fonctionGroupe/delete/{code}', [PlateformeController::class, 'deleteFonctionGroupe'])->name('fg.delete');
@@ -410,6 +411,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/cloturer-projet', [cloturerProjetController::class, 'cloturerProjet'])->name('cloturer_projet');
     //***************** GESTION SIG ************* */
     Route::get('admin/carte', [sigAdminController::class, 'carte']);
+    Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
 
     Route::get('/filter-map', [GeoJSONController::class, 'filter'])->name('filter.map');
 
@@ -485,7 +487,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
 
 
-
+     Route::post('/get-groups-by-country', [LoginController::class, 'getGroupsByCountry'])->name('login.getGroupsByCountry');
+     Route::post('/change-group', [LoginController::class, 'changeGroup'])->name('login.changeGroup');
 
 
 
@@ -503,6 +506,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/type-acteurs', [TypeActeurController::class, 'store'])->name('type-acteurs.store');
     Route::put('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'update'])->name('type-acteurs.update');
     Route::delete('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'destroy'])->name('type-acteurs.destroy');
+    Route::delete('/type-acteurs/bulk-delete', [TypeActeurController::class, 'bulkDelete'])->name('type-acteurs.bulkDelete');
+
 
     /*************************ACTEURS *******/
     Route::get('admin/acteurs', [ActeurController::class, 'index'])->name('acteurs.index');

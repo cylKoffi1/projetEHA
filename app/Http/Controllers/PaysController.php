@@ -13,6 +13,7 @@ use App\Models\Departement;
 use App\Models\Sous_prefecture;
 use App\Models\Localite;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PaysController extends Controller
 {
@@ -45,16 +46,17 @@ class PaysController extends Controller
         $pays->nom_fr_fr = $request->input('nom_fr_fr');
         $pays->codeTel = $request->input('codeTel');
 
+
         if ($request->hasFile('armoirie')) {
             $filename = 'armoirie_' . time() . '.' . $request->file('armoirie')->getClientOriginalExtension();
             $path = $request->file('armoirie')->storeAs('public/armoiries', $filename);
-            $pays->armoirie = str_replace('public/', '', $path);
+            $pays->armoirie = 'armoiries/' . $filename; // Enregistrer seulement le chemin relatif
         }
 
         if ($request->hasFile('flag')) {
             $filename = 'flag_' . time() . '.' . $request->file('flag')->getClientOriginalExtension();
             $path = $request->file('flag')->storeAs('public/drapeaux', $filename);
-            $pays->flag = str_replace('public/', '', $path);
+            $pays->flag = 'drapeaux/' . $filename; // Enregistrer seulement le chemin relatif
         }
 
 
@@ -76,17 +78,35 @@ class PaysController extends Controller
             $pays->nom_fr_fr = $request->input('nom_fr_fr-update');
             $pays->codeTel = $request->input('codeTel-update');
 
-            if ($request->hasFile('armoirie-update')) {
-                $filename = 'armoirie_' . time() . '.' . $request->file('armoirie-update')->getClientOriginalExtension();
-                $path = $request->file('armoirie-update')->storeAs('public/armoiries', $filename);
-                $pays->armoirie = str_replace('public/', '', $path);
-            }
 
-            if ($request->hasFile('flag-update')) {
-                $filename = 'flag_' . time() . '.' . $request->file('flag-update')->getClientOriginalExtension();
-                $path = $request->file('flag-update')->storeAs('public/drapeaux', $filename);
-                $pays->flag = str_replace('public/', '', $path);
-            }
+            if ($request->hasFile('armoirie-update')) {
+                $filePath = public_path($pays->armoirie);
+                   if (file_exists($filePath)) {
+                       unlink($filePath); // Supprime le fichier du serveur
+                   }
+
+               $file = $request->file('armoirie-update');
+               $extension = $file->getClientOriginalExtension();
+               $filename= 'armoirie_'.time().'.'.$extension;
+               $path =  $file->storeAs('Data/armoiries/');
+               $file->move($path, $filename);
+               $pays->armoirie = $path.'/'  . $filename;
+           }
+              // Mettre à jour le drapeau
+
+           if ($request->hasFile('flag-update')) {
+                $filePath = public_path($pays->flag);
+                   if (file_exists($filePath)) {
+                       unlink($filePath); // Supprime le fichier du serveur
+                   }
+               $file = $request->file('flag-update');
+               $extension = $file->getClientOriginalExtension();
+               $filename= 'flag_'.time().'.'.$extension;
+               $path = $file->storeAs('Data/drapeaux/');
+               $file->move($path, $filename);
+               $pays->flag = $path.'/' . $filename;
+           }
+
 
 
             // Enregistrement des modifications

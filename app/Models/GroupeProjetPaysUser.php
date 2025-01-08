@@ -23,7 +23,7 @@ class GroupeProjetPaysUser extends Model
      */
     public function pays()
     {
-        return $this->belongsTo(Pays::class, 'pays_code', 'alpha3');
+        return $this->belongsTo(Pays::class, 'alpha3', 'pays_code');
     }
 
     /**

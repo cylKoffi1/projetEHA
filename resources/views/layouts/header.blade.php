@@ -1,4 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTP-Project</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+</head>
+
 <style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: rgba(255, 255, 255, 0.8);
+    }
     /* Profile Picture */
     .profile-pic {
         display: inline-block;
@@ -59,7 +78,7 @@
     <div class="container-fluid" style="align-items: center;">
         <div style="display: flex; flex-direction: column; align-items: center;">
             <a class="navbar-brand" href="{{ url('/')}}" style="color: white; display: flex; flex-direction: column; align-items: flex-start;">
-                <img src="{{ asset('storage/' . auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
+                <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
                 <span>BTP-PROJECT</span>
             </a>
         </div>
@@ -99,11 +118,12 @@
                     <a class="nav-link dropdown-toggle" href="{{ url('#')}}" id="navbarDropdown" style="display: flex; align-items: center;" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <div style="display: flex; flex-direction: column; align-items: center; margin-right: 7px;">
                             <span style="color: #F1C40F;">{{ auth()->user()->login }} </span>
-                            <span style="font-size: 13px; color: #F1C40F;">{{ auth()->user()->getRoleNames()->first() }}</span>
+                            <span style="font-size: 13px; color: #F1C40F;">{{ auth()->user()->groupeUtilisateur->libelle_groupe  }}</span>
                         </div>
                         @if (auth()->user()->acteur)
                             <div class="profile-pic">
-                                <img src="{{ asset("users/".auth()->user()->acteur->Photo) }}" alt="Profile Picture">
+
+                                <img src="{{ asset(auth()->user()->acteur->Photo) }}" alt="Profile Picture">
                             </div>
                         @else
                             <div class="profile-pic">
@@ -116,14 +136,13 @@
                         <li><a class="dropdown-item" href="{{ url('/admin/users/details-user/' . auth()->user()->id . '?ecran_id=' . $ecran->id) }}"><i class="fas fa-cog fa-fw"></i> Réglages</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li class="sidebar-item">
-                            <a class="dropdown-item" href="{{ url('#')}}" onclick="logout('logout-form')">
-                                <i class="bi bi-box-arrow-left"></i> Déconnexion
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#changeGroupModal">
+                                <i class="bi bi-box-arrow-left"></i> Changer de groupe projet
                             </a>
-                            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                                @csrf
-                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
-                            </form>
                         </li>
+
+
                     </ul>
                 </li>
             </ul>
@@ -142,7 +161,133 @@
             @endif
         </div>
     </div>
+    <?php
+    ?>
 </nav>
+<div class="modal fade" id="changeGroupModal" tabindex="-1" aria-labelledby="changeGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changeGroupModalLabel">Changer de Groupe Projet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="change-group-form">
+                    @csrf
+
+                    <!-- Étape 1 : Sélection du Pays -->
+                    <div id="step-country">
+                        <div class="form-group">
+                            <label for="country-select">Sélectionnez un Pays :</label>
+                            <select id="country-select" class="form-control" required>
+                                <option value="">Veuillez sélectionner un pays</option>
+                                @foreach($payss as $pay)
+                                    <option value="{{ $pay->alpha3 }}">{{ $pay->nom_fr_fr }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="button" id="next-country" class="btn btn-primary" style="float: right;">Suivant</button><br>
+                        <hr class="mt-4">
+
+                    </div>
+
+                    <!-- Étape 2 : Sélection du Groupe Projet -->
+                    <div id="step-group" style="display: none;">
+                        <div class="form-group mt-3">
+                            <label for="group-select">Sélectionnez un Groupe Projet :</label>
+                            <select id="group-select" class="form-control" required>
+                                <option value="">Veuillez sélectionner un groupe projet</option>
+                            </select>
+                        </div>
+                        <button type="button" id="prev-group" class="btn btn-primary" >Retour</button>
+                        <button type="submit" id="next-group" class="btn btn-primary" style="float: right;">Changer</button><br>
+                        <hr class="mt-4">
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="float: right;">Fermer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    toastr.options = {
+        "closeButton": true,
+        "progressBar": true,
+        "positionClass": "toast-top-right",
+        "timeOut": "3000"
+    };
+
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+
+        // Étape 1 -> Étape 2 (Afficher le choix du groupe projet)
+        $('#next-country').on('click', function () {
+            const selectedCountry = $('#country-select').val();
+            if (!selectedCountry) {
+                toastr.error('Veuillez sélectionner un pays.');
+                return;
+            }
+
+            // Charger les groupes projets
+            $.post("{{ route('login.getGroupsByCountry') }}",
+                { pays_code: selectedCountry, _token: '{{ csrf_token() }}' },
+                function (response) {
+                    let options = '<option value="">Veuillez sélectionner un groupe projet</option>';
+                    response.forEach(group => {
+                        options += `<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`;
+                    });
+                    $('#group-select').html(options);
+
+                    // Afficher l'étape suivante
+                    $('#step-country').hide();
+                    $('#step-group').show();
+                }
+            ).fail(function () {
+                toastr.error('Erreur lors du chargement des groupes projets.');
+            });
+        });
+
+        // Étape 2 -> Étape 1 (Retour)
+        $('#prev-group').on('click', function () {
+            $('#step-group').hide();
+            $('#step-country').show();
+        });
+
+        // Changer le groupe projet
+        $('#change-group-form').on('submit', function (e) {
+            e.preventDefault();
+            const selectedCountry = $('#country-select').val();
+            const selectedGroup = $('#group-select').val();
+
+            if (!selectedCountry || !selectedGroup) {
+                toastr.error("Veuillez sélectionner un pays et un groupe projet.");
+                return;
+            }
+
+            $.post("{{ route('login.changeGroup') }}",
+                { pays_code: selectedCountry, projet_id: selectedGroup, _token: '{{ csrf_token() }}' },
+                function (response) {
+                    if (response.success) {
+                        toastr.success("Changement effectué avec succès !");
+                        window.location.reload();
+                    } else {
+                        toastr.error("Une erreur est survenue lors du changement.");
+                    }
+                }
+            ).fail(function () {
+                toastr.error('Erreur lors du changement de groupe projet.');
+            });
+        });
+
+    });
+</script>
+
+
 
 <script>
     document.querySelectorAll('.dropdown-toggle').forEach(item => {

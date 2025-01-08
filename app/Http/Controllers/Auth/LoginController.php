@@ -48,8 +48,9 @@ class LoginController extends Controller
 
             // Récupérer les pays associés à l'utilisateur
             $pays = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
-                ->distinct()
-                ->pluck('pays_code');
+            ->join('pays', 'groupe_projet_pays_user.pays_code', '=', 'pays.alpha3')
+            ->distinct()
+            ->get(['pays.alpha3', 'pays.nom_fr_fr']);
 
             Log::info('Pays associés récupérés.', ['count' => $pays->count()]);
 
@@ -168,10 +169,12 @@ class LoginController extends Controller
         }
 
         Log::info('Affichage de la page admin.');
-        return view('parSpecifique.pays', [
+        $pays = Pays::all();
+        return view('layouts.header', [
             'ecran' => $request->input('ecran_id'),
             'pays_selectionne' => session('pays_selectionne'),
             'projet_selectionne' => session('projet_selectionne'),
+            'pays'=> $pays
         ]);
     }
 
@@ -189,4 +192,38 @@ class LoginController extends Controller
         Log::info('Déconnexion réussie.');
         return redirect()->route('login')->with('success', 'Vous êtes déconnecté.');
     }
+    /**
+     * 
+     *  
+     **/
+
+     public function getGroupsByCountry(Request $request)
+     {
+         $request->validate(['pays_code' => 'required|string']);
+         
+         $user = Auth::user();
+         $groupes = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
+             ->where('pays_code', $request->pays_code)
+             ->with('groupeProjet')
+             ->get();
+     
+         return response()->json($groupes);
+     }
+     
+     public function changeGroup(Request $request)
+     {
+         $request->validate([
+             'pays_code' => 'required|string',
+             'projet_id' => 'required|exists:groupe_projet_pays_user,groupe_projet_id'
+         ]);
+     
+         session([
+             'pays_selectionne' => $request->pays_code,
+             'projet_selectionne' => $request->projet_id
+         ]);
+     
+         return response()->json(['success' => true]);
+     }
+     
+
 }

@@ -174,6 +174,7 @@ return [
         Spatie\Permission\PermissionServiceProvider::class,
 
         App\Providers\RubriquesServiceProvider::class,
+        App\Providers\HeaderServiceProvider::class,
     ]),
     
 

@@ -10,6 +10,7 @@ use App\Models\Ecran;
 use App\Models\FonctionTypeActeur;
 use App\Models\GroupeUtilisateur;
 use App\Models\GroupeProjet;
+use App\Models\GroupeProjetPaysUser;
 use App\Models\GroupeProjetUser;
 use App\Models\LocalitesPays;
 use App\Models\Pays;
@@ -33,6 +34,7 @@ class UtilisateurController extends Controller
     {
         try {
             Log::info('Chargement de la liste des utilisateurs.');
+            $user = Auth::user();
 
             $ecran = Ecran::find($request->input('ecran_id'));
             $utilisateurs = User::with([
@@ -41,26 +43,42 @@ class UtilisateurController extends Controller
                 'groupeProjet',
                 'champsExercice',
                 'lieuxExercice'
-            ])->get();
+            ])
+            ->get();
 
-            $groupeProjets = Auth()->User()->groupeUtilisateur->code;
+            $groupeProjets = GroupeProjetPaysUser::where('user_id', $user->acteur_id)->value('groupe_projet_id');
+
+            // Vérifiez si un pays est sélectionné dans la session
+            $paysSelectionne = session('pays_selectionne');
+
+            if (!$paysSelectionne) {
+                return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un pays avant de continuer.');
+            }
+            $groupeSelectionne = session('projet_selectionne');
+            if (!$groupeSelectionne) {
+                return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un groupe avant de continuer.');
+            }
+            $pays = Pays::all();
            $roles =
-            RolePermission::where('role_source', $groupeProjets)
+            RolePermission::where('role_source', Auth::user()->groupe_utilisateur_id)
             ->join('groupe_utilisateur as gu', 'gu.code', '=', 'role_permissions.role_target')
             ->where('role_permissions.can_assign', 1)
             ->select('code','gu.libelle_groupe')
             ->get();
-            $groupProjects = GroupeProjet::all();
+            $groupProjects = GroupeProjet::where('code', $groupeSelectionne)->first();
 
-            $acteurs = Acteur::where('is_user', 0)->orderBy('libelle_court', 'asc')->get();;
+            $acteurs = Acteur::where('is_user', 0)
+            ->where('type_acteur', 'etp')
+            ->orderBy('libelle_court', 'asc')->get();;
 
-            $userCountry =  Auth()->User()->paysUser->code_pays;
-
-            $codePays = Pays::where('alpha3', $userCountry)->first();
+            $codePays = Pays::where('alpha3', $paysSelectionne)->first();
 
             $champsExercice = DecoupageAdministratif::join('decoupage_admin_pays', 'decoupage_administratif.code_decoupage', '=', 'decoupage_admin_pays.code_decoupage')
                 ->where('decoupage_admin_pays.id_pays', $codePays->id)
                 ->get();
+
 
             $lieuxExercice = LocalitesPays::where('id_pays', $codePays->alpha3)
                 ->get(['id', 'libelle', 'code_decoupage']); // Récupérer les données nécessaires pour filtrage
@@ -72,7 +90,8 @@ class UtilisateurController extends Controller
                 'groupProjects',
                 'acteurs',
                 'champsExercice',
-                'lieuxExercice'
+                'lieuxExercice',
+                'codePays'
             ));
         } catch (\Exception $e) {
             Log::error("Erreur lors du chargement des utilisateurs : " . $e->getMessage());
@@ -93,8 +112,8 @@ class UtilisateurController extends Controller
             // Valider les données
             $request->validate([
                 'acteur_id' => 'required|exists:acteur,code_acteur',
-                'groupe_utilisateur_id' => 'required|exists:groupe_utilisateur,code',
-                'fonction_utilisateur' => 'required|string|max:255',
+                'groupe_utilisateur_id' => 'exists:groupe_utilisateur,code',
+                'fonction_utilisateur' => 'string|max:255',
                 'groupe_projet_id' => 'nullable|array',
                 'groupe_projet_id.*' => 'exists:groupe_projet,code',
                 'champs_exercice' => 'nullable|array',
@@ -120,12 +139,19 @@ class UtilisateurController extends Controller
             Acteur::where('code_acteur', $request->acteur_id)
                 ->update(['is_user' => true]);
 
+            $paysSelectionne = session('pays_selectionne');
+            if (!$paysSelectionne) {
+                return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un pays avant de continuer.');
+            }
+
             // Assigner les groupes projets (plusieurs groupes)
             if ($request->groupe_projet_id) {
                 foreach ($request->groupe_projet_id as $groupeProjetId) {
-                    GroupeProjetUser::create([
+                    GroupeProjetPaysUser::create([
                         'user_code' => $request->acteur_id,
-                        'groupe_code' => $groupeProjetId,
+                        'groupe_projet_id' => $groupeProjetId,
+                        'pays_code'=>$paysSelectionne,
                     ]);
                 }
             }

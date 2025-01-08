@@ -109,10 +109,14 @@
                         <td>{{ $typeActeur->cd_type_acteur }}</td>
                         <td>{{ $typeActeur->libelle_type_acteur }}</td>
                         <td>
-                            <button class="btn btn-sm btn-warning edit-button" data-id="{{ $typeActeur->id }}" data-cd="{{ $typeActeur->cd_type_acteur }}" data-libelle="{{ $typeActeur->libelle_type_acteur }}">Modifier</button>
-                            
-                                <button class="btn btn-sm btn-danger delete-button" data-cd="{{ $typeActeur->cd_type_acteur }}" data-toggle="modal" data-target="#deleteModal">Supprimer</button>
-                            
+                            <a href="#" class="edit-button" data-id="{{ $typeActeur->id }}" data-cd="{{ $typeActeur->cd_type_acteur }}" data-libelle="{{ $typeActeur->libelle_type_acteur }}">
+                                <i class="bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;"></i>
+                            </a>
+
+                            <a  href="#" class="delete-button" data-cd="{{ $typeActeur->cd_type_acteur }}" data-toggle="modal" data-target="#deleteModal">
+                                <i class="bi bi-x-circle" style="font-size: 1.2rem; color: red; cursor: pointer;"></i>
+                            </a>
+
 
                         </td>
                     </tr>
@@ -150,7 +154,7 @@
 
 <script>
         $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des types acteurs')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des types acteurs')
     });
 document.addEventListener('DOMContentLoaded', function() {
     // Modifier un type d'acteur

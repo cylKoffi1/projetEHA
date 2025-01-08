@@ -3,40 +3,41 @@
 @section('content')
 <style>
 
-.info {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: white;
-  padding: 10px;
-  border-radius: 5px;
-}
-.map{
-    padding-right: 200;
-}
-g{
-    transform: translate3d(-120px, 20px, 0px);
-}
-.info .title {
-  font-weight: bold;
-}
+    .info {
+        background:rgba(255, 255, 255, 0.57);
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 10px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+    }
+    .map{
+        padding-right: 200;
+    }
+    g{
+        transform: translate3d(-120px, 20px, 0px);
+    }
+    .info .title {
+    font-weight: bold;
+    }
 
-.info .content {
-  font-size: 12px;
-}
+    .info .content {
+    font-size: 12px;
+    }
 
-.info .close-button {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 10px;
-  height: 10px;
-  cursor: pointer;
-}
+    .info .close-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 10px;
+    height: 10px;
+    cursor: pointer;
+    }
 
-.info .close-button:hover {
-  background-color: #ccc;
-}
+    .info .close-button:hover {
+    background-color: #ccc;
+    }
     .district-label {
         font-size: 12px;
         font-weight: bold;
@@ -45,21 +46,41 @@ g{
         /* Couleur du texte */
     }
 
-    .legend {
-        position: absolute;
-        top: 350px;
-        right: 10px;
-        width: 200px;
-        float: left;
+    .info.legend {
+        background: rgba(255, 255, 255, 0.57); /* Blanc transparent */
+        padding: 10px 15px;
+        font: 14px Arial, sans-serif;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+        line-height: 18px;
+        color: #333;
     }
 
-    .legend i {
+    .info.legend h4 {
+        margin: 0 0 5px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #000;
+    }
+
+    .info.legend p {
+        margin: 0 0 10px;
+        font-size: 14px;
+        color: #555;
+    }
+
+    .info.legend i {
         width: 18px;
         height: 18px;
         float: left;
         margin-right: 8px;
-        opacity: 0.9;
+        opacity: 0.7; /* Applique la transparence */
+        border-radius: 3px; /* Adoucit les bords */
     }
+
+
+
+
     .leaflet-control-attribution {
         visibility: hidden;
     }
@@ -223,21 +244,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
                     <div class="card-body">
                         <div class="row" style="flex-wrap: nowrap">
                             <div class="col">
-                                <div id="map" style="height: 590px; outline-style: none;"></div>
+                                <div id="countryMap" style="height: 590px; outline-style: none;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="card">
-        <div class="card-header">
-            <h4 class="card-title">Carte du pays</h4>
-        </div>
-        <div class="card-content">
-            <div class="card-body">
-                <div id="countryMap" style="height: 600px; outline-style: none;"></div>
             </div>
         </div>
     </div>
@@ -358,10 +369,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
         console.log(data);
     }
 
-    // Call initMapJS on page load
-    document.addEventListener('DOMContentLoaded', function () {
-        initMapJS();
-    });
 
     function handleCheckboxChange(checkboxId, layerType) {
         var checkbox = document.getElementById(checkboxId);
@@ -406,19 +413,4 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>
 <script src="{{ asset('leaflet/leaflet.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojson/districts.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojson/regions.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojson/departements.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutDepartment.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/District_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Region_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Cout_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/CoutRegion_temp.geojson.js')}}"></script>
-<script type="text/javascript" src="{{ asset('leaflet/geojsonTemp/Department.geojson.js')}}"></script>
-<script src="{{ asset('leaflet/codeJS/scriptFina.js') }}"></script>
-<script src="{{ asset('leaflet/codeJS/scriptJS.js') }}"></script>
 @endsection

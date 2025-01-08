@@ -68,7 +68,7 @@
 
                 <div class="row">
                     <!-- Rôle Source -->
-                    <div class="form-group col-md-4">
+                    <div class="col-md-4">
                         <label for="role_source">Rôle Source</label>
                         <select class="form-control" id="role_source" name="role_source" required>
                             @foreach ($roles as $role)
@@ -78,9 +78,9 @@
                     </div>
 
                     <!-- Rôle Cible -->
-                    <div class="form-group col-md-4">
-                        <label for="role_target">Rôle Cible</label>
-                        <select class="form-control" id="role_target" name="role_target" required>
+                    <div class="col-md-4">
+                        <label for="role_target">Rôles Cibles</label>
+                        <select class="form-control" id="role_target" name="role_target[]" multiple required>
                             @foreach ($roles as $role)
                                 <option value="{{ $role->code }}">{{ $role->libelle_groupe }}</option>
                             @endforeach
@@ -88,7 +88,7 @@
                     </div>
 
                     <!-- Permission -->
-                    <div class="form-group col-md-4">
+                    <div class="col-md-4">
                         <label for="can_assign">Permission</label>
                         <select class="form-control" id="can_assign" name="can_assign" required>
                             <option value="1">Autorisé</option>
@@ -97,10 +97,10 @@
                     </div>
                 </div>
 
-                <div class="row mt-3">
-                    <div class="col-md-12 text-end">
-                        <button type="submit" class="btn btn-primary mt-2" id="submit-button">Enregistrer</button>
-                    </div>
+                <div class="mt-3 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Enregistrer
+                    </button>
                 </div>
             </form>
         </div>
@@ -179,13 +179,37 @@
                 document.getElementById('can_assign').value = canAssign;
 
                 const form = document.getElementById('role-permissions-form');
-                form.action = `/role_permissions/${id}`;
+                form.action = `{{ url('/role_permissions')}}/${id}`;
                 document.getElementById('method').value = 'PUT';
 
                 document.getElementById('submit-button').textContent = 'Modifier';
             });
         });
+        var groupes = $('#role_target').filterMultiSelect({
 
+            // displayed when no options are selected
+            placeholderText: "0 sélection",
+
+            // placeholder for search field
+            filterText: "Filtrer",
+
+            // Select All text
+            selectAllText: "Tout sélectionner",
+
+            // Label text
+            labelText: "",
+
+            // the number of items able to be selected
+            // 0 means no limit
+            selectionLimit: 0,
+
+            // determine if is case sensitive
+            caseSensitive: false,
+
+            // allows the user to disable and enable options programmatically
+            allowEnablingAndDisabling: true,
+
+            });
         // Supprimer une permission
         document.querySelectorAll('.delete-button').forEach(button => {
             button.addEventListener('click', function () {

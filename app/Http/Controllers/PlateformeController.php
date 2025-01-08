@@ -18,6 +18,7 @@ use App\Models\FamilleInfrastructure;
 use App\Models\Fonction_groupe_utilisateur;
 use App\Models\FonctionUtilisateur;
 use App\Models\Genre;
+use App\Models\GroupeUtilisateur;
 use App\Models\Localite;
 use App\Models\MaterielStockage;
 use App\Models\Ministere;

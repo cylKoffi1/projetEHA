@@ -83,6 +83,22 @@ class TypeActeurController extends Controller
         return redirect()->back()->withErrors('Une erreur est survenue lors de la suppression du type d\'acteur.');
     }
 }
+    public function bulkDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return redirect()->back()->withErrors('Aucun type d\'acteur sélectionné pour la suppression.');
+        }
+ 
+        try {
+            TypeActeur::whereIn('cd_type_acteur', $ids)->delete();
+            return redirect()->back()->with('success', 'Types d\'acteurs supprimés avec succès.');
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la suppression groupée : " . $e->getMessage());
+            return redirect()->back()->withErrors('Erreur lors de la suppression groupée.');
+        }
+    }
 
 
 }

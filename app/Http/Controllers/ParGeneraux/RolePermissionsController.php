@@ -32,29 +32,44 @@ class RolePermissionsController extends Controller
     public function store(Request $request)
     {
         try {
-            Log::info('Enregistrement d\'une permission de rôle.', ['data' => $request->all()]);
+            Log::info('Enregistrement ou mise à jour de permissions de rôles.', ['data' => $request->all()]);
 
             $request->validate([
                 'role_source' => 'required|string|exists:groupe_utilisateur,code',
-                'role_target' => 'required|string|exists:groupe_utilisateur,code',
+                'role_target' => 'required|array|min:1', // Plusieurs rôles cibles
+                'role_target.*' => 'string|exists:groupe_utilisateur,code',
                 'can_assign' => 'required|boolean',
             ]);
 
             if ($request->id) {
-                // Mise à jour
+                // 🔄 **Mise à jour**
                 $permission = RolePermission::findOrFail($request->id);
-                $permission->update($request->all());
-                Log::info("Permission de rôle mise à jour avec succès : ID {$permission->id}");
+                $permission->update([
+                    'role_source' => $request->role_source,
+                    'role_target' => $request->role_target[0], // On met à jour avec le premier rôle cible
+                    'can_assign' => $request->can_assign
+                ]);
+                Log::info("✅ Permission de rôle mise à jour avec succès : ID {$permission->id}");
             } else {
-                // Création
-                $permission = RolePermission::create($request->all());
-                Log::info("Nouvelle permission de rôle créée avec succès : ID {$permission->id}");
+                // ➕ **Création groupée**
+                foreach ($request->role_target as $roleTarget) {
+                    RolePermission::updateOrCreate(
+                        [
+                            'role_source' => $request->role_source,
+                            'role_target' => $roleTarget
+                        ],
+                        [
+                            'can_assign' => $request->can_assign
+                        ]
+                    );
+                }
+                Log::info("✅ Permissions de rôle enregistrées avec succès.");
             }
 
-            return redirect()->back()->with('success', 'Permission de rôle enregistrée avec succès.');
+            return redirect()->back()->with('success', 'Permissions de rôle enregistrées avec succès.');
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'enregistrement de la permission de rôle : ' . $e->getMessage());
-            return redirect()->back()->withErrors("Une erreur est survenue lors de l'enregistrement de la permission de rôle.");
+            Log::error('❌ Erreur lors de l\'enregistrement ou mise à jour des permissions : ' . $e->getMessage());
+            return redirect()->back()->withErrors("Une erreur est survenue lors de l'enregistrement des permissions.");
         }
     }
 

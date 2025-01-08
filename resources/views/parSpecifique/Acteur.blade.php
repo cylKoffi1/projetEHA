@@ -84,7 +84,7 @@
             </ul>
         </div>
         @endif
-        
+
 
 
         <div class="card-header">
@@ -135,7 +135,7 @@
                     <!-- Type d'acteur -->
                     <div class="form-group col-md-4">
                         <label for="type_acteur">Type d'acteur</label>
-                        <select class="form-control" id="type_acteur" name="type_acteur" required>
+                        <select class="form-control" id="type_acteur" name="type_acteur" >
                             @foreach ($TypeActeurs as $TypeActeur)
                                 <option value="{{ $TypeActeur->cd_type_acteur }}">{{ $TypeActeur->libelle_type_acteur }}</option>
                             @endforeach
@@ -199,8 +199,11 @@
                     @foreach ($acteurs as $acteur)
                     <tr>
                         <td>
-                            @if ($acteur->photo)
-                                <img src="{{ asset('storage/' . $acteur->photo) }}" alt="Photo de {{ $acteur->libelle_long }}" style="width: 50px; height: 50px; object-fit: cover;">
+                            @if ($acteur->Photo)
+                            <img src="{{ asset($acteur->Photo) }}"
+                            alt="Photo de {{ $acteur->libelle_long }}"
+                            style="width: 50px; height: 50px; object-fit: cover;">
+
                             @else
                                 <span>Pas de photo</span>
                             @endif
@@ -294,7 +297,7 @@
 
                 // Mise à jour de l'action du formulaire pour modification
                 const form = document.getElementById('acteur-form');
-                form.action = `/acteurs/${id}`;
+                form.action = `{{ url('/acteurs') }}/${id}`;
                 document.getElementById('method').value = 'PUT';
 
                 // Changer le texte du bouton
@@ -311,7 +314,7 @@
                     const form = document.createElement('form');
                     form.method = 'POST';
 
-                    form.action = `acteurs/${id}/restore?ecran_id=${ecranId}`;
+                    form.action = `{{ url('/acteurs')}}/${id}/restore?ecran_id=${ecranId}`;
                     form.innerHTML = `
                         @csrf
                         <input type="hidden" name="_method" value="PATCH">

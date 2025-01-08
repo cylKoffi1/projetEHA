@@ -48,4 +48,9 @@ class Pays extends Model
     {
         return self::where('nom_fr_fr', $countryName)->value('alpha3');
     }
+
+    public function niveau()
+    {
+        return $this->hasMany(DecoupageAdminPays::class, 'id_pays', 'id');
+    }
 }

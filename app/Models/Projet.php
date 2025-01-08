@@ -1,37 +1,39 @@
 <?php
-// app/Models/Projet.php
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Projet extends Model
 {
-    // Nom de la table dans la base de données
-    protected $table = 'projet_eha2';
-    protected $primaryKey ='CodeProjet';
+    use HasFactory;
 
-    // Liste des colonnes que vous souhaitez remplir (modifiable selon vos besoins)
+    protected $table = 'projets';
+    protected $primaryKey = 'code_projet'; 
+
+    // Colonnes modifiables
     protected $fillable = [
-        'CodeProjet',
-        'code_domaine',
+        'code_alpha3_pays',
+        'code_maitre_oeuvre',
+        'commentaire',
         'code_sous_domaine',
-        'code_region',
-        'Date_demarrage_prevue',
+        'date_demarrage_prevue',
         'date_fin_prevue',
         'cout_projet',
         'code_devise',
-        'code_district'
+        'code_chef_projet',
+        'created_at',
+        'updated_at',
     ];
 
-
-    public function Domaine()
+    public function sousDomaine()
     {
-        return $this->belongsTo(Domaine::class, 'Domaine', 'code');
+        return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code');
     }
 
-    public function SousDomaine()
+    public function pays()
     {
-        return $this->belongsTo(SousDomaine::class, 'Sous_domaine', 'code');
+        return $this->belongsTo(Pays::class, 'code_alpha3_pays', 'alpha3');
     }
 }

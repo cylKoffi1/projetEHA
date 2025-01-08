@@ -53,9 +53,9 @@
 
         <div class="container">
             <div class="welcome-hero-txt" >
-                <h2>BTP-PROJECT</h2>
+                <h2>GESTION DE PROJETS</h2>
                 <h2>
-                    Bâtiment Travaux Public - Projects
+                    DU BÂTIMENT ET DES TRAVAUX PUBLICS
                 </h2>
 
 

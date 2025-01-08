@@ -65,8 +65,16 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
      */
     public function pays()
     {
-        return $this->projetsPays()->distinct('pays_code')->pluck('pays_code');
+        return $this->hasManyThrough(
+            Pays::class,                  // Modèle cible
+            GroupeProjetPaysUser::class,   // Modèle intermédiaire
+            'user_id',                     // Clé étrangère sur `groupe_projet_pays_user`
+            'alpha3',                      // Clé primaire sur `pays`
+            'acteur_id',                   // Clé locale sur `users`
+            'pays_code'                    // Clé étrangère sur `groupe_projet_pays_user`
+        );
     }
+
     public function paysSelectionne()
     {
         $paysCode = session('pays_selectionne'); // Récupère le code du pays depuis la session

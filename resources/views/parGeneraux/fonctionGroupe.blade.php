@@ -189,7 +189,7 @@
     /* CODE JAVASCRIPT ICI */
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste de la table');
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_court }}', 'table1', 'Liste de la table');
         var groupes = $('#groupes').filterMultiSelect({
 
             // displayed when no options are selected

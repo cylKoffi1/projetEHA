@@ -93,7 +93,7 @@
                         <td>
                             @if ($p->armoirie)
                                 <img style="width: 30px; height: 30px;"
-                                    src="{{ asset('storage/' . $p->armoirie) }}"
+                                    src="{{ asset( $p->armoirie) }}"
                                     alt="Armoirie du pays">
                             @endif
                         </td>
@@ -101,7 +101,7 @@
                         <td>
                             @if ($p->flag)
                                 <img style="width: 30px; height: 30px;"
-                                    src="{{ asset('storage/' . $p->flag) }}"
+                                    src="{{ asset( $p->flag) }}"
                                     alt="Drapeau du pays">
                             @endif
                         </td>
@@ -361,7 +361,7 @@
             $('#edit-nom-fr-fr-update').val(pays.nomFrFr);
             $('#edit-code-tel-update').val(pays.codeTel);
 
-            $('#edit-pays-form').attr('action', `/pays/${pays.id}/update`);
+            $('#edit-pays-form').attr('action', `${window.location.origin}/pays/${pays.id}/update`);
 
             $('#paysEditModal').modal('show');
         });

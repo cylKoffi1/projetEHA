@@ -3,11 +3,11 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
         zoomControl: false,
         center: [-6.5, 7],
         maxZoom: codeZoom.maxZoom,
-        minZoom: codeZoom.minZoom,        
+        minZoom: codeZoom.minZoom,
         dragging: true,
         prefix: null
     }).setView([4.54, -3.55], 4);
-   
+
     // Ajustement pour pousser la carte vers la gauche
     map.panBy([20, 0]);
 
@@ -18,6 +18,20 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
     // Vérifie si le pays est la RDC
     const isRDC = countryAlpha3Code === "COD";
 
+    // Échelle des couleurs pour les projets
+    const colorScale = ['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000'];
+
+    // Règle pour attribuer une couleur en fonction de projectCount
+    function getColor(projectCount) {
+        if (projectCount >= 350) return colorScale[7];      
+        else if (projectCount >= 300) return colorScale[6];
+        else if (projectCount >= 250) return colorScale[5];
+        else if (projectCount >= 200) return colorScale[4];
+        else if (projectCount >= 150) return colorScale[3];
+        else if (projectCount >= 100) return colorScale[2];
+        else if (projectCount >= 50) return colorScale[1];
+        else return colorScale[0];
+    }
     // Contrôle d'information
     var info = L.control();
 
@@ -104,9 +118,35 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
     // Mettre à jour la bulle d'information avec des valeurs initiales
     info.update(domainesAssocie, niveau);
 
+    // Légende pour la carte
+     var legend = L.control({ position: 'bottomright' });
+
+     legend.onAdd = function (map) {
+        var div = L.DomUtil.create('div', 'info legend');
+        var grades = [0, 50, 100, 150, 200, 250, 300, 350];
+        var labels = [];
+
+        // Ajouter le titre de la légende
+        div.innerHTML = '<h4>LEGENDE</h4><p>Nombre de projet</p>';
+
+        // Boucle pour générer les plages de couleurs avec transparence
+        for (var i = 0; i < grades.length; i++) {
+            labels.push(
+                `<i style="background:${getColor(grades[i] + 1)}; opacity: 0.7;"></i> ${grades[i]}${grades[i + 1] ? `&ndash;${grades[i + 1]}` : '+'}`
+            );
+        }
+
+        // Ajouter les labels sous le titre
+        div.innerHTML += labels.join('<br>');
+        return div;
+    };
+
+
+    legend.addTo(map);
+
     // Charger le niveau 1 par défaut
     function loadGeoJsonLevel(level, parentName = null) {
-        var geojsonPath = `/geojson/gadm41_${countryAlpha3Code}_${level}.json.js`;
+        var geojsonPath = `${window.location.origin}/geojson/gadm41_${countryAlpha3Code}_${level}.json.js`;
 
         var script = document.createElement('script');
         script.src = geojsonPath;
@@ -134,10 +174,11 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
 
                 var geoJsonLayer = L.geoJSON(filteredData, {
                     style: function (feature) {
+                        var projectCount = feature.properties.projectCount || 0; // Remplacez par le bon champ
                         return {
                             weight: 2,
                             color: 'white',
-                            fillColor: '#87CE01',
+                            fillColor: getColor(projectCount),
                             fillOpacity: 0.7
                         };
                     },
