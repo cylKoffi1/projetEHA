@@ -45,5 +45,21 @@
 		<link rel="stylesheet" href="{{ asset('betsa/assets/css/menu.css')}}">
 		<link href="https://fonts.googleapis.com/css?family=Arvo&display=swap" rel="stylesheet">
 
+    <!-- DevExtreme CSS -->
+    <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/22.2.3/css/dx.light.css" />
+
+    <!-- DevExtreme JS -->
+    <script src="https://cdn3.devexpress.com/jslib/22.2.3/js/dx.all.js"></script>
 
         <link src="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+        <script>
+            toastr.options = {
+                "closeButton": true,
+                "progressBar": true,
+                "positionClass": "toast-top-right",
+                "timeOut": "3000"
+            };
+
+        </script>

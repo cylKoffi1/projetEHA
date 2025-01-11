@@ -23,6 +23,7 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         'acteur_id',
         'groupe_utilisateur_id',
         'fonction_utilisateur',
+        'groupe_projet_id',
         'login',
         'password',
         'email_verified_at',
@@ -75,6 +76,7 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         );
     }
 
+
     public function paysSelectionne()
     {
         $paysCode = session('pays_selectionne'); // Récupère le code du pays depuis la session
@@ -107,16 +109,28 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         return $this->belongsTo(GroupeUtilisateur::class, 'groupe_utilisateur_id', 'code');
     }
 
-
+    // Vérifier si un utilisateur a un rôle
+    public function hasGroupe($groupeCode)
+    {
+        return $this->groupeUtilisateur->code === $groupeCode;
+    }
 
     public function fonctionUtilisateur(){
         return $this->belongsTo(FonctionUtilisateur::class, 'fonction_utilisateur', 'code');
     }
 
-    public function groupeProjet()
+    public function groupeProjets()
     {
-        return $this->belongsTo(GroupeProjet::class, 'groupe_projet_id', 'code');
+        return $this->hasManyThrough(
+            GroupeProjet::class,
+            GroupeProjetPaysUser::class,
+            'user_id',   // Clé étrangère sur `groupe_projet_pays_user`
+            'code',      // Clé primaire sur `groupe_projet`
+            'acteur_id', // Clé locale sur `users`
+            'groupe_projet_id' // Clé étrangère sur `groupe_projet_pays_user`
+        );
     }
+
 
     public function lieuxExercice()
     {

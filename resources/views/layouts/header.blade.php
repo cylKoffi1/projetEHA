@@ -71,7 +71,25 @@
     .show .nav-link {
         color: #34495E;
     }
-
+    #changeGroupModal  {
+        background: url("{{ asset('assets/BTP-Image/a-wind-turbine-with-environment-ecology-sign-hologram-sustainable-clean-energy-free-video.jpg') }}") no-repeat center center;
+        background-size: cover;
+        color: white; /* Pour améliorer la lisibilité du texte */
+    }
+    #changeGroupModal .modal-body,
+    #changeGroupModal .modal-header,
+    #changeGroupModal .modal-footer {
+        background: rgba(0, 0, 0, 0.6); /* Ajoute une légère transparence pour le contenu */
+    }
+    #changeGroupModal .modal-body, #changeGroupModal .modal-header, #changeGroupModal .modal-footer {
+    background: rgb(255 255 255 / 60%);
+}
+    .modal-content{
+        width: 57% !important;
+    }
+    .modal.show .modal-dialog {
+        transform: matrix(1, 0, 0, 1, 170, 111) !important;
+    }
 </style>
 
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000; width: 100%; height: 90px; background-color: #435ebe;">

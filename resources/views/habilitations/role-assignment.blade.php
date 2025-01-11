@@ -16,7 +16,7 @@
                     <label for="group" class="form-label">Sélectionnez un groupe utilisateur</label>
                     <select class="form-select" id="group" name="group">
                         @foreach($groupes as $groupe)
-                            <option value="{{ $groupe->id }}">{{ $groupe->libelle_groupe }}</option>
+                            <option value="{{ $groupe->id }}">{{ $groupe->name }}</option>
                         @endforeach
                     </select>
                 </div>

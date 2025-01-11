@@ -11,7 +11,16 @@
 @section('content')
 
 @if (session('success'))
-    <script>alert("{{ session('success') }}");</script>
+    <script>toastr.success("{{ session('success') }}");</script>
+@endif
+@if (session('error'))
+    <script>toastr.error("{{ session('error') }}");</script>
+@endif
+
+@if ($errors->any())
+    @foreach ($errors->all() as $error)
+        <script>toastr.error("{{ $error }}");</script>
+    @endforeach
 @endif
 
 <div class="page-heading">
@@ -43,37 +52,57 @@
                 <div class="row">
                     <div class="form-pays col-md-3 text-start">
                         <label for="pays_id" class="text-start">Pays</label>
-                        <input type="text"  id="pays_id" name="pays_id[]" class="form-control" style="width: 100%;" value="{{ $codePays->nom_fr_fr }}" readonly>
+                        <input type="hidden" name="pays_id" id="pays_id" value="{{ $codePays->alpha3 }}">
+                        <input type="text"  id="pays_libelle" name="pays_libelle[]" class="form-control" style="width: 100%;" value="{{ $codePays->nom_fr_fr }}" readonly>
                     </div>
                     <div class="col-5"></div>
-                    @if(auth()->user()->groupe_utilisateur_id != 'ag')
                     <!-- Groupes Projets -->
                     <div class="form-group col-md-4">
                         <label for="groupe_projet_id">Groupe Projet</label>
-                        <input type="text"  id="groupe_projet_id" name="groupe_projet_id[]" class="form-control" value="{{ $groupProjects->libelle }}" readonly>
+                        <input type="hidden" name="groupe_projet_id" id="groupe_projet_id" value="{{ $groupProjects->code }}">
+                        <input type="text"  id="groupe_projet_libelle" name="groupe_projet_libelle[]" class="form-control" value="{{ $groupProjects->libelle }}" readonly>
                     </div>
-                    @endif
                 </div>
                 <div class="row">
                     <div class="row mt-3">
                         <div class="form-group col-md-4">
                             <label for="acteur_id">Acteur</label>
-                            <select class="form-control" id="acteur_id" name="acteur_id" required>
-                                <option value="">Sélectionnez un acteur</option>
-                                @foreach ($acteurs as $acteur)
-                                    <option value="{{ $acteur->code_acteur }}"
-                                            data-code-acteur = "{{ $acteur->code_acteur }}"
-                                            data-email="{{ $acteur->email }}"
-                                            data-telephone="{{ $acteur->telephone }}"
-                                            data-adresse="{{ $acteur->adresse }}"
-                                            data-type-acteur="{{ $acteur->type_acteur }}"
-                                            data-type-nom = "{{ $acteur->libelle_court }}">
-                                            {{ $acteur->libelle_court }} {{ $acteur->libelle_long }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
 
+                            <!-- Sélection Acteur pour l'ajout -->
+                            <div id="acteur-selection-ajout">
+                                <select class="form-control" id="acteur_id" name="acteur_id" required>
+                                    <option value="">Sélectionnez un acteur</option>
+                                    @foreach ($acteurs as $acteur)
+                                        <option value="{{ $acteur->code_acteur }}"
+                                                data-code-acteur="{{ $acteur->code_acteur }}"
+                                                data-email="{{ $acteur->email }}"
+                                                data-telephone="{{ $acteur->telephone }}"
+                                                data-adresse="{{ $acteur->adresse }}"
+                                                data-type-acteur="{{ $acteur->type_acteur }}"
+                                                data-type-nom="{{ $acteur->libelle_court }}">
+                                            {{ $acteur->libelle_court }} {{ $acteur->libelle_long }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Sélection Acteur pour la modification (readonly) -->
+                            <div id="acteur-selection-modifier" style="display: none;">
+                                <select class="form-control" id="acteur_id_Modifier" name="acteur_id_Modifier" required readonly>
+                                    @foreach ($acteurUpdate as $acteur)
+                                        <option value="{{ $acteur->code_acteur }}"
+                                                data-code-acteur="{{ $acteur->code_acteur }}"
+                                                data-email="{{ $acteur->email }}"
+                                                data-telephone="{{ $acteur->telephone }}"
+                                                data-adresse="{{ $acteur->adresse }}"
+                                                data-type-acteur="{{ $acteur->type_acteur }}"
+                                                data-type-nom="{{ $acteur->libelle_court }}">
+                                            {{ $acteur->libelle_court }} {{ $acteur->libelle_long }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row mt-3">
@@ -101,28 +130,7 @@
                             <label for="adresse">Adresse</label>
                             <input type="text" class="form-control" id="adresse" name="adresse" readonly>
                         </div>
-                        @if(auth()->user()->groupe_utilisateur_id != 'ab')
-                        @if(auth()->user()->groupe_utilisateur_id != 'ad')
-                        <!-- Champs d'exercice -->
-                        <div class="form-group col-md-4">
-                            <label for="champs_exercice">Champs d'exercice</label>
-                            <select id="champs_exercice" name="champs_exercice[]" class="form-select js-select2" multiple="multiple" style="width: 100%;">
-                                @foreach ($champsExercice as $champ)
-                                    <option value="{{ $champ->code_decoupage }}">{{ $champ->libelle_decoupage }}</option>
-                                @endforeach
-                            </select>
-                        </div>
 
-                        <!-- Lieux d'exercice -->
-                        <div class="form-group col-md-4">
-                            <label for="lieux_exercice">Lieux d'exercice</label>
-                            <select id="lieux_exercice" name="lieux_exercice[]" class="form-select js-select2" multiple="multiple" style="width: 100%;">
-
-                            </select>
-                        </div>
-                        @endif
-
-                        @endif
 
 
                         <!-- Email -->
@@ -136,7 +144,31 @@
                             <label for="telephone">Téléphone</label>
                             <input type="text" class="form-control" id="telephone" name="telephone" readonly>
                         </div>
+                        @if(auth()->user()->groupe_utilisateur_id != 'ab')
+                        @if(auth()->user()->groupe_utilisateur_id != 'ad')
 
+                            <div class="form-group col-md-4">
+                                <label for="champs_exercice">Champs d'exercice</label>
+                                <select id="champs_exercice" name="champs_exercice[]" class="form-select" multiple="multiple" style="width: 100%;" data-placeholder="Sélectionnez un champ">
+                                    @foreach ($champsExercice as $champ)
+                                        <option value="{{ $champ->code_decoupage }}">{{ $champ->libelle_decoupage }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="form-group col-md-4">
+                                <label for="lieux_exercice">Lieux d'exercice</label>
+                                <select id="lieux_exercice" name="lieux_exercice[]" class="form-select" multiple="multiple" style="width: 100%;" data-placeholder="Sélectionnez un lieu">
+                                    @foreach ($lieuxExercice as $lieu)
+                                        <option value="{{ $lieu->id }}">{{ $lieu->libelle }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
+                        @endif
+
+                        @endif
 
                     </div>
                 </div>
@@ -156,7 +188,7 @@
             <h5>Liste des Utilisateurs</h5>
         </div>
         <div class="card-body">
-            <table class="table table-striped table-bordered" id="users-table">
+            <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="users-table">
                 <thead>
                     <tr>
                         <th>Pays</th>
@@ -170,12 +202,7 @@
                 <tbody>
                     @foreach ($utilisateurs as $utilisateur)
                         <tr>
-                        <td>
-                            @foreach ($utilisateur->pays as $pays)
-                                {{ $pays->nom_fr_fr }}<br>
-                            @endforeach
-                        </td>
-
+                            <td>{{ $utilisateur->pays->first()->nom_fr_fr ?? 'Aucun pays' }}</td>
                             <td>{{ $utilisateur->acteur->libelle_long }}</td>
                             <td>{{ $utilisateur->login }}</td>
                             <td>{{ $utilisateur->groupeUtilisateur->libelle_groupe }}</td>
@@ -187,97 +214,33 @@
                                 @endif
                             </td>
                             <td>
-                                <!-- Modifier -->
-                                <a href="#" class="edit-button" data-id="{{ $utilisateur->id }}" data-bs-tog gle="modal" data-bs-target="#editUserModal">
-                                    <i class="bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;"></i>
+                                 <!-- Modifier -->
+                                <a href="#" class="edit-button" data-id="{{ $utilisateur->id }}" data-bs-toggle="modal" style="display: inline;">
+                                    <i class="btn btn-link bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;"></i>
                                 </a>
 
-                                <!-- Désactiver ou Réactiver -->
+                                <!-- Désactiver si l'utilisateur est actif -->
                                 @if ($utilisateur->is_active)
-                                    <a href="#" class="delete-button" data-id="{{ $utilisateur->id }}" data-bs-toggle="tooltip" title="Désactiver">
-                                        <i class="bi bi-x-circle" style="font-size: 1.2rem; color: red; cursor: pointer;"></i>
-                                    </a>
+                                    <form action="{{ route('utilisateurs.disable', $utilisateur->id) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        <button type="submit" class="btn btn-link" data-bs-toggle="tooltip" title="Désactiver">
+                                            <i class=" bi bi-x-circle" style="font-size: 1.2rem; color: red; cursor: pointer;"></i>
+                                        </button>
+                                    </form>
                                 @else
-                                    <a href="{{ route('utilisateurs.restore', $utilisateur->id) }}"data-id="{{ $utilisateur->id }}" class="restore-button" data-bs-toggle="tooltip" title="Réactiver">
-                                        <i class="bi bi-check-circle" style="font-size: 1.2rem; color: green; cursor: pointer;"></i>
-                                    </a>
+                                    <!-- Réactiver si l'utilisateur est inactif -->
+                                    <form action="{{ route('utilisateurs.restore', $utilisateur->id) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        <button type="submit" class="btn btn-link" data-bs-toggle="tooltip" title="Réactiver">
+                                            <i class="bi bi-check-circle" style="font-size: 1.2rem; color: green; cursor: pointer;"></i>
+                                        </button>
+                                    </form>
                                 @endif
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <!-- Modal pour modifier l'utilisateur -->
-    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editUserModalLabel">Modifier un Utilisateur</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="edit-user-form" method="POST" action="">
-                        @csrf
-                        @method('PUT')
-
-                        <input type="hidden" id="edit-user-id" name="id">
-
-                        <div class="row">
-                            <div class="form-group col-md-4">
-                                <label for="edit-acteur_id">Acteur</label>
-                                <select class="form-control" id="edit-acteur_id" name="acteur_id" disabled>
-                                    <option value="">Sélectionnez un acteur</option>
-                                    @foreach ($acteurs as $acteur)
-                                        <option value="{{ $acteur->code_acteur }}">{{ $acteur->libelle_long }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="form-group col-md-4">
-                                <label for="edit-email">Email</label>
-                                <input type="email" class="form-control" id="edit-email" name="email" readonly>
-                            </div>
-
-                            <div class="form-group col-md-4">
-                                <label for="edit-telephone">Téléphone</label>
-                                <input type="text" class="form-control" id="edit-telephone" name="telephone" readonly>
-                            </div>
-
-                            <div class="form-group col-md-4">
-                                <label for="edit-adresse">Adresse</label>
-                                <input type="text" class="form-control" id="edit-adresse" name="adresse" readonly>
-                            </div>
-
-                            <div class="form-group col-md-4">
-                                <label for="edit-groupe_utilisateur_id">Rôle</label>
-                                <select class="form-control" id="edit-groupe_utilisateur_id" name="groupe_utilisateur_id">
-                                    <option value="">Sélectionnez un rôle</option>
-                                    @foreach ($roles as $role)
-                                        <option value="{{ $role->code }}">{{ $role->libelle_groupe }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="form-group col-md-4">
-                                <label for="edit-fonction_utilisateur">Fonction</label>
-                                <select class="form-control" id="edit-fonction_utilisateur" name="fonction_utilisateur">
-                                    <option value="">Sélectionnez une fonction</option>
-                                </select>
-                            </div>
-
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                            <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -293,6 +256,68 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
 <script>
+$(document).ready(function () {
+    // Définir la source de données depuis le tableau HTML
+    var tableData = [];
+    $("#users-table tbody tr").each(function () {
+        var row = $(this);
+        tableData.push({
+            pays: row.find("td:eq(0)").text().trim(),
+            nom: row.find("td:eq(1)").text().trim(),
+            login: row.find("td:eq(2)").text().trim(),
+            role: row.find("td:eq(3)").text().trim(),
+            statut: row.find("td:eq(4)").text().trim(),
+        });
+    });
+
+    // Initialisation de DevExtreme DataGrid
+    $("#dataGridContainer").dxDataGrid({
+        dataSource: tableData, // Données de la table
+        keyExpr: "login",
+        columns: [
+            { dataField: "pays", caption: "Pays", width: 150 },
+            { dataField: "nom", caption: "Nom", width: 200 },
+            { dataField: "login", caption: "Login", width: 150 },
+            { dataField: "role", caption: "Rôle", width: 150 },
+            {
+                dataField: "statut",
+                caption: "Statut",
+                cellTemplate: function(container, options) {
+                    let badgeClass = options.value === "Actif" ? "badge bg-success" : "badge bg-danger";
+                    $("<span>").addClass(badgeClass).text(options.value).appendTo(container);
+                }
+            }
+        ],
+        showBorders: true,
+        filterRow: { visible: true }, // Filtrage rapide
+        searchPanel: { visible: true }, // Barre de recherche
+        paging: { pageSize: 10 }, // Pagination
+        pager: {
+            showPageSizeSelector: true,
+            allowedPageSizes: [10, 20, 50],
+            showInfo: true
+        },
+        columnChooser: { enabled: true }, // Sélectionner les colonnes visibles
+        export: { enabled: true }, // Export Excel
+        onExporting: function(e) {
+            var workbook = new ExcelJS.Workbook();
+            var worksheet = workbook.addWorksheet("Utilisateurs");
+
+            DevExpress.excelExporter.exportDataGrid({
+                component: e.component,
+                worksheet: worksheet,
+                autoFilterEnabled: true,
+            }).then(function() {
+                workbook.xlsx.writeBuffer().then(function(buffer) {
+                    saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Utilisateurs.xlsx");
+                });
+            });
+
+            e.cancel = true;
+        }
+    });
+});
+
     document.addEventListener('DOMContentLoaded', function () {
         // Quand un acteur est sélectionné
         document.getElementById('acteur_id').addEventListener('change', function () {
@@ -347,203 +372,107 @@
     });
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Gestion du bouton Modifier
-            document.querySelectorAll('.edit-button').forEach(button => {
-                console.log('Le modal s\'affiche correctement.');
-                button.addEventListener('click', function () {
-                    const userId = this.getAttribute('data-id');
-                    console.log(`Chargement des données pour l'utilisateur ID : ${userId}`);
+        document.getElementById('toggle-form-btn').addEventListener('click', function () {
+            document.getElementById('acteur-selection-ajout').style.display = 'block';
+            document.getElementById('acteur-selection-modifier').style.display = 'none';
 
-                    fetch(`{{ url('/utilisateurs')}}/${userId}`)
-                        .then(response => {
-                            if (!response.ok) {
-                                console.error('Erreur HTTP :', response.status);
-                                throw new Error('Erreur de récupération des données');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log('Données utilisateur :', data);
-
-                            // Remplir les champs
-                            document.getElementById('edit-user-id').value = data.id || '';
-                            document.getElementById('edit-acteur_id').value = data.acteur_id || '';
-                            document.getElementById('edit-email').value = data.email || '';
-                            document.getElementById('edit-telephone').value = data.telephone || '';
-                            document.getElementById('edit-adresse').value = data.adresse || '';
-                            document.getElementById('edit-groupe_utilisateur_id').value = data.groupe_utilisateur_id || '';
-                            document.getElementById('edit-fonction_utilisateur').value = data.fonction_utilisateur || '';
-
-                            // Gérer les groupes projets
-                            const groupSelect = document.getElementById('edit-groupe_projet_id');
-                            const projectCodes = data.groupe_projets.map(project => project.code);
-                            $(groupSelect).val(projectCodes).trigger('change');
-
-                            // Afficher le modal
-                            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-                            modal.show();
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de la récupération des données :', error);
-                            alert('Erreur lors du chargement des données utilisateur.');
-                        });
-                });
-
+            // Activer required pour acteur_id et désactiver pour acteur_id_Modifier
+            document.getElementById('acteur_id').setAttribute('required', 'true');
+            document.getElementById('acteur_id_Modifier').removeAttribute('required');
         });
-
-
-        // Gestion des boutons Désactiver/Activer
-        document.querySelectorAll('.delete-button').forEach(button => {
+        document.querySelectorAll('.edit-button').forEach(button => {
             button.addEventListener('click', function () {
                 const userId = this.getAttribute('data-id');
-                const url = `{{ url('/utilisateurs')}}/${userId}`;
 
-                if (confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')) {
-                    fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } })
-                        .then(response => {
-                            if (response.ok) {
-                                alert('Utilisateur désactivé avec succès.');
-                                location.reload();
-                            } else {
-                                location.reload();
+                fetch(`/utilisateurs/${userId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            //console.error('Erreur HTTP :', response.status);
+                            throw new Error('Erreur lors de la récupération des données');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        //console.log('Données utilisateur :', data);
 
-                            }
-                        })
-                        .catch(error => console.error('Erreur lors de la désactivation de l\'utilisateur :', error));
-                }
+                        // Afficher le champ acteur_id_Modifier et cacher acteur_id
+                        document.getElementById('acteur-selection-ajout').style.display = 'none';
+                        document.getElementById('acteur-selection-modifier').style.display = 'block';
+
+                        // Désactiver required pour acteur_id et activer pour acteur_id_Modifier
+                        document.getElementById('acteur_id').removeAttribute('required');
+                        document.getElementById('acteur_id_Modifier').setAttribute('required', 'true');
+
+                        // Sélectionner l'acteur dans le champ de modification
+                        const acteurSelect = document.getElementById('acteur_id_Modifier');
+                        if (acteurSelect) {
+                            acteurSelect.value = data.acteur_id;
+                        }
+
+                        // Remplir les autres champs
+                        document.getElementById('user-id').value = data.id;
+                        document.getElementById('email').value = data.email;
+                        document.getElementById('telephone').value = data.acteur.telephone;
+                        document.getElementById('adresse').value = data.acteur.adresse;
+                        document.getElementById('groupe_utilisateur_id').value = data.groupe_utilisateur_id;
+                        document.getElementById('login').value = data.login;
+                        document.getElementById('password').value = ''; // Ne pas afficher l'ancien mot de passe
+
+                        // Sélection des champs d'exercice
+                        const champSelect = document.getElementById('champs_exercice');
+                        if (champSelect) {
+                            const champIds = data.champs_exercice.map(champ => champ.champ_exercice_id);
+                            $(champSelect).val(champIds).trigger('change');
+                        }
+
+                        // Sélection des lieux d'exercice
+                        const lieuSelect = document.getElementById('lieux_exercice');
+                        if (lieuSelect) {
+                            const lieuIds = data.lieux_exercice.map(lieu => lieu.lieu_exercice_id);
+                            $(lieuSelect).val(lieuIds).trigger('change');
+                        }
+
+                        // Modifier l'action du formulaire pour la mise à jour
+                        const form = document.getElementById('user-form');
+                        if (form) {
+                            form.setAttribute('action', `/utilisateurs/${userId}`);
+                            document.getElementById('form-method').value = 'PUT';
+                        }
+
+                        // Changer le bouton "Enregistrer" en "Modifier"
+                        const submitButton = document.getElementById('submit-button');
+                        if (submitButton) {
+                            submitButton.textContent = 'Modifier';
+                            submitButton.classList.remove('btn-success');
+                            submitButton.classList.add('btn-warning');
+                        }
+
+                        // Afficher le formulaire
+                        document.getElementById('user-form-card').style.display = 'block';
+                    })
+                    .catch(error => {
+                       // console.error('Erreur lors de la récupération des données :', error);
+                        alert('Erreur lors du chargement des données utilisateur.');
+                    });
             });
         });
 
-        document.querySelectorAll('.restore-button').forEach(button => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-
-                const userId = this.getAttribute('data-id'); // Assurez-vous que cet ID est défini
-                if (!userId) {
-                    alert('L\'ID de l\'utilisateur est manquant.');
-                    return;
-                }
-
-                fetch(`{{ url('/utilisateurs')}}/restore/${userId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        alert('Utilisateur réactivé avec succès.');
-                        location.reload();
-                    } else {
-                        location.reload();
-                        /*alert('Erreur lors de la réactivation de l\'utilisateur.');*/
-                    }
-                })
-                .catch(error => console.error('Erreur lors de la réactivation :', error));
-            });
-        });
-
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        $(document).ready(function () {
-        $('#groupe_projet_id').select2({
-            rounded: true,
-            shadow: true,
-            allowClear: true,
-		    placeholder: "Clique pour selectionne les sous-domaines",
-            tagColor: {
-                textColor: '#327b2c',
-                borderColor: '#92e681',
-                bgColor: '#eaffe6',
-            },
-            onChange: function(values) {
-                console.log(values)
-            }
-	    });
-
-        // Initialisation pour d'autres champs (si nécessaire)
-        $('#champs_exercice').select2({
-            rounded: true,
-            shadow: true,
-		    placeholder: "Clique pour selectionne les sous-domaines",
-            tagColor: {
-                textColor: '#327b2c',
-                borderColor: '#92e681',
-                bgColor: '#eaffe6',
-            },
-            onChange: function(values) {
-                console.log(values)
-            }
-	    });
-
-        $('#lieux_exercice').select2({
-            rounded: true,
-            shadow: true,
-		    placeholder: "Clique pour selectionne les sous-domaines",
-            tagColor: {
-                textColor: '#327b2c',
-                borderColor: '#92e681',
-                bgColor: '#eaffe6',
-            },
-            onChange: function(values) {
-                console.log(values)
-            }
-	    });
-        var pays = $('#pays_id').filterMultiSelect({
-            // displayed when no options are selected
-            placeholderText: "0 sélection",
-            // placeholder for search field
-            filterText: "Filtrer",
-            // Select All text
-            selectAllText: "Tout sélectionner",
-            // Label text
-            labelText: "",
-            // the number of items able to be selected
-            // 0 means no limit
-            selectionLimit: 0,
-            // determine if is case sensitive
-            caseSensitive: false,
-            // allows the user to disable and enable options programmatically
-            allowEnablingAndDisabling: true,
-
+        // Réinitialiser le formulaire pour l'ajout d'un nouvel utilisateur
+        document.getElementById('toggle-form-btn').addEventListener('click', function () {
+            document.getElementById('acteur-selection-ajout').style.display = 'block';
+            document.getElementById('acteur-selection-modifier').style.display = 'none';
+            document.getElementById('user-form').reset();
+            document.getElementById('form-method').value = 'POST';
+            document.getElementById('submit-button').textContent = 'Enregistrer';
+            document.getElementById('submit-button').classList.remove('btn-warning');
+            document.getElementById('submit-button').classList.add('btn-success');
         });
     });
-    });
-    $(document).ready(function () {
-        // Préparer les données des lieux d'exercice pour un filtrage rapide
-        const lieuxExerciceData = @json($lieuxExercice);
 
-        $('#champs_exercice').on('change', function () {
-            const selectedDecoupage = $(this).val(); // Découpages sélectionnés
-            const lieuExerciceSelect = $('#lieux_exercice');
 
-            // Réinitialiser la liste des lieux
-            lieuExerciceSelect.empty();
-            lieuExerciceSelect.append('<option value="">--- Sélectionnez un lieu ---</option>');
 
-            if (selectedDecoupage) {
-                // Ajouter les lieux correspondant aux champs sélectionnés
-                lieuxExerciceData.forEach(function (lieu) {
-                    if (selectedDecoupage.includes(lieu.code_decoupage)) {
-                        lieuExerciceSelect.append(
-                            `<option value="${lieu.id}">${lieu.libelle}</option>`
-                        );
-                    }
-                });
-            }
 
-            // Réinitialiser l'affichage du multiselect
-            lieuExerciceSelect.trigger('change');
-        });
 
-        // Initialisation des selects avec Select2
-        $('#groupe_projet_id, #champs_exercice, #lieux_exercice').select2({
-            placeholder: 'Sélectionnez une option',
-            allowClear: true
-        });
-    });
     document.addEventListener('DOMContentLoaded', function () {
         // Quand un acteur est sélectionné
         document.getElementById('acteur_id').addEventListener('change', function () {
@@ -565,5 +494,90 @@
     });
 
 </script>
+<script>
+$(document).ready(function () {
+    let lieuxExerciceData = @json($lieuxExercice);
 
+    function initSelect2WithCheckbox(selector) {
+        $(selector).select2({
+            closeOnSelect: false,
+            allowClear: true,
+            placeholder: $(selector).data('placeholder'),
+            templateResult: formatOption,
+            templateSelection: formatSelection
+        });
+
+        let selectElement = $(selector);
+
+        // Ajouter une option "Tout sélectionner" en premier
+        if (!selectElement.find('option[value="all"]').length) {
+            selectElement.prepend('<option value="all">Tout sélectionner</option>');
+        }
+
+        function formatOption(option) {
+            if (!option.id) return option.text;
+            return $('<span><input type="checkbox" class="checkbox-select2"> ' + option.text + '</span>');
+        }
+
+        function formatSelection(option) {
+            return option.text;
+        }
+
+        selectElement.on('select2:selecting', function (e) {
+            if (e.params.args.data.id === "all") {
+                let allOptions = $(this).find('option:not([value="all"])').map(function () {
+                    return $(this).val();
+                }).get();
+
+                $(this).val(allOptions).trigger("change");
+                return false;
+            }
+        });
+
+        selectElement.on('select2:unselecting', function (e) {
+            if (e.params.args.data.id === "all") {
+                $(this).val([]).trigger("change");
+                return false;
+            }
+        });
+    }
+
+    initSelect2WithCheckbox('#champs_exercice');
+    initSelect2WithCheckbox('#lieux_exercice');
+
+    // Auto-remplissage email, téléphone, adresse en fonction de l'acteur sélectionné
+    $('#acteur_id').on('change', function () {
+        let selected = $(this).find(':selected');
+        $('#email').val(selected.data('email') || '');
+        $('#telephone').val(selected.data('telephone') || '');
+        $('#adresse').val(selected.data('adresse') || '');
+    });
+
+    // Accélération du filtrage des lieux d'exercice
+    $('#champs_exercice').on('change', function () {
+        const selectedDecoupage = $(this).val();
+        const lieuExerciceSelect = $('#lieux_exercice');
+
+        // Utilisation d'un Document Fragment pour améliorer la performance
+        let fragment = document.createDocumentFragment();
+
+        lieuExerciceSelect.empty();
+        lieuExerciceSelect.append('<option value="all">Tout sélectionner</option>');
+
+        if (selectedDecoupage) {
+            lieuxExerciceData.forEach(function (lieu) {
+                if (selectedDecoupage.includes(lieu.code_decoupage)) {
+                    let option = document.createElement("option");
+                    option.value = lieu.id;
+                    option.textContent = lieu.libelle;
+                    fragment.appendChild(option);
+                }
+            });
+        }
+
+        lieuExerciceSelect.append(fragment);
+        lieuExerciceSelect.trigger('change');
+    });
+});
+</script>
 @endsection

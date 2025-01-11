@@ -123,7 +123,7 @@
                                     <select class="form-select" id="role" required name="role">
                                         <option value="" selected>Sélectionez un groupe utilisateur</option>
                                         @foreach($roles as $role)
-                                        <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                        <option value="{{ $role->code }}">{{ $role->libelle_groupe }}</option>
                                         @endforeach
                                     </select>
                                 </div>

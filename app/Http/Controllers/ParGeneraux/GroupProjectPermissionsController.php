@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ecran;
 use App\Models\GroupeUtilisateur;
 use App\Models\GroupProjectPermission;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -74,4 +75,82 @@ class GroupProjectPermissionsController extends Controller
             return redirect()->back()->withErrors("Une erreur est survenue lors de la suppression de la permission pour groupes projets.");
         }
     }
+
+    ////////GROUPE PROJET ///////////
+   /**
+     * Afficher la liste des groupes utilisateurs
+     */
+    public function groupe(Request $request)
+    {
+        try {
+            Log::info('Chargement des groupes utilisateurs.');
+            $groupes = GroupeUtilisateur::all();
+            $ecran = Ecran::find($request->input('ecran_id'));
+
+            return view('parGeneraux.groupeUtilisateur', compact('groupes', 'ecran'));
+        } catch (\Exception $e) {
+            Log::error("Erreur lors du chargement des groupes utilisateurs : " . $e->getMessage());
+            return redirect()->back()->with('error', "Une erreur est survenue lors du chargement des groupes.");
+        }
+    }
+
+    /**
+     * Ajouter un nouveau groupe utilisateur
+     */
+    public function storeGroupe(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:10|unique:groupe_utilisateur,code',
+            'libelle_groupe' => 'required|string|max:255'
+        ]);
+
+        try {
+            GroupeUtilisateur::create([
+                'code' => $request->code,
+                'libelle_groupe' => $request->libelle_groupe
+            ]);
+
+            return redirect()->back()->with('success', 'Groupe utilisateur ajouté avec succès.');
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de l'ajout du groupe utilisateur : " . $e->getMessage());
+            return redirect()->back()->with('error', "Une erreur est survenue lors de l'ajout.");
+        }
+    }
+
+    /**
+     * Mettre à jour un groupe utilisateur
+     */
+    public function updateGroupe(Request $request, $id)
+    {
+        $request->validate([
+            'libelle_groupe' => 'required|string|max:255'
+        ]);
+
+        try {
+            $groupe = GroupeUtilisateur::findOrFail($id);
+            $groupe->update(['libelle_groupe' => $request->libelle_groupe]);
+
+            return redirect()->back()->with('success', 'Groupe utilisateur mis à jour avec succès.');
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la mise à jour du groupe utilisateur : " . $e->getMessage());
+            return redirect()->back()->with('error', "Une erreur est survenue lors de la mise à jour.");
+        }
+    }
+
+    /**
+     * Supprimer un groupe utilisateur
+     */
+    public function destroyGroupe($id)
+    {
+        try {
+            $groupe = GroupeUtilisateur::findOrFail($id);
+            $groupe->delete();
+
+            return redirect()->back()->with('success', 'Groupe utilisateur supprimé avec succès.');
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la suppression du groupe utilisateur : " . $e->getMessage());
+            return redirect()->back()->with('error', "Une erreur est survenue lors de la suppression.");
+        }
+    }
+
 }

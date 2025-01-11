@@ -54,7 +54,7 @@ class LoginController extends Controller
 
             Log::info('Pays associés récupérés.', ['count' => $pays->count()]);
 
-            if ($pays->count() > 1) {
+            if ($pays->count() >= 1) {
                 Log::info('Utilisateur associé à plusieurs pays.', ['user_id' => $user->acteur_id]);
                 session(['step' => 'choose_country']);
                 return response()->json(['step' => 'choose_country', 'data' => $pays]);
@@ -88,7 +88,7 @@ class LoginController extends Controller
             Log::info('Groupes projets récupérés :', $groupes->toArray());
         Log::info('Projets récupérés après sélection du pays.', ['count' => $groupes->count()]);
 
-        if ($groupes->count() > 1) {
+        if ($groupes->count() >= 1) {
             session(['step' => 'choose_group']);
             return response()->json(['step' => 'choose_group', 'data' => $groupes]);
         }
@@ -190,40 +190,40 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
 
         Log::info('Déconnexion réussie.');
-        return redirect()->route('login')->with('success', 'Vous êtes déconnecté.');
+        return redirect()->route('login');
     }
     /**
-     * 
-     *  
+     *
+     *
      **/
 
      public function getGroupsByCountry(Request $request)
      {
          $request->validate(['pays_code' => 'required|string']);
-         
+
          $user = Auth::user();
          $groupes = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
              ->where('pays_code', $request->pays_code)
              ->with('groupeProjet')
              ->get();
-     
+
          return response()->json($groupes);
      }
-     
+
      public function changeGroup(Request $request)
      {
          $request->validate([
              'pays_code' => 'required|string',
              'projet_id' => 'required|exists:groupe_projet_pays_user,groupe_projet_id'
          ]);
-     
+
          session([
              'pays_selectionne' => $request->pays_code,
              'projet_selectionne' => $request->projet_id
          ]);
-     
+
          return response()->json(['success' => true]);
      }
-     
+
 
 }

@@ -160,15 +160,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::delete('admin/materielStockage/delete/{code}', [PlateformeController::class, 'deleteMaterielStockage'])->name('materielStockage.delete');
     Route::post('/check-materielStockage-code', [PlateformeController::class, 'checkMaterielStockageCode']);
 
-    //***************** Groupe utilisateur ************* */
-    Route::get('admin/groupeUtilisateur', [PlateformeController::class, 'groupeUtilisateur'])->name('groupeUtilisateur');
-    Route::get('admin/groupeUtilisateur/{code}', [PlateformeController::class, 'getGroupeUtilisateur'])->name('groupeUtilisateur.show');
-    Route::post('admin/groupeUtilisateur', [PlateformeController::class, 'storeGroupeUtilisateur'])->name('groupeUtilisateur.store');
-    Route::post('admin/groupeUtilisateur/update', [PlateformeController::class, 'updateGroupeUtilisateur'])->name('groupeUtilisateur.update');
-    Route::delete('admin/groupeUtilisateur/delete/{code}', [PlateformeController::class, 'deleteGroupeUtilisateur'])->name('groupeUtilisateur.delete');
-    Route::post('/check-groupeUtilisateur-code', [PlateformeController::class, 'checkGroupeUtilisateurCode']);
-    Route::get('/admin/get-groupes/{code}', [PlateformeController::class, 'getGroupeUtilisateursByFonction'])->name('groupeUtilisateur.byFonction');
-
     //***************** Genre ************* */
     Route::get('admin/genre', [PlateformeController::class, 'genre'])->name('genre');
     Route::get('admin/genre/{code}', [PlateformeController::class, 'getGenre'])->name('genre.show');
@@ -526,8 +517,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');
     Route::get('/utilisateurs/{id}', [UtilisateurController::class, 'show'])->name('utilisateurs.show');
     Route::put('/utilisateurs/{id}', [UtilisateurController::class, 'update'])->name('utilisateurs.update');
-    Route::patch('/utilisateurs/restore/{id}', [UtilisateurController::class, 'restore'])->name('utilisateurs.restore');
-    Route::delete('/utilisateurs/{id}', [UtilisateurController::class, 'destroy'])->name('utilisateurs.destroy');
+    Route::post('/utilisateurs/{id}/disable', [UtilisateurController::class, 'disable'])->name('utilisateurs.disable');
+    Route::post('/utilisateurs/{id}/restore', [UtilisateurController::class, 'restore'])->name('utilisateurs.restore');
+
     Route::get('/fonctions-par-type-acteur/{typeActeur}', [UtilisateurController::class, 'getFonctionsByTypeActeur']);
 
     /*************************PERMISSIONS */
@@ -543,7 +535,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::put('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'store'])->name('group_project_permissions.update'); // Mise à jour d'une permission
     Route::delete('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'destroy'])->name('group_project_permissions.destroy'); // Suppression d'une permission
 
-
+    // Groupe Projet
+    Route::get('admin/groupeUtilisateur', [GroupProjectPermissionsController::class, 'groupe'])->name('groupes-utilisateurs.index');
+    Route::post('/groupeUtilisateur/store', [GroupProjectPermissionsController::class, 'storeGroupe'])->name('groupes-utilisateurs.store');
+    Route::post('/groupeUtilisateur/update/{id}', [GroupProjectPermissionsController::class, 'updateGroupe'])->name('groupes-utilisateurs.update');
+    Route::post('/groupeUtilisateur/delete/{id}', [GroupProjectPermissionsController::class, 'destroyGroupe'])->name('groupes-utilisateurs.destroy');
 });
 
 // MAP

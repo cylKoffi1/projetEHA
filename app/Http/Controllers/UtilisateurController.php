@@ -8,8 +8,8 @@ use App\Models\DecoupageAdministratif;
 use App\Models\DecoupageAdminPays;
 use App\Models\Ecran;
 use App\Models\FonctionTypeActeur;
-use App\Models\GroupeUtilisateur;
 use App\Models\GroupeProjet;
+use App\Models\GroupeUtilisateur;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\GroupeProjetUser;
 use App\Models\LocalitesPays;
@@ -37,29 +37,41 @@ class UtilisateurController extends Controller
             $user = Auth::user();
 
             $ecran = Ecran::find($request->input('ecran_id'));
-            $utilisateurs = User::with([
-                'acteur',
-                'groupeUtilisateur',
-                'groupeProjet',
-                'champsExercice',
-                'lieuxExercice'
-            ])
-            ->get();
-
-            $groupeProjets = GroupeProjetPaysUser::where('user_id', $user->acteur_id)->value('groupe_projet_id');
-
-            // Vérifiez si un pays est sélectionné dans la session
+            // Récupérer les valeurs de session
             $paysSelectionne = session('pays_selectionne');
+            $groupeSelectionne = session('projet_selectionne');
 
             if (!$paysSelectionne) {
                 return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
                     ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un pays avant de continuer.');
             }
-            $groupeSelectionne = session('projet_selectionne');
+
             if (!$groupeSelectionne) {
                 return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
                     ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un groupe avant de continuer.');
             }
+
+            // Récupérer les utilisateurs filtrés
+            $utilisateurs = User::with([
+                'acteur',
+                'groupeUtilisateur',
+                'groupeProjets',
+                'champsExercice',
+                'lieuxExercice',
+                'pays'
+            ])
+            ->whereHas('pays', function ($query) use ($paysSelectionne) {
+                $query->where('alpha3', $paysSelectionne);
+            })
+            ->whereHas('groupeProjets', function ($query) use ($groupeSelectionne) {
+                $query->where('code', $groupeSelectionne);
+            })
+            ->get();
+
+
+
+            $groupeProjets = GroupeProjetPaysUser::where('user_id', $user->acteur_id)->value('groupe_projet_id');
+
             $pays = Pays::all();
            $roles =
             RolePermission::where('role_source', Auth::user()->groupe_utilisateur_id)
@@ -71,7 +83,11 @@ class UtilisateurController extends Controller
 
             $acteurs = Acteur::where('is_user', 0)
             ->where('type_acteur', 'etp')
-            ->orderBy('libelle_court', 'asc')->get();;
+            ->orderBy('libelle_court', 'asc')->get();
+
+            $acteurUpdate = Acteur::where('is_user', 1)
+            ->where('type_acteur', 'etp')
+            ->orderBy('libelle_court', 'asc')->get();
 
             $codePays = Pays::where('alpha3', $paysSelectionne)->first();
 
@@ -91,7 +107,8 @@ class UtilisateurController extends Controller
                 'acteurs',
                 'champsExercice',
                 'lieuxExercice',
-                'codePays'
+                'codePays',
+                'acteurUpdate'
             ));
         } catch (\Exception $e) {
             Log::error("Erreur lors du chargement des utilisateurs : " . $e->getMessage());
@@ -114,8 +131,6 @@ class UtilisateurController extends Controller
                 'acteur_id' => 'required|exists:acteur,code_acteur',
                 'groupe_utilisateur_id' => 'exists:groupe_utilisateur,code',
                 'fonction_utilisateur' => 'string|max:255',
-                'groupe_projet_id' => 'nullable|array',
-                'groupe_projet_id.*' => 'exists:groupe_projet,code',
                 'champs_exercice' => 'nullable|array',
                 'champs_exercice.*' => 'exists:decoupage_admin_pays,code_decoupage',
                 'lieux_exercice' => 'nullable|array',
@@ -131,30 +146,66 @@ class UtilisateurController extends Controller
                 'acteur_id' => $request->acteur_id,
                 'groupe_utilisateur_id' => $request->groupe_utilisateur_id,
                 'fonction_utilisateur' => $request->fonction_utilisateur,
+                'groupe_projet_id' => $request->groupe_projet_id ?? session('projet_selectionne'), // Ajout du groupe projet
                 'login' => $login,
                 'password' => $password,
                 'email' => $request->email,
-                'is_active' => true, // Utilisateur actif par défaut
+                'is_active' => true, // Par défaut actif
             ]);
+
             Acteur::where('code_acteur', $request->acteur_id)
                 ->update(['is_user' => true]);
 
-            $paysSelectionne = session('pays_selectionne');
-            if (!$paysSelectionne) {
-                return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
-                    ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un pays avant de continuer.');
-            }
+            // Assigner les groupes projets (plusieurs groupes) avec contrôle
+            if ($request->groupe_utilisateur_id) {
+                if ($request->groupe_utilisateur_id === 'ab') {
+                    // Administrateur de la plateforme : associer tous les pays et tous les groupes projets
+                    $paysList = LocalitesPays::distinct()->pluck('id_pays'); // Récupérer tous les id_pays sans doublon
+                    $groupeProjets = GroupeProjet::pluck('code'); // Récupérer tous les groupes de projet
 
-            // Assigner les groupes projets (plusieurs groupes)
-            if ($request->groupe_projet_id) {
-                foreach ($request->groupe_projet_id as $groupeProjetId) {
-                    GroupeProjetPaysUser::create([
-                        'user_code' => $request->acteur_id,
-                        'groupe_projet_id' => $groupeProjetId,
-                        'pays_code'=>$paysSelectionne,
+                    foreach ($paysList as $paysCode) {
+                        foreach ($groupeProjets as $groupeProjetId) {
+                            GroupeProjetPaysUser::updateOrCreate([
+                                'user_id' => $request->acteur_id,
+                                'pays_code' => $paysCode,
+                                'groupe_projet_id' => $groupeProjetId
+                            ]);
+                        }
+                    }
+                } elseif ($request->groupe_utilisateur_id === 'ad') {
+                    // Administrateur pays : associer au pays sélectionné et tous les groupes projets
+                    $paysSelectionne = session('pays_selectionne');
+                    $groupeProjets = GroupeProjet::pluck('code');
+
+                    foreach ($groupeProjets as $groupeProjetId) {
+                        GroupeProjetPaysUser::updateOrCreate([
+                            'user_id' => $request->acteur_id,
+                            'pays_code' => $paysSelectionne,
+                            'groupe_projet_id' => $groupeProjetId
+                        ]);
+                    }
+                } elseif ($request->groupe_utilisateur_id === 'ag') {
+                    // Administrateur groupe projet : associer au pays et groupe projet sélectionné
+                    $paysSelectionne = session('pays_selectionne');
+                    $groupeSelectionne = session('projet_selectionne');
+
+                    GroupeProjetPaysUser::updateOrCreate([
+                        'user_id' => $request->acteur_id,
+                        'pays_code' => $paysSelectionne,
+                        'groupe_projet_id' => $groupeSelectionne
+                    ]);
+                }else {
+                    // Utilisateur : associer au pays et groupe projet sélectionné
+                    $paysSelectionne = session('pays_selectionne');
+                    $groupeSelectionne = session('projet_selectionne');
+                    GroupeProjetPaysUser::updateOrCreate([
+                        'user_id' => $request->acteur_id,
+                        'pays_code' => $paysSelectionne,
+                        'groupe_projet_id' => $request->groupe_projet_id
                     ]);
                 }
             }
+
 
             // Assigner les champs d'exercice
             if ($request->champs_exercice) {
@@ -184,47 +235,20 @@ class UtilisateurController extends Controller
         }
     }
 
-    public function getFonctionsByTypeActeur($typeActeur)
-{
-    try {
-        Log::info('Chargement des fonctions pour le type acteur : ' . $typeActeur);
-
-        // Récupérer les fonctions associées au type acteur
-        $fonctions = FonctionTypeActeur::where('type_acteur_code', $typeActeur)
-            ->with('fonction') // Charger les détails de la fonction
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'code' => $item->fonction->code,
-                    'libelle_fonction' => $item->fonction->libelle_fonction,
-                ];
-            });
-
-        // Enregistrer les résultats dans le log
-        Log::info('Fonctions récupérées : ', $fonctions->toArray());
-
-        return response()->json($fonctions);
-    } catch (\Exception $e) {
-        // Enregistrer les erreurs dans le log
-        Log::error('Erreur lors du chargement des fonctions pour le type acteur ' . $typeActeur . ': ' . $e->getMessage());
-
-        return response()->json(['error' => 'Erreur lors du chargement des fonctions.'], 500);
+    /**
+     * afficher un utilisateur
+     */
+    public function show($id)
+    {
+        try {
+            $utilisateur = User::with(['acteur', 'groupeProjets', 'lieuxExercice', 'champsExercice'])->findOrFail($id);
+            Log::info("Utilisateur récupéré avec succès : ", $utilisateur->toArray());
+            return response()->json($utilisateur);
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la récupération des données utilisateur : " . $e->getMessage());
+            return response()->json(['error' => 'Une erreur est survenue lors de la récupération des données.'], 500);
+        }
     }
-}
-
-public function show($id)
-{
-    try {
-        $utilisateur = User::with(['acteur', 'groupeProjet'])->findOrFail($id);
-        Log::info("Utilisateur récupéré avec succès : ", $utilisateur->toArray());
-        return response()->json($utilisateur);
-    } catch (\Exception $e) {
-        Log::error("Erreur lors de la récupération des données utilisateur : " . $e->getMessage());
-        return response()->json(['error' => 'Une erreur est survenue lors de la récupération des données.'], 500);
-    }
-}
-
-
 
     /**
      * Modifier un utilisateur
@@ -232,84 +256,162 @@ public function show($id)
     public function update(Request $request, $id)
     {
         try {
-            Log::info("Modification de l'utilisateur ID {$id}.", ['data' => $request->all()]);
+            Log::info("Tentative de modification de l'utilisateur ID {$id}.", ['data' => $request->all()]);
 
-            $request->validate([
-                'groupe_utilisateur_id' => 'required|exists:groupe_utilisateur,id',
-                'groupe_projet_id' => 'nullable|array',
-                'groupe_projet_id.*' => 'exists:groupe_projet,id',
-                'fonction_utilisateur' => 'required|string|max:255',
+            // ✅ Étape 1 : Validation des données
+            $validator = \Validator::make($request->all(), [
+                'acteur_id_Modifier' => 'required|exists:acteur,code_acteur',
+                'groupe_utilisateur_id' => 'required|exists:groupe_utilisateur,code',
+                'fonction_utilisateur' => 'nullable|string|max:255',
+                'login' => 'required|string|max:255',
+                'password' => [
+                    'nullable',
+                    'string',
+                    'min:8',           // Minimum 8 caractères
+                    'regex:/[A-Z]/',   // Au moins une lettre majuscule
+                    'regex:/[a-z]/',   // Au moins une lettre minuscule
+                    'regex:/[0-9]/',   // Au moins un chiffre
+                    'regex:/[@$!%*?&]/' // Au moins un caractère spécial
+                ],
+                'email' => 'required|email|max:255',
                 'champs_exercice' => 'nullable|array',
-                'champs_exercice.*' => 'exists:decoupage_admin_pays,code',
+                'champs_exercice.*' => 'exists:decoupage_admin_pays,code_decoupage',
                 'lieux_exercice' => 'nullable|array',
                 'lieux_exercice.*' => 'exists:localites_pays,id',
             ]);
 
+            // Si la validation échoue, on stoppe immédiatement
+            if ($validator->fails()) {
+                return redirect()->back()->withErrors($validator)->withInput();
+            }
+
+            // ✅ Étape 2 : Vérifier manuellement le mot de passe si modifié
+            if (!empty($request->password)) {
+                if (!preg_match('/[A-Z]/', $request->password) ||
+                    !preg_match('/[a-z]/', $request->password) ||
+                    !preg_match('/[0-9]/', $request->password) ||
+                    !preg_match('/[@$!%*?&]/', $request->password)
+                ) {
+                    return redirect()->back()->withErrors(['password' => 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.'])->withInput();
+                }
+            }
+
+            // ✅ Étape 3 : Trouver l'utilisateur et mettre à jour les informations
             $utilisateur = User::findOrFail($id);
 
-            // Récupérer l'utilisateur connecté pour appliquer les règles
-            $utilisateurConnecte = auth()->user();
+            $updateData = [
+                'acteur_id' => $request->acteur_id_Modifier,
+                'groupe_utilisateur_id' => $request->groupe_utilisateur_id,
+                'fonction_utilisateur' => $request->fonction_utilisateur,
+                'login' => $request->login,
+                'email' => $request->email,
+            ];
 
-            // Vérifier les règles pour le rôle
-            if (!$this->peutAttribuerRole($utilisateurConnecte->groupeUtilisateur->code, $request->groupe_utilisateur_id)) {
-                return redirect()->back()->withErrors('Vous ne pouvez pas modifier ce rôle.');
+            // Si le mot de passe est modifié, on l'ajoute à la mise à jour
+            if (!empty($request->password)) {
+                $updateData['password'] = Hash::make($request->password);
             }
 
-            // Vérifier les règles pour les groupes projets
-            if (!$this->peutAttribuerGroupeProjet($utilisateurConnecte->groupeUtilisateur->code, $request->groupe_projet_id)) {
-                return redirect()->back()->withErrors('Vous ne pouvez pas modifier ces groupes projets.');
+            $utilisateur->update($updateData);
+
+            // ✅ Étape 4 : Mise à jour des groupes projets
+            $paysSelectionne = session('pays_selectionne');
+            $groupeSelectionne = session('projet_selectionne');
+
+            if ($request->groupe_utilisateur_id === 'ab') {
+                // Administrateur plateforme -> Associer à tous les pays et groupes projets
+                $paysList = LocalitesPays::distinct()->pluck('id_pays');
+                $groupeProjets = GroupeProjet::pluck('code');
+
+                foreach ($paysList as $paysCode) {
+                    foreach ($groupeProjets as $groupeProjetId) {
+                        GroupeProjetPaysUser::updateOrCreate([
+                            'user_id' => $request->acteur_id_Modifier,
+                            'pays_code' => $paysCode,
+                            'groupe_projet_id' => $groupeProjetId
+                        ]);
+                    }
+                }
+            } elseif ($request->groupe_utilisateur_id === 'ad') {
+                // Administrateur pays -> Associer au pays sélectionné et tous les groupes projets
+                $groupeProjets = GroupeProjet::pluck('code');
+
+                foreach ($groupeProjets as $groupeProjetId) {
+                    GroupeProjetPaysUser::updateOrCreate([
+                        'user_id' => $request->acteur_id_Modifier,
+                        'pays_code' => $paysSelectionne,
+                        'groupe_projet_id' => $groupeProjetId
+                    ]);
+                }
+            } elseif ($request->groupe_utilisateur_id === 'ag') {
+                // Administrateur groupe projet -> Associer au pays et groupe projet sélectionné
+                GroupeProjetPaysUser::updateOrCreate([
+                    'user_id' => $request->acteur_id_Modifier,
+                    'pays_code' => $paysSelectionne,
+                    'groupe_projet_id' => $groupeSelectionne
+                ]);
+            } else {
+                // Utilisateur simple -> Associer au groupe projet spécifique
+                GroupeProjetPaysUser::updateOrCreate([
+                    'user_id' => $request->acteur_id_Modifier,
+                    'pays_code' => $paysSelectionne,
+                    'groupe_projet_id' => $request->groupe_projet_id
+                ]);
             }
 
-            $utilisateur->update($request->only('groupe_utilisateur_id', 'fonction_utilisateur'));
-            $utilisateur->groupeProjet()->sync($request->groupe_projet_id);
-
-            // Mettre à jour les champs d'exercice
-            UtilisateurChampExercice::where('utilisateur_id', $id)->delete();
+            // ✅ Étape 5 : Mise à jour des Champs d'exercice
+            UtilisateurChampExercice::where('utilisateur_code', $id)->delete();
             if ($request->champs_exercice) {
                 foreach ($request->champs_exercice as $champExerciceId) {
                     UtilisateurChampExercice::create([
-                        'utilisateur_id' => $id,
+                        'utilisateur_code' => $id,
                         'champ_exercice_id' => $champExerciceId,
                     ]);
                 }
             }
 
-            // Mettre à jour les lieux d'exercice
-            UtilisateurLieuExercice::where('utilisateur_id', $id)->delete();
+            // ✅ Étape 6 : Mise à jour des Lieux d'exercice
+            UtilisateurLieuExercice::where('utilisateur_code', $id)->delete();
             if ($request->lieux_exercice) {
                 foreach ($request->lieux_exercice as $lieuExerciceId) {
                     UtilisateurLieuExercice::create([
-                        'utilisateur_id' => $id,
+                        'utilisateur_code' => $id,
                         'lieu_exercice_id' => $lieuExerciceId,
                     ]);
                 }
             }
 
-            Log::info("Utilisateur ID {$id} modifié avec succès.");
+            Log::info("Utilisateur ID {$id} mis à jour avec succès.");
             return redirect()->back()->with('success', 'Utilisateur mis à jour avec succès.');
         } catch (\Exception $e) {
             Log::error("Erreur lors de la modification de l'utilisateur ID {$id} : " . $e->getMessage());
-            return redirect()->back()->withErrors("Une erreur est survenue lors de la modification de l'utilisateur.");
+            return redirect()->back()->with('error', "Une erreur est survenue lors de la modification de l'utilisateur.");
         }
     }
+
+
+
 
 
     /**
      * Désactiver un utilisateur
      */
-    public function destroy($id)
+    public function disable($id)
     {
         try {
             Log::info("Tentative de désactivation de l'utilisateur ID {$id}.");
 
+            // Trouver l'utilisateur
             $utilisateur = User::findOrFail($id);
+
+            // Désactiver l'utilisateur
             $utilisateur->update(['is_active' => false]);
 
             Log::info("Utilisateur ID {$id} désactivé avec succès.");
             return redirect()->back()->with('success', 'Utilisateur désactivé avec succès.');
         } catch (\Exception $e) {
             Log::error("Erreur lors de la désactivation de l'utilisateur ID {$id} : " . $e->getMessage());
-            return redirect()->back()->withErrors("Une erreur est survenue lors de la désactivation de l'utilisateur.");
+            return redirect()->back()->with('error', "Une erreur est survenue lors de la désactivation de l'utilisateur.");
         }
     }
 
@@ -319,14 +421,9 @@ public function show($id)
     public function restore($id)
     {
         try {
-            if (is_null($id)) {
-                Log::error("Aucun ID fourni pour la réactivation de l'utilisateur.");
-                return redirect()->back()->withErrors('L\'ID de l\'utilisateur est manquant.');
-            }
-
             Log::info("Tentative de réactivation de l'utilisateur ID {$id}.");
 
-            // Rechercher l'utilisateur inactif explicitement
+            // Trouver l'utilisateur désactivé
             $utilisateur = User::where('id', $id)->where('is_active', false)->firstOrFail();
 
             // Réactiver l'utilisateur
@@ -336,25 +433,9 @@ public function show($id)
             return redirect()->back()->with('success', 'Utilisateur réactivé avec succès.');
         } catch (\Exception $e) {
             Log::error("Erreur lors de la réactivation de l'utilisateur ID {$id} : " . $e->getMessage());
-            return redirect()->back()->withErrors("Une erreur est survenue lors de la réactivation de l'utilisateur.");
+            return redirect()->back()->with('error', "Une erreur est survenue lors de la réactivation de l'utilisateur.");
         }
     }
 
 
-    ///////GROUPE UTILISATEUR//////////
-    public function getGroupesDisponibles()
-{
-    try {
-        // Récupérer le groupe utilisateur de l'utilisateur connecté
-        $groupeUtilisateur = GroupeUtilisateur::where('code', auth()->user()->groupe_utilisateur_id)->first();
-
-        // Récupérer les groupes enfants que ce groupe peut créer
-        $groupesDisponibles = $groupeUtilisateur->groupesEnfants;
-
-        return response()->json($groupesDisponibles);
-    } catch (\Exception $e) {
-        Log::error("Erreur lors de la récupération des groupes disponibles : " . $e->getMessage());
-        return response()->json(['error' => 'Une erreur est survenue lors du chargement des groupes disponibles.'], 500);
-    }
-}
 }
