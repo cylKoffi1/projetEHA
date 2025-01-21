@@ -36,6 +36,7 @@ use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
 use App\Models\EtudeProject;
 use App\Models\Renforcement;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Ui\Presets\React;
 use PasswordResetController as GlobalPasswordResetController;
 
@@ -452,7 +453,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
      Route::get('/admin/habilitations', [RoleAssignmentController::class, 'habilitations'])->name('habilitations.index');
      Route::get('/admin/role-assignment', [RoleAssignmentController::class, 'index'])->name('role-assignment.index');
      Route::post('/admin/role-assignment/assign', [RoleAssignmentController::class, 'assignRoles'])->name('role-assignment.assign');
-     Route::get('/get-role-permissions/{roleId}', [RoleAssignmentController::class, 'getRolePermissions']);
+     Route::get('/get-role-permissions/{groupeId}', [RoleAssignmentController::class, 'getRolePermissions']);
+
+
 
 
      Route::get('/admin/rubriques', [RoleAssignmentController::class, 'rubriques'])->name('rubriques.index');
@@ -481,6 +484,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
      Route::post('/get-groups-by-country', [LoginController::class, 'getGroupsByCountry'])->name('login.getGroupsByCountry');
      Route::post('/change-group', [LoginController::class, 'changeGroup'])->name('login.changeGroup');
 
+    Route::get('/get-progress/{key}', function ($key) {
+        return response()->json(['progress' => Cache::get($key, 0)]);
+    });
 
 
 
@@ -536,10 +542,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::delete('/group_project_permissions/{id}', [GroupProjectPermissionsController::class, 'destroy'])->name('group_project_permissions.destroy'); // Suppression d'une permission
 
     // Groupe Projet
+
     Route::get('admin/groupeUtilisateur', [GroupProjectPermissionsController::class, 'groupe'])->name('groupes-utilisateurs.index');
+    Route::get('/groupeUtilisateur/{id}/edit', [GroupProjectPermissionsController::class, 'edit'])->name('groupes-utilisateurs.edit');
     Route::post('/groupeUtilisateur/store', [GroupProjectPermissionsController::class, 'storeGroupe'])->name('groupes-utilisateurs.store');
     Route::post('/groupeUtilisateur/update/{id}', [GroupProjectPermissionsController::class, 'updateGroupe'])->name('groupes-utilisateurs.update');
-    Route::post('/groupeUtilisateur/delete/{id}', [GroupProjectPermissionsController::class, 'destroyGroupe'])->name('groupes-utilisateurs.destroy');
+    Route::post('admin/groupeUtilisateur/delete/{id}', [GroupProjectPermissionsController::class, 'destroyGroupe'])->name('groupes-utilisateurs.destroy');
 });
 
 // MAP

@@ -19,7 +19,9 @@
         color: #dc3545;
         /* Couleur du texte pour les messages d'erreur */
     }
-
+    th:empty {
+            border: none; /* Supprime les bordures des cellules vides */
+        }
 </style>
 <section id="multiple-column-form">
     <div class="page-heading">
@@ -85,7 +87,7 @@
                 <div class="card-content">
                     <div class="card-body">
 
-                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
+                        {{--<table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -321,8 +323,96 @@
                                     @endif
                                 </tr>
                             </tbody>
-                        </table>
+                        </table>--}}
 
+                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
+                            <thead>
+                                <tr>
+                                    <th colspan="3"></th>
+                                    <th colspan="2" style="text-align: center">Prévu</th>
+                                    <th colspan="2" style="text-align: center">En cours</th>
+                                    <th colspan="2" style="text-align: center">Clôturé</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="3"></th>
+                                    <th colspan="2">Cumul</th>
+                                    <th colspan="2">Cumul</th>
+                                    <th colspan="2">Cumul</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="2" ></th>
+                                    <th>Total</th>
+                                    <th>Public</th>
+                                    <th>Privé</th>
+                                    <th>Public</th>
+                                    <th>Privé</th>
+                                    <th>Public</th>
+                                    <th>Privé</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="2">National</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Bailleur</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Maître d'ouvrage</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Maître d'œuvre</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Chef de projet</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Ratio (%)</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -347,7 +437,7 @@
             hour: "numeric",
             minute: "numeric",
         });
-        var userName = "{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}";
+        var userName = "{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}";
         $("#" + table).DataTable({
             fixedColumns: true,
             language: {

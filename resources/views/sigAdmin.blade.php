@@ -103,7 +103,9 @@
         position: relative;
     }
 
-
+    th:empty {
+            border: none; /* Supprime les bordures des cellules vides */
+        }
     .wide-column{
         min-width: 100px;
     }
@@ -237,7 +239,25 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                 <label for="nombreProjet" class="form-control-label">Nombre de projet</label>
                                 <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
                             </div>
-                        </div>
+                            <div class="col-5 border border-bg-gray-100">
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="nombreProjet" class="form-control-label">Cumul</label>
+                                        <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                    </div>
+                                    <div class="col">
+                                        <label for="nombreProjet" class="form-control-label">Privé</label>
+                                        <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                    </div>
+                                    <div class="col">
+                                        <label for="nombreProjet" class="form-control-label">Public</label>
+                                        <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            </div>
                     </div>
                 </div>
                 <div class="card-content">

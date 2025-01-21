@@ -256,68 +256,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
 <script>
-$(document).ready(function () {
-    // Définir la source de données depuis le tableau HTML
-    var tableData = [];
-    $("#users-table tbody tr").each(function () {
-        var row = $(this);
-        tableData.push({
-            pays: row.find("td:eq(0)").text().trim(),
-            nom: row.find("td:eq(1)").text().trim(),
-            login: row.find("td:eq(2)").text().trim(),
-            role: row.find("td:eq(3)").text().trim(),
-            statut: row.find("td:eq(4)").text().trim(),
-        });
-    });
-
-    // Initialisation de DevExtreme DataGrid
-    $("#dataGridContainer").dxDataGrid({
-        dataSource: tableData, // Données de la table
-        keyExpr: "login",
-        columns: [
-            { dataField: "pays", caption: "Pays", width: 150 },
-            { dataField: "nom", caption: "Nom", width: 200 },
-            { dataField: "login", caption: "Login", width: 150 },
-            { dataField: "role", caption: "Rôle", width: 150 },
-            {
-                dataField: "statut",
-                caption: "Statut",
-                cellTemplate: function(container, options) {
-                    let badgeClass = options.value === "Actif" ? "badge bg-success" : "badge bg-danger";
-                    $("<span>").addClass(badgeClass).text(options.value).appendTo(container);
-                }
-            }
-        ],
-        showBorders: true,
-        filterRow: { visible: true }, // Filtrage rapide
-        searchPanel: { visible: true }, // Barre de recherche
-        paging: { pageSize: 10 }, // Pagination
-        pager: {
-            showPageSizeSelector: true,
-            allowedPageSizes: [10, 20, 50],
-            showInfo: true
-        },
-        columnChooser: { enabled: true }, // Sélectionner les colonnes visibles
-        export: { enabled: true }, // Export Excel
-        onExporting: function(e) {
-            var workbook = new ExcelJS.Workbook();
-            var worksheet = workbook.addWorksheet("Utilisateurs");
-
-            DevExpress.excelExporter.exportDataGrid({
-                component: e.component,
-                worksheet: worksheet,
-                autoFilterEnabled: true,
-            }).then(function() {
-                workbook.xlsx.writeBuffer().then(function(buffer) {
-                    saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Utilisateurs.xlsx");
-                });
-            });
-
-            e.cancel = true;
-        }
-    });
-});
-
     document.addEventListener('DOMContentLoaded', function () {
         // Quand un acteur est sélectionné
         document.getElementById('acteur_id').addEventListener('change', function () {
@@ -384,7 +322,7 @@ $(document).ready(function () {
             button.addEventListener('click', function () {
                 const userId = this.getAttribute('data-id');
 
-                fetch(`/utilisateurs/${userId}`)
+                fetch(`{{url('/utilisateurs')}}/${userId}`)
                     .then(response => {
                         if (!response.ok) {
                             //console.error('Erreur HTTP :', response.status);

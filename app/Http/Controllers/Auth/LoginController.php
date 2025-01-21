@@ -44,7 +44,7 @@ class LoginController extends Controller
                 Log::warning('Compte désactivé.', ['user_id' => $user->acteur_id]);
                 Auth::logout();
                 return response()->json(['error' => 'Votre compte est désactivé.'], 403);
-            }
+                }
 
             // Récupérer les pays associés à l'utilisateur
             $pays = GroupeProjetPaysUser::where('user_id', $user->acteur_id)

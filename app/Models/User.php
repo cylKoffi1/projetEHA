@@ -38,7 +38,7 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
 
     ];
     protected $hidden = ['password', 'remember_token'];
-
+    protected $guard_name = 'web';
     protected $casts = [
         'date' => 'date',
         'is_active' => 'boolean',

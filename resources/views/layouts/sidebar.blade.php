@@ -27,13 +27,9 @@
         padding-left: 0;
     }
 
-
-
     .nav-item a {
         text-align: center;
     }
-
-
 
     .nav-item ul.nav-second-level>.nav-item {
         padding-left: 20px;
@@ -65,7 +61,6 @@
     }
 
     .show {
-        /* background-color: #cae3ea; */
         background-color: white;
         display: flex;
         flex-direction: column;
@@ -84,7 +79,7 @@
 
     .nav-link {
         display: flex;
-        align-items: center;/* Centre les éléments verticalement */
+        align-items: center;
         justify-content: space-between;
     }
 
@@ -95,79 +90,64 @@
         justify-content: space-between;
     }
 
-
-    .bi{
+    .bi {
         width: auto;
         height: auto;
         float: inline-start;
         margin-bottom: 7px;
         padding-right: 15px;
     }
-
-
 </style>
-
 
 <div id="sidebar">
     <div class="sidebar-wrapper active" style="margin-top: 90px;">
-
         <ul class="navbar-nav mr-auto sidenav" id="navAccordion">
+            @php
+                $userPermissions = auth()->user()->groupeUtilisateur->permissions->pluck('name');
+            @endphp
+
             @foreach ($rubriquesByAuthRole as $rubrique)
-            @if($rubrique->permission)
-            @can($rubrique->permission->name)
-            <li class="nav-item">
-                {{-- <a href="{{ url('#')}}" class='nav-link nav-link-collapse' data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}" aria-expanded="false">
-                <i class="bi bi-people-fill md-2"></i>
-                <span>{{ $rubrique->libelle }}</span>
-                </a> --}}
-
-                <a href="{{ url('#')}}" class='nav-link nav-link-collapse' data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}" aria-expanded="false">
-                    <div class="nav-link-content">
-                        <i class="{{ $rubrique->class_icone ?? 'bi-gear' }}"></i>
-                        <span>{{ $rubrique->libelle }}</span>
-                    </div>
-                </a>
-
-
-                <ul class="nav-second-level collapse" data-parent="#navAccordion" id="rubrique_{{ $rubrique->code }}">
-                    @foreach ($rubrique->sousMenus->where('niveau', 1) as $sousMenu)
-                    @if($sousMenu->permission)
-                    @can($sousMenu->permission->name)
+                @if ($rubrique->permission && $userPermissions->contains($rubrique->permission->name))
                     <li class="nav-item">
-                        <a href="{{ url('#')}}" class="nav-link nav-link-collapse" id="hasSubItems" data-toggle="collapse" data-target="#sous_menu{{ $sousMenu->code }}" aria-controls="sous_menu{{ $sousMenu->code }}" aria-expanded="false">{{ $sousMenu->libelle }}</a>
-                        <ul class="nav-second-level collapse " id="sous_menu{{ $sousMenu->code }}">
-                            @include('partials.submenu', ['sousMenus' => $sousMenu->sousSousMenus, 'id_parent'=>$sousMenu->code])
-
-                            @foreach ($sousMenu->ecrans as $ecran)
-                            @if($ecran->permission)
-                            @can($ecran->permission->name)
-                            <li class="nav-item">
-                                <a href="{{ url('/admin/' . $ecran->path . '?ecran_id=' . $ecran->id) }}" class="nav-link">{{ $ecran->libelle }}</a>
-                            </li>
-                            @endcan
-                            @endif
+                        <a href="#" class="nav-link nav-link-collapse" data-toggle="collapse" data-target="#rubrique_{{ $rubrique->code }}" aria-controls="rubrique_{{ $rubrique->code }}">
+                            <div class="nav-link-content">
+                                <i class="{{ $rubrique->class_icone ?? 'bi-gear' }}"></i>
+                                <span>{{ $rubrique->libelle }}</span>
+                            </div>
+                        </a>
+                        <ul class="nav-second-level collapse" data-parent="#navAccordion" id="rubrique_{{ $rubrique->code }}">
+                            @foreach ($rubrique->sousMenus->where('niveau', 1) as $sousMenu)
+                                @if ($sousMenu->permission && $userPermissions->contains($sousMenu->permission->name))
+                                    <li class="nav-item">
+                                        <a href="#" class="nav-link nav-link-collapse" data-toggle="collapse" data-target="#sous_menu{{ $sousMenu->code }}" aria-controls="sous_menu{{ $sousMenu->code }}">
+                                            {{ $sousMenu->libelle }}
+                                        </a>
+                                        <ul class="nav-second-level collapse" id="sous_menu{{ $sousMenu->code }}">
+                                            @include('partials.submenu', ['sousMenus' => $sousMenu->sousSousMenus, 'id_parent' => $sousMenu->code])
+                                            @foreach ($sousMenu->ecrans as $ecran)
+                                                @if ($ecran->permission && $userPermissions->contains($ecran->permission->name))
+                                                    <li class="nav-item">
+                                                        <a href="{{ url('/admin/' . $ecran->path . '?ecran_id=' . $ecran->id) }}" class="nav-link">{{ $ecran->libelle }}</a>
+                                                    </li>
+                                                @endif
+                                            @endforeach
+                                        </ul>
+                                    </li>
+                                @endif
+                            @endforeach
+                            @foreach ($rubrique->ecrans as $ecran)
+                                @if ($ecran->permission && $userPermissions->contains($ecran->permission->name))
+                                    <li class="nav-item">
+                                        <a href="{{ url('/admin/' . $ecran->path . '?ecran_id=' . $ecran->id) }}" class="nav-link">{{ $ecran->libelle }}</a>
+                                    </li>
+                                @endif
                             @endforeach
                         </ul>
                     </li>
-                    @endcan
-                    @endif
-                    @endforeach
-                    @foreach ($rubrique->ecrans as $ecran)
-                    @if($ecran->permission)
-                    @can($ecran->permission->name)
-                    <li class="nav-item">
-                        <a href="{{ url('/admin/' . $ecran->path . '?ecran_id=' . $ecran->id) }}" class="nav-link">{{ $ecran->libelle }}</a>
-                    </li>
-                    @endcan
-                    @endif
-                    @endforeach
-                </ul>
-            </li>
-            @endcan
-            @endif
+                @endif
             @endforeach
             <li class="nav-link" onclick="logout('logout-form_side')" style="padding-bottom: 150px;">
-                <a href="{{ url('#')}}" class='nav-link' onclick="logout('logout-form_side')">
+                <a href="#" class="nav-link" onclick="logout('logout-form_side')">
                     <i class="bi bi-box-arrow-left" style="color: red;"></i>
                     <span style="color: red;">Déconnexion</span>
                 </a>
@@ -175,19 +155,19 @@
                     @csrf
                 </form>
             </li>
-
         </ul>
-
     </div>
 </div>
 
-
 <script>
-    $(document).ready(function() {
-        $('.nav-link-collapse').on('click', function() {
+    $(document).ready(function () {
+        $('.nav-link-collapse').on('click', function () {
             $('.nav-link-collapse').not(this).removeClass('nav-link-show');
             $(this).toggleClass('nav-link-show');
         });
     });
 
+    function logout(formId) {
+        document.getElementById(formId).submit();
+    }
 </script>

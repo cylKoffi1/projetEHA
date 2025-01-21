@@ -10,6 +10,7 @@ class Rubriques extends Model
     protected $table = 'rubriques';
     protected $primaryKey = 'code';
     public $timestamps = false;
+    protected $fillable = ['code', 'libelle','ordre', 'permission_id', 'class_icone'];
 
     public function sousMenus()
     {

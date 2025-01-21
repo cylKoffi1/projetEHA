@@ -77,7 +77,8 @@ class GroupProjectPermissionsController extends Controller
     }
 
     ////////GROUPE PROJET ///////////
-   /**
+
+     /**
      * Afficher la liste des groupes utilisateurs
      */
     public function groupe(Request $request)
@@ -118,7 +119,7 @@ class GroupProjectPermissionsController extends Controller
     }
 
     /**
-     * Mettre à jour un groupe utilisateur
+     * Modifier un groupe utilisateur
      */
     public function updateGroupe(Request $request, $id)
     {
@@ -153,4 +154,17 @@ class GroupProjectPermissionsController extends Controller
         }
     }
 
+    /**
+     * Récupérer les données d'un groupe utilisateur pour modification
+     */
+    public function edit($id)
+    {
+        try {
+            $groupe = GroupeUtilisateur::findOrFail($id);
+            return response()->json($groupe);
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la récupération du groupe utilisateur ID {$id} : " . $e->getMessage());
+            return response()->json(['error' => "Impossible de récupérer le groupe utilisateur."], 500);
+        }
+    }
 }

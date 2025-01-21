@@ -95,7 +95,7 @@
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000; width: 100%; height: 90px; background-color: #435ebe;">
     <div class="container-fluid" style="align-items: center;">
         <div style="display: flex; flex-direction: column; align-items: center;">
-            <a class="navbar-brand" href="{{ url('/')}}" style="color: white; display: flex; flex-direction: column; align-items: flex-start;">
+            <a class="navbar-brand" href="#" style="color: white; display: flex; flex-direction: column; align-items: flex-start;">
                 <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
                 <span>BTP-PROJECT</span>
             </a>
@@ -193,8 +193,21 @@
                 <form id="change-group-form">
                     @csrf
 
-                    <!-- Étape 1 : Sélection du Pays -->
-                    <div id="step-country">
+                    <!-- Étape 1 : Sélection du Groupe Projet (Affiché par défaut) -->
+                    <div id="step-group">
+                        <div class="form-group mt-3">
+                            <label for="group-select">Sélectionnez un Groupe Projet :</label>
+                            <select id="group-select" class="form-control" required>
+                                <option value="">Veuillez sélectionner un groupe projet</option>
+                            </select>
+                        </div>
+                        <button type="button" id="change-country" class="btn btn-secondary">Modifier le pays</button>
+                        <button type="submit" id="next-group" class="btn btn-primary" style="float: right;">Changer</button>
+                        <hr class="mt-4">
+                    </div>
+
+                    <!-- Étape 2 : Sélection du Pays (Caché au départ) -->
+                    <div id="step-country" style="display: none;">
                         <div class="form-group">
                             <label for="country-select">Sélectionnez un Pays :</label>
                             <select id="country-select" class="form-control" required>
@@ -204,24 +217,11 @@
                                 @endforeach
                             </select>
                         </div>
-                        <button type="button" id="next-country" class="btn btn-primary" style="float: right;">Suivant</button><br>
+                        <button type="button" id="prev-country" class="btn btn-primary">Retour</button>
+                        <button type="button" id="next-country" class="btn btn-primary" style="float: right;">Suivant</button>
                         <hr class="mt-4">
-
                     </div>
 
-                    <!-- Étape 2 : Sélection du Groupe Projet -->
-                    <div id="step-group" style="display: none;">
-                        <div class="form-group mt-3">
-                            <label for="group-select">Sélectionnez un Groupe Projet :</label>
-                            <select id="group-select" class="form-control" required>
-                                <option value="">Veuillez sélectionner un groupe projet</option>
-                            </select>
-                        </div>
-                        <button type="button" id="prev-group" class="btn btn-primary" >Retour</button>
-                        <button type="submit" id="next-group" class="btn btn-primary" style="float: right;">Changer</button><br>
-                        <hr class="mt-4">
-
-                    </div>
 
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="float: right;">Fermer</button>
@@ -241,68 +241,88 @@
 
 </script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function() {
 
-        // Étape 1 -> Étape 2 (Afficher le choix du groupe projet)
-        $('#next-country').on('click', function () {
-            const selectedCountry = $('#country-select').val();
-            if (!selectedCountry) {
-                toastr.error('Veuillez sélectionner un pays.');
-                return;
-            }
+    // Récupérer le pays sélectionné depuis la session PHP
+    var paysSelectionne = "{{ session('pays_selectionne') }}";
 
-            // Charger les groupes projets
-            $.post("{{ route('login.getGroupsByCountry') }}",
-                { pays_code: selectedCountry, _token: '{{ csrf_token() }}' },
-                function (response) {
-                    let options = '<option value="">Veuillez sélectionner un groupe projet</option>';
-                    response.forEach(group => {
-                        options += `<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`;
-                    });
-                    $('#group-select').html(options);
+    // Pré-remplir le champ pays avec la session et charger les groupes projets
+    if (paysSelectionne) {
+        $('#country-select').val(paysSelectionne).trigger('change');
+        chargerGroupesProjets(paysSelectionne);
+    }
 
-                    // Afficher l'étape suivante
+    // Quand on clique sur "Modifier le pays", afficher la sélection du pays
+    $('#change-country').on('click', function () {
+        $('#step-group').hide();
+        $('#step-country').show();
+    });
+
+    // Quand on clique sur "Retour", revenir à la sélection du groupe projet
+    $('#prev-country').on('click', function () {
+        $('#step-country').hide();
+        $('#step-group').show();
+    });
+
+    // Quand un pays est sélectionné, charger les groupes projets
+    $('#country-select').on('change', function () {
+        let selectedCountry = $(this).val();
+        if (selectedCountry) {
+            chargerGroupesProjets(selectedCountry);
+        }
+    });
+
+    // Fonction pour charger les groupes projets d'un pays donné
+    function chargerGroupesProjets(paysCode) {
+        $.post("{{ route('login.getGroupsByCountry') }}",
+            { pays_code: paysCode, _token: '{{ csrf_token() }}' },
+            function (response) {
+                let options = '<option value="">Veuillez sélectionner un groupe projet</option>';
+                response.forEach(group => {
+                    options += `<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`;
+                });
+                $('#group-select').html(options);
+
+                // Revenir à la sélection du groupe projet si on est sur l'étape du pays
+                if ($('#step-country').is(':visible')) {
                     $('#step-country').hide();
                     $('#step-group').show();
                 }
-            ).fail(function () {
-                toastr.error('Erreur lors du chargement des groupes projets.');
-            });
-        });
-
-        // Étape 2 -> Étape 1 (Retour)
-        $('#prev-group').on('click', function () {
-            $('#step-group').hide();
-            $('#step-country').show();
-        });
-
-        // Changer le groupe projet
-        $('#change-group-form').on('submit', function (e) {
-            e.preventDefault();
-            const selectedCountry = $('#country-select').val();
-            const selectedGroup = $('#group-select').val();
-
-            if (!selectedCountry || !selectedGroup) {
-                toastr.error("Veuillez sélectionner un pays et un groupe projet.");
-                return;
             }
-
-            $.post("{{ route('login.changeGroup') }}",
-                { pays_code: selectedCountry, projet_id: selectedGroup, _token: '{{ csrf_token() }}' },
-                function (response) {
-                    if (response.success) {
-                        toastr.success("Changement effectué avec succès !");
-                        window.location.reload();
-                    } else {
-                        toastr.error("Une erreur est survenue lors du changement.");
-                    }
-                }
-            ).fail(function () {
-                toastr.error('Erreur lors du changement de groupe projet.');
-            });
+        ).fail(function () {
+            toastr.error('Erreur lors du chargement des groupes projets.');
         });
+    }
 
+    // Soumettre le formulaire pour changer de groupe projet
+    $('#change-group-form').on('submit', function (e) {
+        e.preventDefault();
+        const selectedCountry = $('#country-select').val();
+        const selectedGroup = $('#group-select').val();
+
+        if (!selectedCountry || !selectedGroup) {
+            toastr.error("Veuillez sélectionner un pays et un groupe projet.");
+            return;
+        }
+
+        $.post("{{ route('login.changeGroup') }}",
+            { pays_code: selectedCountry, projet_id: selectedGroup, _token: '{{ csrf_token() }}' },
+            function (response) {
+                if (response.success) {
+                    toastr.success("Changement effectué avec succès !");
+                    window.location.reload();
+                } else {
+                    toastr.error("Une erreur est survenue lors du changement.");
+                }
+            }
+        ).fail(function () {
+            toastr.error('Erreur lors du changement de groupe projet.');
+        });
     });
+
+});
+
+
 </script>
 
 

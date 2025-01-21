@@ -10,6 +10,7 @@ class Ecran extends Model
     protected $table = 'views';
     protected $primaryKey = 'id'; // Assurez-vous que le nom de la clé primaire est correct
     public $timestamps = false;
+    protected $fillable = ['id', 'path','created_at', 'updated_at', 'libelle', 'ordre', 'code_sous_menu','code_rubrique', 'permission_id'];
 
     public function sousMenu()
     {

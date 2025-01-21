@@ -342,10 +342,17 @@
 
             const select = $('#country-select');
             select.empty();
-            select.append('<option value="" disabled selected>Veuillez sélectionner un pays</option>'); // Option par défaut
+           // Trier le tableau des pays par ordre alphabétique
+            countries.sort((a, b) => a.nom_fr_fr.localeCompare(b.nom_fr_fr));
+
+            // Ajouter l'option par défaut
+            select.append('<option value="" disabled selected>Veuillez sélectionner un pays</option>');
+
+            // Ajouter les options triées
             countries.forEach(country => {
                 select.append(`<option value="${country.alpha3}">${country.nom_fr_fr}</option>`);
             });
+
         }
 
         // Peupler les options de groupes projets
@@ -354,6 +361,9 @@
 
             const select = $('#group-select');
             select.empty();
+              // Trier le tableau des pays par ordre alphabétique
+              groups.sort((a, b) => a.groupe_projet.libelle.localeCompare(b.groupe_projet.libelle));
+
             select.append('<option value="" disabled selected>Veuillez sélectionner un groupe projet</option>'); // Option par défaut
 
             groups.forEach(group => {

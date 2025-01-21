@@ -10,22 +10,24 @@ use App\Models\Ecran;
 use App\Models\Ministere;
 use App\Models\Pays;
 use App\Models\Personnel;
+use App\Models\Projet;
 use App\Models\ProjetEha2;
 use App\Models\ProjetStatutProjet;
 use App\Models\Region;
 use App\Models\StatutProjet;
 use App\Models\StructureRattachement;
+use App\Models\UtilisateurChampExercice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StatController extends Controller
 {
-    function statNombreProjet(Request $request)
+  /*  function statNombreProjet(Request $request)
     {
         // Utiliser une requête SQL brute pour obtenir le montant total des projets par statut
-        $resultats = DB::select("SELECT `code_statut_projet`, COUNT(`projet_eha2`.`CodeProjet`) as montant_total FROM `projet_statut_projet`
-        INNER JOIN `projet_eha2` ON `projet_statut_projet`.`code_projet` = `projet_eha2`.`CodeProjet`
-        GROUP BY `code_statut_projet`");
+        $resultats = DB::select("SELECT `type_statut`, COUNT(`projets`.`code_projet`) as montant_total FROM `statut_projet`
+        INNER JOIN `projets` ON `statut_projet`.`code_projet` = `projets`.`code_projet`
+        GROUP BY `type_statut`");
 
         // Convertir les résultats en tableau associatif
         $montantParStatut = [];
@@ -36,19 +38,19 @@ class StatController extends Controller
         // Récupérer les montants pour chaque statut de projet
         $projets_prevus = isset($montantParStatut['01']) ? $montantParStatut['01'] : 0;
         $projets_en_cours = isset($montantParStatut['02']) ? $montantParStatut['02'] : 0;
-        $projets_annulé = isset($montantParStatut['03']) ? $montantParStatut['03'] : 0;
-        $projets_cloture = isset($montantParStatut['04']) ? $montantParStatut['04'] : 0;
+        $projets_cloture = isset($montantParStatut['03']) ? $montantParStatut['03'] : 0;
+        $projets_ann = isset($montantParStatut['04']) ? $montantParStatut['04'] : 0;
         $projets_suspendus = isset($montantParStatut['05']) ? $montantParStatut['05'] : 0;
         $projets_redemarrer = isset($montantParStatut['06']) ? $montantParStatut['06'] : 0;
 
        $ecran = Ecran::find($request->input('ecran_id'));
 
         // Récupérer tous les projets
-        $projets = ProjetEha2::all();
+        $projets = Projet::all();
 
         // Récupérer le code région de l'utilisateur
-        $region = CouvrirRegion::where('code_personnel', auth()->user()->personnel->code_personnel)->latest('date')->first();
-        $code_region = $region->code_region;
+        $region = UtilisateurChampExercice::where('utilisateur_code', auth()->user()->acteur_id)->latest('created_at')->first();
+        $code_region = $region->champ_exercice_id;
 
 
         // Récupérer le code de fonction de l'utilisateur connecté
@@ -990,8 +992,49 @@ class StatController extends Controller
             return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
         }
     }
+*/
+    public function statNombreProjet(Request $request)
+    {
+        try {
+            $ecran = Ecran::find($request->input('ecran_id'));
 
+            return view('stat_nombre_projet_vue', compact('ecran'));
+        }
+        catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
+        }
+    }
+    public function statFinance(Request $request)
+    {
+        try {
+            $ecran =Ecran::find($request->input('ecran_id'));
 
+            return view('stat_fincance', compact('ecran'));
+        }
+        catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
+        }
+    }
+    public function statNombreData(Request $request)
+    {
+        try {
+            $ecran = Ecran::find($request->input('ecran_id'));
 
+            return view('stat_nombre_projet_lien', compact('ecran'));
+        }
+        catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
+        }
+    }
+    public function statFinanceData(Request $request)
+    {
+        try {
+            $ecran =Ecran::find($request->input('ecran_id'));
+            return view('stat_fincance_lien', compact('ecran'));
+        }
+        catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
+        }
+    }
 
 }

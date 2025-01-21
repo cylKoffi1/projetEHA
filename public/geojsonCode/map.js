@@ -17,13 +17,15 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
 
     // Vérifie si le pays est la RDC
     const isRDC = countryAlpha3Code === "COD";
+    const isMLI = countryAlpha3Code === "MLI";
+
 
     // Échelle des couleurs pour les projets
     const colorScale = ['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000'];
 
     // Règle pour attribuer une couleur en fonction de projectCount
     function getColor(projectCount) {
-        if (projectCount >= 350) return colorScale[7];      
+        if (projectCount >= 350) return colorScale[7];
         else if (projectCount >= 300) return colorScale[6];
         else if (projectCount >= 250) return colorScale[5];
         else if (projectCount >= 200) return colorScale[4];
@@ -64,7 +66,24 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
                     <td>${selectedLevels["Ville"] || 'Sélectionnez un niveau'}</td>
                 </tr>
             `);
-        } else {
+        } else if(isMLI){
+
+            rows.push(`
+                <tr>
+                    <th style="text-align: right;">Région:</th>
+                    <td>${selectedLevels["Région"] || 'Sélectionnez un niveau'}</td>
+                </tr>
+                <tr>
+                    <th style="text-align: right;">Cercle:</th>
+                    <td>${selectedLevels["Cercle"] || 'Sélectionnez un niveau'}</td>
+                </tr>
+                <tr>
+                    <th style="text-align: right;">Arrondissement:</th>
+                    <td>${selectedLevels["Arrondissement"] || 'Sélectionnez un niveau'}</td>
+                </tr>
+            `);
+
+        }else {
             const limitedNiveaux = niveau.slice(0, maxLevels);
             rows.push(...limitedNiveaux.map((n, index) => `
                 <tr>
@@ -80,36 +99,54 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
                     ${rows.join('')}
                 </thead>
             </table>
-            <table style="border-collapse: collapse; width: 100%;">
+            <table style="border-collapse: collapse; width: 100%; font-size: 12px;">
                 <thead>
+                    <!-- Ligne pour le titre % -->
                     <tr>
-                        <th></th>
-                        <th></th>
-                        <th colspan="${isRDC ? 4 : maxLevels + 1}" style="border: 1px solid black; text-align: center;">%</th>
+                        <th colspan="2" style="border: none;"></th>
+                        <th colspan="${isRDC ? 6 : maxLevels * 2}" style="border: 1px solid black; text-align: center;">%</th>
                     </tr>
+                    <!-- Ligne pour les colonnes dynamiques -->
                     <tr>
-                        <th class="col" style=""></th>
-                        <th class="col" style="border: 1px solid black; font-size:12px; text-align: center; width:40px;">Nbr</th>
+                        <th></th>
+                        <th style="border: none;"></th>
                         ${(isRDC
                             ? ["Province", "Territoire", "Ville"]
                             : niveau.slice(0, maxLevels).map(n => n.libelle_decoupage || '')
                         ).map(name => `
-                            <th class="col" style="border: 1px solid black; text-align: center; font-size:12px; width:50px;">${name}</th>
+                            <th colspan="2" style="border: 1px solid black; text-align: center; font-size: 12px; width: 50px;">${name}</th>
+                        `).join('')}
+                    </tr>
+                    <!-- Ligne pour les colonnes cumulées Public/Privé -->
+                    <tr>
+                        <th colspan="1" style="border: 1px solid black; text-align: center;">Domaines</th>
+                        <th style="border: 1px solid black; text-align: center;">Total</th>
+                        ${(isRDC
+                            ? ["Province", "Territoire", "Ville"]
+                            : niveau.slice(0, maxLevels)
+                        ).map(() => `
+                            <th style="border: 1px solid black; text-align: center;">Public</th>
+                            <th style="border: 1px solid black; text-align: center;">Privé</th>
                         `).join('')}
                     </tr>
                 </thead>
                 <tbody>
+                    <!-- Boucle pour les lignes des domaines -->
                     ${domaines.map(domaine => `
                         <tr>
-                            <th class="row22" style="text-align: right;">${domaine.libelle || ''}:</th>
-                            <th class="col" style="border: 1px solid black; text-align: center;"></th>
+                            <th style="border: 1px solid black; text-align: right;">${domaine.libelle || ''}</th>
+                            <td style="border: 1px solid black; text-align: center;"></td>
                             ${(isRDC ? ["Province", "Territoire", "Ville"] : niveau.slice(0, maxLevels)).map(() => `
-                                <th class="col" style="border: 1px solid black; text-align: center;"></th>
+                                <td style="border: 1px solid black; text-align: center;"></td>
+                                <td style="border: 1px solid black; text-align: center;"></td>
                             `).join('')}
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
+
+
+
         `;
     };
 
@@ -185,28 +222,26 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
                     onEachFeature: function (feature, layer) {
                         feature.properties.level = level;
 
-                        // Ajouter un tooltip sur survol
-                        layer.bindTooltip(feature.properties[`NAME_${level}`], { permanent: false, className: "tooltip-name" });
 
+                        // Gestion des événements (aucune surbrillance ou rectangle affiché)
                         layer.on({
-                            mouseover: function (e) {
-                                highlightFeature(e);
-                                layer.openTooltip(); // Affiche le tooltip
-                            },
-                            mouseout: function (e) {
-                                resetHighlight(e);
-                                layer.closeTooltip(); // Masque le tooltip
-                            },
                             click: function (e) {
                                 var feature = e.target.feature;
-                                handleClick(feature, level);
+                                handleClick(feature, level); // Appeler la fonction de gestion du clic
                                 if (level < 5) {
                                     var nextNameProperty = `NAME_${level}`;
                                     loadGeoJsonLevel(level + 1, feature.properties[nextNameProperty]);
                                 }
+                            },
+                            mouseover: function (e) {
+                                // Pas de mise en surbrillance
+                            },
+                            mouseout: function (e) {
+                                // Pas de réinitialisation du style
                             }
                         });
                     }
+
                 }).addTo(map);
 
                 currentLayers[level] = geoJsonLayer;

@@ -79,7 +79,9 @@
     }
 
 
-
+    th:empty {
+            border: none; /* Supprime les bordures des cellules vides */
+        }
 
     .leaflet-control-attribution {
         visibility: hidden;

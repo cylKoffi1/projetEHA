@@ -44,7 +44,7 @@ class Role extends Model implements RoleContract
     {
         $attributes['guard_name'] = $attributes['guard_name'] ?? Guard::getDefaultName(static::class);
 
-        $params = ['name' => $attributes['name'], 'guard_name' => $attributes['guard_name']];
+        $params = ['libelle_groupe' => $attributes['libelle_groupe'], 'guard_name' => $attributes['guard_name']];
         if (app(PermissionRegistrar::class)->teams) {
             $teamsKey = app(PermissionRegistrar::class)->teamsKey;
 
@@ -55,7 +55,7 @@ class Role extends Model implements RoleContract
             }
         }
         if (static::findByParam($params)) {
-            throw RoleAlreadyExists::create($attributes['name'], $attributes['guard_name']);
+            throw RoleAlreadyExists::create($attributes['libelle_groupe'], $attributes['guard_name']);
         }
 
         return static::query()->create($attributes);
@@ -99,7 +99,7 @@ class Role extends Model implements RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
-        $role = static::findByParam(['name' => $name, 'guard_name' => $guardName]);
+        $role = static::findByParam(['libelle_groupe' => $name, 'guard_name' => $guardName]);
 
         if (! $role) {
             throw RoleDoesNotExist::named($name, $guardName);
@@ -135,10 +135,10 @@ class Role extends Model implements RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
-        $role = static::findByParam(['name' => $name, 'guard_name' => $guardName]);
+        $role = static::findByParam(['libelle_groupe' => $name, 'guard_name' => $guardName]);
 
         if (! $role) {
-            return static::query()->create(['name' => $name, 'guard_name' => $guardName] + (app(PermissionRegistrar::class)->teams ? [app(PermissionRegistrar::class)->teamsKey => getPermissionsTeamId()] : []));
+            return static::query()->create(['libelle_groupe' => $name, 'guard_name' => $guardName] + (app(PermissionRegistrar::class)->teams ? [app(PermissionRegistrar::class)->teamsKey => getPermissionsTeamId()] : []));
         }
 
         return $role;
