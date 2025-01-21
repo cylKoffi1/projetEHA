@@ -196,33 +196,6 @@
     </div>
 </section>
 
-<div class="progress" style="margin-top: 20px;">
-    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-        0%
-    </div>
-</div>
-
-<script>
-    async function trackProgress(progressKey) {
-        const progressBar = document.getElementById('progress-bar');
-        while (true) {
-            const response = await fetch(`/get-progress/${progressKey}`);
-            const data = await response.json();
-            const progress = data.progress || 0;
-
-            // Mettre à jour la barre
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-            progressBar.textContent = `${progress}%`;
-
-            if (progress >= 100) break; // Arrêtez lorsque le traitement est terminé
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Attendez avant de re-vérifier
-        }
-    }
-
-    // Appeler la fonction après le démarrage du traitement
-    trackProgress('assign_roles_progress_{{ auth()->id() }}');
-</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -425,7 +398,7 @@
                     const checkbox = document.querySelector(`input[name="consulterSousMenu[]"][value="${sousMenu.code}"]`);
                     if (checkbox) checkbox.checked = true;
                 });
-                
+
 
                 data.ecrans.forEach(ecran => {
                     const checkbox = document.querySelector(`input[name="consulterRubriqueEcran[]"][value="${ecran.id}"]`);
