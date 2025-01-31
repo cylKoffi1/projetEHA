@@ -3,11 +3,12 @@
 namespace App\Providers;
 
 use App\Models\Ecran;
+use App\Models\GroupeUtilisateur;
 use App\Models\Pays;
-use App\Models\RoleHasRubrique;
 use App\Models\Rubriques;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Spatie\Permission\Models\Role;
 
 class RubriquesServiceProvider extends ServiceProvider
 {
@@ -39,16 +40,22 @@ class RubriquesServiceProvider extends ServiceProvider
 
             $rubriquesByAuthRole = collect(); // Collection vide par défaut
 
+
+
+
+
             // Vérification de l'utilisateur connecté
             if (auth()->check()) {
-                $userGroup = auth()->user()->groupeUtilisateur;
+                $role_id = auth()->user()->groupe_utilisateur_id;// Récupérer le rôle de l'utilisateur connecté
+                $userRoles = GroupeUtilisateur::where('code', $role_id)->get(); // Récupérer les rôles de l'utilisateur connecté
 
-                if ($userGroup) {
-                    // Obtenir les rubriques associées aux rôles de l'utilisateur connecté
-                    $rubriqueIdsByRole = RoleHasRubrique::where('role_id', $userGroup->code)
-                        ->pluck('rubrique_id');
+                if ($userRoles->isNotEmpty()) {
+                    // Extraire les permissions des rôles de l'utilisateur
+                    $permissions = $userRoles->flatMap(function ($role) {
+                        return $role->permissions;
+                    })->pluck('name')->toArray();
 
-                    // Charger les rubriques autorisées par rôle avec leurs relations et triées par ordre
+                    // Filtrer les rubriques basées sur les permissions associées
                     $rubriquesByAuthRole = Rubriques::with([
                         'sousMenus' => function ($query) {
                             $query->orderBy('ordre');
@@ -60,7 +67,9 @@ class RubriquesServiceProvider extends ServiceProvider
                             $query->orderBy('ordre');
                         }
                     ])
-                    ->whereIn('code', $rubriqueIdsByRole)
+                    ->whereHas('permission', function ($query) use ($permissions) {
+                        $query->whereIn('name', $permissions);
+                    })
                     ->orderBy('ordre')
                     ->get();
                 }

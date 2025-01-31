@@ -1,22 +1,22 @@
 <x-mail::message>
-{{-- Greeting --}}
+{{-- En-tête --}}
 @if (! empty($greeting))
 # {{ $greeting }}
 @else
 @if ($level === 'error')
-# @lang('Whoops!')
+# @lang('Oups !')
 @else
-# @lang('Hello!')
+# @lang('Bonjour !')
 @endif
 @endif
 
-{{-- Intro Lines --}}
+{{-- Introduction --}}
 @foreach ($introLines as $line)
 {{ $line }}
 
 @endforeach
 
-{{-- Action Button --}}
+{{-- Bouton d'Action --}}
 @isset($actionText)
 <?php
     $color = match ($level) {
@@ -29,7 +29,7 @@
 </x-mail::button>
 @endisset
 
-{{-- Outro Lines --}}
+{{-- Lignes de Conclusion --}}
 @foreach ($outroLines as $line)
 {{ $line }}
 
@@ -39,20 +39,22 @@
 @if (! empty($salutation))
 {{ $salutation }}
 @else
-@lang('Regards'),<br>
-{{ config('app.name') }}
+@lang('Cordialement'),<br>
+**BTP-PROJECT - Gestion des Projets BTP**
 @endif
 
-{{-- Subcopy --}}
+{{-- Sous-Texte --}}
 @isset($actionText)
 <x-slot:subcopy>
 @lang(
-    "If you're having trouble clicking the \":actionText\" button, copy and paste the URL below\n".
-    'into your web browser:',
+    "Si vous rencontrez des difficultés pour cliquer sur le bouton \":actionText\", copiez et collez le lien ci-dessous\n".
+    'dans votre navigateur web :',
     [
         'actionText' => $actionText,
     ]
-) <span class="break-all">[{{ $displayableActionUrl }}]({{ $actionUrl }})</span>
+)
+<br>
+<span class="break-all">[{{ $displayableActionUrl }}]({{ $actionUrl }})</span>
 </x-slot:subcopy>
 @endisset
 </x-mail::message>

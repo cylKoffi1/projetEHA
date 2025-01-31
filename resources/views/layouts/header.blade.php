@@ -96,7 +96,7 @@
     <div class="container-fluid" style="align-items: center;">
         <div style="display: flex; flex-direction: column; align-items: center;">
             <a class="navbar-brand" href="#" style="color: white; display: flex; flex-direction: column; align-items: flex-start;">
-                <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
+            @if(auth()->check())  <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />@endif
                 <span>BTP-PROJECT</span>
             </a>
         </div>
@@ -106,7 +106,7 @@
                 <span>{{ auth()->user()->fonctionUtilisateur->libelle_fonction ?? "" }}:  {{ $personnelAffiche }}</span>
             @endif
         </span>
-
+        @if(auth()->check())
         <div style="flex-grow: 4; text-align: center; color: white;">
             <span style="font-size: 18px; text-transform: uppercase;">
                 @if (session('projet_selectionne') && auth()->user())
@@ -116,6 +116,7 @@
             @endif
             </span>
         </div>
+        @endif
         <header class="mb-3 navbar-toggler">
             <a href="{{ url('#')}}" class="burger-btn d-block d-xl-none">
                 <span class="navbar-toggler-icon"></span>
@@ -166,14 +167,12 @@
             </ul>
             @else
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 profile-menu" style="align-items: center">
-                <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="{{ url('/sig')}}">SIG-EHA</a>
-                </li>
+
                 <li class="nav-item">
                     <a class="nav-link" style="color: white;" href="{{ url('/')}}">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="{{ url('/connexion')}}">Connexion</a>
+                    <a class="nav-link" style="color: white;" href="{{ url('/login')}}">Connexion</a>
                 </li>
             </ul>
             @endif
@@ -182,6 +181,7 @@
     <?php
     ?>
 </nav>
+@if(auth()->check())
 <div class="modal fade" id="changeGroupModal" tabindex="-1" aria-labelledby="changeGroupModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -231,6 +231,7 @@
         </div>
     </div>
 </div>
+
 <script>
     toastr.options = {
         "closeButton": true,
@@ -241,90 +242,90 @@
 
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function() {
 
-    // Récupérer le pays sélectionné depuis la session PHP
-    var paysSelectionne = "{{ session('pays_selectionne') }}";
+        // Récupérer le pays sélectionné depuis la session PHP
+        var paysSelectionne = "{{ session('pays_selectionne') }}";
 
-    // Pré-remplir le champ pays avec la session et charger les groupes projets
-    if (paysSelectionne) {
-        $('#country-select').val(paysSelectionne).trigger('change');
-        chargerGroupesProjets(paysSelectionne);
-    }
-
-    // Quand on clique sur "Modifier le pays", afficher la sélection du pays
-    $('#change-country').on('click', function () {
-        $('#step-group').hide();
-        $('#step-country').show();
-    });
-
-    // Quand on clique sur "Retour", revenir à la sélection du groupe projet
-    $('#prev-country').on('click', function () {
-        $('#step-country').hide();
-        $('#step-group').show();
-    });
-
-    // Quand un pays est sélectionné, charger les groupes projets
-    $('#country-select').on('change', function () {
-        let selectedCountry = $(this).val();
-        if (selectedCountry) {
-            chargerGroupesProjets(selectedCountry);
-        }
-    });
-
-    // Fonction pour charger les groupes projets d'un pays donné
-    function chargerGroupesProjets(paysCode) {
-        $.post("{{ route('login.getGroupsByCountry') }}",
-            { pays_code: paysCode, _token: '{{ csrf_token() }}' },
-            function (response) {
-                let options = '<option value="">Veuillez sélectionner un groupe projet</option>';
-                response.forEach(group => {
-                    options += `<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`;
-                });
-                $('#group-select').html(options);
-
-                // Revenir à la sélection du groupe projet si on est sur l'étape du pays
-                if ($('#step-country').is(':visible')) {
-                    $('#step-country').hide();
-                    $('#step-group').show();
-                }
-            }
-        ).fail(function () {
-            toastr.error('Erreur lors du chargement des groupes projets.');
-        });
-    }
-
-    // Soumettre le formulaire pour changer de groupe projet
-    $('#change-group-form').on('submit', function (e) {
-        e.preventDefault();
-        const selectedCountry = $('#country-select').val();
-        const selectedGroup = $('#group-select').val();
-
-        if (!selectedCountry || !selectedGroup) {
-            toastr.error("Veuillez sélectionner un pays et un groupe projet.");
-            return;
+        // Pré-remplir le champ pays avec la session et charger les groupes projets
+        if (paysSelectionne) {
+            $('#country-select').val(paysSelectionne).trigger('change');
+            chargerGroupesProjets(paysSelectionne);
         }
 
-        $.post("{{ route('login.changeGroup') }}",
-            { pays_code: selectedCountry, projet_id: selectedGroup, _token: '{{ csrf_token() }}' },
-            function (response) {
-                if (response.success) {
-                    toastr.success("Changement effectué avec succès !");
-                    window.location.reload();
-                } else {
-                    toastr.error("Une erreur est survenue lors du changement.");
-                }
-            }
-        ).fail(function () {
-            toastr.error('Erreur lors du changement de groupe projet.');
+        // Quand on clique sur "Modifier le pays", afficher la sélection du pays
+        $('#change-country').on('click', function () {
+            $('#step-group').hide();
+            $('#step-country').show();
         });
-    });
 
-});
+        // Quand on clique sur "Retour", revenir à la sélection du groupe projet
+        $('#prev-country').on('click', function () {
+            $('#step-country').hide();
+            $('#step-group').show();
+        });
+
+        // Quand un pays est sélectionné, charger les groupes projets
+        $('#country-select').on('change', function () {
+            let selectedCountry = $(this).val();
+            if (selectedCountry) {
+                chargerGroupesProjets(selectedCountry);
+            }
+        });
+
+        // Fonction pour charger les groupes projets d'un pays donné
+        function chargerGroupesProjets(paysCode) {
+            $.post("{{ route('login.getGroupsByCountry') }}",
+                { pays_code: paysCode, _token: '{{ csrf_token() }}' },
+                function (response) {
+                    let options = '<option value="">Veuillez sélectionner un groupe projet</option>';
+                    response.forEach(group => {
+                        options += `<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`;
+                    });
+                    $('#group-select').html(options);
+
+                    // Revenir à la sélection du groupe projet si on est sur l'étape du pays
+                    if ($('#step-country').is(':visible')) {
+                        $('#step-country').hide();
+                        $('#step-group').show();
+                    }
+                }
+            ).fail(function () {
+                toastr.error('Erreur lors du chargement des groupes projets.');
+            });
+        }
+
+        // Soumettre le formulaire pour changer de groupe projet
+        $('#change-group-form').on('submit', function (e) {
+            e.preventDefault();
+            const selectedCountry = $('#country-select').val();
+            const selectedGroup = $('#group-select').val();
+
+            if (!selectedCountry || !selectedGroup) {
+                toastr.error("Veuillez sélectionner un pays et un groupe projet.");
+                return;
+            }
+
+            $.post("{{ route('login.changeGroup') }}",
+                { pays_code: selectedCountry, projet_id: selectedGroup, _token: '{{ csrf_token() }}' },
+                function (response) {
+                    if (response.success) {
+                        toastr.success("Changement effectué avec succès !");
+                        window.location.reload();
+                    } else {
+                        toastr.error("Une erreur est survenue lors du changement.");
+                    }
+                }
+            ).fail(function () {
+                toastr.error('Erreur lors du changement de groupe projet.');
+            });
+        });
+
+    });
 
 
 </script>
-
+@endif
 
 
 <script>

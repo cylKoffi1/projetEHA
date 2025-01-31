@@ -42,6 +42,16 @@
         </div>
     </div>
 </div>
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="card shadow-sm" style="background-color: rgba(250, 250, 250, 0.9);">
+            <div class="card-body p-3">
+                <h5 class="card-title">Représentation du PIB par année</h5>
+            </div>
+            <canvas id="pibChart" style="max-height: 200px;"></canvas>
+        </div>
+    </div>
+</div>
 
 <section>
     <div class="card">
@@ -53,7 +63,7 @@
                     <a  href="#" data-toggle="modal" data-target="#localite-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                     @endcan
                 </h5>
-               
+
                 @if (count($errors) > 0)
                 <div class="alert alert-danger">
                     <ul>
@@ -164,8 +174,44 @@
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des pibs')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des pibs')
     });
 
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('pibChart').getContext('2d');
+
+    // Données pour le graphique (transmises depuis le backend)
+    const pibData = @json($pibs->map(function ($pib) {
+        return ['année' => $pib->annee, 'montant' => $pib->montant_pib];
+    }));
+
+    // Extraction des années et montants pour le graphique
+    const labels = pibData.map(pib => pib.année);
+    const data = pibData.map(pib => pib.montant);
+
+    new Chart(ctx, {
+        type: 'line', // Utilisez 'bar' ou 'line' selon vos besoins
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'PIB (en millions)',
+                data: data,
+                backgroundColor: 'rgba(104, 155, 225, 0.5)',
+                borderColor: 'rgba(104, 155, 225, 1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
 </script>
 @endsection

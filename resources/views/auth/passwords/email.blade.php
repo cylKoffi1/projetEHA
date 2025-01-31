@@ -163,10 +163,10 @@ label {
             </div>
         @endif
         @include('layouts.menu')
-        <section class="d-flex align-items-center justify-content-center" style="margin-top: 150px;">
-            <div class="container"  style="max-width: 800px;">
+        <section class="d-flex align-items-center justify-content-center" >
+            <div class="container"  style="max-width: 500px;">
                 <div class="row justify-content-center">
-                    <div class="col-md-8">
+                    <div class="col justify-content-center" >
                         <div class="card">
                             <div class="card-header">Réinitialiser le mot de passe</div>
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GanttController;
+use App\Http\Controllers\ParSpecifique\ActeurController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -32,3 +33,10 @@ Route::delete('/task/{id}', [GanttController::class, 'destroy'])->name('task.des
 Route::post('/link', [GanttController::class, 'storelink'])->name('link.store');
 Route::put('/link/{id}', [GanttController::class, 'updatelink'])->name('link.update');
 Route::delete('/link/{id}', [GanttController::class, 'destroylink'])->name('link.destroy');
+
+// Route pour les calendrier
+
+Route::get('/scheduler-data', [GanttController::class, 'getSchedulerData']);
+
+Route::get('/acteurs', [ActeurController::class, 'search']);
+Route::post('/acteurs', [ActeurController::class, 'stores']);

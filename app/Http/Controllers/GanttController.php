@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Ecran;
 use Illuminate\Http\Request;
-use App\Models\ProjetEha2;
 use App\Models\GanttTache;
 use App\Models\GanttLien;
 use App\Models\Links;
+use App\Models\Projet;
 use App\Models\Taches;
 use Carbon\Carbon;
 use Exception;
@@ -20,7 +20,7 @@ class GanttController extends Controller
     public function index(Request $request)
     {
         $ecran = Ecran::find($request->input('ecran_id'));
-        $projects = ProjetEha2::all();  // Obtenez tous les projets
+        $projects = Projet::all();  // Obtenez tous les projets
         return view('etudes_projets.plan', compact('projects', 'ecran'));
     }
     // Récupération des tâches et des liens
@@ -29,12 +29,7 @@ class GanttController extends Controller
         try {
             $codeProjet = $request->input('CodeProjet');
 
-            // Vérifiez si un code projet est fourni
-            if (!$codeProjet) {
-                return response()->json([
-                    "error" => "Code projet manquant"
-                ], 400);
-            }
+            
 
             // Récupérer les tâches filtrées par CodeProjet
             $tasks = Taches::where('CodeProjet', $codeProjet)
@@ -271,4 +266,16 @@ class GanttController extends Controller
             ], 500);
         }
     }
+
+
+    /////////////////////CALENDRIRER
+    public function getSchedulerData()
+    {
+        $events = Taches::select('id', 'text as title', 'start_date', 'duration', 'progress', 'parent')->get();
+
+        return response()->json([
+            "data" => $events
+        ]);
+    }
+
 }

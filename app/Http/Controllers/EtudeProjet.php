@@ -15,6 +15,7 @@ use App\Models\NatureTravaux;
 use App\Models\Particulier;
 use App\Models\Personnel;
 use App\Models\ProjectApproval;
+use App\Models\Projet;
 use App\Models\ProjetEha2;
 use App\Models\Renforcement;
 use App\Models\Task;
@@ -224,7 +225,7 @@ class EtudeProjet extends Controller
             $approvedProjects = EtudeProject::select('etudeprojects.codeEtudeProjets', 'etudeprojects.natureTravaux', 'etudeprojects.created_at', 'pa.approved_at')
                 ->join('project_approbation as pa', 'etudeprojects.codeEtudeProjets', '=', 'pa.codeEtudeProjets')
                 ->join('approbateur as app', 'app.codeAppro', '=', 'pa.codeAppro')
-                ->join('personnel as pers', 'pers.code_personnel', '=', 'app.code_personnel')
+                ->join('acteur as pers', 'pers.code_acteur', '=', 'app.code_acteur')
                 ->where('pa.is_approved', true) // Filtre pour les projets approuvés
                 ->where('etudeprojects.is_deleted', 0) // Assurez-vous que le projet n'est pas supprimé
                 ->groupBy('etudeprojects.codeEtudeProjets', 'etudeprojects.natureTravaux', 'etudeprojects.created_at', 'pa.approved_at') // Grouper par projet
@@ -238,8 +239,8 @@ class EtudeProjet extends Controller
             // Récupérer tous les projets approuvés avec les approbations
             $approvalHistory = ProjectApproval::select('project_approbation.*', 'etudeprojects.natureTravaux', 'pers.nom', 'pers.prenom')
                 ->join('etudeprojects', 'project_approbation.codeEtudeProjets', '=', 'etudeprojects.codeEtudeProjets')
-                ->join('approbateur as app', 'project_approbation.codeAppro', '=', 'app.codeAppro')
-                ->join('personnel as pers', 'app.code_personnel', '=', 'pers.code_personnel')
+                ->join('approbateur as app', 'project_approbation.codeAppro', '=', 'app.code_acteur')
+                ->join('personnel as pers', 'app.code_acteur', '=', 'pers.code_personnel')
                 ->where('project_approbation.is_approved', true) // Filtre pour les approbations
                 ->orderBy('project_approbation.approved_at', 'desc') // Trier par date d'approbation
                 ->get();
@@ -390,7 +391,7 @@ class EtudeProjet extends Controller
         $renforcements = Renforcement::with(['beneficiaires', 'projets'])->get();
 
         $ecran = Ecran::find($request->input('ecran_id'));
-        $projets = ProjetEha2::all();
+        $projets = Projet::all();
         $beneficiaires = User::all();
         return view('etudes_projets.renforcement', compact('renforcements', 'projets', 'beneficiaires', 'ecran'));
     }
@@ -484,7 +485,7 @@ class EtudeProjet extends Controller
     {
         $ecran = Ecran::find($request->input('ecran_id'));
         $travaux = TravauxConnexes::with('typeTravaux', 'projet')->get();
-        $projets = ProjetEha2::all();
+        $projets = Projet::all();
         $typesTravaux = TypeTravauxConnexes::orderBy('libelle', 'asc')->get();
 
         return view('etudes_projets.activite', compact('ecran','travaux', 'projets', 'typesTravaux'));

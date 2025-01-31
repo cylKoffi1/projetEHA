@@ -3,55 +3,100 @@
 @section('content')
 <div class="container-fluid">
 
-    <!-- KPI Cards -->
-    <div class="row mt-3 mb-3">
-        <div class="col-md-3">
-            <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
-                <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
-                    <div>
-                        <h6 class="card-title mb-1">Projets Totaux</h6>
-                        <h4 class="mb-0">45</h4>
-                    </div>
-                    <i class="fas fa-project-diagram fa-2x"></i>
+<div class="row mt-3 mb-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Totaux</h6>
+                    <h6 class="mb-0">45</h6>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
-                <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
-                    <div>
-                        <h6 class="card-title mb-1">Projets en Cours</h6>
-                        <h4 class="mb-0">25</h4>
-                    </div>
-                    <i class="fas fa-tasks fa-2x"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
-                <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
-                    <div>
-                        <h6 class="card-title mb-1">Projets Prévus</h6>
-                        <h4 class="mb-0">10</h4>
-                    </div>
-                    <i class="fas fa-calendar-alt fa-2x"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
-                <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
-                    <div>
-                        <h6 class="card-title mb-1">Projets Suspendus</h6>
-                        <h4 class="mb-0">5</h4>
-                    </div>
-                    <i class="fas fa-ban fa-2x"></i>
-                </div>
+                <i class="fas fa-layer-group fa-2x"></i>
             </div>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets en Cours</h6>
+                    <h6 class="mb-0">25</h6>
+                </div>
+                <i class="fas fa-spinner fa-2x"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Prévus</h6>
+                    <h6 class="mb-0">10</h6>
+                </div>
+                <i class="fas fa-calendar-check fa-2x"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Clôturés</h6>
+                    <h6 class="mb-0">5</h6>
+                </div>
+                <i class="fas fa-check-circle fa-2x"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Redémarrés</h6>
+                    <h6 class="mb-0">45</h6>
+                </div>
+                <i class="fas fa-redo-alt fa-2x"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Suspendus</h6>
+                    <h6 class="mb-0">25</h6>
+                </div>
+                <i class="fas fa-pause-circle fa-2x"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Terminés</h6>
+                    <h6 class="mb-0">10</h6>
+                </div>
+                <i class="fas fa-flag-checkered fa-2x"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">
+                <div>
+                    <h6 class="card-title mb-1">Projets Annulés</h6>
+                    <h6 class="mb-0">5</h6>
+                </div>
+                <i class="fas fa-times-circle fa-2x"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- Charts Section -->
+
     <div class="row">
         <div class="col-md-6">
             <div class="card shadow-sm" style="background-color: rgba(250, 250, 250, 0.9);">
@@ -121,10 +166,10 @@
         new Chart(actorsCtx, {
             type: 'bar',
             data: {
-                labels: ['Maîtres d’Ouvrage', 'Bailleurs', 'Bénéficiaires', 'Chefs de Projet'],
+                labels: ['Maîtres d’Ouvrage', 'Maîtres d’Œuvre', 'Bailleurs', 'Bénéficiaires', 'Chefs de Projet'],
                 datasets: [{
-                    data: [15, 8, 30, 10],
-                    backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(255, 206, 86, 0.5)', 'rgba(153, 102, 255, 0.5)']
+                    data: [15, 35, 8, 30, 10],
+                    backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(110, 41, 41, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(255, 206, 86, 0.5)', 'rgba(153, 102, 255, 0.5)']
                 }]
             }
         });

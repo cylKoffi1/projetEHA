@@ -73,7 +73,7 @@ class ProjetController extends Controller
         $user = auth()->user();
 
         // Récupérer les données de l'utilisateur à partir de son code_personnel
-        $userData = User::with('personnel')->where('code_personnel', $user->code_personnel)->first();
+        $userData = User::with('acteur')->where('acteur_id', $user->acteur_id)->first();
 
         // Vérifier si l'utilisateur existe
         if (!$userData) {

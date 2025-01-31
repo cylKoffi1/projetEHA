@@ -17,7 +17,7 @@ class AdminController extends Controller
 
     public function index(Request $request)
     {
-       
+
         $ecran = Ecran::find(29);
         $ecrans = Ecran::all();
 

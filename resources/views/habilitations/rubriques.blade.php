@@ -65,12 +65,12 @@
             <div class="card">
                 <div class="card-header">
                     <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                        @can("ajouter_ecran_" . $ecran->id)
+
                         <h5 class="card-title">
                             Ajout d'une rubrique
                             <a href="#" data-toggle="modal" data-target="#localite-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                         </h5>
-                        @endcan
+
 
 
                         @if (count($errors) > 0)
@@ -172,12 +172,10 @@
                                 </div>
                             </div>
                         </div>
-                        @can("ajouter_ecran_" . $ecran->id)
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
                         </div>
-                        @endcan
                     </form>
                 </div>
             </div>
@@ -242,7 +240,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des rubriques')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des rubriques')
     });
 
     // Lorsque l'utilisateur clique sur un bouton "Modifier"

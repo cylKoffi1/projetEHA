@@ -597,7 +597,7 @@ Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middl
 Route::get('/sig', [GeoJSONController::class, 'showSIG'])->name('carte.sig');
 Route::get('/filter-maps', [GeoJSONController::class, 'filter'])->name('filter.maps');
 Route::get('/filtered-data', [GeoJSONController::class, 'showFilteredData'])->name('filtered.data');
-Route::get('test', [AdminController::class, 'test']);
+Route::get('/test', [AdminController::class, 'test']);
 
 // routes/web.php
 
@@ -610,3 +610,5 @@ Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 Route::get('/etat/pdf', [EtatController::class, 'generatePDF'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+

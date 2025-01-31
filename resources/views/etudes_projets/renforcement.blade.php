@@ -165,13 +165,13 @@
                             <div class="col-6">
                                 <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label><br>
                                 <select name="beneficiaires[]" multiple class="form-select" style="width: 100%;">
-                                    @foreach($beneficiaires as $beneficiaire)
+                                   {{-- @foreach($beneficiaires as $beneficiaire)
                                         @if ($beneficiaire->personnel)
                                             <option value="{{ $beneficiaire->code_personnel }}">
                                                 {{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}
                                             </option>
                                         @endif
-                                    @endforeach
+                                    @endforeach--}}
                                 </select>
                             </div>
                         </div>
@@ -360,7 +360,7 @@
     });
     $(document).ready(function() {
 
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table', 'Listes des renforcements de capacités');
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table', 'Listes des renforcements de capacités');
     });
     window.addEventListener('DOMContentLoaded', function() {
 

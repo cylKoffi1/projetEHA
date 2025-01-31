@@ -303,7 +303,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des sous-menus')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des sous-menus')
     });
 
     // Lorsque l'utilisateur clique sur un bouton "Modifier"
@@ -315,7 +315,7 @@
             , success: function(data) {
                 console.log(data);
                 // Remplir le formulaire modal avec les données du district
-                $('#edit_code').val(data.code); // Utilisez l'ID du champ d'édition
+                $('#edit_code').val(data.code); 
                 $('#edit_libelle').val(data.libelle);
                 $('#edit_ordre').val(data.ordre);
                 $('#edit_niveau').val(data.niveau);

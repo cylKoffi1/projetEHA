@@ -283,7 +283,7 @@
                         @foreach($travaux as $travail)
                         <tr>
                             <td>{{ $travail->codeActivite }}</td>
-                            <td>{{ $travail->projet->CodeProjet }}</td>
+                            <td>{{ $travail?->projet?->code_projet }}</td>
                             <td>{{ $travail->typeTravaux->libelle }}</td>
                             <td style="text-align: right">{{ number_format($travail->cout_projet, 2) }}</td>
                             <td>{{ $travail->date_debut_previsionnelle }}</td>
@@ -339,7 +339,7 @@
 
     $(document).ready(function() {
 
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table', 'Listes des activités connexes');
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table', 'Listes des activités connexes');
     });
 
 

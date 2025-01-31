@@ -19,13 +19,13 @@ class Renforcement extends Model
     // Relation avec les bénéficiaires
     public function beneficiaires()
     {
-        return $this->belongsToMany(Personnel::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_personnel');
+        return $this->belongsToMany(Acteur::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_acteur');
     }
 
     // Relation avec les projets
     public function projets()
     {
-        return $this->belongsToMany(ProjetEha2::class, 'renforcement_projet', 'renforcement_capacite', 'CodeProjet');
+        return $this->belongsToMany(Projet::class, 'renforcement_projet', 'renforcement_capacite', 'code_projet');
     }
 
     public static function generateCodeRenforcement()

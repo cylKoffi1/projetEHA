@@ -239,4 +239,64 @@ class ActeurController extends Controller
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public function search(Request $request)
+    {
+            $query = Acteur::where(function ($q) use ($request) {
+            // Condition pour "libelle_court" correspondant à "nom"
+            $q->where('libelle_court', 'LIKE', "%" . $request->search . "%");
+
+            // Condition pour "libelle_long" correspondant à "prénoms"
+            $q->orWhere('libelle_long', 'LIKE', "%" . $request->search . "%");
+
+            // Concatenation des deux colonnes
+            $q->orWhereRaw("CONCAT(libelle_court, ' ', libelle_long) LIKE ?", ["%" . $request->search . "%"]);
+        })
+        ->limit(5)
+        ->get();
+
+        return response()->json($query);
+
+    }
+
+
+    public function stores(Request $request)
+    {
+        $acteur = Acteur::create([
+            'libelle_court' => $request->name,
+            'libelle_long' => $request->name
+        ]);
+        return response()->json($acteur);
+    }
+
+
 }
+

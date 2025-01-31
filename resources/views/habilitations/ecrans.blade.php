@@ -329,7 +329,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des écrans')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_court }}', 'table1', 'Liste des écrans')
     });
 
     // Lorsque l'utilisateur clique sur un bouton "Modifier"

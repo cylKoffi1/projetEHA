@@ -34,7 +34,7 @@ class TravauxConnexes extends Model
     // Relation avec le projet
     public function projet()
     {
-        return $this->belongsTo(ProjetEha2::class, 'CodeProjet', 'CodeProjet');
+        return $this->belongsTo(Projet::class, 'code_projet', 'CodeProjet');
     }
     public static function generateCodeTravauxConnexe()
     {
