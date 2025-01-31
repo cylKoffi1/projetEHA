@@ -1,3 +1,4 @@
+@if(auth()->check())
 <style type="text/css">
     .nav-link:hover {
         transition: all 0.4s;
@@ -97,7 +98,9 @@
         margin-bottom: 7px;
         padding-right: 15px;
     }
+    
 </style>
+
 
 <div id="sidebar">
     <div class="sidebar-wrapper active" style="margin-top: 90px;">
@@ -171,3 +174,4 @@
         document.getElementById(formId).submit();
     }
 </script>
+@endif

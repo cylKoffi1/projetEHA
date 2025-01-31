@@ -1,605 +1,497 @@
-<?php
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naissance de Projet - BTP-PROJECT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group label {
+            font-weight: bold;
+        }
+        .upload-box {
+            border: 2px dashed #007bff;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+        }
+        .upload-box:hover {
+            background: #e2e6ea;
+        }
+        .uploaded-files {
+            margin-top: 10px;
+        }
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+        }
+        .progress {
+            height: 5px;
+        }
+    </style>
+</head>
+<body>
 
-// app/Http/Controllers/RoleAssignmentController.php
+<div class="container mt-5">
+    <h2 class="text-center mb-4 text-primary">📌 Naissance de Projet - BTP-PROJECT</h2>
 
-namespace App\Http\Controllers;
+    <!-- Barre de progression -->
+    <div class="progress mb-4">
+        <div class="progress-bar bg-success" role="progressbar" style="width: 20%;" id="progressBar"></div>
+    </div>
 
-use App\Models\Ecran;
-use App\Models\Pays;
-use App\Models\RoleHasRubrique;
-use App\Models\Rubriques;
-use App\Models\SousMenu;
-use App\Models\View;
-use Illuminate\Http\Request;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Log;
+    <form id="projectForm">
+        <!-- 🟢 Étape 1 : Informations Générales -->
+        <div class="step active" id="step-1">
+            <h5 class="text-secondary">📋 Informations Générales</h5>
+            <div class="mb-3">
+                <label>Nom du Projet *</label>
+                <input type="text" class="form-control" placeholder="Nom du projet" required>
+            </div>
+            <div class="mb-3">
+                <label>Groupe de Projet *</label>
+                <select class="form-control">
+                    <option>Bâtiment</option>
+                    <option>Transport</option>
+                    <option>Informatique & Télécom</option>
+                    <option>Eau & Assainissement</option>
+                    <option>Énergies</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Objectif du projet *</label>
+                <textarea class="form-control" rows="3" placeholder="Décrivez l'objectif du projet"></textarea>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+        </div>
 
-class RoleAssignmentController extends Controller
-{
+        <!-- 🟠 Étape 2 : Localisation -->
+        <div class="step" id="step-2">
+            <h5 class="text-secondary">🌍 Localisation</h5>
+            <div class="mb-3">
+                <label>Pays *</label>
+                <select class="form-control">
+                    <option>Côte d'Ivoire</option>
+                    <option>Sénégal</option>
+                    <option>Gabon</option>
+                    <option>Burundi</option>
+                    <option>RDC</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Région/Département *</label>
+                <input type="text" class="form-control" placeholder="Entrez la région">
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+        </div>
 
-    public function index(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $groupes = Role::all();
-        $roles = Role::all();
+        <!-- 🔵 Étape : Financement -->
+        <div class="step" id="step-3">
+            <h5 class="text-secondary">💰 Ressources Financières</h5>
+            <div class="mb-3">
+                <label for="typeFinancement">Type de financement</label>
+                <select id="typeFinancement" class="form-control">
+                    <option value="public">Public</option>
+                    <option value="privé">Privé</option>
+                    <option value="mixte">Mixte</option>
+                </select>
+            </div>
 
-        return view('habilitations.role-assignment', compact('groupes', 'ecran',  'roles'));
+            <!-- Formulaire pour ajouter des détails financiers -->
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="bailleur">Bailleur</label>
+                    <input type="text" id="bailleur" class="form-control" placeholder="Rechercher un bailleur...">
+                    <ul class="list-group" id="bailleurList"></ul>
+                </div>
+                <div class="col-md-2">
+                    <label for="montant">Montant</label>
+                    <input type="number" id="montant" class="form-control" placeholder="Montant">
+                </div>
+                <div class="col-md-2">
+                    <label for="devise">Devise</label>
+                    <select id="devise" class="form-control">
+                        <option value="FCFA">FCFA</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label>Partie</label><br>
+                    <div class="form-check form-check-inline">
+                        <input type="radio" id="partieOui" name="partie" value="oui" class="form-check-input">
+                        <label for="partieOui" class="form-check-label">Oui</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input type="radio" id="partieNon" name="partie" value="non" class="form-check-input">
+                        <label for="partieNon" class="form-check-label">Non</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="commentaire">Commentaire</label>
+                    <input type="text" id="commentaire" class="form-control" placeholder="Commentaire">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="button" class="btn btn-secondary" id="addFinancementBtn">Ajouter</button>
+                </div>
+            </div>
+
+            <!-- Tableau des ressources financières -->
+            <div class="mt-4">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Bailleur</th>
+                            <th>Montant</th>
+                            <th>Devise</th>
+                            <th>Partie</th>
+                            <th>Commentaire</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableFinancements">
+                        <!-- Les lignes seront ajoutées ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+        </div>
+
+
+        <!-- 🟣 Étape 4 : Acteurs du projet -->
+        <div class="step" id="step-4">
+            <h5 class="text-secondary">👷 Informations Techniques et Acteurs</h5>
+            <div class="row">
+                <!-- Sélection dynamique des bailleurs -->
+                <div class="col">
+                    <label>Bailleur *</label>
+                    <input type="text" id="bailleurInput" class="form-control" placeholder="Rechercher un bailleur...">
+                    <ul class="list-group" id="bailleurList"></ul>
+                </div>
+
+                <!-- Sélection dynamique du maître d’ouvrage -->
+                <div class="col">
+                    <label>Maître d’ouvrage *</label>
+                    <input type="text" id="maitreOuvrageInput" class="form-control" placeholder="Rechercher un maître d’ouvrage...">
+                    <ul class="list-group" id="maitreOuvrageList"></ul>
+                </div>
+
+                <!-- Sélection dynamique du maître d’œuvre -->
+                <div class="col">
+                    <label>Maître d’œuvre *</label>
+                    <input type="text" id="maitreOeuvreInput" class="form-control" placeholder="Rechercher un maître d’œuvre...">
+                    <ul class="list-group" id="maitreOeuvreList"></ul>
+                </div>
+
+                <!-- Sélection dynamique du chef de projet -->
+                <div class="col">
+                    <label>Chef de projet *</label>
+                    <input type="text" id="chefProjetInput" class="form-control" placeholder="Rechercher un chef de projet...">
+                    <ul class="list-group" id="chefProjetList"></ul>
+                </div>
+
+            </div><br>
+
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+            <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+        </div>
+
+        <!-- 📜 Modal pour la liste des documents -->
+        <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="documentModalLabel">📜 Documents à fournir</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul>
+                            <li>📄 Cahier des Charges</li>
+                            <li>📊 Études Préliminaires (Faisabilité, Impact Environnemental, Géotechnique)</li>
+                            <li>📜 Plans et Maquettes du Projet</li>
+                            <li>💰 Budget Prévisionnel</li>
+                            <li>📝 Permis de Construire (si applicable)</li>
+                            <li>🏢 Justificatif de propriété du terrain</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 🟡 Étape 5 : Documents -->
+        <div class="step" id="step-5">
+            <h5 class="text-secondary">📎 Documents et Pièces Justificatives</h5>
+            <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#documentModal">
+                📜 Liste des documents à fournir
+            </button>
+        <div class="upload-box" onclick="document.getElementById('fileUpload').click();">
+            <p><i class="fas fa-upload"></i> Cliquez ici ou glissez vos fichiers</p>
+            <input type="file" id="fileUpload" class="d-none" multiple>
+        </div>
+        <div class="uploaded-files mt-2" id="uploadedFiles"></div>
+            <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+            <button type="submit" class="btn btn-success">Soumettre</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 5;
+    let uploadedFiles = [];
+
+    function showStep(step) {
+        document.querySelectorAll('.step').forEach((element, index) => {
+            element.classList.remove('active');
+        });
+        document.getElementById('step-' + step).classList.add('active');
+        updateProgressBar(step);
     }
 
-    public function assignRoles(Request $request)
-    {
-        ini_set('max_execution_time', 0);
-        try {
-            Log::info("Début de la fonction assignRoles");
-            // Récupérer les données du formulaire
-            $role_id = $request->input('role');
-            $consulterRubrique = json_decode($request->input('consulterRubrique'));
-            $consulterRubriqueEcran = json_decode($request->input('consulterRubriqueEcran'));
-            $consulterSousMenu = json_decode($request->input('consulterSousMenu'));
-            $consulterSousMenuEcran = json_decode($request->input('consulterSousMenuEcran'));
+    function nextStep() {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            showStep(currentStep);
+        }
+    }
 
-            $ajouterRubriqueEcran = json_decode($request->input('ajouterRubriqueEcran'));
-            $modifierRubriqueEcran = json_decode($request->input('modifierRubriqueEcran'));
-            $supprimerRubriqueEcran = json_decode($request->input('supprimerRubriqueEcran'));
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            showStep(currentStep);
+        }
+    }
 
-            $ajouterSousMenuEcran = json_decode($request->input('ajouterSousMenuEcran'));
-            $modifierSousMenuEcran = json_decode($request->input('modifierSousMenuEcran'));
-            $supprimerSousMenuEcran = json_decode($request->input('supprimerSousMenuEcran'));
+    function updateProgressBar(step) {
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = (step / totalSteps) * 100;
+        progressBar.style.width = progressPercentage + "%";
+    }
 
-            $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer'));
+    document.getElementById('fileUpload').addEventListener('change', function(event) {
+        let files = event.target.files;
+        let fileList = document.getElementById('uploadedFiles');
 
-            Log::info("Données récupérées du formulaire", [
-                'role_id' => $role_id,
-                'consulterRubrique' => $consulterRubrique,
-                'consulterRubriqueEcran' => $consulterRubriqueEcran,
-                'consulterSousMenu' => $consulterSousMenu,
-                'consulterSousMenuEcran' => $consulterSousMenuEcran,
-                'ajouterRubriqueEcran' => $ajouterRubriqueEcran,
-                'modifierRubriqueEcran' => $modifierRubriqueEcran,
-                'supprimerRubriqueEcran' => $supprimerRubriqueEcran,
-                'ajouterSousMenuEcran' => $ajouterSousMenuEcran,
-                'modifierSousMenuEcran' => $modifierSousMenuEcran,
-                'supprimerSousMenuEcran' => $supprimerSousMenuEcran,
-                'permissionsAsupprimer' => $permissionsAsupprimer,
-            ]);
+        for (let i = 0; i < files.length; i++) {
+            let file = files[i];
 
-            // Récupérer le rôle
-            $role = Role::findById($role_id);
-            if (!$role) {
-                Log::error("Le rôle avec l'ID {$role_id} n'existe pas.");
-                return response()->json(['error' => "Rôle non trouvé"], 404);
+            // Vérification si le fichier existe déjà
+            if (uploadedFiles.some(f => f.name === file.name)) {
+                continue;
             }
-            $users = $role->users;
 
-            Log::info("Rôle et utilisateurs associés récupérés", ['role_id' => $role_id, 'user_count' => count($users)]);
+            uploadedFiles.push(file);
+            displayUploadedFiles();
+        }
+    });
 
-            // Supprimer les associations non cochées
-            RoleHasRubrique::where('role_id', $role_id)
-                ->whereNotIn('rubrique_id', $consulterRubrique)
-                ->delete();
-            Log::info("Associations non cochées supprimées pour le rôle", ['role_id' => $role_id]);
+    function displayUploadedFiles() {
+        let fileList = document.getElementById('uploadedFiles');
+        fileList.innerHTML = "";
 
-            Log::info("Début du traitement de consulterRubrique");
-            // Parcourir et enregistrer chaque ID dans le tableau consulterRubrique
-            foreach ($consulterRubrique as $id) {
-                // Vérifier si une association existe déjà pour ce rôle et cette rubrique
-                $existingAssociation = RoleHasRubrique::where('role_id', $role_id)
-                    ->where('rubrique_id', $id)
-                    ->first();
+        uploadedFiles.forEach((file, index) => {
+            let fileItem = document.createElement('div');
+            fileItem.classList.add('file-item');
+            fileItem.innerHTML = `
+                <span><i class="fas fa-file"></i> ${file.name}</span>
+                <i class="fas fa-trash" onclick="removeFile(${index})"></i>
+            `;
+            fileList.appendChild(fileItem);
+        });
+    }
 
-                // Si aucune association n'existe, créez-en une nouvelle
-                if (!$existingAssociation) {
-                    $roleHasRubrique = new RoleHasRubrique;
-                    $roleHasRubrique->rubrique_id = $id;
-                    $roleHasRubrique->role_id = $role_id;
-                    $roleHasRubrique->save();
-                    Log::info("Nouvelle association ajoutée pour rubrique", ['role_id' => $role_id, 'rubrique_id' => $id]);
+    function removeFile(index) {
+        uploadedFiles.splice(index, 1);
+        displayUploadedFiles();
+    }
+    document.getElementById('projectForm').addEventListener('submit', function(event) {
+        event.preventDefault();
 
-                    // Ajouter la permission à synchroniser
-                    $rubrique = Rubriques::find($id);
-                    $permission = Permission::findById($rubrique->permission_id);
-                    $role->givePermissionTo($permission->name);
-                    Log::info("Permission accordée pour rubrique", ['rubrique_id' => $id, 'permission' => $permission->name]);
-                    Log::info("Traitement de rubrique {$id}");
-                    foreach ($users as $user) {
-                        // $user->givePermissionTo($permission->name);
-                        $user->assignRole($role->name);
-                    }
+        if (uploadedFiles.length === 0) {
+            alert("Veuillez ajouter au moins un fichier avant de soumettre.");
+            return;
+        }
+
+        alert("Formulaire soumis avec succès !");
+        console.log("Fichiers soumis:", uploadedFiles);
+    });
+
+
+    ////////////////ACTEURS
+    document.addEventListener("DOMContentLoaded", function () {
+        const fields = [
+            { id: "bailleur", list: "bailleurList"},
+            { id: "maitreOuvrageInput", list: "maitreOuvrageList" },
+            { id: "maitreOeuvreInput", list: "maitreOeuvreList" },
+            { id: "chefProjetInput", list: "chefProjetList"}
+        ];
+
+        fields.forEach(field => {
+            let input = document.getElementById(field.id);
+            let list = document.getElementById(field.list);
+
+            input.addEventListener("keyup", function () {
+                let searchValue = input.value.trim();
+                if (searchValue.length > 1) {
+                    fetch(`/api/acteurs?search=${searchValue}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            list.innerHTML = "";
+                            data.forEach(item => {
+                                let li = document.createElement("li");
+                                li.classList.add("list-group-item", "list-group-item-action");
+                                li.textContent = item.libelle_long;
+                                li.textContent = item.libelle_court;
+                                li.onclick = () => {
+                                    input.value = item.libelle_long;
+                                    input.value = item.libelle_court;
+                                    list.innerHTML = "";
+                                };
+                                list.appendChild(li);
+                            });
+
+                            // Option pour ajouter une nouvelle personne
+                            let addNewOption = document.createElement("li");
+                            addNewOption.classList.add("list-group-item", "text-primary");
+                            addNewOption.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${searchValue}"`;
+                            addNewOption.onclick = () => {
+                                addNewActor( searchValue);
+                                input.value = searchValue;
+                                list.innerHTML = "";
+                            };
+                            list.appendChild(addNewOption);
+                        });
                 } else {
-                    // Ajouter la permission à synchroniser
-                    $rubrique = Rubriques::find($id);
-                    $permission = Permission::findById($rubrique->permission_id);
-                    $role->givePermissionTo($permission->name);
-                    Log::info("Permission accordée pour rubrique", ['rubrique_id' => $id, 'permission' => $permission->name]);
-                    Log::info("Traitement de rubrique {$id}");
+                    list.innerHTML = "";
+                }
+            });
+        });
 
-                    foreach ($users as $user) {
-                        //$user->givePermissionTo($permission->name);
-                        $user->assignRole($role->name);
-                    }
+        function addNewActor( name) {
+            fetch('/api/acteurs', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({  name })
+            })
+                .then(response => response.json())
+                .then(data => alert("Nouvel acteur ajouté avec succès !"));
+        }
+    });
+
+
+   //////////////////////////FINANCEMENT
+    document.addEventListener('DOMContentLoaded', function () {
+        const tableBody = document.getElementById('tableFinancements');
+        const addButton = document.getElementById('addFinancementBtn');
+        let partieSelection = null; // Pour suivre si "Oui" ou "Non" a été sélectionné.
+
+        // Fonction pour verrouiller les boutons radio
+        function verrouillerBoutons() {
+            if (partieSelection === 'oui') {
+                document.getElementById('partieNon').disabled = true;
+            } else if (partieSelection === 'non') {
+                document.getElementById('partieOui').disabled = true;
+            }
+        }
+
+        // Fonction pour réinitialiser les champs
+        function resetFields() {
+            document.getElementById('bailleur').value = '';
+            document.getElementById('montant').value = '';
+            document.getElementById('devise').value = '';
+            document.querySelectorAll('input[name="partie"]').forEach((radio) => (radio.checked = false));
+            document.getElementById('commentaire').value = '';
+        }
+
+        // Fonction pour supprimer une ligne
+        tableBody.addEventListener('click', function (event) {
+            if (event.target.classList.contains('btn-danger')) {
+                const row = event.target.closest('tr');
+                row.remove();
+
+                // Vérifier si le tableau est vide et réinitialiser les boutons radio
+                const rows = tableBody.querySelectorAll('tr');
+                if (rows.length === 0) {
+                    partieSelection = null;
+                    document.getElementById('partieOui').disabled = false;
+                    document.getElementById('partieNon').disabled = false;
                 }
             }
-            Log::info("Fin du traitement de consulterRubrique");
+        });
 
-            // Parcourir et enregistrer chaque ID dans le tableau consulterRubriqueEcran
-            foreach ($consulterRubriqueEcran as $id) {
-                $ecran = Ecran::find($id);
-                $permissionName = $ecran->permission->name;
-                $permission = Permission::findByName($permissionName);
-                $role->givePermissionTo($permission);
-                Log::info("Permission accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-                foreach ($users as $user) {
-                    $user->assignRole($role->name);
-                }
+        // Fonction pour ajouter un financement
+        addButton.addEventListener('click', function () {
+            // Récupérer les valeurs des champs
+            const bailleur = document.getElementById('bailleur').value;
+            const montant = document.getElementById('montant').value;
+            const devise = document.getElementById('devise').value;
+            const partie = document.querySelector('input[name="partie"]:checked')?.value || '';
+            const commentaire = document.getElementById('commentaire').value;
+
+            // Vérifications des champs obligatoires
+            if (!bailleur || !montant || !devise) {
+                alert('Veuillez remplir tous les champs obligatoires : Bailleur, Montant et Devise.');
+                return;
             }
 
-            // Parcourir et enregistrer chaque ID dans le tableau consulterSousMenu
-            foreach ($consulterSousMenu as $id) {
-                // Ajouter la permission à synchroniser
-                $sous_menu = SousMenu::find($id);
-                $permissionName = $sous_menu->permission->name;
-                $permission = Permission::findByName($permissionName);
-                $role->givePermissionTo($permission);
-                Log::info("Permission accordée pour sous-menu", ['sous_menu_id' => $id, 'permission' => $permissionName]);
-
-                foreach ($users as $user) {
-                    $user->assignRole($role->name);
-                }
+            if (!partie) {
+                alert('Veuillez sélectionner si la ressource est partielle ou complète.');
+                return;
             }
 
-            // Parcourir et enregistrer chaque ID dans le tableau consulterSousMenuEcran
-            foreach ($consulterSousMenuEcran as $id) {
-                $ecran = Ecran::find($id);
-                $permissionName = $ecran->permission->name;
-                $permission = Permission::findByName($permissionName);
-                $role->givePermissionTo($permission);
-                Log::info("Permission accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-
-                foreach ($users as $user) {
-                    $user->assignRole($role->name);
-                }
+            // Logique spécifique pour "Partie"
+            if (partieSelection === null) {
+                // Première sélection
+                partieSelection = partie;
+                verrouillerBoutons();
+            } else if (partieSelection !== partie) {
+                alert(`Vous avez déjà sélectionné "${partieSelection}". Vous ne pouvez pas ajouter un financement avec "${partie}".`);
+                return;
             }
 
-            // Parcourir et accorder la permission pour chaque écran associé à une action dans une rubrique
-            foreach ($ajouterRubriqueEcran as $id) {
-                $permissionName = 'ajouter_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'ajouter' accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
+            if (partie === 'non' && tableBody.querySelectorAll('tr').length > 0) {
+                alert('Vous ne pouvez ajouter qu\'un seul financement marqué comme "Non".');
+                return;
             }
 
-            foreach ($modifierRubriqueEcran as $id) {
-                $permissionName = 'modifier_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'modifier' accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($supprimerRubriqueEcran as $id) {
-                $permissionName = 'supprimer_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'supprimer' accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            // Parcourir et accorder la permission pour chaque écran associé à une action dans un sous-menu
-            foreach ($ajouterSousMenuEcran as $id) {
-                $permissionName = 'ajouter_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'ajouter' accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($modifierSousMenuEcran as $id) {
-                $permissionName = 'modifier_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'modifier' accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($supprimerSousMenuEcran as $id) {
-                $permissionName = 'supprimer_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'supprimer' accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            $permissionsConsulterSousMenuAsupprimer = SousMenu::whereNotIn('code', $consulterSousMenu)->get();
-            $permissionsConsulterRubriquesAsupprimer = Rubriques::whereNotIn('code', $consulterRubrique)->get();
-
-            foreach ($permissionsConsulterRubriquesAsupprimer as $rubrique) {
-                try {
-                    if ($rubrique->permission && $role->hasPermissionTo($rubrique->permission->name)) {
-                        // Révoquer la permission
-                        $permission = Permission::findByName($rubrique->permission->name);
-                        $role->revokePermissionTo($permission);
-                        Log::info("Permission révoquée pour rubrique", ['rubrique_id' => $rubrique->id, 'permission' => $rubrique->permission->name]);
-                    }
-                } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                    Log::error("Permission '{$rubrique->permission->name}' does not exist: " . $e->getMessage());
-                }
-            }
-
-            foreach ($permissionsConsulterSousMenuAsupprimer as $sous_menu) {
-                try {
-                    if ($sous_menu->permission && $role->hasPermissionTo($sous_menu->permission->name)) {
-                        // Révoquer la permission
-                        $permission = Permission::findByName($sous_menu->permission->name);
-                        $role->revokePermissionTo($permission);
-                        Log::info("Permission révoquée pour sous-menu", ['sous_menu_id' => $sous_menu->id, 'permission' => $sous_menu->permission->name]);
-                    }
-                } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                    Log::error("Permission '{$sous_menu->permission->name}' does not exist: " . $e->getMessage());
-                }
-            }
-
-            foreach ($permissionsAsupprimer as $permis) {
-                try {
-                    if ($role->hasPermissionTo($permis)) {
-                        // Révoquer la permission
-                        $permission = Permission::findByName($permis);
-                        $role->revokePermissionTo($permission);
-                        Log::info("Permission révoquée", ['permission' => $permis]);
-                    }
-                } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                    Log::error("Permission '{$permis}' does not exist: " . $e->getMessage());
-                }
-            }
-
-            // Retourner une réponse JSON
-            return response()->json([
-                'message' => 'Données enregistrées avec succès.',
-                'donnee' => $permissionsAsupprimer,
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Erreur lors de l'assignation des rôles: " . $e->getMessage());
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function habilitations(Request $request)
-    {
-        $views = View::all();
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $groupes = Role::all();
-        $roles = Role::all();
-        return view('habilitations.habilitations', compact('groupes', 'ecran', 'roles',  'views'));
-    }
-    public function getRolePermissions($roleId)
-    {
-        // Récupérer le rôle
-        $role = Role::findOrFail($roleId);
-
-
-        // Récupérer les autorisations du rôle
-        $permissions = $role->permissions()->pluck('name');
-        $permissions_id = $role->permissions()->pluck('id');
-
-        $sous_menusAcocher = SousMenu::whereIn('permission_id', $permissions_id)->get();
-        $ecransAcocher = Ecran::whereIn('permission_id', $permissions_id)->get();
-        $rubriquesAcocher = Rubriques::whereIn('permission_id', $permissions_id)->get();
-
-
-        // Renvoyer les autorisations et les ID des rubriques à cocher au format JSON
-        return response()->json([
-            'permissions' => $permissions,
-            'rubriquesAcocher' => $rubriquesAcocher,
-            'sous_menusAcocher' => $sous_menusAcocher,
-            'ecransAcocher' => $ecransAcocher
-        ]);
-    }
-
-
-    /******************** RUBRIQUES ******************* */
-    public function rubriques(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $rubriques = Rubriques::all();
-        $rubriquePlusGrandOrdre = Rubriques::orderBy('ordre', 'desc')->first();
-        return view('habilitations.rubriques', compact('rubriques', 'ecran',  'rubriquePlusGrandOrdre'));
-    }
-
-
-    public function storeRubrique(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $rubrique = new Rubriques;
-        $rubrique->libelle = $request->input('libelle');
-        $rubrique->ordre = $request->input('ordre');
-        $rubrique->class_icone = $request->input('class_icone');
-
-        // Supprimer les accents et les caractères spéciaux du libellé
-        function removeAccent($string) {
-            return preg_replace('/[^\x20-\x7E]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $string));
-        }
-
-        $libelle = $request->input('libelle');
-        $libelleSansEspaces = preg_replace('/\s+/', '', $libelle);
-        $permissionName = removeAccent(preg_replace('/[^A-Za-z]/', '', $libelleSansEspaces));
-
-        // Créer ou récupérer la permission correspondante
-        $permission = Permission::firstOrCreate(['name' => $permissionName]);
-
-        $rubrique->permission_id = $permission->id; // Assurez-vous que l'attribut correct est utilisé pour l'ID de la permission
-
-        $rubrique->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('rubriques.index', ['ecran_id' => $ecran_id])->with('success', 'Rubrique enregistrée avec succès.');
-    }
-
-
-
-
-
-    public function getRubrique($code)
-    {
-        $rubrique = Rubriques::find($code);
-
-        if (!$rubrique) {
-            return response()->json(['error' => 'Rubrique non trouvé'], 404);
-        }
-
-        return response()->json($rubrique);
-    }
-
-    public function updateRubrique(Request $request)
-    {
-
-        $rubrique = Rubriques::find($request->input('edit_code'));
-
-        if (!$rubrique) {
-            return response()->json(['error' => 'Rubrique non trouvé'], 404);
-        }
-
-        $rubrique->libelle = $request->input('edit_libelle');
-        $rubrique->ordre = $request->input('edit_ordre');
-        $rubrique->class_icone = $request->input('edit_class_icone');
-        $rubrique->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('rubriques.index', ['ecran_id' => $ecran_id])->with('success', 'Rubrique mise à jour avec succès.');
-    }
-
-    public function deleteRubrique($code)
-    {
-        $rubrique = Rubriques::find($code);
-
-        if (!$rubrique) {
-            return response()->json(['error' => 'Rubrique non trouvée'], 404);
-        }
-
-        // Récupérer les sous-menus et écrans associés à la rubrique
-        $sousMenus = $rubrique->sousMenus;
-        $ecrans = $rubrique->sousMenus->flatMap->ecrans;
-
-        // Supprimer les écrans associés
-        foreach ($ecrans as $ecran) {
-            $ecran->delete();
-        }
-
-        // Supprimer les sous-menus associés
-        foreach ($sousMenus as $sousMenu) {
-            $sousMenu->delete();
-        }
-
-        // Supprimer la rubrique elle-même
-        $rubrique->delete();
-
-        return response()->json(['success' => 'Rubrique supprimée avec succès']);
-    }
-
-    public function getSousMenus($rubriqueId)
-    {
-        $sousMenus = SousMenu::where('code_rubrique', $rubriqueId)->where('niveau', 1)
-            ->with('sousSousMenusRecursive')->with('sousSousMenus')->with('ecrans')
-            ->get();
-        return response()->json($sousMenus);
-    }
-
-
-    /******************** SOUS-MENUS ******************* */
-
-    public function sous_menus(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $sous_menus = SousMenu::all();
-        $smPlusGrandOrdre = SousMenu::orderBy('ordre', 'desc')->first();
-        return view('habilitations.sous_menus', compact('ecran',  'sous_menus', 'smPlusGrandOrdre'));
-    }
-
-
-    public function storeSous_menu(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $sous_menus = new SousMenu;
-        $sous_menus->libelle = $request->input('libelle');
-        $sous_menus->ordre = $request->input('ordre');
-        $sous_menus->niveau = $request->input('niveau');
-        $sous_menus->code_rubrique = $request->input('code_rubrique');
-        $sous_menus->sous_menu_parent = $request->input('sous_menu_parent');
-
-        // Supprimer les accents et les caractères spéciaux du libellé
-        function removeAccents($string) {
-            return preg_replace('/[^\x20-\x7E]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $string));
-        }
-
-        $libelle = $request->input('libelle');
-        $libelleSansEspaces = preg_replace('/\s+/', '', $libelle);
-        $permissionName = removeAccents(preg_replace('/[^A-Za-z]/', '', $libelleSansEspaces));
-
-        // Créer ou récupérer la permission correspondante
-        $permission = Permission::firstOrCreate(['name' => $permissionName]);
-
-        $sous_menus->permission_id = $permission->id; // Assurez-vous que l'attribut correct est utilisé pour l'ID de la permission
-
-        $sous_menus->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('sous_menu.index', ['ecran_id' => $ecran_id])->with('success', 'Sous-menu enregistré avec succès.');
-    }
-
-
-    public function getSous_menu($code)
-    {
-        $sous_menu = SousMenu::find($code);
-
-        if (!$sous_menu) {
-            return response()->json(['error' => 'Sous-menu non trouvé'], 404);
-        }
-
-        return response()->json($sous_menu);
-    }
-
-    public function updateSous_menu(Request $request)
-    {
-
-        $sous_menu = SousMenu::find($request->input('edit_code'));
-
-        if (!$sous_menu) {
-            return response()->json(['error' => 'Sous-menu non trouvé'], 404);
-        }
-
-        $sous_menu->libelle = $request->input('edit_libelle');
-        $sous_menu->ordre = $request->input('edit_ordre');
-        $sous_menu->niveau = $request->input('edit_niveau');
-        $sous_menu->code_rubrique = $request->input('edit_code_rubrique');
-        $sous_menu->sous_menu_parent = $request->input('edit_sous_menu_parent');
-        $sous_menu->save();
-
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('sous_menu.index', ['ecran_id' => $ecran_id])->with('success', 'Sous-menu mis à jour avec succès.');
-    }
-
-
-    public function deleteSous_menu($code)
-    {
-        $sous_menu = SousMenu::find($code);
-
-        if (!$sous_menu) {
-            return response()->json(['error' => 'Sous-menu non trouvé'], 404);
-        }
-
-        $ecrans = $sous_menu->ecrans;
-
-        // Supprimer les écrans associés
-        foreach ($ecrans as $ecran) {
-            $ecran->delete();
-        }
-
-        // Supprimer la rubrique elle-même
-        $sous_menu->delete();
-
-        return response()->json(['success' => 'Sous-menu supprimé avec succès']);
-    }
-
-
-
-    /******************** ECRANS ******************* */
-
-    public function ecrans(Request $request)
-    {
-        $sous_menus = SousMenu::all();
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $ecrans = Ecran::all();
-        $permissions = Permission::orderBy('name', 'desc')->get();
-        return view('habilitations.ecrans', compact('ecran','ecrans',  'sous_menus', 'permissions'));
-    }
-
-
-
-    public function storeEcran(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $ecran = new Ecran;
-        $ecran->libelle = $request->input('libelle');
-        $ecran->ordre = $request->input('ordre');
-        $ecran->path = $request->input('path');
-        $ecran->code_sous_menu = $request->input('code_sous_menu');
-        $ecran->code_rubrique = $request->input('code_rubrique');
-
-        $permissionName = 'consulter_ecran_' . $ecran->id;
-        $permission = Permission::findOrCreate($permissionName);
-        $ecran->permission_id = $permission->id;
-
-        try {
-            Permission::findOrCreate('ajouter_ecran_' . $ecran->id);
-            Permission::findOrCreate('modifier_ecran_' . $ecran->id);
-            Permission::findOrCreate('supprimer_ecran_' . $ecran->id);
-        } catch (\Throwable $th) {
-            //throw $th;
-        }
-        $ecran->save();
-
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('ecran.index', ['ecran_id' => $ecran_id])->with('success', 'Ecran enregistré avec succès.');
-    }
-
-
-    public function getEcran($code)
-    {
-        $ecran = Ecran::find($code);
-
-        if (!$ecran) {
-            return response()->json(['error' => 'Ecran non trouvé'], 404);
-        }
-
-        return response()->json($ecran);
-    }
-
-    public function updateEcran(Request $request)
-    {
-
-        $ecran = Ecran::find($request->input('edit_code'));
-
-        if (!$ecran) {
-            return response()->json(['error' => 'Ecran non trouvé'], 404);
-        }
-
-        $ecran->libelle = $request->input('edit_libelle');
-        $ecran->ordre = $request->input('edit_ordre');
-        $ecran->path = $request->input('edit_path');
-        $ecran->code_sous_menu = $request->input('edit_code_sous_menu');
-        $ecran->code_rubrique = $request->input('edit_code_rubrique');
-
-        $permissionName = 'consulter_ecran_' . $request->input('edit_code');
-        $permission = Permission::findOrCreate($permissionName);
-        $ecran->permission_id = $permission->id;
-        try {
-            Permission::findOrCreate('ajouter_ecran_' . $ecran->code);
-            Permission::findOrCreate('modifier_ecran_' . $ecran->code);
-            Permission::findOrCreate('supprimer_ecran_' . $ecran->code);
-        } catch (\Throwable $th) {
-            //throw $th;
-        }
-        $ecran->save();
-
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('ecran.index', ['ecran_id' => $ecran_id])->with('success', 'Ecran mis à jour avec succès.');
-    }
-
-
-    public function deleteEcran($code)
-    {
-        $ecran = Ecran::find($code);
-
-        if (!$ecran) {
-            return response()->json(['error' => 'ecran non trouvé'], 404);
-        }
-        $ecran->delete();
-
-        return response()->json(['success' => 'Ecran supprimé avec succès']);
-    }
-}
+            // Ajouter une nouvelle ligne au tableau
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${bailleur}</td>
+                <td>${montant}</td>
+                <td>${devise}</td>
+                <td>${partie === 'oui' ? 'Oui' : 'Non'}</td>
+                <td>${commentaire}</td>
+                <td><button class="btn btn-danger btn-sm">Supprimer</button></td>
+            `;
+            tableBody.appendChild(row);
+
+            // Réinitialiser les champs
+            resetFields();
+        });
+    });
+
+  </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

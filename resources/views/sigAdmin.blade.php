@@ -260,6 +260,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                             </div>
                     </div>
                 </div>
+
                 <div class="card-content">
                     <div class="card-body">
                         <div class="row" style="flex-wrap: nowrap">

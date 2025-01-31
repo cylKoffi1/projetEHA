@@ -184,9 +184,12 @@
                                 </div>
                             </div>
                             <div class="row">
+                                @can("ajouter_ecran_" . $ecran->id)
                                 <div class="col-12 d-flex justify-content-end">
                                     <button type="submit" id="soumettre_personnel" class="btn btn-primary me-1 mb-1">Enregistrer</button>
                                 </div>
+                                @endcan
+
                             </div>
                         </form>
                     </div>
