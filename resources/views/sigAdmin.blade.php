@@ -25,7 +25,9 @@
     .info .content {
     font-size: 12px;
     }
-
+    .leaflet-control-zoom{
+        display: none;
+    }
     .info .close-button {
     position: absolute;
     top: 5px;

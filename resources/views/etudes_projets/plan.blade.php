@@ -158,8 +158,8 @@
                     <!-- Conteneur du Gantt -->
                     <div id="gantt_here" class="active-view"></div>
                     <!-- Modal Explicatif -->
-                    <div class="modal fade" id="ganttHelpModal" tabindex="-1" role="dialog" aria-labelledby="ganttHelpModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal fade" id="ganttHelpModal" tabindex="-1" role="dialog" aria-labelledby="ganttHelpModalLabel" aria-hidden="true" style="background: transparent;">
+                        <div class="modal-dialog modal-lg" role="document" >
                             <div class="modal-content">
                                 <div class="modal-header bg-primary text-white">
                                     <h5 class="modal-title" id="ganttHelpModalLabel">📌 Guide d'Utilisation du Gantt</h5>
@@ -167,7 +167,7 @@
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
-                                <div class="modal-body">
+                                <div class="modal-body" style="background: white;">
                                     <!-- Étapes du tutoriel -->
                                     <div id="gantt-step-1" class="gantt-step">
                                         <h5>1️⃣ 📂 Projets, Tâches et Jalons</h5>
@@ -215,7 +215,7 @@
                                 </div>
 
                                 <!-- Navigation entre les étapes -->
-                                <div class="modal-footer">
+                                <div class="modal-footer" style="background: white;">
                                     <button type="button" class="btn btn-secondary" id="prev-step" disabled>⬅ Précédent</button>
                                     <button type="button" class="btn btn-primary" id="next-step">Suivant ➡</button>
                                     <button type="button" class="btn btn-success" id="close-tutorial" style="display: none;" data-dismiss="modal">🚀 J'ai compris</button>

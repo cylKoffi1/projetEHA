@@ -57,13 +57,24 @@
     <div class="card">
         <div class="card-header">
             <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                <h5 class="card-title">
-                    Ajout d'un pib
-                     @can("ajouter_ecran_" . $ecran->id)
-                    <a  href="#" data-toggle="modal" data-target="#localite-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
-                    @endcan
-                </h5>
 
+            <h5 class="card-title">
+                    Ajout d'un pib
+                    {{-- @can("ajouter_ecran_" . $ecran->id)--}}
+                    <a  href="#" data-toggle="modal" data-target="#localite-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
+                    {{--@endcan--}}
+                </h5>
+                        <div class="card-title text-end">
+                        @if (session('success'))
+                            <div class="alert alert-success">
+                                {{session('success')}}
+                            </div>
+                        @elseif (session('error'))
+                            <div class="alert alert-danger">
+                                {{session('error')}}
+                            </div>
+                        @endif
+                        </div>
                 @if (count($errors) > 0)
                 <div class="alert alert-danger">
                     <ul>
@@ -79,12 +90,39 @@
             </div>
         </div>
         <div class="card-body">
+        <form class="form" method="POST" action="{{ route('pib.store') }}">
+            @csrf
+            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
+            <div class="row">
+                <div class="col-md-4 col-12">
+                    <label>Année :</label>
+                    <input type="number" class="form-control" id="annee" name="annee" required>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label>Montant :</label>
+                    <input type="number" class="form-control" name="montant" id="montant" required>
+                </div>
+                <div class="col-md-4 col-12">
+                    <label>Devise :</label>
+                    <select name="devise" id="devise" class="form-select">
+                        @foreach ($devises as $devise)
+                        <option value="{{ $devise->code }}">{{ $devise->code_long }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="col text-end"><button type="submit" class="btn btn-primary mt-2 text-end">Enregistrer</button></div>
+
+        </form>
+
+        </div>
+        <div class="card-body">
             <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                 <thead>
                     <tr>
-                        <th>Code</th>
-                        <th>Montant</th>
+                        {{--<th>Code</th>--}}
                         <th>Année</th>
+                        <th>Montant</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -92,18 +130,18 @@
                 <tbody>
                     @foreach ($pibs as $pib)
                     <tr>
-                        <td>{{ $pib->code }}</td>
-                        <td>{{ $pib->montant_pib }}</td>
-                        <td>{{ $pib->annee }}</td>
-                        <td>
+                        {{--<td>{{ $pib->code }}</td>--}}
+                        <td class="col-2">{{ $pib->annee }}</td>
+                        <td class="col-3 text-end">{{ number_format($pib->montant_pib, 0, ',', ' ') }}</td>
+                        <td class="col-2">
                             <div class="dropdown">
                                 <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
                                     <span style="color: white"></span>
                                 </a>
                                 <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#edit-modal-{{ $pib->code }}"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
                                     <li><a class="dropdown-item" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                    <li><a class="dropdown-item" href="#"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
+
                                 </ul>
                             </div>
                         </td>
@@ -115,66 +153,44 @@
     </div>
 </section>
 <!-- Modal -->
-<div class="modal fade" id="localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Enregistrement du PIB</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+<div class="modal fade" id="edit-modal-{{ $pib->code }}" tabindex="-1" style="background: transparent">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('pib.update', $pib->code) }}" >
+            @csrf
+            @method('PUT')
+            <div class="modal-content" style="background: white">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modifier PIB</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label>Année :</label>
+                    <input type="number" name="annee" value="{{ $pib->annee }}" class="form-control" required>
+                    <label>Montant :</label>
+                    <input type="number" name="montant" value="{{ $pib->montant_pib }}" class="form-control" required>
+                    <label>Devise :</label>
+                    <select name="devise" class="form-select">
+                        @foreach ($devises as $devise)
+                        <option value="{{ $devise->code }}" {{ $devise->code == $pib->devise ? 'selected' : '' }}>{{ $devise->code_long }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
             </div>
-            <div class="modal-body">
-                <form class="form" method="POST" action="" data-parsley-validate>
-                    @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                    <div class="row">
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" for="code">Code :</label>
-                                <input type="text" class="form-control" id="code" name="code" placeholder="Code du pib" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" style="color: black;" for="id_sous_prefecture">Année :</label>
-                                <input type="year" class="form-control" id="annee" name="annee" min="1900" max="2100">
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" style="color: black;" for="id_departement">Montant :</label>
-                                <input type="number" class="form-control" name="montant" id="montant">
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="form-group mandatory">
-                                <label class="form-label" style="color: black;" for="id_departement">Dévise :</label>
-                                <select name="devise" id="devise" class="form-select">
-                                    @foreach ($devises as $devise)
-                                    <option value="{{ $devise->code }}">{{ $devise->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                        <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
-                    </div>
-                </form>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
-
-
+<form method="POST" action="{{ route('pib.destroy', $pib->code) }}">
+    @csrf
+    @method('DELETE')
+    <button type="submit" class="btn btn-danger">Supprimer</button>
+</form>
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des pibs')
+        initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des pibs')
     });
 
 </script>
@@ -184,7 +200,7 @@
 
     // Données pour le graphique (transmises depuis le backend)
     const pibData = @json($pibs->map(function ($pib) {
-        return ['année' => $pib->annee, 'montant' => $pib->montant_pib];
+        return ['année' => $pib->annee, 'montant' => $pib->montant_pib /1000000000];
     }));
 
     // Extraction des années et montants pour le graphique
@@ -196,9 +212,9 @@
         data: {
             labels: labels,
             datasets: [{
-                label: 'PIB (en millions)',
+                label: 'PIB (en milliard de dollar)',
                 data: data,
-                backgroundColor: 'rgba(104, 155, 225, 0.5)',
+                backgroundColor: 'rgba(255, 255, 255, 0)',
                 borderColor: 'rgba(104, 155, 225, 1)',
                 borderWidth: 2,
                 fill: true

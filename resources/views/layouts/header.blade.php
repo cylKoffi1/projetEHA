@@ -96,7 +96,7 @@
     <div class="container-fluid" style="align-items: center;">
         <div style="display: flex; flex-direction: column; align-items: center;">
             <a class="navbar-brand" href="#" style="color: white; display: flex; flex-direction: column; align-items: flex-start;">
-            @if(auth()->check())  <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />@endif
+                <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie)}}" style="width: 40px; height: auto; margin-bottom: 5px;" alt="" />
                 <span>BTP-PROJECT</span>
             </a>
         </div>
@@ -125,7 +125,6 @@
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
             @if(auth()->check())
@@ -172,7 +171,7 @@
                     <a class="nav-link" style="color: white;" href="{{ url('/')}}">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" style="color: white;" href="{{ url('/login')}}">Connexion</a>
+                    <a class="nav-link" style="color: white;" href="{{ url('/connexion')}}">Connexion</a>
                 </li>
             </ul>
             @endif
@@ -187,7 +186,6 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="changeGroupModalLabel">Changer de Groupe Projet</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="change-group-form">
@@ -220,11 +218,6 @@
                         <button type="button" id="prev-country" class="btn btn-primary">Retour</button>
                         <button type="button" id="next-country" class="btn btn-primary" style="float: right;">Suivant</button>
                         <hr class="mt-4">
-                    </div>
-
-
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="float: right;">Fermer</button>
                     </div>
                 </form>
             </div>

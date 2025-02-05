@@ -34,6 +34,7 @@ use App\Http\Controllers\representationGraphique;
 use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
+use App\Http\Controllers\WorkflowValidationController;
 use App\Models\EtudeProject;
 use App\Models\Renforcement;
 use Illuminate\Support\Facades\Cache;
@@ -309,6 +310,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
         /*****************ETUDE DE PROJET**************** */
         Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
+        Route::get('/pays/{alpha3}/niveaux', [EtudeProjet::class, 'getNiveauxAdministratifs']);
+        Route::get('/pays/{alpha3}/niveau/{niveau}/localites', [EtudeProjet::class, 'getLocalitesByNiveau']);
         Route::post('/projects/store', [EtudeProjet::class, 'storeNaissance'])->name('project.store');
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
@@ -396,6 +399,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/get-project-status/{id}', [ProjectStatusController::class, 'getProjectStatus']);    //***************** GESTION FINANCIERE ************* */
     Route::get('admin/graphique', [representationGraphique::class, 'graphique']);
     Route::get('admin/pib', [pibController::class, 'pib']);
+    Route::post('admin/pib/store', [pibController::class, 'store'])->name('pib.store');
+    Route::put('admin/pib/update/{id}', [pibController::class, 'update'])->name('pib.update');
+    Route::delete('admin/pib/destroy/{id}', [pibController::class, 'destroy'])->name('pib.destroy');
 
 
     //********************CLOTURER **************************//
@@ -495,11 +501,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
 
 
+    Route::get('/admin/validationProjet', [WorkflowValidationController::class, 'afficherValidation'])->name('workflow');
+
+    Route::get('/notifications', function () {
+        return view('notifications');
+    })->name('notifications');
 
 
 
     /*************************TYPE ACTEURS */
     Route::get('admin/type-acteurs', [TypeActeurController::class, 'index'])->name('type-acteurs.index');
+
+    Route::get('/get-acteurs', [EtudeProjet::class, 'filter'])->name('acteur.filter');
     Route::post('/type-acteurs', [TypeActeurController::class, 'store'])->name('type-acteurs.store');
     Route::put('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'update'])->name('type-acteurs.update');
     Route::delete('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'destroy'])->name('type-acteurs.destroy');
@@ -548,7 +561,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/groupeUtilisateur/store', [GroupProjectPermissionsController::class, 'storeGroupe'])->name('groupes-utilisateurs.store');
     Route::post('/groupeUtilisateur/update/{id}', [GroupProjectPermissionsController::class, 'updateGroupe'])->name('groupes-utilisateurs.update');
     Route::post('admin/groupeUtilisateur/delete/{id}', [GroupProjectPermissionsController::class, 'destroyGroupe'])->name('groupes-utilisateurs.destroy');
+
 });
+
 
 // MAP
 Route::get('/map', function () {

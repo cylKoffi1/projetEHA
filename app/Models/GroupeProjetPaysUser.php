@@ -23,8 +23,9 @@ class GroupeProjetPaysUser extends Model
      */
     public function pays()
     {
-        return $this->belongsTo(Pays::class, 'alpha3', 'pays_code');
+        return $this->belongsTo(Pays::class, 'pays_code', 'alpha3');
     }
+
 
     /**
      * Relation avec la table `groupe_projet`.

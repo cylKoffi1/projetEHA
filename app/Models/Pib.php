@@ -11,8 +11,7 @@ class Pib extends Model
 
     protected $table = 'pib'; // Nom de la table
     protected $primaryKey = 'code';
-    protected $keyType = 'string';
-
+    protected $fillable = ['code_pays', 'annee', 'montant_pib'];
     public function pays()
     {
         return $this->belongsTo(Pays::class, 'code_pays', 'id_pays');

@@ -1,6 +1,6 @@
 function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAssocie, niveau) {
     var map = L.map('countryMap', {
-        zoomControl: false,
+        zoomControl: true,
         center: [-6.5, 7],
         maxZoom: codeZoom.maxZoom,
         minZoom: codeZoom.minZoom,
@@ -13,10 +13,13 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
 
     var currentLayers = {}; // Pour stocker les couches GeoJSON par niveau
     var selectedLevels = {};
+    var selectedLevel = {};
     var maxLevels = 3; // Par défaut, limiter à 3 niveaux
 
     // Vérifie si le pays est la RDC
     const isRDC = countryAlpha3Code === "COD";
+    const isMLI = countryAlpha3Code === "MLI";
+
 
     // Échelle des couleurs pour les projets
     const colorScale = ['#ebebb9', '#c9c943', '#6495ed', '#af6eeb', '#32cd32', '#eaff00', '#ffba00', '#ff0000'];
@@ -48,7 +51,7 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
 
         // Construction des informations fixes pour chaque niveau
         const rows = [];
-
+        const maxVisibleTypes = 3;
         if (isRDC) {
             rows.push(`
                 <tr>
@@ -64,7 +67,28 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
                     <td>${selectedLevels["Ville"] || 'Sélectionnez un niveau'}</td>
                 </tr>
             `);
-        } else {
+        } else if(isMLI){
+            // Initialiser selectedLevels avec des données en dur
+            selectedLevel[1] = { type: "Région", name: "Cliquez sur une zone" };
+            selectedLevel[2] = { type: "Cercle", name: "Cliquez sur une zone" };
+            selectedLevel[3] = { type: "Arrondissement", name: "Cliquez sur une zone" };
+            // Générer les lignes pour les types et les noms
+            for (let i = 1; i <= maxVisibleTypes; i++) {
+                // Vérifier si selectedLevels[i] existe
+                const levelData = selectedLevels[i] || selectedLevel[i];
+                const type = levelData.type;
+                const name = levelData.name;
+
+                rows.push(`
+                    <tr>
+                        <th style="text-align: right;">${type}:</th>
+                        <td>${name}</td>
+                    </tr>
+                `);
+            }
+
+
+        }else {
             const limitedNiveaux = niveau.slice(0, maxLevels);
             rows.push(...limitedNiveaux.map((n, index) => `
                 <tr>
@@ -85,13 +109,15 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
                     <!-- Ligne pour le titre % -->
                     <tr>
                         <th colspan="2" style="border: none;"></th>
-                        <th colspan="${isRDC ? 6 : maxLevels * 2}" style="border: 1px solid black; text-align: center;">%</th>
+                        <th colspan="${isMLI ? 6 : isRDC ? 6 : maxLevels * 2}" style="border: 1px solid black; text-align: center;">%</th>
                     </tr>
                     <!-- Ligne pour les colonnes dynamiques -->
                     <tr>
                         <th></th>
                         <th style="border: none;"></th>
-                        ${(isRDC
+                        ${(isMLI
+                            ? Object.values(selectedLevels).map(level => level.type || "Type manquant")
+                            : isRDC
                             ? ["Province", "Territoire", "Ville"]
                             : niveau.slice(0, maxLevels).map(n => n.libelle_decoupage || '')
                         ).map(name => `
@@ -102,7 +128,12 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
                     <tr>
                         <th colspan="1" style="border: 1px solid black; text-align: center;">Domaines</th>
                         <th style="border: 1px solid black; text-align: center;">Total</th>
-                        ${(isRDC
+                        ${(isMLI
+                            ? Object.values(selectedLevels).map(() => `
+                                <th style="border: 1px solid black; text-align: center;">Public</th>
+                                <th style="border: 1px solid black; text-align: center;">Privé</th>
+                            `).join("")
+                            : isRDC
                             ? ["Province", "Territoire", "Ville"]
                             : niveau.slice(0, maxLevels)
                         ).map(() => `
@@ -117,7 +148,12 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
                         <tr>
                             <th style="border: 1px solid black; text-align: right;">${domaine.libelle || ''}</th>
                             <td style="border: 1px solid black; text-align: center;"></td>
-                            ${(isRDC ? ["Province", "Territoire", "Ville"] : niveau.slice(0, maxLevels)).map(() => `
+                            ${(isMLI
+                            ? Object.values(selectedLevels).map(() => `
+                                <td style="border: 1px solid black; text-align: center;"></td>
+                                <td style="border: 1px solid black; text-align: center;"></td>
+                            `).join("")
+                            : isRDC ? ["Province", "Territoire", "Ville"] : niveau.slice(0, maxLevels)).map(() => `
                                 <td style="border: 1px solid black; text-align: center;"></td>
                                 <td style="border: 1px solid black; text-align: center;"></td>
                             `).join('')}
@@ -125,6 +161,8 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
                     `).join('')}
                 </tbody>
             </table>
+
+
 
         `;
     };
@@ -201,28 +239,26 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
                     onEachFeature: function (feature, layer) {
                         feature.properties.level = level;
 
-                        // Ajouter un tooltip sur survol
-                        layer.bindTooltip(feature.properties[`NAME_${level}`], { permanent: false, className: "tooltip-name" });
 
+                        // Gestion des événements (aucune surbrillance ou rectangle affiché)
                         layer.on({
-                            mouseover: function (e) {
-                                highlightFeature(e);
-                                layer.openTooltip(); // Affiche le tooltip
-                            },
-                            mouseout: function (e) {
-                                resetHighlight(e);
-                                layer.closeTooltip(); // Masque le tooltip
-                            },
                             click: function (e) {
                                 var feature = e.target.feature;
-                                handleClick(feature, level);
+                                handleClick(feature, level); // Appeler la fonction de gestion du clic
                                 if (level < 5) {
                                     var nextNameProperty = `NAME_${level}`;
                                     loadGeoJsonLevel(level + 1, feature.properties[nextNameProperty]);
                                 }
+                            },
+                            mouseover: function (e) {
+                                // Pas de mise en surbrillance
+                            },
+                            mouseout: function (e) {
+                                // Pas de réinitialisation du style
                             }
                         });
                     }
+
                 }).addTo(map);
 
                 currentLayers[level] = geoJsonLayer;
@@ -261,7 +297,9 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
     // Lors du clic sur un niveau
     function handleClick(feature, level) {
         var nameProperty = `NAME_${level}`;
+        var typeProperty = `TYPE_${level}`;
         var name = feature.properties[nameProperty];
+        var type = feature.properties[typeProperty];
 
         // Spécifique à la RDC
         if (isRDC) {
@@ -273,6 +311,17 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
             } else if (feature.properties[typeProperty] === "Ville") {
                 selectedLevels["Ville"] = name;
             }
+        } else  if (isMLI) {
+            // Logique spécifique au Mali
+            selectedLevels[level] = { type, name };
+
+            // Réinitialiser les niveaux suivants pour le Mali
+            if (level === 1) {
+                selectedLevels[2] = { type: "Cercle", name: "Cliquez sur une zone" };
+                selectedLevels[3] = { type: "Arrondissement", name: "Cliquez sur une zone" };
+            } else if (level === 2) {
+                selectedLevels[3] = { type: "Arrondissement", name: "Cliquez sur une zone" };
+            }
         } else {
             // Réinitialiser les niveaux supérieurs
             for (let i = level + 1; i <= 3; i++) {
@@ -283,6 +332,10 @@ function initCountryAutreMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domai
 
         // Mettre à jour l'affichage
         info.update(domainesAssocie, niveau);
+        // Charger les sous-niveaux
+        if (level < 5) {
+            loadGeoJsonLevel(level + 1, name);
+        }
     }
 
     // Charger les fichiers GeoJSON

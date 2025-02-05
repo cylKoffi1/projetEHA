@@ -3,7 +3,7 @@
 @section('content')
 <div class="container-fluid">
 
-<div class="row mt-3 mb-3">
+<div class="row">
     <div class="col-md-3">
         <div class="card shadow-sm kpi-card" style="background: linear-gradient(to right, rgba(104, 155, 225, 0.9), #e7f1ff);">
             <div class="card-body py-3 d-flex justify-content-between align-items-center text-dark">

@@ -2,7 +2,7 @@ function initCountryMap(countryAlpha3Code,codeZoom, codeGroupeProjet, domainesAs
     var map = L.map('countryMap', {
         zoomControl: true,
         center: [-6.5, 7],
-        maxZoom: 20,
+        maxZoom: codeZoom.maxZoom,
         minZoom: codeZoom.minZoom,
         dragging: true,
         prefix: null

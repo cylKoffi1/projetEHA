@@ -2,22 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Acteur;
 use App\Models\Approbateur;
 use App\Models\Bailleur;
+use App\Models\DecoupageAdministratif;
+use App\Models\DecoupageAdminPays;
+use App\Models\Domaine;
 use App\Models\Ecran;
 use App\Models\Entreprise;
 use App\Models\EntrepriseParticulier;
 use App\Models\EtudeProject;
 use App\Models\EtudeProjectFile;
+use App\Models\FormeJuridique;
+use App\Models\Genre;
+use App\Models\GroupeProjet;
+use App\Models\GroupeProjetPaysUser;
+use App\Models\LocalitesPays;
 use App\Models\Ministere;
 use App\Models\MotDePasseUtilisateur;
 use App\Models\NatureTravaux;
 use App\Models\Particulier;
+use App\Models\Pays;
 use App\Models\Personnel;
 use App\Models\ProjectApproval;
 use App\Models\Projet;
 use App\Models\ProjetEha2;
 use App\Models\Renforcement;
+use App\Models\SecteurActivite;
+use App\Models\SituationMatrimonial;
+use App\Models\SousDomaine;
 use App\Models\Task;
 use App\Models\TravauxConnexes;
 use App\Models\TypeTravauxConnexes;
@@ -37,14 +50,94 @@ class EtudeProjet extends Controller
         {
             // Générer le code par défaut pour Public (1)
             $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA', 1); // 1 pour Public
+            $paysSelectionne = session('pays_selectionne');
+            $groupeSelectionne = session('projet_selectionne');
 
             $ecran = Ecran::find($request->input('ecran_id'));
             $natures = NatureTravaux::all();
-            $ministeres = Ministere::all();
-            $collectivites = Bailleur::where('code_type_bailleur', '06')->get();
-
-            return view('etudes_projets.naissance', compact('ecran','generatedCodeProjet','natures', 'ministeres', 'collectivites'));
+            $GroupeProjets = GroupeProjet::all();
+            $Domaines = Domaine::all();
+            $SousDomaines = SousDomaine::all();
+            $SecteurActivites = SecteurActivite::all();
+            $localite = LocalitesPays::all();
+            $Pays = GroupeProjetPaysUser::with('pays')
+            ->select('pays_code') // Sélectionne uniquement le code pays
+            ->distinct() // Évite les doublons
+            ->get()
+            ->pluck('pays.nom_fr_fr', 'pays.alpha3') // Associe alpha3 avec le nom
+            ->sort();
+            $DecoupageAdminPays = DecoupageAdminPays::all();
+            $Niveau = DecoupageAdministratif::all();
+            $formeJuridiques = FormeJuridique::all();
+            $genres = Genre::all();
+            $SituationMatrimoniales = SituationMatrimonial::all();
+            return view('etudes_projets.naissance', compact('formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures'));
         }
+        public function filter(Request $request)
+        {
+            $type_mo = $request->input('type_mo'); // Public ou Privé
+            $priveType = $request->input('priveType'); // Entreprise ou Individu
+
+            if ($type_mo === 'Public') {
+                $acteurs = Acteur::whereIn('type_acteur', ['eta', 'clt'])->get();
+            } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
+                $acteurs = Acteur::whereIn('type_acteur', ['ogi', 'etp', 'fat', 'sa', 'sar', 'sup', 'op'])->get();
+            } elseif ($type_mo === 'Privé' && $priveType === 'Individu') {
+                $acteurs = Acteur::where('type_acteur', 'etp')->get();
+            } else {
+                $acteurs = collect(); // Renvoie une collection vide si aucune correspondance
+            }
+            // Transformer les données pour inclure la concaténation
+            $acteurs = $acteurs->map(function ($acteur) {
+                return [
+                    'code_acteur' => $acteur->code_acteur,
+                    'libelle_long' => $acteur?->libelle_court . ' ' . $acteur?->libelle_long,
+                ];
+            });
+
+            return response()->json($acteurs);
+        }
+        public function getNiveauxAdministratifs($alpha3)
+        {
+            $pays = Pays::where('alpha3', $alpha3)->first();
+
+            if ($pays) {
+                $niveaux = DecoupageAdminPays::where('id_pays', $pays->id)
+                    ->join('decoupage_administratif', 'decoupage_admin_pays.code_decoupage', '=', 'decoupage_administratif.code_decoupage')
+                    ->select('decoupage_administratif.libelle_decoupage', 'decoupage_admin_pays.num_niveau_decoupage')
+                    ->orderBy('num_niveau_decoupage')
+                    ->get();
+
+                return response()->json($niveaux);
+            }
+
+            return response()->json([], 404);
+        }
+
+
+        public function getLocalitesByNiveau($alpha3, $niveau, Request $request)
+        {
+            $pays = Pays::where('alpha3', $alpha3)->first();
+
+            if ($pays) {
+                $query = LocalitesPays::where('id_pays', $pays->alpha3)
+                    ->where('id_niveau', $niveau);
+
+                // Filtrer selon `code_rattachement` si disponible
+                if ($request->has('code_rattachement')) {
+                    $query->where('code_rattachement', 'LIKE', $request->code_rattachement . '%');
+                }
+
+                $localites = $query->get(['id', 'libelle', 'code_rattachement']);
+
+                return response()->json($localites);
+            }
+
+            return response()->json([], 404);
+        }
+
+
+
 
         const MAX_FILE_SIZE_KB = 2048; // 2 Mo
         const MAX_FILE_SIZE_MB = 2;
