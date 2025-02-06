@@ -119,8 +119,314 @@
                         </div>
 
                         <form class="col-12" id="projectForm">
-                          <!-- Étape 3 : Informations sur le Maître d’Ouvrage -->
+                            <!-- Étape : Informations sur le Maître d’Œuvre -->
                             <div class="step active" id="step-1">
+                                <h5 class="text-secondary">👷 Informations / Maître d’ouvrage</h5>
+
+                                <div class="row">
+                                    <label>Type de Maître d’ouvrage *</label>
+                                    <div class="col">
+                                        <div class="form-check">
+                                            <input type="checkbox" id="moePublic" class="form-check-input" name="type_ouvrage" value="Public" onchange="toggleTypeMoe()">
+                                            <label class="form-check-label" for="moePublic">Public</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" id="moePrive" class="form-check-input" name="type_ouvrage" value="Privé" onchange="toggleTypeMoe()">
+                                            <label class="form-check-label" for="moePrive">Privé</label>
+                                        </div>
+
+                                    </div>
+                                    <!-- Options spécifiques pour le type privé -->
+                                    <div class="col mt-3 d-none" id="optionsMoePrive">
+                                        <label>Type de Privé *</label>
+                                        <div class="col">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priveMoeType" id="moeEntreprise" value="Entreprise" onchange="toggleMoeFields()">
+                                                <label class="form-check-label" for="moeEntreprise">Entreprise</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="priveMoeType" id="moeIndividu" value="Individu" onchange="toggleMoeFields()">
+                                                <label class="form-check-label" for="moeIndividu">Individu</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col position-relative">
+                                        <label>Acteur Responsable *</label>
+                                        <select class="form-control required" id="acteurMoeSelect">
+                                            <option value="">Sélectionnez un acteur</option>
+                                        </select>
+                                        <small class="text-muted">Sélectionnez l’entité qui assure le rôle de Maître d’œuvre.</small>
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <!-- MOE Entreprise Fields -->
+                                        <div class="row mt-3 d-none" id="moeEntrepriseFields">
+                                            <hr>
+                                            <h6>Détails pour l’Entreprise</h6>
+                                            <div class="col-12">
+                                                <ul class="nav nav-tabs" id="moeentrepriseTabs" role="tablist">
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link active" id="moeentreprise-general-tab" data-bs-toggle="tab" data-bs-target="#moeentreprise-general" type="button" role="tab" aria-controls="moeentreprise-general" aria-selected="true">Informations Générales</button>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link" id="moeentreprise-legal-tab" data-bs-toggle="tab" data-bs-target="#moeentreprise-legal" type="button" role="tab" aria-controls="moeentreprise-legal" aria-selected="false">Informations Juridiques</button>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link" id="moeentreprise-contact-tab" data-bs-toggle="tab" data-bs-target="#moeentreprise-contact" type="button" role="tab" aria-controls="moeentreprise-contact" aria-selected="false">Informations de Contact</button>
+                                                    </li>
+                                                </ul>
+                                                <div class="tab-content mt-3" id="moeentrepriseTabsContent">
+                                                    <!-- Tab 1: Informations Générales -->
+                                                    <div class="tab-pane fade show active" id="moeentreprise-general" role="tabpanel" aria-labelledby="moeentreprise-general-tab">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label>Code de l'Entreprise :</label>
+                                                                <input type="text" class="form-control" placeholder="Nom de l'entreprise">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label>Nom de l'Entreprise :</label>
+                                                                <input type="text" class="form-control" placeholder="Nom de l'entreprise">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Date de création :</label>
+                                                                <input type="text" class="form-control" placeholder="Adresse complète">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Secteur d'activité :</label>
+                                                                <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($SecteurActivites as $SecteurActivite)
+                                                                        <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4 ">
+                                                                <label>Forme Juridique :</label>
+                                                                <select name="FormeJuridique" id="FormeJuridique" class="form-control">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($formeJuridiques as $formeJuridique)
+                                                                        <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Tab 2: Informations Juridiques -->
+                                                    <div class="tab-pane fade" id="moeentreprise-legal" role="tabpanel" aria-labelledby="moeentreprise-legal-tab">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label>Numéro d’Immatriculation :</label>
+                                                                <input type="text" class="form-control" placeholder="Numéro RCCM">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label>Numéro d’Identification Fiscale (NIF) :</label>
+                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                            </div>
+                                                            <div class="col-md-6 mt-2">
+                                                                <label>Capital Social :</label>
+                                                                <input type="number" class="form-control" placeholder="Capital social de l’entreprise">
+                                                            </div>
+                                                            <div class="col-md-6 mt-2">
+                                                                <label>Numéro d'agrément :</label>
+                                                                <input type="text" name="Numéroagrement" id="Numéroagrement" class="form-control">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Tab 3: Informations de Contact -->
+                                                    <div class="tab-pane fade" id="moeentreprise-contact" role="tabpanel" aria-labelledby="moeentreprise-contact-tab">
+                                                        <div class="row">
+                                                            <div class="col-4">
+                                                                <label>Code postale</label>
+                                                                <input type="text" class="form-control" name="CodePostaleEntreprise" placeholder="Code postale">
+                                                            </div>
+                                                            <div class="col-4">
+                                                                <label>Adresse postale</label>
+                                                                <input type="text" class="form-control" name="AdressePostaleEntreprise" placeholder="Code postale">
+                                                            </div>
+                                                            <div class="col-4">
+                                                                <label>Adresse Siège</label>
+                                                                <input type="text" class="form-control" name="AdresseSiègeEntreprise" placeholder="Code postale">
+                                                            </div>
+                                                            <hr>
+                                                            <div class="col-md-3">
+                                                                <label>Représentant Légal :</label>
+                                                                <input type="text" class="form-control"  placeholder="Nom du représentant légal">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Email:</label>
+                                                                <input type="email" class="form-control" placeholder="Email du représentant légal">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Téléphone 1:</label>
+                                                                <input type="text" class="form-control" placeholder="Téléphone 1 du représentant légal">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Téléphone 2:</label>
+                                                                <input type="text" class="form-control" placeholder="Téléphone 2 du représentant légal">
+                                                            </div>
+                                                            <hr>
+                                                            <div class="col-md-3">
+                                                                <label>Personne de Contact :</label>
+                                                                <input type="text" class="form-control" placeholder="Nom de la personne de contact">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Email:</label>
+                                                                <input type="email" class="form-control" placeholder="Email du personne de Contact">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Téléphone 1:</label>
+                                                                <input type="text" class="form-control" placeholder="Téléphone 1 de la ersonne de Contact">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Téléphone 2:</label>
+                                                                <input type="text" class="form-control" placeholder="Téléphone 2 de la Personne de Contact">
+                                                            </div>
+                                                            <hr>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- MOE Individu Fields -->
+                                        <div class="row mt-3 d-none" id="moeIndividuFields">
+                                            <hr>
+                                            <h6>Détails pour l’Individu</h6>
+                                            <div class="col-12">
+                                                <ul class="nav nav-tabs" id="moeindividuTabs" role="tablist">
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link active" id="moeindividu-general-tab" data-bs-toggle="tab" data-bs-target="#moeindividu-general" type="button" role="tab" aria-controls="moeindividu-general" aria-selected="true">Informations Personnelles</button>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link" id="moeindividu-contact-tab" data-bs-toggle="tab" data-bs-target="#moeindividu-contact" type="button" role="tab" aria-controls="moeindividu-contact" aria-selected="false">Informations de Contact</button>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <button class="nav-link" id="moeindividu-admin-tab" data-bs-toggle="tab" data-bs-target="#moeindividu-admin" type="button" role="tab" aria-controls="moeindividu-admin" aria-selected="false">Informations Administratives</button>
+                                                    </li>
+                                                </ul>
+                                                <div class="tab-content mt-3" id="moeindividuTabsContent">
+                                                    <!-- Tab 1: Informations Personnelles -->
+                                                    <div class="tab-pane fade show active" id="moeindividu-general" role="tabpanel" aria-labelledby="moeindividu-general-tab">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label>Nom :</label>
+                                                                <input type="text" class="form-control" placeholder="Nom">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label>Prénom :</label>
+                                                                <input type="text" class="form-control" placeholder="Prénom">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Date de Naissance :</label>
+                                                                <input type="date" class="form-control">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Nationalité :</label>
+                                                                <input type="text" class="form-control" placeholder="Nationalité">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Secteur d'activité :</label>
+                                                                <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($formeJuridiques as $formeJuridique)
+                                                                        <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Tab 2: Informations de Contact -->
+                                                    <div class="tab-pane fade" id="moeindividu-contact" role="tabpanel" aria-labelledby="moeindividu-contact-tab">
+                                                        <div class="row">
+                                                            <div class="col-md-4">
+                                                                <label>Email :</label>
+                                                                <input type="email" class="form-control" placeholder="Email">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label for="codePostal">Code postal</label>
+                                                                <input type="text" name="CodePostal" id="CodePostal" class="form-control">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Adresse :</label>
+                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Adresse siège :</label>
+                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Téléphone Bureau:</label>
+                                                                <input type="text" class="form-control" placeholder="Téléphone">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Téléphone mobile:</label>
+                                                                <input type="text" class="form-control" placeholder="Téléphone">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Tab 3: Informations Administratives -->
+                                                    <div class="tab-pane fade" id="moeindividu-admin" role="tabpanel" aria-labelledby="moeindividu-admin-tab">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <label>Numéro de Carte d’Identité :</label>
+                                                                <input type="text" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label>Date de vailidité :</label>
+                                                                <input type="date" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Numéro Fiscal :</label>
+                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                            </div>
+                                                            <div class="col-md-4 ">
+                                                                <label>Situation Matrimoniale :</label>
+                                                                <select class="form-control">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                                        <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Genre</label>
+                                                                <select name="genre" id="genre" class="form-control">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($genres as $genre)
+                                                                    <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                </div>                                <!-- Champs pour Entreprise -->
+
+
+                                <hr>
+                                <div class="row mt-3">
+                                    <label>Description / Observations</label>
+                                    <textarea class="form-control" id="descriptionMoe" rows="3" placeholder="Ajoutez des précisions sur le Maître d’œuvre"></textarea>
+                                </div><br>
+                                <div class="row">
+
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                          <!-- Étape  : Informations sur le Maître d’Ouvrage -->
+                            <div class="step" id="step-2">
                                 <h5 class="text-secondary">🏗️ Informations / Maître d'œuvre</h5>
 
                                 <!-- ✅ Sélection du Type -->
@@ -173,99 +479,11 @@
                                     </div>
                                 </div>
 
-                                <!-- ✅ Champs spécifiques pour Entreprise -->
-                                <div class="row mt-3 d-none" id="entrepriseFields">
-                                    <h6>Détails pour l’Entreprise</h6>
-                                    <div class="col-md-6">
-                                        <label>Nom de l'Entreprise :</label>
-                                        <input type="text" class="form-control" placeholder="Nom de l'entreprise">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label>Adresse de l'Entreprise :</label>
-                                        <input type="text" class="form-control" placeholder="Adresse">
-                                    </div>
-                                    <div class="col-md-6 mt-2">
-                                        <label>Activité Principale :</label>
-                                        <input type="text" class="form-control" placeholder="Activité principale">
-                                    </div>
-                                    <div class="col-md-6 mt-2">
-                                        <label>Numéro d’Immatriculation :</label>
-                                        <input type="text" class="form-control" placeholder="Numéro d'immatriculation">
-                                    </div>
-                                </div>
-
-                                  <!-- ✅ Champs spécifiques pour Individu -->
-                                <div class="row mt-3 d-none" id="individuFields">
-                                    <h6>Détails pour l’Individu</h6>
-                                    <div class="col-md-6">
-                                        <label>Nom :</label>
-                                        <input type="text" class="form-control" placeholder="Nom">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label>Prénom :</label>
-                                        <input type="text" class="form-control" placeholder="Prénom">
-                                    </div>
-                                    <div class="col-md-6 mt-2">
-                                        <label>Numéro de Téléphone :</label>
-                                        <input type="text" class="form-control" placeholder="Téléphone">
-                                    </div>
-                                    <div class="col-md-6 mt-2">
-                                        <label>Adresse E-mail :</label>
-                                        <input type="email" class="form-control" placeholder="Email">
-                                    </div>
-                                </div>
-                                <!-- ✅ Zone de description complémentaire -->
                                 <div class="row">
-                                    <label>Description / Observations</label>
-                                    <textarea class="form-control" id="descriptionMO" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
-                                </div><br>
 
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
-                            </div>
-                            <!-- Étape : Informations sur le Maître d’Œuvre -->
-                            <div class="step" id="step-2">
-                                <h5 class="text-secondary">👷 Informations / Maître d’ouvrage</h5>
-
-                                <div class="row">
-                                    <label>Type de Maître d’ouvrage *</label>
-                                    <div class="col">
-                                        <div class="form-check">
-                                            <input type="checkbox" id="moePublic" class="form-check-input" name="type_ouvrage" value="Public" onchange="toggleTypeMoe()">
-                                            <label class="form-check-label" for="moePublic">Public</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input type="checkbox" id="moePrive" class="form-check-input" name="type_ouvrage" value="Privé" onchange="toggleTypeMoe()">
-                                            <label class="form-check-label" for="moePrive">Privé</label>
-                                        </div>
-
-                                    </div>
-                                    <!-- Options spécifiques pour le type privé -->
-                                    <div class="col mt-3 d-none" id="optionsMoePrive">
-                                        <label>Type de Privé *</label>
-                                        <div class="col">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="priveMoeType" id="moeEntreprise" value="Entreprise" onchange="toggleMoeFields()">
-                                                <label class="form-check-label" for="moeEntreprise">Entreprise</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="priveMoeType" id="moeIndividu" value="Individu" onchange="toggleMoeFields()">
-                                                <label class="form-check-label" for="moeIndividu">Individu</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <!-- Sélection de l’Acteur -->
-                                        <label>Acteur Responsable *</label>
-                                        <select class="form-control required" id="acteurMoeSelect">
-                                            <option value="">Sélectionnez un acteur</option>
-                                        </select>
-                                        <small class="text-muted">Sélectionnez l’entité qui assure le rôle de Maître d’œuvre.</small>
-                                    </div>
-                                </div>
-
-                                <div class="row">
                                     <!-- MOE Entreprise Fields -->
-                                        <div class="row mt-3 d-none" id="moeEntrepriseFields">
+                                        <div class="row mt-3 d-none" id="entrepriseFields">
+                                            <hr>
                                             <h6>Détails pour l’Entreprise</h6>
                                             <div class="col-12">
                                                 <ul class="nav nav-tabs" id="entrepriseTabs" role="tablist">
@@ -278,28 +496,21 @@
                                                     <li class="nav-item" role="presentation">
                                                         <button class="nav-link" id="entreprise-contact-tab" data-bs-toggle="tab" data-bs-target="#entreprise-contact" type="button" role="tab" aria-controls="entreprise-contact" aria-selected="false">Informations de Contact</button>
                                                     </li>
-                                                    <li class="nav-item" role="presentation">
-                                                        <button class="nav-link" id="entreprise-localisation-tab" data-bs-toggle="tab" data-bs-target="#entreprise-localisation" type="button" role="tab" aria-controls="entreprise-localisation" aria-selected="false">Localisation</button>
-                                                    </li>
                                                 </ul>
                                                 <div class="tab-content mt-3" id="entrepriseTabsContent">
                                                     <!-- Tab 1: Informations Générales -->
                                                     <div class="tab-pane fade show active" id="entreprise-general" role="tabpanel" aria-labelledby="entreprise-general-tab">
                                                         <div class="row">
                                                             <div class="col-md-6">
-                                                                <label>Code de l'Entreprise :</label>
+                                                                <label>Raison social * </label>
                                                                 <input type="text" class="form-control" placeholder="Nom de l'entreprise">
                                                             </div>
                                                             <div class="col-md-6">
-                                                                <label>Nom de l'Entreprise :</label>
-                                                                <input type="text" class="form-control" placeholder="Nom de l'entreprise">
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <label>Date de création :</label>
+                                                                <label>Date de création * </label>
                                                                 <input type="text" class="form-control" placeholder="Adresse complète">
                                                             </div>
-                                                            <div class="col-md-4">
-                                                                <label>Secteur d'activité :</label>
+                                                            <div class="col-md-6">
+                                                                <label>Secteur d'activité * </label>
                                                                 <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($SecteurActivites as $SecteurActivite)
@@ -307,8 +518,8 @@
                                                                     @endforeach
                                                                 </select>
                                                             </div>
-                                                            <div class="col-md-4 ">
-                                                                <label>Forme Juridique :</label>
+                                                            <div class="col-md-6 ">
+                                                                <label>Forme Juridique *</label>
                                                                 <select name="FormeJuridique" id="FormeJuridique" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($formeJuridiques as $formeJuridique)
@@ -322,12 +533,16 @@
                                                     <!-- Tab 2: Informations Juridiques -->
                                                     <div class="tab-pane fade" id="entreprise-legal" role="tabpanel" aria-labelledby="entreprise-legal-tab">
                                                         <div class="row">
-                                                            <div class="col-md-6">
-                                                                <label>Numéro d’Immatriculation :</label>
+                                                            <div class="col-md-4">
+                                                                <label>Numéro d’Immatriculation *:</label>
                                                                 <input type="text" class="form-control" placeholder="Numéro RCCM">
                                                             </div>
-                                                            <div class="col-md-6">
+                                                            <div class="col-md-4">
                                                                 <label>Numéro d’Identification Fiscale (NIF) :</label>
+                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Registre du commerce (RCCM) :</label>
                                                                 <input type="text" class="form-control" placeholder="Numéro fiscal">
                                                             </div>
                                                             <div class="col-md-6 mt-2">
@@ -344,85 +559,53 @@
                                                     <!-- Tab 3: Informations de Contact -->
                                                     <div class="tab-pane fade" id="entreprise-contact" role="tabpanel" aria-labelledby="entreprise-contact-tab">
                                                         <div class="row">
-                                                            <div class="col-6">
+                                                            <div class="col-4">
                                                                 <label>Code postale</label>
                                                                 <input type="text" class="form-control" name="CodePostaleEntreprise" placeholder="Code postale">
                                                             </div>
-                                                            <div class="col-6">
+                                                            <div class="col-4">
                                                                 <label>Adresse postale</label>
                                                                 <input type="text" class="form-control" name="AdressePostaleEntreprise" placeholder="Code postale">
                                                             </div>
+                                                            <div class="col-4">
+                                                                <label>Adresse Siège</label>
+                                                                <input type="text" class="form-control" name="AdresseSiègeEntreprise" placeholder="Code postale">
+                                                            </div>
                                                             <hr>
                                                             <div class="col-md-3">
-                                                                <label>Représentant Légal :</label>
+                                                                <label>Représentant Légal *</label>
                                                                 <input type="text" class="form-control"  placeholder="Nom du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label>Email:</label>
+                                                                <label>Email *</label>
                                                                 <input type="email" class="form-control" placeholder="Email du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label>Téléphone 1:</label>
+                                                                <label>Téléphone 1 *</label>
                                                                 <input type="text" class="form-control" placeholder="Téléphone 1 du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label>Téléphone 2:</label>
+                                                                <label>Téléphone 2 *</label>
                                                                 <input type="text" class="form-control" placeholder="Téléphone 2 du représentant légal">
                                                             </div>
                                                             <hr>
                                                             <div class="col-md-3">
-                                                                <label>Personne de Contact :</label>
+                                                                <label>Personne de Contact </label>
                                                                 <input type="text" class="form-control" placeholder="Nom de la personne de contact">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label>Email:</label>
+                                                                <label>Email</label>
                                                                 <input type="email" class="form-control" placeholder="Email du personne de Contact">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label>Téléphone 1:</label>
+                                                                <label>Téléphone 1</label>
                                                                 <input type="text" class="form-control" placeholder="Téléphone 1 de la ersonne de Contact">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label>Téléphone 2:</label>
+                                                                <label>Téléphone 2</label>
                                                                 <input type="text" class="form-control" placeholder="Téléphone 2 de la Personne de Contact">
                                                             </div>
                                                             <hr>
-                                                        </div>
-                                                    </div>
-                                                    <!--Tab 4: Localisation-->
-                                                    <div class="tab-pane fade" id="entreprise-localisation" role="tabpanel" aria-labelledby="entreprise-localisation-tab">
-                                                        <div class="row">
-                                                            <label>Pays de localisation</label>
-                                                            <div class="col-6">
-                                                                <label>Pays *</label>
-                                                                <select class="form-control" id="paysSelect2">
-                                                                    <option value="">Sélectionnez un pays</option>
-                                                                    @foreach ($Pays as $alpha3 => $nom_fr_fr)
-                                                                        <option value="{{ $alpha3 }}">{{ $nom_fr_fr }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="col-6">
-                                                                <label id="niveau1Label2">Niveau 1 *</label>
-                                                                <select class="form-control" id="niveau1Select2" disabled>
-                                                                    <option value="">Sélectionnez un niveau</option>
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="col-6">
-                                                                <label id="niveau2Label2">Niveau 2 *</label>
-                                                                <select class="form-control" id="niveau2Select2" disabled>
-                                                                    <option value="">Sélectionnez un niveau</option>
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="col-6">
-                                                                <label id="niveau3Label2">Niveau 3 *</label>
-                                                                <select class="form-control" id="niveau3Select2" disabled>
-                                                                    <option value="">Sélectionnez un niveau</option>
-                                                                </select>
-                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -430,7 +613,8 @@
                                         </div>
 
                                         <!-- MOE Individu Fields -->
-                                        <div class="row mt-3 d-none" id="moeIndividuFields">
+                                        <div class="row mt-3 d-none" id="individuFields">
+                                            <hr>
                                             <h6>Détails pour l’Individu</h6>
                                             <div class="col-12">
                                                 <ul class="nav nav-tabs" id="individuTabs" role="tablist">
@@ -443,32 +627,29 @@
                                                     <li class="nav-item" role="presentation">
                                                         <button class="nav-link" id="individu-admin-tab" data-bs-toggle="tab" data-bs-target="#individu-admin" type="button" role="tab" aria-controls="individu-admin" aria-selected="false">Informations Administratives</button>
                                                     </li>
-                                                    <li class="nav-item" role="presentation">
-                                                        <button class="nav-link" id="individu-localisation-tab" data-bs-toggle="tab" data-bs-target="#individu-localisation" type="button" role="tab" aria-controls="individu-localisation" aria-selected="false">Localisation</button>
-                                                    </li>
                                                 </ul>
                                                 <div class="tab-content mt-3" id="individuTabsContent">
                                                     <!-- Tab 1: Informations Personnelles -->
                                                     <div class="tab-pane fade show active" id="individu-general" role="tabpanel" aria-labelledby="individu-general-tab">
                                                         <div class="row">
                                                             <div class="col-md-6">
-                                                                <label>Nom :</label>
+                                                                <label>Nom *</label>
                                                                 <input type="text" class="form-control" placeholder="Nom">
                                                             </div>
                                                             <div class="col-md-6">
-                                                                <label>Prénom :</label>
+                                                                <label>Prénom *</label>
                                                                 <input type="text" class="form-control" placeholder="Prénom">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Date de Naissance :</label>
+                                                                <label>Date de Naissance </label>
                                                                 <input type="date" class="form-control">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Nationalité :</label>
+                                                                <label>Nationalité *</label>
                                                                 <input type="text" class="form-control" placeholder="Nationalité">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Secteur d'activité :</label>
+                                                                <label>Secteur d'activité *</label>
                                                                 <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($formeJuridiques as $formeJuridique)
@@ -483,7 +664,7 @@
                                                     <div class="tab-pane fade" id="individu-contact" role="tabpanel" aria-labelledby="individu-contact-tab">
                                                         <div class="row">
                                                             <div class="col-md-4">
-                                                                <label>Email :</label>
+                                                                <label>Email *</label>
                                                                 <input type="email" class="form-control" placeholder="Email">
                                                             </div>
                                                             <div class="col-md-4">
@@ -491,15 +672,19 @@
                                                                 <input type="text" name="CodePostal" id="CodePostal" class="form-control">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Adresse :</label>
+                                                                <label>Adresse postale</label>
                                                                 <input type="text" class="form-control" placeholder="Adresse">
                                                             </div>
-                                                            <div class="col-md-6">
-                                                                <label>Téléphone Bureau:</label>
+                                                            <div class="col-md-4">
+                                                                <label>Adresse siège *</label>
+                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Téléphone Bureau *</label>
                                                                 <input type="text" class="form-control" placeholder="Téléphone">
                                                             </div>
-                                                            <div class="col-md-6">
-                                                                <label>Téléphone mobile:</label>
+                                                            <div class="col-md-4">
+                                                                <label>Téléphone mobile *</label>
                                                                 <input type="text" class="form-control" placeholder="Téléphone">
                                                             </div>
                                                         </div>
@@ -509,15 +694,15 @@
                                                     <div class="tab-pane fade" id="individu-admin" role="tabpanel" aria-labelledby="individu-admin-tab">
                                                         <div class="row">
                                                             <div class="col-md-6">
-                                                                <label>Numéro de Carte d’Identité :</label>
+                                                                <label>Numéro de Carte d’Identité </label>
                                                                 <input type="text" class="form-control" placeholder="Numéro de CNI">
                                                             </div>
                                                             <div class="col-md-6">
-                                                                <label>Date de vailidité :</label>
+                                                                <label>Date de vailidité </label>
                                                                 <input type="date" class="form-control" placeholder="Numéro de CNI">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Numéro Fiscal :</label>
+                                                                <label>Numéro Fiscal </label>
                                                                 <input type="text" class="form-control" placeholder="Numéro fiscal">
                                                             </div>
                                                             <div class="col-md-4 ">
@@ -540,59 +725,27 @@
                                                             </div>
                                                         </div>
                                                     </div>
-
-                                                    <!--Tab 4: Localisation-->
-                                                    <div class="tab-pane fade" id="individu-localisation" role="tabpanel" aria-labelledby="individu-localisation-tab">
-                                                        <div class="row">
-                                                            <label>Pays de localisation</label>
-                                                            <div class="col-6">
-                                                                <label>Pays *</label>
-                                                                <select class="form-control" id="paysSelect3">
-                                                                    <option value="">Sélectionnez un pays</option>
-                                                                    @foreach ($Pays as $alpha3 => $nom_fr_fr)
-                                                                        <option value="{{ $alpha3 }}">{{ $nom_fr_fr }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="col-6">
-                                                                <label id="niveau1Label3">Niveau 1 *</label>
-                                                                <select class="form-control" id="niveau1Select3" disabled>
-                                                                    <option value="">Sélectionnez un niveau</option>
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="col-6">
-                                                                <label id="niveau2Label3">Niveau 2 *</label>
-                                                                <select class="form-control" id="niveau2Select3" disabled>
-                                                                    <option value="">Sélectionnez un niveau</option>
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="col-6">
-                                                                <label id="niveau3Label3">Niveau 3 *</label>
-                                                                <select class="form-control" id="niveau3Select3" disabled>
-                                                                    <option value="">Sélectionnez un niveau</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-
-                                </div>                                <!-- Champs pour Entreprise -->
-
-
-
-                                <div class="row mt-3">
+                                </div>
+                                <!-- ✅ Zone de description complémentaire -->
+                                <div class="row">
                                     <label>Description / Observations</label>
-                                    <textarea class="form-control" id="descriptionMoe" rows="3" placeholder="Ajoutez des précisions sur le Maître d’œuvre"></textarea>
+                                    <textarea class="form-control" id="descriptionMO" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
                                 </div><br>
+                                <div class="row">
 
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary " onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
+
                             </div>
+
 
 
                             <!-- 🟣 Étape 4 : Acteurs du projet -->
@@ -614,8 +767,14 @@
 
                                 </div><br>
 
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
                             </div>
 
 
@@ -689,8 +848,14 @@
                                     </table>
                                 </div>
 
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
                             </div>
 
 
@@ -739,8 +904,14 @@
                                     <textarea class="form-control" rows="3" placeholder="Décrivez l'objectif du projet"></textarea>
                                 </div>
 
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- 🟠 Étape 2 : Localisation -->
@@ -809,8 +980,14 @@
                                     </div>
                                 </div>
 
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- 🔵 Étape : Bénéficiaire -->
@@ -940,8 +1117,14 @@
                                     </div>
                                 </div>
 
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
 
                             </div>
 
@@ -972,7 +1155,7 @@
                                 </div>
                             </div>
                             <!-- 🟡 Étape 5 : Documents -->
-                            <div class="step" id="step-6">
+                            <div class="step" id="step-7">
                                 <h5 class="text-secondary">📎 Documents et Pièces Justificatives</h5>
                                 <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#documentModal">
                                     📜 Liste des documents à fournir
@@ -982,8 +1165,14 @@
                                     <input type="file" id="fileUpload" class="d-none" multiple>
                                 </div>
                                 <div class="uploaded-files mt-2" id="uploadedFiles"></div>
-                                <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                <button type="submit" class="btn btn-success">Soumettre</button>
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="submit" class="btn btn-success">Soumettre</button>
+                                    </div>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -995,7 +1184,7 @@
 
 <script>
     let currentStep = 1;
-    const totalSteps = 6;
+    const totalSteps = 7;
     let uploadedFiles = [];
 
     function showStep(step) {
@@ -1077,67 +1266,97 @@
 
     ////////////////ACTEURS
     document.addEventListener("DOMContentLoaded", function () {
-        const fields = [
-            { id: "bailleur", list: "bailleurList"},
-            { id: "maitreOuvrageInput", list: "maitreOuvrageList" },
-            { id: "maitreOeuvreInput", list: "maitreOeuvreList" },
-            { id: "chefProjetInput", list: "chefProjetList"}
-        ];
+    let acteurInput = document.getElementById("acteurMoeInput");
+    let acteurList = document.getElementById("acteurMoeList");
+    let entrepriseFields = document.getElementById("moeEntrepriseFields");
+    let individuFields = document.getElementById("moeIndividuFields");
 
-        fields.forEach(field => {
-            let input = document.getElementById(field.id);
-            let list = document.getElementById(field.list);
+    acteurInput.addEventListener("keyup", function () {
+        let searchValue = acteurInput.value.trim();
 
-            input.addEventListener("keyup", function () {
-                let searchValue = input.value.trim();
-                if (searchValue.length > 1) {
-                    fetch(`/api/acteurs?search=${searchValue}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            list.innerHTML = "";
-                            data.forEach(item => {
-                                let li = document.createElement("li");
-                                li.classList.add("list-group-item", "list-group-item-action");
-                                li.textContent = item.libelle_long;
-                                li.textContent = item.libelle_court;
-                                li.onclick = () => {
-                                    input.value = item.libelle_long;
-                                    input.value = item.libelle_court;
-                                    list.innerHTML = "";
-                                };
-                                list.appendChild(li);
-                            });
-
-                            // Option pour ajouter une nouvelle personne
-                            let addNewOption = document.createElement("li");
-                            addNewOption.classList.add("list-group-item", "text-primary");
-                            addNewOption.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${searchValue}"`;
-                            addNewOption.onclick = () => {
-                                addNewActor( searchValue);
-                                input.value = searchValue;
-                                list.innerHTML = "";
-                            };
-                            list.appendChild(addNewOption);
-                        });
-                } else {
-                    list.innerHTML = "";
-                }
-            });
-        });
-
-        function addNewActor( name) {
-            fetch('/api/acteurs', {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({  name })
-            })
+        if (searchValue.length > 1) {
+            fetch(`/api/acteurs?search=${searchValue}`)
                 .then(response => response.json())
-                .then(data => alert("Nouvel acteur ajouté avec succès !"));
+                .then(data => {
+                    acteurList.innerHTML = "";
+                    data.forEach(item => {
+                        let li = document.createElement("li");
+                        li.classList.add("list-group-item", "list-group-item-action");
+                        li.textContent = item.libelle_long;
+                        li.dataset.id = item.code_acteur;
+                        li.dataset.type = item.type_acteur; // Stocker le type d'acteur
+
+                        li.onclick = () => {
+                            acteurInput.value = item.libelle_long;
+                            acteurList.innerHTML = "";
+
+                            // Remplissage automatique des champs selon le type d'acteur
+                            remplirChampsActeur(item);
+
+                            // Désactivation des autres champs si acteur existant sélectionné
+                            if (item.type_acteur === "Entreprise") {
+                                entrepriseFields.classList.remove("d-none");
+                                individuFields.classList.add("d-none");
+                            } else if (item.type_acteur === "Individu") {
+                                entrepriseFields.classList.add("d-none");
+                                individuFields.classList.remove("d-none");
+                            }
+                        };
+
+                        acteurList.appendChild(li);
+                    });
+
+                    // Option pour ajouter un nouvel acteur
+                    let addNewOption = document.createElement("li");
+                    addNewOption.classList.add("list-group-item", "text-primary");
+                    addNewOption.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${searchValue}"`;
+                    addNewOption.onclick = () => {
+                        acteurInput.value = searchValue;
+                        acteurList.innerHTML = "";
+                        entrepriseFields.classList.add("d-none");
+                        individuFields.classList.add("d-none");
+                        activerChampsActeur(); // Activer tous les champs pour une saisie manuelle
+                    };
+                    acteurList.appendChild(addNewOption);
+                })
+                .catch(error => console.error("Erreur lors de la recherche des acteurs :", error));
+        } else {
+            acteurList.innerHTML = "";
         }
     });
+
+    function remplirChampsActeur(acteur) {
+        document.getElementById("nomEntreprise").value = acteur.nom_entreprise || "";
+        document.getElementById("adresseEntreprise").value = acteur.adresse || "";
+        document.getElementById("emailEntreprise").value = acteur.email || "";
+        document.getElementById("telephoneEntreprise").value = acteur.telephone || "";
+        document.getElementById("numImmatriculation").value = acteur.num_immatriculation || "";
+        document.getElementById("numFiscal").value = acteur.num_fiscal || "";
+
+        document.getElementById("nomIndividu").value = acteur.nom || "";
+        document.getElementById("prenomIndividu").value = acteur.prenom || "";
+        document.getElementById("emailIndividu").value = acteur.email || "";
+        document.getElementById("telephoneIndividu").value = acteur.telephone || "";
+        document.getElementById("cniIndividu").value = acteur.num_cni || "";
+
+        // Désactiver les champs si acteur existant
+        desactiverChampsActeur();
+    }
+
+    function desactiverChampsActeur() {
+        document.querySelectorAll("#moeEntrepriseFields input, #moeIndividuFields input").forEach(input => {
+            input.disabled = true;
+        });
+    }
+
+    function activerChampsActeur() {
+        document.querySelectorAll("#moeEntrepriseFields input, #moeIndividuFields input").forEach(input => {
+            input.disabled = false;
+            input.value = ""; // Réinitialiser les champs
+        });
+    }
+});
+
 
 
    //////////////////////////FINANCEMENT
@@ -1805,6 +2024,7 @@ document.addEventListener("DOMContentLoaded", function () {
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const typeSelectionInputs = document.querySelectorAll(".type_mo");
+
         const acteurSelect = document.getElementById("acteurSelect");
 
         typeSelectionInputs.forEach(input => {
@@ -1829,40 +2049,65 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     });
+    document.addEventListener("DOMContentLoaded", function() {
+        const typeSelectionInputs = document.querySelectorAll(".type_ouvrage");
+
+        const acteurMoeSelect = document.getElementById("acteurMoeSelect");
+
+        typeSelectionInputs.forEach(input => {
+            input.addEventListener("change", function() {
+                const selectionType = this.value;
+
+                fetch(`/get-acteurs?type_selection=${selectionType}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Réinitialiser les options
+                        acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
+
+                        // Ajouter les nouvelles options
+                        data.forEach(acteur => {
+                            const option = document.createElement("option");
+                            option.value = acteur.code_acteur;
+                            option.textContent = acteur.libelle_long;
+                            acteurMoeSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Erreur lors du chargement des acteurs:", error));
+            });
+        });
+    });
 
 
     ////////////////MAITRE D'OEUVRE
     document.addEventListener("DOMContentLoaded", function () {
-        const type_ouvrage = document.querySelectorAll('input[name="type_ouvrage"]');
-        type_ouvrage.forEach((checkbox) => {
-            checkbox.addEventListener("change", function () {
-                if (this.checked) {
-                    type_ouvrage.forEach((cb) => {
-                        if (cb !== this) cb.checked = false;
-                    });
-                }
-            });
+    // Empêcher la sélection de plusieurs options pour type_ouvrage
+    const type_ouvrages = document.querySelectorAll('input[name="type_ouvrage"]');
+    type_ouvrages.forEach((checkbox) => {
+        checkbox.addEventListener("change", function () {
+            if (this.checked) {
+                type_ouvrages.forEach((cb) => {
+                    if (cb !== this) cb.checked = false;
+                });
+            }
         });
     });
-    // Gestion du Maître d’œuvre
+
+    // Gestion du Maître d’Ouvrage
     function toggleTypeMoe() {
-        const publicRadio = document.getElementById('moePublic'); // Checkbox "Public"
-        const priveRadio = document.getElementById('moePrive');   // Checkbox "Privé"
-        const optionsMoePrive = document.getElementById('optionsMoePrive'); // Section pour "Entreprise" ou "Individu"
-        const moeEntrepriseFields = document.getElementById('moeEntrepriseFields'); // Champs pour "Entreprise"
-        const individuFields = document.getElementById('moeIndividuFields'); // Champs pour "Individu"
+        const publicRadio = document.getElementById('moePublic');
+        const priveRadio = document.getElementById('moePrive');
+        const optionsMoePrive = document.getElementById('optionsMoePrive');
+        const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
+        const individuFields = document.getElementById('moeIndividuFields');
         const acteurMoeSelect = document.getElementById('acteurMoeSelect');
 
-        // Si "Public" est sélectionné
         if (publicRadio.checked) {
-            optionsMoePrive.classList.add('d-none'); // Cacher les options pour "Privé"
-            moeEntrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
-            individuFields.classList.add('d-none'); // Cacher les champs "Individu"
+            optionsMoePrive.classList.add('d-none');
+            moeEntrepriseFields.classList.add('d-none');
+            individuFields.classList.add('d-none');
             fetchMoeActeurs('Public');
-        }
-        // Si "Privé" est sélectionné
-        else if (priveRadio.checked) {
-            optionsMoePrive.classList.remove('d-none'); // Afficher les options pour "Entreprise" ou "Individu"
+        } else if (priveRadio.checked) {
+            optionsMoePrive.classList.remove('d-none');
             acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
 
             const entrepriseRadio = document.getElementById('moeEntreprise');
@@ -1889,24 +2134,25 @@ document.addEventListener("DOMContentLoaded", function () {
         const individuRadio = document.getElementById('moeIndividu');
         const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
         const individuFields = document.getElementById('moeIndividuFields');
+        const typeOuvrage = document.querySelector('input[name="type_ouvrage"]:checked')?.value;
 
         if (entrepriseRadio.checked) {
-            fetchMoeActeurs('Privé', 'Entreprise');
+            fetchMoeActeurs(typeOuvrage, 'Entreprise');
             moeEntrepriseFields.classList.remove('d-none');
             individuFields.classList.add('d-none');
         } else if (individuRadio.checked) {
-            fetchMoeActeurs('Privé', 'Individu');
+            fetchMoeActeurs(typeOuvrage, 'Individu');
             individuFields.classList.remove('d-none');
             moeEntrepriseFields.classList.add('d-none');
         }
     }
 
-    function fetchMoeActeurs(type_ouvrage, priveType = null) {
+    function fetchMoeActeurs(typeOuvrage, priveType = null) {
         const acteurMoeSelect = document.getElementById('acteurMoeSelect');
-        let url = `/get-acteurs?type_ouvrage=${type_ouvrage}`;
+        let url = `/get-acteurs?type_ouvrage=${encodeURIComponent(typeOuvrage)}`;
 
         if (priveType) {
-            url += `&priveType=${priveType}`;
+            url += `&priveMoeType=${encodeURIComponent(priveType)}`;
         }
 
         fetch(url)
@@ -1923,12 +2169,12 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch(error => console.error("Erreur lors du chargement des acteurs :", error));
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        document.getElementById('moePublic').addEventListener('change', toggleTypeMoe);
-        document.getElementById('moePrive').addEventListener('change', toggleTypeMoe);
-        document.getElementById('moeEntreprise').addEventListener('change', toggleMoeFields);
-        document.getElementById('moeIndividu').addEventListener('change', toggleMoeFields);
-    });
+    document.getElementById('moePublic').addEventListener('change', toggleTypeMoe);
+    document.getElementById('moePrive').addEventListener('change', toggleTypeMoe);
+    document.getElementById('moeEntreprise').addEventListener('change', toggleMoeFields);
+    document.getElementById('moeIndividu').addEventListener('change', toggleMoeFields);
+});
+
 
 </script>
 

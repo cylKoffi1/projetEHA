@@ -73,30 +73,50 @@ class EtudeProjet extends Controller
             $SituationMatrimoniales = SituationMatrimonial::all();
             return view('etudes_projets.naissance', compact('formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures'));
         }
-        public function filter(Request $request)
+        public function getActeurs(Request $request)
         {
-            $type_mo = $request->input('type_mo'); // Public ou Privé
-            $priveType = $request->input('priveType'); // Entreprise ou Individu
 
-            if ($type_mo === 'Public') {
-                $acteurs = Acteur::whereIn('type_acteur', ['eta', 'clt'])->get();
-            } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
-                $acteurs = Acteur::whereIn('type_acteur', ['ogi', 'etp', 'fat', 'sa', 'sar', 'sup', 'op'])->get();
-            } elseif ($type_mo === 'Privé' && $priveType === 'Individu') {
-                $acteurs = Acteur::where('type_acteur', 'etp')->get();
-            } else {
-                $acteurs = collect(); // Renvoie une collection vide si aucune correspondance
+            // Vérification du type de requête : Maître d’Ouvrage ou Maître d’Œuvre
+            $type_mo = $request->input('type_mo'); // Public ou Privé (Maître d'Ouvrage)
+            $priveType = $request->input('priveType'); // Entreprise ou Individu (Maître d'Ouvrage)
+
+            $type_ouvrage = $request->input('type_ouvrage'); // Public ou Privé (Maître d'Œuvre)
+            $priveMoeType = $request->input('priveMoeType'); // Entreprise ou Individu (Maître d'Œuvre)
+            //dd('Privé type:'.$priveMoeType, 'Type Ouvrage:'.$type_ouvrage);
+            $acteurs = collect(); // Collection vide par défaut
+
+            if (!empty($type_ouvrage)) {
+                // 🔹 Logique pour le Maître d'Œuvre
+                if ($type_ouvrage === 'Public') {
+                    $acteurs = Acteur::whereIn('type_acteur', ['eta', 'clt'])->get();
+                } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Entreprise') {
+                    $acteurs = Acteur::whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])->get();
+                } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Individu') {
+                    $acteurs = Acteur::where('type_acteur', 'etp')->get();
+                }
+            } elseif(!empty($type_mo)) {
+                // 🔹 Logique pour le Maître d'Ouvrage
+                if ($type_mo === 'Public') {
+                    $acteurs = Acteur::whereIn('type_acteur', ['eta', 'clt'])->get();
+                } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
+                    $acteurs = Acteur::whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])->get();
+                } elseif ($type_mo === 'Privé' && $priveType === 'Individu') {
+                    $acteurs = Acteur::where('type_acteur', 'etp')->get();
+                }
             }
-            // Transformer les données pour inclure la concaténation
+
+            // Transformation des résultats
             $acteurs = $acteurs->map(function ($acteur) {
                 return [
                     'code_acteur' => $acteur->code_acteur,
-                    'libelle_long' => $acteur?->libelle_court . ' ' . $acteur?->libelle_long,
+                    'libelle_long' => trim(($acteur->libelle_court ?? '') . ' ' . ($acteur->libelle_long ?? '')),
                 ];
             });
 
             return response()->json($acteurs);
         }
+
+
         public function getNiveauxAdministratifs($alpha3)
         {
             $pays = Pays::where('alpha3', $alpha3)->first();

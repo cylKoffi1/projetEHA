@@ -512,7 +512,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     /*************************TYPE ACTEURS */
     Route::get('admin/type-acteurs', [TypeActeurController::class, 'index'])->name('type-acteurs.index');
 
-    Route::get('/get-acteurs', [EtudeProjet::class, 'filter'])->name('acteur.filter');
+    Route::get('/get-acteurs', [EtudeProjet::class, 'getActeurs'])->name('acteur.filter');
+    Route::get('/get-actor-details', [EtudeProjet::class, 'getActeurs'])->name('acteur.filter');
     Route::post('/type-acteurs', [TypeActeurController::class, 'store'])->name('type-acteurs.store');
     Route::put('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'update'])->name('type-acteurs.update');
     Route::delete('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'destroy'])->name('type-acteurs.destroy');
