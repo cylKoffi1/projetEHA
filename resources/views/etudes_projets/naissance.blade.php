@@ -29,7 +29,7 @@
             display: none;
         }
         #documentModal .modal-body ul li {
-            background-color: black;
+           color: black;
         }
         .step.active {
             display: block;
@@ -746,28 +746,139 @@
 
                             </div>
 
+                            <!-- Étape : Informations sur le Chef de Projet -->
+                            <div class="step" id="step-3">
+                                <h5 class="text-secondary">👨‍💼 Informations / Chef de Projet</h5>
 
+                                <!-- Recherche et sélection du Chef de Projet -->
+                                <div class="col-4 position-relative">
+                                    <label>Chef de Projet *</label>
+                                    <input type="text" id="chefProjetInput" name="chefProjet" class="form-control" placeholder="Rechercher un chef de projet..." onkeyup="searchChefProjet()">
+                                    <ul class="list-group position-absolute w-100 d-none" id="chefProjetList" style="z-index: 1000;"></ul>
+                                    <small class="text-muted">Sélectionnez un chef de projet existant ou ajoutez un nouveau.</small>
+                                </div>
 
-                            <!-- 🟣 Étape 4 : Acteurs du projet -->
-                            <div class="step" id="step-2">
-                                <h5 class="text-secondary">👷 Acteurs</h5>
-                                <div class="row">
-                                    <!-- Sélection dynamique du maître d’œuvre -->
-                                    <div class="col">
-                                        <label>Maître d’œuvre *</label>
+                                <!-- Formulaire pour renseigner un nouveau chef de projet -->
+                                <div class="row mt-3 d-none" id="chefProjetFields">
+                                    <hr>
+                                    <h6>Détails du Chef de Projet</h6>
 
+                                    <div class="col-12">
+                                        <ul class="nav nav-tabs" id="chefProjetTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="chef-general-tab" data-bs-toggle="tab" data-bs-target="#chef-general" type="button" role="tab" aria-controls="chef-general" aria-selected="true">Informations Personnelles</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="chef-contact-tab" data-bs-toggle="tab" data-bs-target="#chef-contact" type="button" role="tab" aria-controls="chef-contact" aria-selected="false">Informations de Contact</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="chef-admin-tab" data-bs-toggle="tab" data-bs-target="#chef-admin" type="button" role="tab" aria-controls="chef-admin" aria-selected="false">Informations Administratives</button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content mt-3" id="chefProjetTabsContent">
+                                            <!-- Tab 1: Informations Personnelles -->
+                                            <div class="tab-pane fade show active" id="chef-general" role="tabpanel" aria-labelledby="chef-general-tab">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label>Nom *</label>
+                                                        <input type="text" class="form-control" id="chefNom" placeholder="Nom">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label>Prénom *</label>
+                                                        <input type="text" class="form-control" id="chefPrenom" placeholder="Prénom">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Date de Naissance</label>
+                                                        <input type="date" class="form-control" id="chefDateNaissance">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Nationalité *</label>
+                                                        <input type="text" class="form-control" id="chefNationalite" placeholder="Nationalité">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Secteur d'activité *</label>
+                                                        <select name="chefSecteurActivite" id="chefSecteurActivite" class="form-control">
+                                                            <option value="">Sélectionnez...</option>
+                                                            @foreach ($formeJuridiques as $formeJuridique)
+                                                                <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Tab 2: Informations de Contact -->
+                                            <div class="tab-pane fade" id="chef-contact" role="tabpanel" aria-labelledby="chef-contact-tab">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label>Email *</label>
+                                                        <input type="email" class="form-control" id="chefEmail" placeholder="Email">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="codePostal">Code postal</label>
+                                                        <input type="text" name="chefCodePostal" id="chefCodePostal" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Adresse postale</label>
+                                                        <input type="text" class="form-control" placeholder="Adresse">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Adresse siège *</label>
+                                                        <input type="text" class="form-control" placeholder="Adresse">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Téléphone Bureau *</label>
+                                                        <input type="text" class="form-control" placeholder="Téléphone">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Téléphone mobile *</label>
+                                                        <input type="text" class="form-control" id="chefTelephoneMobille" placeholder="Téléphone">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Tab 3: Informations Administratives -->
+                                            <div class="tab-pane fade" id="chef-admin" role="tabpanel" aria-labelledby="chef-admin-tab">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label>Numéro de Carte d’Identité </label>
+                                                        <input type="text" class="form-control" placeholder="Numéro de CNI">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label>Date de vailidité </label>
+                                                        <input type="date" class="form-control" placeholder="Numéro de CNI">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Numéro Fiscal </label>
+                                                        <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                    </div>
+                                                    <div class="col-md-4 ">
+                                                        <label>Situation Matrimoniale :</label>
+                                                        <select class="form-control">
+                                                            <option value="">Sélectionnez...</option>
+                                                            @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                                <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Genre</label>
+                                                        <select name="genre" id="genre" class="form-control">
+                                                            <option value="">Sélectionnez...</option>
+                                                            @foreach ($genres as $genre)
+                                                            <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
 
-                                    <!-- Sélection dynamique du chef de projet -->
-                                    <div class="col">
-                                        <label>Chef de projet *</label>
-                                        <input type="text" id="chefProjetInput" class="form-control" placeholder="Rechercher un chef de projet...">
-                                        <ul class="list-group" id="chefProjetList"></ul>
-                                    </div>
-
-                                </div><br>
-
-                                <div class="row">
+                                <!-- Boutons de navigation -->
+                                <div class="row mt-3">
                                     <div class="col">
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
@@ -777,9 +888,8 @@
                                 </div>
                             </div>
 
-
                             <!-- 🔵 Étape : Financement -->
-                            <div class="step" id="step-3">
+                            <div class="step" id="step-4">
                                 <h5 class="text-secondary">💰 Ressources Financières</h5>
                                 <div class="col-2 mb-3">
                                     <label for="typeFinancement">Type de financement</label>
@@ -858,17 +968,21 @@
                                 </div>
                             </div>
 
-
-
-                            <!-- 🟢 Étape 1 : Informations Générales -->
-                            <div class="step" id="step-4">
+                            <!-- 🟢 Étape  : Informations Générales -->
+                            <div class="step" id="step-5">
                                 <h5 class="text-secondary">📋 Informations Générales</h5>
                                 <div class="row">
-                                    <div class="col">
-                                        <label>Nom du Projet *</label>
-                                        <input type="text" class="form-control" placeholder="Nom du projet" required>
+                                    <div class="col-4">
+                                        <label>Nature des travaux *</label>
+                                        
+                                        <select name="natureTraveaux" id="natureTraveaux" class="form-control">
+                                            <option>Sélectionner une nature</option>    
+                                            @foreach ($NaturesTravaux as $NaturesTravau)
+                                                <option value="{{ $NaturesTravau->code }}">{{ $NaturesTravau->libelle }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
-                                    <div class="col">
+                                    <div class="col-4">
                                         <label>Groupe de Projet *</label>
                                         <select class="form-control">
                                             <option>Sélectionner un groupe</option>
@@ -878,6 +992,10 @@
                                         </select>
                                     </div>
 
+                                    <div class="col-4">
+                                        <label>Nom du Projet *</label>
+                                        <input type="text" class="form-control" placeholder="Nom du projet" required>
+                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col">
@@ -898,11 +1016,8 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label>Objectif du projet *</label>
-                                    <textarea class="form-control" rows="3" placeholder="Décrivez l'objectif du projet"></textarea>
-                                </div>
+                                </div><br>
+                                
 
                                 <div class="row">
                                     <div class="col">
@@ -914,73 +1029,71 @@
                                 </div>
                             </div>
 
-                            <!-- 🟠 Étape 2 : Localisation -->
-                            <div class="step" id="step-5">
+                            <!-- 🟠 Étape  : Localisation -->
+                            <div class="step" id="step-6">
                                 <h5 class="text-secondary">🌍 Localisation</h5>
                                 <div class="row">
+                                    <br>
                                     <div class="col">
-                                        <!-- Inclure la bibliothèque Leaflet -->
-                                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-                                        <div class="mb-3">
-                                            <label>Pays *</label>
-                                            <select class="form-control" id="paysSelect">
-                                                <option value="">Sélectionnez un pays</option>
-                                                @foreach ($Pays as $alpha3 => $nom_fr_fr)
-                                                    <option value="{{ $alpha3 }}">{{ $nom_fr_fr }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label id="niveau1Label">Niveau 1 *</label>
-                                            <select class="form-control" id="niveau1Select" disabled>
-                                                <option value="">Sélectionnez un niveau</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label id="niveau2Label">Niveau 2 *</label>
-                                            <select class="form-control" id="niveau2Select" disabled>
-                                                <option value="">Sélectionnez un niveau</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label id="niveau3Label">Niveau 3 *</label>
-                                            <select class="form-control" id="niveau3Select" disabled>
-                                                <option value="">Sélectionnez un niveau</option>
-                                            </select>
-                                        </div>
-
-
-                                        <!-- Coordonnées GPS Automatiques -->
                                         <div class="row">
+                                            <div class="col-md-12">
+                                                <label>Pays *</label>
+                                                <select class="form-control" id="paysSelect">
+                                                    <option value="">Sélectionnez un pays</option>
+                                                    @foreach ($Pays as $alpha3 => $nom_fr_fr)
+                                                        <option value="{{ $alpha3 }}">{{ $nom_fr_fr }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label id="niveau1Label">Niveau 1 *</label>
+                                                <select class="form-control" id="niveau1Select" disabled>
+                                                    <option value="">Sélectionnez un niveau</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-12">
+                                                <label id="niveau2Label">Niveau 2 *</label>
+                                                <select class="form-control" id="niveau2Select" disabled>
+                                                    <option value="">Sélectionnez un niveau</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label id="niveau3Label">Niveau 3 *</label>
+                                                <select class="form-control" id="niveau3Select" disabled>
+                                                    <option value="">Sélectionnez un niveau</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6 d-none" id="fixedPositionContainer">
+                                                <label>Position Fixe :</label>
+                                                <input type="text" id="fixedPosition" class="form-control" placeholder="Entrez une adresse précise...">
+                                                <ul class="list-group position-absolute w-100 d-none" id="fixedPositionResults" style="z-index: 1000;"></ul>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
                                             <div class="col-md-6">
                                                 <label>Latitude</label>
-                                                <input type="text" id="latitude" class="form-control" >
+                                                <input type="text" id="latitude" class="form-control" readonly>
                                             </div>
                                             <div class="col-md-6">
                                                 <label>Longitude</label>
-                                                <input type="text" id="longitude" class="form-control" >
+                                                <input type="text" id="longitude" class="form-control" readonly>
                                             </div>
                                         </div>
-
-                                        <!-- Intégration du fichier JS -->
-                                        <script src="{{ asset('geojsonCode/map.js') }}"></script>
-
                                     </div>
                                     <div class="col">
-                                        <!-- Carte Interactive pour Sélectionner l'Emplacement -->
-                                        <div class="mb-3">
-                                            <label>📍 Sélectionner l'Emplacement sur la Carte</label>
-                                            <div id="countryMap" style="height: 400px; border: 1px solid #ddd;"></div>
-                                        </div>
+                                            <div class="col-md-12">
+                                                <label>📍 Sélectionner l'Emplacement sur la Carte</label>
+                                                <div id="countryMap" style="height: 400px; border: 1px solid #ddd;"></div>
+                                            </div>
                                     </div>
                                 </div>
-
-                                <div class="row">
+                                
+                                
+                                <div class="row mt-3">
                                     <div class="col">
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
@@ -991,7 +1104,7 @@
                             </div>
 
                             <!-- 🔵 Étape : Bénéficiaire -->
-                            <div class="step" id="step-6">
+                            <div class="step" id="step-7">
                                 <h5 class="text-secondary">🧍 Bénéficiaires</h5>
                                 <div class="row">
                                     <div class="col-md-1">
@@ -1128,15 +1241,10 @@
 
                             </div>
 
-
-
-
-
-
                             <!-- 📜 Modal pour la liste des documents -->
-                            <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+                            <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true" style="background: transparent;">
                                 <div class="modal-dialog">
-                                    <div class="modal-content">
+                                    <div class="modal-content" style="width: 100% !important; background: white;">
                                         <div class="modal-header">
                                             <h5 class="modal-title" id="documentModalLabel">📜 Documents à fournir</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1154,14 +1262,14 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- 🟡 Étape 5 : Documents -->
-                            <div class="step" id="step-7">
+                            <!-- 🟡 Étape  : Documents -->
+                            <div class="step" id="step-8">
                                 <h5 class="text-secondary">📎 Documents et Pièces Justificatives</h5>
                                 <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#documentModal">
                                     📜 Liste des documents à fournir
                                 </button>
                                 <div class="upload-box" onclick="document.getElementById('fileUpload').click();">
-                                    <p><i class="fas fa-upload"></i> Cliquez ici ou glissez vos fichiers</p>
+                                    <p><i class="fas fa-upload"></i> Cliquez ici pour importer vos fichiers</p>
                                     <input type="file" id="fileUpload" class="d-none" multiple>
                                 </div>
                                 <div class="uploaded-files mt-2" id="uploadedFiles"></div>
@@ -1184,7 +1292,7 @@
 
 <script>
     let currentStep = 1;
-    const totalSteps = 7;
+    const totalSteps = 8;
     let uploadedFiles = [];
 
     function showStep(step) {
@@ -1453,89 +1561,168 @@
 
 
     ///////////////////////////LOCALLISATION
-    // Attendre le chargement complet du DOM
-    document.addEventListener("DOMContentLoaded", function () {
-        // Définition des coordonnées GPS des pays (alpha3 -> lat/lng)
-        const paysCoordonnees = {
-            "CIV": { lat: 7.539989, lng: -5.54708 },  // Côte d'Ivoire
-            "SEN": { lat: 14.497401, lng: -14.452362 }, // Sénégal
-            "GAB": { lat: -0.803689, lng: 11.609444 }, // Gabon
-            "BDI": { lat: -3.373056, lng: 29.918886 }, // Burundi
-            "COD": { lat: -4.038333, lng: 21.758664 }, // RDC
-            "NER": { lat: 17.607789, lng: 8.081666 }, // Niger
-            "MLI": { lat: 17.570692, lng: -3.996166 }, // Mali
-            "BFA": { lat: 12.238333, lng: -1.561593 }, // Burkina Faso
-            "TCD": { lat: 15.454166, lng: 18.732207 }, // Tchad
-            "COG": { lat: -0.228021, lng: 15.827659 }  // Congo
-        };
+document.addEventListener("DOMContentLoaded", function () {
+    let map = L.map('countryMap').setView([7.539989, -5.54708], 6); // Position initiale : Côte d'Ivoire
 
-        // Initialisation de la carte Leaflet sur un point par défaut (Côte d'Ivoire)
-        var map = L.map('countryMap').setView([7.539989, -5.54708], 5);
+    // Ajouter une couche OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-        // Ajout d'une couche OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+    let marker = L.marker([7.539989, -5.54708], { draggable: true }).addTo(map);
 
-        // Ajouter un marqueur initial (invisible au début)
-        var marker = L.marker([7.539989, -5.54708], { draggable: true }).addTo(map);
-        marker.setOpacity(0); // Rendre invisible tant qu'il n'est pas utilisé
-
-        // Fonction pour centrer la carte sur un pays sélectionné
-        function centrerCarteSurPays(alpha3) {
-            if (paysCoordonnees[alpha3]) {
-                var coords = paysCoordonnees[alpha3];
-
-                // Déplacer la carte et zoomer sur le pays
-                map.setView([coords.lat, coords.lng], 6);
-
-                // Déplacer et afficher le marqueur
-                marker.setLatLng([coords.lat, coords.lng]);
-                marker.setOpacity(1); // Rendre visible
-
-                // Mettre à jour les champs de latitude et longitude
-                document.getElementById("latitude").value = coords.lat;
-                document.getElementById("longitude").value = coords.lng;
-            } else {
-                console.warn("Pays non trouvé dans paysCoordonnees :", alpha3);
-            }
-        }
-
-        // Événement : Quand on change de pays dans la liste déroulante
-        document.getElementById("paysSelect").addEventListener("change", function () {
-            var selectedPays = this.value;
-            centrerCarteSurPays(selectedPays);
-        });
-        document.getElementById("paysSelect2").addEventListener("change", function () {
-            var selectedPays = this.value;
-            centrerCarteSurPays(selectedPays);
-        });
-        document.getElementById("paysSelect3").addEventListener("change", function () {
-            var selectedPays = this.value;
-            centrerCarteSurPays(selectedPays);
-        });
-
-        // Événement : Quand on clique sur la carte, ajouter un marqueur
-        map.on('click', function (e) {
-            var lat = e.latlng.lat.toFixed(6);
-            var lng = e.latlng.lng.toFixed(6);
-
-            // Déplacer le marqueur sur l'endroit cliqué
-            marker.setLatLng([lat, lng]);
-            marker.setOpacity(1); // Rendre visible
-
-            // Remplir automatiquement les champs Latitude et Longitude
-            document.getElementById("latitude").value = lat;
-            document.getElementById("longitude").value = lng;
-        });
-
-        // Événement : Si on déplace le marqueur, mettre à jour les coordonnées
-        marker.on('dragend', function (e) {
-            var newCoords = e.target.getLatLng();
-            document.getElementById("latitude").value = newCoords.lat.toFixed(6);
-            document.getElementById("longitude").value = newCoords.lng.toFixed(6);
-        });
+    // Mettre à jour les coordonnées GPS lors du déplacement du marqueur
+    marker.on('dragend', function () {
+        let position = marker.getLatLng();
+        document.getElementById("latitude").value = position.lat.toFixed(6);
+        document.getElementById("longitude").value = position.lng.toFixed(6);
     });
+
+    // Sélection dynamique des niveaux
+    document.getElementById("paysSelect").addEventListener("change", function () {
+        let alpha3 = this.value;
+        resetSelect(niveau1Select, "Niveau 1 *");
+        resetSelect(niveau2Select, "Niveau 2 *");
+        resetSelect(niveau3Select, "Niveau 3 *");
+
+        if (!alpha3) return;
+
+        fetch(`/pays/${alpha3}/niveaux`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(niveau => {
+                    if (niveau.num_niveau_decoupage === 1) {
+                        niveau1Label.textContent = niveau.libelle_decoupage + " *";
+                        niveau1Select.disabled = false;
+                        loadLocalites(alpha3, 1, null, niveau1Select);
+                    } else if (niveau.num_niveau_decoupage === 2) {
+                        niveau2Label.textContent = niveau.libelle_decoupage + " *";
+                        niveau2Select.disabled = true;
+                    } else if (niveau.num_niveau_decoupage === 3) {
+                        niveau3Label.textContent = niveau.libelle_decoupage + " *";
+                        niveau3Select.disabled = true;
+                    }
+                });
+
+                // Zoomer sur le pays sélectionné
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.options[this.selectedIndex].text)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            let location = data[0];
+                            map.setView([location.lat, location.lon], 6);
+                            marker.setLatLng([location.lat, location.lon]);
+
+                            document.getElementById("latitude").value = location.lat;
+                            document.getElementById("longitude").value = location.lon;
+                        }
+                    });
+            })
+            .catch(error => console.error('Erreur chargement niveaux:', error));
+    });
+
+    // Sélection des sous-niveaux
+    document.getElementById("niveau1Select").addEventListener("change", function () {
+        let codeRattachement = this.value;
+        loadLocalites(document.getElementById("paysSelect").value, 2, codeRattachement, niveau2Select);
+    });
+
+    document.getElementById("niveau2Select").addEventListener("change", function () {
+        let codeRattachement = this.value;
+        loadLocalites(document.getElementById("paysSelect").value, 3, codeRattachement, niveau3Select);
+
+        // Afficher la zone de recherche de lieu fixe à partir du niveau 2
+        document.getElementById("fixedPositionContainer").classList.remove("d-none");
+
+        // Zoomer sur la carte en fonction du niveau 2 sélectionné
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.options[this.selectedIndex].text)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    let location = data[0];
+                    map.setView([location.lat, location.lon], 10);
+                    marker.setLatLng([location.lat, location.lon]);
+
+                    document.getElementById("latitude").value = location.lat;
+                    document.getElementById("longitude").value = location.lon;
+                }
+            });
+    });
+
+    document.getElementById("niveau3Select").addEventListener("change", function () {
+        // Zoomer sur la carte en fonction du niveau 3 sélectionné
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.options[this.selectedIndex].text)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    let location = data[0];
+                    map.setView([location.lat, location.lon], 12);
+                    marker.setLatLng([location.lat, location.lon]);
+
+                    document.getElementById("latitude").value = location.lat;
+                    document.getElementById("longitude").value = location.lon;
+                }
+            });
+    });
+
+    // Charger les localités en fonction du niveau
+    function loadLocalites(alpha3, niveau, codeRattachement, selectElement) {
+        let url = `/pays/${alpha3}/niveau/${niveau}/localites${codeRattachement ? `?code_rattachement=${codeRattachement}` : ""}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                resetSelect(selectElement, `Niveau ${niveau} *`);
+                data.forEach(localite => {
+                    let option = document.createElement('option');
+                    option.value = localite.code_rattachement;
+                    option.textContent = localite.libelle;
+                    selectElement.appendChild(option);
+                });
+                selectElement.disabled = false;
+            })
+            .catch(error => console.error('Erreur chargement localités:', error));
+    }
+
+    // Réinitialiser un select
+    function resetSelect(selectElement, defaultText) {
+        selectElement.innerHTML = `<option value="">${defaultText}</option>`;
+        selectElement.disabled = true;
+    }
+
+    // Recherche et mise à jour des coordonnées en fonction du lieu entré manuellement
+    document.getElementById("fixedPosition").addEventListener("keyup", function () {
+        let input = this.value.trim();
+        if (input.length < 3) return;
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    let location = data[0];
+                    map.setView([location.lat, location.lon], 14);
+                    marker.setLatLng([location.lat, location.lon]);
+
+                    document.getElementById("latitude").value = location.lat;
+                    document.getElementById("longitude").value = location.lon;
+                }
+            });
+    });
+
+    // Mise à jour des coordonnées GPS en cliquant sur la carte
+    map.on('click', function (e) {
+        let lat = e.latlng.lat.toFixed(6);
+        let lon = e.latlng.lng.toFixed(6);
+
+        document.getElementById("latitude").value = lat;
+        document.getElementById("longitude").value = lon;
+
+        marker.setLatLng([lat, lon]);
+    });
+});
+
+
+
 
 
 
@@ -1641,230 +1828,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const paysSelect = document.getElementById('paysSelect');
-        const paysSelect2 = document.getElementById('paysSelect2');
-        const paysSelect3 = document.getElementById('paysSelect3');
 
-        const niveau1Label = document.getElementById('niveau1Label');
-        const niveau2Label = document.getElementById('niveau2Label');
-        const niveau3Label = document.getElementById('niveau3Label');
-        const niveau1Select = document.getElementById('niveau1Select');
-        const niveau2Select = document.getElementById('niveau2Select');
-        const niveau3Select = document.getElementById('niveau3Select');
-
-        const niveau1Label2 = document.getElementById('niveau1Label2');
-        const niveau2Label2 = document.getElementById('niveau2Label2');
-        const niveau3Label2 = document.getElementById('niveau3Label2');
-        const niveau1Select2 = document.getElementById('niveau1Select2');
-        const niveau2Select2 = document.getElementById('niveau2Select2');
-        const niveau3Select2 = document.getElementById('niveau3Select2');
-
-        const niveau1Label3 = document.getElementById('niveau1Label3');
-        const niveau2Label3 = document.getElementById('niveau2Label3');
-        const niveau3Label3 = document.getElementById('niveau3Label3');
-        const niveau1Select3 = document.getElementById('niveau1Select3');
-        const niveau2Select3 = document.getElementById('niveau2Select3');
-        const niveau3Select3 = document.getElementById('niveau3Select3');
-
-        // 🟢 Lorsque l'utilisateur sélectionne un pays
-        paysSelect.addEventListener('change', function () {
-            const alpha3 = this.value;
-
-            if (!alpha3) {
-                resetLabelAndSelect(niveau1Label, niveau1Select, "Niveau 1 *");
-                resetLabelAndSelect(niveau2Label, niveau2Select, "Niveau 2 *");
-                resetLabelAndSelect(niveau3Label, niveau3Select, "Niveau 3 *");
-                return;
-            }
-
-            // Récupérer les niveaux administratifs et charger les localités associées
-            fetch(`/pays/${alpha3}/niveaux`)
-                .then(response => response.json())
-                .then(data => {
-                    resetLabelAndSelect(niveau1Label, niveau1Select, "Niveau 1 *");
-                    resetLabelAndSelect(niveau2Label, niveau2Select, "Niveau 2 *");
-                    resetLabelAndSelect(niveau3Label, niveau3Select, "Niveau 3 *");
-
-                    data.forEach(niveau => {
-                        if (niveau.num_niveau_decoupage === 1) {
-                            niveau1Label.textContent = niveau.libelle_decoupage + " *";
-                            niveau1Select.disabled = false;
-                            loadLocalites(alpha3, 1, null, niveau1Select);
-                        } else if (niveau.num_niveau_decoupage === 2) {
-                            niveau2Label.textContent = niveau.libelle_decoupage + " *";
-                            niveau2Select.disabled = true;
-                        } else if (niveau.num_niveau_decoupage === 3) {
-                            niveau3Label.textContent = niveau.libelle_decoupage + " *";
-                            niveau3Select.disabled = true;
-                        }
-                    });
-                })
-                .catch(error => console.error('Erreur lors du chargement des niveaux :', error));
-        });
-        // 🟢 Lorsque l'utilisateur sélectionne un pays Entreprise
-        paysSelect2.addEventListener('change', function () {
-        const alpha3 = this.value;
-
-        if (!alpha3) {
-            resetLabelAndSelect(niveau1Label2, niveau1Select2, "Niveau 1 *");
-            resetLabelAndSelect(niveau2Label2, niveau2Select2, "Niveau 2 *");
-            resetLabelAndSelect(niveau3Label2, niveau3Select2, "Niveau 3 *");
-            return;
-        }
-
-        // Récupérer les niveaux administratifs et charger les localités associées
-        fetch(`/pays/${alpha3}/niveaux`)
-            .then(response => response.json())
-            .then(data => {
-                resetLabelAndSelect(niveau1Label2, niveau1Select2, "Niveau 1 *");
-                resetLabelAndSelect(niveau2Label2, niveau2Select2, "Niveau 2 *");
-                resetLabelAndSelect(niveau3Label2, niveau3Select2, "Niveau 3 *");
-
-                data.forEach(niveau => {
-                    if (niveau.num_niveau_decoupage === 1) {
-                        niveau1Label2.textContent = niveau.libelle_decoupage + " *";
-                        niveau1Select2.disabled = false;
-                        loadLocalites(alpha3, 1, null, niveau1Select2);
-                    } else if (niveau.num_niveau_decoupage === 2) {
-                        niveau2Label2.textContent = niveau.libelle_decoupage + " *";
-                        niveau2Select2.disabled = true;
-                    } else if (niveau.num_niveau_decoupage === 3) {
-                        niveau3Label2.textContent = niveau.libelle_decoupage + " *";
-                        niveau3Select2.disabled = true;
-                    }
-                });
-            })
-            .catch(error => console.error('Erreur lors du chargement des niveaux :', error));
-        });
-        // 🟢 Lorsque l'utilisateur sélectionne un pays Entreprise
-        paysSelect3.addEventListener('change', function () {
-        const alpha3 = this.value;
-
-        if (!alpha3) {
-            resetLabelAndSelect(niveau1Label3, niveau1Select3, "Niveau 1 *");
-            resetLabelAndSelect(niveau2Label3, niveau2Select3, "Niveau 2 *");
-            resetLabelAndSelect(niveau3Label3, niveau3Select3, "Niveau 3 *");
-            return;
-        }
-
-        // Récupérer les niveaux administratifs et charger les localités associées
-        fetch(`/pays/${alpha3}/niveaux`)
-            .then(response => response.json())
-            .then(data => {
-                resetLabelAndSelect(niveau1Label3, niveau1Select3, "Niveau 1 *");
-                resetLabelAndSelect(niveau2Label3, niveau2Select3, "Niveau 2 *");
-                resetLabelAndSelect(niveau3Label3, niveau3Select3, "Niveau 3 *");
-
-                data.forEach(niveau => {
-                    if (niveau.num_niveau_decoupage === 1) {
-                        niveau1Label3.textContent = niveau.libelle_decoupage + " *";
-                        niveau1Select3.disabled = false;
-                        loadLocalites(alpha3, 1, null, niveau1Select3);
-                    } else if (niveau.num_niveau_decoupage === 2) {
-                        niveau2Label3.textContent = niveau.libelle_decoupage + " *";
-                        niveau2Select3.disabled = true;
-                    } else if (niveau.num_niveau_decoupage === 3) {
-                        niveau3Label3.textContent = niveau.libelle_decoupage + " *";
-                        niveau3Select3.disabled = true;
-                    }
-                });
-            })
-            .catch(error => console.error('Erreur lors du chargement des niveaux :', error));
-        });
-
-        // 🟡 Lorsque le niveau 1 est sélectionné, charger les localités de niveau 2
-        niveau1Select.addEventListener('change', function () {
-            const alpha3 = paysSelect.value;
-            const codeRattachement = this.value;
-            if (codeRattachement) {
-                loadLocalites(alpha3, 2, codeRattachement, niveau2Select);
-            } else {
-                resetSelect(niveau2Select);
-            }
-        });
-        niveau1Select2.addEventListener('change', function () {
-            const alpha3 = paysSelect2.value;
-            const codeRattachement = this.value;
-            if (codeRattachement) {
-                loadLocalites(alpha3, 2, codeRattachement, niveau2Select2);
-            } else {
-                resetSelect(niveau2Select2);
-            }
-        });
-        niveau1Select3.addEventListener('change', function () {
-            const alpha3 = paysSelect3.value;
-            const codeRattachement = this.value;
-            if (codeRattachement) {
-                loadLocalites(alpha3, 2, codeRattachement, niveau2Select3);
-            } else {
-                resetSelect(niveau2Select3);
-            }
-        });
-
-        // 🟠 Lorsque le niveau 2 est sélectionné, charger les localités de niveau 3
-        niveau2Select.addEventListener('change', function () {
-            const alpha3 = paysSelect.value;
-            const codeRattachement = this.value;
-            if (codeRattachement) {
-                loadLocalites(alpha3, 3, codeRattachement, niveau3Select);
-            } else {
-                resetSelect(niveau3Select);
-            }
-        });
-        niveau2Select2.addEventListener('change', function () {
-            const alpha3 = paysSelect2.value;
-            const codeRattachement = this.value;
-            if (codeRattachement) {
-                loadLocalites(alpha3, 3, codeRattachement, niveau3Select2);
-            } else {
-                resetSelect(niveau3Select2);
-            }
-        });
-        niveau2Select3.addEventListener('change', function () {
-            const alpha3 = paysSelect3.value;
-            const codeRattachement = this.value;
-            if (codeRattachement) {
-                loadLocalites(alpha3, 3, codeRattachement, niveau3Select3);
-            } else {
-                resetSelect(niveau3Select3);
-            }
-        });
-
-        // 🔹 Fonction pour charger les localités d’un niveau donné
-        function loadLocalites(alpha3, niveau, codeRattachement, selectElement) {
-            let url = `/pays/${alpha3}/niveau/${niveau}/localites`;
-            if (codeRattachement) {
-                url += `?code_rattachement=${codeRattachement}`;
-            }
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    resetSelect(selectElement);
-                    data.forEach(localite => {
-                        const option = document.createElement('option');
-                        option.value = localite.code_rattachement; // Stocke le code_rattachement
-                        option.textContent = localite.libelle;
-                        selectElement.appendChild(option);
-                    });
-                    selectElement.disabled = false; // Active le select après chargement
-                })
-                .catch(error => console.error('Erreur lors du chargement des localités :', error));
-        }
-
-        // 🔹 Réinitialiser un label et un select
-        function resetLabelAndSelect(labelElement, selectElement, defaultText) {
-            labelElement.textContent = defaultText;
-            resetSelect(selectElement);
-        }
-
-        // 🔹 Réinitialiser un select
-        function resetSelect(selectElement) {
-            selectElement.innerHTML = '<option value="">Sélectionnez</option>';
-            selectElement.disabled = true;
-        }
-    });
 
     ///////////////INFORMATION / MAITRE OUVRAGE
     document.addEventListener("DOMContentLoaded", function () {
@@ -2080,100 +2044,171 @@ document.addEventListener("DOMContentLoaded", function () {
 
     ////////////////MAITRE D'OEUVRE
     document.addEventListener("DOMContentLoaded", function () {
-    // Empêcher la sélection de plusieurs options pour type_ouvrage
-    const type_ouvrages = document.querySelectorAll('input[name="type_ouvrage"]');
-    type_ouvrages.forEach((checkbox) => {
-        checkbox.addEventListener("change", function () {
-            if (this.checked) {
-                type_ouvrages.forEach((cb) => {
-                    if (cb !== this) cb.checked = false;
-                });
-            }
+        // Empêcher la sélection de plusieurs options pour type_ouvrage
+        const type_ouvrages = document.querySelectorAll('input[name="type_ouvrage"]');
+        type_ouvrages.forEach((checkbox) => {
+            checkbox.addEventListener("change", function () {
+                if (this.checked) {
+                    type_ouvrages.forEach((cb) => {
+                        if (cb !== this) cb.checked = false;
+                    });
+                }
+            });
         });
-    });
 
-    // Gestion du Maître d’Ouvrage
-    function toggleTypeMoe() {
-        const publicRadio = document.getElementById('moePublic');
-        const priveRadio = document.getElementById('moePrive');
-        const optionsMoePrive = document.getElementById('optionsMoePrive');
-        const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
-        const individuFields = document.getElementById('moeIndividuFields');
-        const acteurMoeSelect = document.getElementById('acteurMoeSelect');
+        // Gestion du Maître d’Ouvrage
+        function toggleTypeMoe() {
+            const publicRadio = document.getElementById('moePublic');
+            const priveRadio = document.getElementById('moePrive');
+            const optionsMoePrive = document.getElementById('optionsMoePrive');
+            const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
+            const individuFields = document.getElementById('moeIndividuFields');
+            const acteurMoeSelect = document.getElementById('acteurMoeSelect');
 
-        if (publicRadio.checked) {
-            optionsMoePrive.classList.add('d-none');
-            moeEntrepriseFields.classList.add('d-none');
-            individuFields.classList.add('d-none');
-            fetchMoeActeurs('Public');
-        } else if (priveRadio.checked) {
-            optionsMoePrive.classList.remove('d-none');
-            acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
+            if (publicRadio.checked) {
+                optionsMoePrive.classList.add('d-none');
+                moeEntrepriseFields.classList.add('d-none');
+                individuFields.classList.add('d-none');
+                fetchMoeActeurs('Public');
+            } else if (priveRadio.checked) {
+                optionsMoePrive.classList.remove('d-none');
+                acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
 
+                const entrepriseRadio = document.getElementById('moeEntreprise');
+                const individuRadio = document.getElementById('moeIndividu');
+
+                if (entrepriseRadio.checked) {
+                    moeEntrepriseFields.classList.remove('d-none');
+                    individuFields.classList.add('d-none');
+                } else if (individuRadio.checked) {
+                    individuFields.classList.remove('d-none');
+                    moeEntrepriseFields.classList.add('d-none');
+                } else {
+                    moeEntrepriseFields.classList.add('d-none');
+                    individuFields.classList.add('d-none');
+                }
+            } else {
+                optionsMoePrive.classList.add('d-none');
+                acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
+            }
+        }
+
+        function toggleMoeFields() {
             const entrepriseRadio = document.getElementById('moeEntreprise');
             const individuRadio = document.getElementById('moeIndividu');
+            const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
+            const individuFields = document.getElementById('moeIndividuFields');
+            const typeOuvrage = document.querySelector('input[name="type_ouvrage"]:checked')?.value;
 
             if (entrepriseRadio.checked) {
+                fetchMoeActeurs(typeOuvrage, 'Entreprise');
                 moeEntrepriseFields.classList.remove('d-none');
                 individuFields.classList.add('d-none');
             } else if (individuRadio.checked) {
+                fetchMoeActeurs(typeOuvrage, 'Individu');
                 individuFields.classList.remove('d-none');
                 moeEntrepriseFields.classList.add('d-none');
-            } else {
-                moeEntrepriseFields.classList.add('d-none');
-                individuFields.classList.add('d-none');
             }
-        } else {
-            optionsMoePrive.classList.add('d-none');
-            acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
-        }
-    }
-
-    function toggleMoeFields() {
-        const entrepriseRadio = document.getElementById('moeEntreprise');
-        const individuRadio = document.getElementById('moeIndividu');
-        const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
-        const individuFields = document.getElementById('moeIndividuFields');
-        const typeOuvrage = document.querySelector('input[name="type_ouvrage"]:checked')?.value;
-
-        if (entrepriseRadio.checked) {
-            fetchMoeActeurs(typeOuvrage, 'Entreprise');
-            moeEntrepriseFields.classList.remove('d-none');
-            individuFields.classList.add('d-none');
-        } else if (individuRadio.checked) {
-            fetchMoeActeurs(typeOuvrage, 'Individu');
-            individuFields.classList.remove('d-none');
-            moeEntrepriseFields.classList.add('d-none');
-        }
-    }
-
-    function fetchMoeActeurs(typeOuvrage, priveType = null) {
-        const acteurMoeSelect = document.getElementById('acteurMoeSelect');
-        let url = `/get-acteurs?type_ouvrage=${encodeURIComponent(typeOuvrage)}`;
-
-        if (priveType) {
-            url += `&priveMoeType=${encodeURIComponent(priveType)}`;
         }
 
-        fetch(url)
+        function fetchMoeActeurs(typeOuvrage, priveType = null) {
+            const acteurMoeSelect = document.getElementById('acteurMoeSelect');
+            let url = `/get-acteurs?type_ouvrage=${encodeURIComponent(typeOuvrage)}`;
+
+            if (priveType) {
+                url += `&priveMoeType=${encodeURIComponent(priveType)}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
+                    data.forEach(acteur => {
+                        const option = document.createElement('option');
+                        option.value = acteur.code_acteur;
+                        option.textContent = acteur.libelle_long;
+                        acteurMoeSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Erreur lors du chargement des acteurs :", error));
+        }
+
+        document.getElementById('moePublic').addEventListener('change', toggleTypeMoe);
+        document.getElementById('moePrive').addEventListener('change', toggleTypeMoe);
+        document.getElementById('moeEntreprise').addEventListener('change', toggleMoeFields);
+        document.getElementById('moeIndividu').addEventListener('change', toggleMoeFields);
+    });
+
+
+
+    ///////////////////////// CHEF DE PROJET ////////////////////////////////
+    document.addEventListener("DOMContentLoaded", function () {
+        const chefProjetInput = document.getElementById('chefProjetInput');
+        const chefProjetList = document.getElementById('chefProjetList');
+
+        chefProjetInput.addEventListener('keyup', function () {
+            searchChefProjet();
+        });
+    });
+
+    function searchChefProjet() {
+        const input = document.getElementById('chefProjetInput');
+        const list = document.getElementById('chefProjetList');
+        const query = input.value.trim();
+
+        if (query.length < 2) {
+            list.innerHTML = '';
+            list.classList.add('d-none');
+            return;
+        }
+
+        fetch(`/get-chefs-projet?search=${query}`)
             .then(response => response.json())
             .then(data => {
-                acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
-                data.forEach(acteur => {
-                    const option = document.createElement('option');
-                    option.value = acteur.code_acteur;
-                    option.textContent = acteur.libelle_long;
-                    acteurMoeSelect.appendChild(option);
-                });
+                list.innerHTML = '';
+                list.classList.remove('d-none');
+
+                if (data.length === 0) {
+                    let li = document.createElement('li');
+                    li.classList.add('list-group-item', 'text-primary');
+                    li.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${query}"`;
+                    li.onclick = () => addNewChefProjet(query);
+                    list.appendChild(li);
+                } else {
+                    data.forEach(acteur => {
+                        let li = document.createElement('li');
+                        li.classList.add('list-group-item', 'list-group-item-action');
+                        li.textContent = acteur.libelle_long;
+                        li.onclick = () => selectChefProjet(acteur);
+                        list.appendChild(li);
+                    });
+                }
             })
-            .catch(error => console.error("Erreur lors du chargement des acteurs :", error));
+            .catch(error => console.error("Erreur lors de la recherche :", error));
     }
 
-    document.getElementById('moePublic').addEventListener('change', toggleTypeMoe);
-    document.getElementById('moePrive').addEventListener('change', toggleTypeMoe);
-    document.getElementById('moeEntreprise').addEventListener('change', toggleMoeFields);
-    document.getElementById('moeIndividu').addEventListener('change', toggleMoeFields);
-});
+    function selectChefProjet(acteur) {
+        document.getElementById('chefProjetInput').value = acteur.libelle_long;
+        document.getElementById('chefProjetList').innerHTML = '';
+        document.getElementById('chefProjetList').classList.add('d-none');
+
+        // Remplir les champs automatiquement
+        document.getElementById('chefEmail').value = acteur.email || '';
+        document.getElementById('chefTelephoneMobille').value = acteur.telephone || '';
+
+        // Cacher le formulaire d'ajout
+        document.getElementById('chefProjetFields').classList.add('d-none');
+    }
+
+    function addNewChefProjet(nom) {
+        document.getElementById('chefProjetInput').value = nom;
+        document.getElementById('chefProjetList').innerHTML = '';
+        document.getElementById('chefProjetList').classList.add('d-none');
+
+        // Afficher le formulaire pour renseigner les informations
+        document.getElementById('chefProjetFields').classList.remove('d-none');
+    }
+
 
 
 </script>

@@ -70,8 +70,9 @@ class EtudeProjet extends Controller
             $Niveau = DecoupageAdministratif::all();
             $formeJuridiques = FormeJuridique::all();
             $genres = Genre::all();
+            $NaturesTravaux = NatureTravaux::all();
             $SituationMatrimoniales = SituationMatrimonial::all();
-            return view('etudes_projets.naissance', compact('formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures'));
+            return view('etudes_projets.naissance', compact('NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures'));
         }
         public function getActeurs(Request $request)
         {
@@ -115,6 +116,37 @@ class EtudeProjet extends Controller
 
             return response()->json($acteurs);
         }
+
+            /**
+         * Recherche des chefs de projet existants.
+         */
+        public function getChefsProjet(Request $request)
+        {
+            $search = $request->input('search');
+
+            $query = Acteur::where('type_acteur', 'etp');
+
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('libelle_long', 'like', "%$search%")
+                    ->orWhere('libelle_court', 'like', "%$search%");
+                });
+            }
+
+            $chefsProjet = $query->get()->map(function ($acteur) {
+                return [
+                    'code_acteur' => $acteur->code_acteur,
+                    'libelle_long' => trim(($acteur->libelle_court ?? '') . ' ' . ($acteur->libelle_long ?? '')),
+                    'email' => $acteur->email,
+                    'telephone' => $acteur->telephone,
+                    'adresse' => $acteur->adresse,
+                    'nationalite' => $acteur->pays?->nom_fr_fr,
+                ];
+            });
+
+            return response()->json($chefsProjet);
+        }
+
 
 
         public function getNiveauxAdministratifs($alpha3)
