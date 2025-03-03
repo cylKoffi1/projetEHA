@@ -117,8 +117,8 @@
             <div class="card-content">
                 <div class="col-12">
                     <div class="row">
-                        <div class="col-4">
-                            <label for="projectSelect">Code Projets :</label>
+                        <div class="col-3">
+                            <label for="projectSelect">Code Projet :</label>
                             <select id="projectSelect" class="form-select" name="projectSelect">
                                 <option value="">-- Sélectionner un projet --</option>
                                 @foreach ($projects as $project)
@@ -130,7 +130,7 @@
                         </div>
                         <div class="col-2">
                             <div id="controls" style="display: block;">
-                                <label for="scale_select">Echelle :</label>
+                                <label for="scale_select">Période :</label>
                                 <select id="scale_select" class="form-control">
                                     <option value="day">Jour</option>
                                     <option value="week">Semaine</option>
@@ -140,7 +140,12 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-4"></div>
+                        <div class="col-2">
+                            <div id="controls" style="display: block;">
+                                <label for="scale_select">Echelle :</label>
+                            </div>
+                        </div>
+                        <div class="col-3"></div>
                         <div class="col-2 d-flex flex-column">
                             <label class="text-start" for="viewSelect">Vue :</label>
                             <select id="viewSelect" class="form-select">
@@ -442,6 +447,27 @@ $(document).ready(function() {
                     resources_filter_label: "cacher les vides"
                 }
             });
+
+            // Ajuster dynamiquement la largeur du Gantt en fonction des tâches affichées
+            function adjustGanttWidth() {gantt_layout_content
+                let taskArea = document.querySelector(".gantt_task");
+                if (taskArea) {
+                    let gridWidth = document.querySelector(".gantt_grid").offsetWidth; // Largeur de la grille
+                    let parentWidth = document.getElementById("gantt_here").offsetWidth; // Largeur du Gantt
+
+                    // Ajuster la largeur pour que toutes les tâches soient visibles sans scroll horizontal
+                    let neededWidth = gantt.getState().max_date - gantt.getState().min_date;
+                    let dayWidth = gantt.date.add(gantt.getState().min_date, 1, "day") - gantt.getState().min_date;
+                    let newWidth = (neededWidth / dayWidth) * 40; // Ajuste selon la densité des jours
+
+                    taskArea.style.width = Math.max(newWidth, parentWidth - gridWidth) + "px"; // Ajuste la largeur
+                }
+            }
+
+            // Ajuster au chargement et en cas de redimensionnement
+            gantt.attachEvent("onDataRender", adjustGanttWidth);
+            window.addEventListener("resize", adjustGanttWidth);
+
 
             // Configuration de l'échelle de temps
             gantt.config.start_date = new Date(new Date().getFullYear() - 10, 0, 1);  // 25 ans dans le passé

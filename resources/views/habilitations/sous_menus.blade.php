@@ -119,12 +119,12 @@
                                                 <span style="color: white"></span>
                                             </a>
                                             <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                                @can("modifier_ecran_" . $ecran->id)
+                                            {{--   @can("modifier_ecran_" . $ecran->id) --}}
                                                 <li><a class="dropdown-item" onclick="showEditRubrique('{{ $sous_menu->code }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
-                                                @endcan
-                                                @can("supprimer_ecran_" . $ecran->id)
+                                                {{--     @endcan--}}
+                                                    {{--     @can("supprimer_ecran_" . $ecran->id)--}}
                                                 <li><a class="dropdown-item" onclick="deleteRubrique('{{ $sous_menu->code }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                                @endcan
+                                                {{--      @endcan--}}
                                             </ul>
                                         </div>
                                     </td>
@@ -205,12 +205,12 @@
                                 </div>
                             </div>
                         </div>
-                        @can("ajouter_ecran_" . $ecran->id)
+                    {{--    @can("ajouter_ecran_" . $ecran->id)--}}
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
                         </div>
-                         @endcan
+                        {{--    @endcan--}}
 
                     </form>
                 </div>
@@ -281,12 +281,12 @@
                                 </div>
                             </div>
                         </div>
-                        @can("modifier_ecran_" . $ecran->id)
+                        {{-- @can("modifier_ecran_" . $ecran->id)--}}
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
                         </div>
-                         @endcan
+                        {{--  @endcan--}}
 
                     </form>
                 </div>
@@ -303,7 +303,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des sous-menus')
+        initDataTable('{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}', 'table1', 'Liste des sous-menus')
     });
 
     // Lorsque l'utilisateur clique sur un bouton "Modifier"
@@ -315,7 +315,7 @@
             , success: function(data) {
                 console.log(data);
                 // Remplir le formulaire modal avec les données du district
-                $('#edit_code').val(data.code); 
+                $('#edit_code').val(data.code);
                 $('#edit_libelle').val(data.libelle);
                 $('#edit_ordre').val(data.ordre);
                 $('#edit_niveau').val(data.niveau);

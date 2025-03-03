@@ -35,9 +35,12 @@ use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\WorkflowValidationController;
+use App\Models\Domaine;
 use App\Models\EtudeProject;
 use App\Models\Renforcement;
+use App\Models\SousDomaine;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Laravel\Ui\Presets\React;
 use PasswordResetController as GlobalPasswordResetController;
 
@@ -518,7 +521,24 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::put('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'update'])->name('type-acteurs.update');
     Route::delete('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'destroy'])->name('type-acteurs.destroy');
     Route::delete('/type-acteurs/bulk-delete', [TypeActeurController::class, 'bulkDelete'])->name('type-acteurs.bulkDelete');
-    Route::get('/get-chefs-projet', [EtudeProjet::class, 'getChefsProjet']);
+    Route::get('/get-localites/{pays}', [EtudeProjet::class, 'getLocalites']);
+    Route::get('/get-decoupage-niveau/{localite}', [EtudeProjet::class, 'getDecoupageNiveau']);
+Route::get('/get-sous-domaines/{domaineCode}', function ($domaineCode) {
+    $sousDomaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
+        ->
+    whereRaw("LEFT(code_sous_domaine, 2) = ?", [$domaineCode])
+        ->get()
+        ->map(function ($sousDomaine) {
+            return [
+                'code' => $sousDomaine->code_sous_domaine,
+                'libelle' => $sousDomaine->lib_sous_domaine,
+                'prefix' => substr($sousDomaine->code_sous_domaine, 0, 2), // Extracts the first two characters
+            ];
+        });
+
+    return response()->json($sousDomaines);
+});
+
 
     /*************************ACTEURS *******/
     Route::get('admin/acteurs', [ActeurController::class, 'index'])->name('acteurs.index');

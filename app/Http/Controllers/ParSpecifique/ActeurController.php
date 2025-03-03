@@ -6,10 +6,16 @@ namespace App\Http\Controllers\ParSpecifique;
 use App\Http\Controllers\Controller;
 use App\Models\Acteur;
 use App\Models\Ecran;
+use App\Models\FormeJuridique;
+use App\Models\Genre;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\Pays;
 use App\Models\PaysUser;
+use App\Models\Pieceidentite;
+use App\Models\SecteurActivite;
+use App\Models\SituationMatrimonial;
 use App\Models\TypeActeur;
+use App\Models\TypeFinancement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -56,8 +62,13 @@ class ActeurController extends Controller
                     ->where('code_pays', $paysSelectionne) // Utilisation de `code_pays` au lieu de `pays_code`
                     ->get();
             }
-
-            return view('parSpecifique.Acteur', compact('ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
+            $SecteurActivites = SecteurActivite::all();
+            $SituationMatrimoniales = SituationMatrimonial::all();
+            $genres = Genre::all();
+            $Pieceidentite = Pieceidentite::all();
+            $formeJuridiques = FormeJuridique::all();
+            $typeFinancements = TypeFinancement::all();
+            return view('parSpecifique.Acteur', compact('typeFinancements','formeJuridiques','Pieceidentite','genres','SituationMatrimoniales','SecteurActivites','ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
         } catch (\Exception $e) {
             Log::error("Erreur lors de la récupération des acteurs : " . $e->getMessage());
             return redirect()->back()->withErrors('Une erreur est survenue lors du chargement des acteurs.');
@@ -72,52 +83,116 @@ class ActeurController extends Controller
     {
         try {
             // 🔍 **Validation stricte des données**
-            $request->validate([
-                'libelle_long' => 'required|string|max:255',
-                'libelle_court' => 'required|string|max:255',
-                'type_acteur' => 'required|string|max:5',
-                'email' => 'required|email|unique:acteur,email',
-                'telephone' => 'nullable|string|max:50',
-                'adresse' => 'nullable|string|max:255',
-                'code_pays' => 'required|exists:pays,alpha3', // Vérifie si le pays existe
-                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 📌 Validation stricte pour les fichiers image
-            ]);
 
             // 🔹 **Création de l'acteur**
             $acteur = new Acteur([
-                'libelle_long' => $request->libelle_long,
-                'libelle_court' => $request->libelle_court,
+                'libelle_long' => $request->libelle_long ?? $request->prenom,
+                'libelle_court' => $request->libelle_court ?? $request->nom,
                 'type_acteur' => $request->type_acteur,
-                'email' => $request->email,
-                'telephone' => $request->telephone,
-                'adresse' => $request->adresse,
+                'email' => $request->emailI ?? $request->emailRL,
+                'telephone' => $request->telephoneBureau ?? $request->telephone1RL,
+                'adresse' => $request->AdresseSiègeEntreprise ?? $request->adresseSiegeIndividu,
                 'code_pays' => $request->code_pays,
-                'is_user' => false, // Par défaut, non utilisateur
+                'is_user' => false,
+                'type_financement' => $request->type_financementtype_financement,
             ]);
 
-            // 📌 **Gestion correcte du stockage de l'image**
+            // 📌 **Gestion du stockage de l'image**
             if ($request->hasFile('photo')) {
-                $file = $request->file('photo');
-                $extension = $file->getClientOriginalExtension();
-                $filename = 'Acteur_' . time() . '.' . $extension;
-
-                // 📌 **Définir le chemin absolu dans `public/Data/acteur/`**
-                $destinationPath = public_path('Data/acteur/');
-
-                // 📌 **Créer le dossier s'il n'existe pas**
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0777, true);
-                }
-
-                // 📌 **Déplacer le fichier**
-                $file->move($destinationPath, $filename);
-
-                // 📌 **Enregistrer le chemin relatif pour l'affichage**
-                $acteur->photo = 'Data/acteur/' . $filename;
+                $acteur->photo = $request->file('photo')->store('Data/acteur', 'public');
             }
 
-            // 📌 **Sauvegarde de l'acteur**
             $acteur->save();
+
+            // 🔹 **Gestion des Personnes Physiques**
+            if ($request->type_personne == "physique") {
+                $personne = PersonnePhysique::create([
+                    'code_acteur' => $acteur->code_acteur,
+                    'nom' => $request->nom,
+                    'prenom' => $request->prenom,
+                    'date_naissance' => $request->date_naissance,
+                    'nationalite' => $request->nationalite,
+                    'secteur_activite' => $request->SecteurActiviteIndividu,
+                    'email' => $request->emailI,
+                    'code_postal' => $request->CodePostalI,
+                    'adresse_postale' => $request->AdressePostaleIndividu,
+                    'adresse_siege' => $request->adresseSiegeIndividu,
+                    'telephone_bureau' => $request->telephoneBureauIndividu,
+                    'telephone_mobile' => $request->telephoneMobileIndividu,
+                    'num_fiscal' => $request->numeroFiscal,
+                    'genre_id' => $request->genre,
+                    'situation_matrimoniale_id' => $request->situationMatrimoniale,
+                    'is_active' => true,
+                ]);
+
+                // 📌 **Enregistrement de la pièce d'identité**
+                if ($request->piece_identite && $request->numeroPiece) {
+                    Possederpiece::create([
+                        'idPieceIdent' => $request->piece_identite,
+                        'idPersonnePhysique' => $personne->id, // Correction ici
+                        'NumPieceIdent' => $request->numeroPiece,
+                        'DateEtablissement' => $request->dateEtablissement,
+                        'DateExpiration' => $request->dateExpiration,
+                    ]);
+                }
+            }
+
+            // 🔹 **Gestion des Personnes Morales**
+            elseif ($request->type_personne == "morale") {
+                $entreprise = PersonneMorale::create([
+                    'code_acteur' => $acteur->code_acteur,
+                    'raison_sociale' => $request->libelle_long,
+                    'date_creation' => $request->date_creation,
+                    'secteur_activite' => $request->SecteurActiviteEntreprise,
+                    'forme_juridique' => $request->FormeJuridique,
+                    'num_immatriculation' => $request->NumeroImmatriculation,
+                    'nif' => $request->nif,
+                    'rccm' => $request->rccm,
+                    'capital' => $request->CapitalSocial,
+                    'numero_agrement' => $request->Numéroagrement,
+                    'code_postal' => $request->CodePostaleEntreprise,
+                    'adresse_postale' => $request->AdressePostaleEntreprise,
+                    'adresse_siege' => $request->AdresseSiègeEntreprise,
+                ]);
+
+                // 📌 **Enregistrement du représentant légal**
+                if ($request->nomRL && $request->emailRL) {
+                    $representantRL = Acteur::create([
+                        'libelle_long' => $request->nomRL,
+                        'email' => $request->emailRL,
+                        'telephone' => $request->telephone1RL ?? $request->telephone2RL,
+                        'code_pays' => $request->code_pays,
+                        'type_financement' => $request->type_financement,
+                        'type_acteur' => 'Représentant Légal',
+                        'is_user' => false
+                    ]);
+
+                    Representants::create([
+                        'entreprise_id' => $entreprise->id,
+                        'representant_id' => $representantRL->code_acteur,
+                        'role' => 'Représentant Légal',
+                    ]);
+                }
+
+                // 📌 **Enregistrement de la personne de contact**
+                if ($request->nomPC && $request->emailPC) {
+                    $personneContact = Acteur::create([
+                        'libelle_long' => $request->nomPC,
+                        'email' => $request->emailPC,
+                        'telephone' => $request->telephone1PC ?? $request->telephone2PC,
+                        'code_pays' => $request->code_pays,
+                        'type_financement' => $request->type_financement,
+                        'type_acteur' => 'Personne de Contact',
+                        'is_user' => false
+                    ]);
+
+                    Representants::create([
+                        'entreprise_id' => $entreprise->id,
+                        'representant_id' => $personneContact->code_acteur,
+                        'role' => 'Personne de Contact',
+                    ]);
+                }
+            }
 
             Log::info("✅ Acteur ajouté avec succès : " . $acteur->libelle_long);
             return redirect()->back()->with('success', 'Acteur ajouté avec succès.');
@@ -139,9 +214,6 @@ class ActeurController extends Controller
                 'libelle_long' => 'required|string|max:255',
                 'libelle_court' => 'required|string|max:255',
                 'type_acteur' => 'string|max:5',
-                'email' => 'required|email|unique:acteur,email,' . $id . ',code_acteur',
-                'telephone' => 'nullable|string|max:50',
-                'adresse' => 'nullable|string|max:255',
                 'code_pays' => 'required|exists:pays,alpha3',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);

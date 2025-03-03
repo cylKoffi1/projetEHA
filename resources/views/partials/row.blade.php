@@ -8,7 +8,7 @@
         <td></td>
         <td></td>
         <td></td>
-        <td><input type="checkbox" name="consulterSousMenu" value="{{ $sous_menu->code }}"  id=""></td>
+        <td><input type="checkbox" name="consulter_sous_menu" value="{{ $sous_menu->code }}"  id=""></td>
     </tr>
 
     @foreach ($sous_menu->ecrans as $ecran)
@@ -16,10 +16,10 @@
         <td>{{ $ecran->code }}</td>
         <td>{{ $ecran->libelle }}</td>
         <td></td>
-        <td><input type="checkbox" class="ajouter_ecran_{{ $ecran->id }}" name="ajouterSousMenuEcran" value="{{ $ecran->id }}"  id=""></td>
-        <td><input type="checkbox" class="modifier_ecran_{{ $ecran->id }}" name="modifierSousMenuEcran" value="{{ $ecran->id }}" id=""></td>
-        <td><input type="checkbox" class="supprimer_ecran_{{ $ecran->id }}" name="supprimerSousMenuEcran" value="{{ $ecran->id }}" id=""></td>
-        <td><input type="checkbox" name="consulterSousMenuEcran" value="{{ $ecran->id }}" id=""></td>
+        <td><input type="checkbox" class="ajouter_ecran_{{ $ecran->id }}" name="ajouter_sous_menu_ecran" value="{{ $ecran->id }}"  id=""></td>
+        <td><input type="checkbox" class="modifier_ecran_{{ $ecran->id }}" name="modifier_sous_menu_ecran" value="{{ $ecran->id }}" id=""></td>
+        <td><input type="checkbox" class="supprimer_ecran_{{ $ecran->id }}" name="supprimer_sous_menu_ecran" value="{{ $ecran->id }}" id=""></td>
+        <td><input type="checkbox" name="consulter_sous_menu_ecran" value="{{ $ecran->id }}" id=""></td>
         <td></td>
     </tr>
     @endforeach
@@ -42,7 +42,7 @@
         <td></td>
         <td></td>
         <td></td>
-        <td><input type="checkbox" name="consulterSousMenu" value="{{ $sous_menu->code }}" id=""></td>
+        <td><input type="checkbox" name="consulter_sous_menu" value="{{ $sous_menu->code }}" id=""></td>
 
     </tr>
 
@@ -51,10 +51,10 @@
         <td>{{ $ecran->code }}</td>
         <td>{{ $ecran->libelle }}</td>
         <td></td>
-        <td><input type="checkbox" class="ajouter_ecran_{{ $ecran->id }}" name="ajouterSousMenuEcran" value="{{ $ecran->id }}"  id=""></td>
-        <td><input type="checkbox" class="modifier_ecran_{{ $ecran->id }}" name="modifierSousMenuEcran" value="{{ $ecran->id }}" id=""></td>
-        <td><input type="checkbox" class="supprimer_ecran_{{ $ecran->id }}" name="supprimerSousMenuEcran" value="{{ $ecran->id }}" id=""></td>
-        <td><input type="checkbox" name="consulterSousMenuEcran" value="{{ $ecran->id }}" id=""></td>
+        <td><input type="checkbox" class="ajouter_ecran_{{ $ecran->id }}" name="ajouter_sous_menu_ecran" value="{{ $ecran->id }}"  id=""></td>
+        <td><input type="checkbox" class="modifier_ecran_{{ $ecran->id }}" name="modifier_sous_menu_ecran" value="{{ $ecran->id }}" id=""></td>
+        <td><input type="checkbox" class="supprimer_ecran_{{ $ecran->id }}" name="supprimer_sous_menu_ecran" value="{{ $ecran->id }}" id=""></td>
+        <td><input type="checkbox" name="consulter_sous_menu_ecran" value="{{ $ecran->id }}" id=""></td>
         <td></td>
     </tr>
     @endforeach

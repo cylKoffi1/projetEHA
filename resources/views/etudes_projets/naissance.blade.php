@@ -19,6 +19,60 @@
             cursor: pointer;
             background: #f8f9fa;
         }
+        #fixedPositionResults {
+            position: absolute;
+            width: 100%;
+            max-height: 181px; /* Définit une hauteur maximale pour éviter un trop grand affichage */
+            overflow-y: auto; /* Permet le défilement si trop d'éléments */
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            z-index: 2050 !important; /* Plus grand que la plupart des modals */
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #fixedPositionResults li {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        #fixedPositionResults li:hover {
+            background: #f1f1f1;
+        }
+        /* Ajuster la taille du modal */
+        .modal-dialog {
+            max-width: 80%;
+            width: auto;
+            min-width: 600px;
+        }
+
+        /* Permettre le défilement si le contenu est long */
+        .modal-content {
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+
+        /* Style de la table des bénéficiaires */
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #beneficiaireTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #beneficiaireTable th, #beneficiaireTable td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        #beneficiaireTable th {
+            background-color: #f2f2f2;
+        }
+
         .upload-box:hover {
             background: #e2e6ea;
         }
@@ -86,26 +140,26 @@
             <div class="card-header">
                 <h5 class="card-title">Naissance / Modélisation de Projet</h5>
 
-            @if (session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
+                @if (session('success'))
+                    <div class="alert alert-success">
+                        {{ session('success') }}
+                    </div>
+                @endif
 
-            @if (session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
-            @if ($errors->any())
-                <div class="alert alert-danger">
-                    <ul>0
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+                @if (session('error'))
+                    <div class="alert alert-danger">
+                        {{ session('error') }}
+                    </div>
+                @endif
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>0
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
             </div>
             <div class="card-content">
@@ -151,8 +205,8 @@
                                         </div>
                                     </div>
                                     <div class="col position-relative">
-                                        <label>Acteur Responsable *</label>
-                                        <select class="form-control required" id="acteurMoeSelect">
+                                        <label>Nom acteur *</label>
+                                        <select class="form-control required" name="acteurMoeSelect" id="acteurMoeSelect">
                                             <option value="">Sélectionnez un acteur</option>
                                         </select>
                                         <small class="text-muted">Sélectionnez l’entité qui assure le rôle de Maître d’œuvre.</small>
@@ -184,19 +238,19 @@
                                                         <div class="row">
                                                             <div class="col-md-6">
                                                                 <label>Code de l'Entreprise :</label>
-                                                                <input type="text" class="form-control" placeholder="Nom de l'entreprise">
+                                                                <input type="text" name="codeEntMoe" class="form-control" placeholder="Nom de l'entreprise">
                                                             </div>
                                                             <div class="col-md-6">
                                                                 <label>Nom de l'Entreprise :</label>
-                                                                <input type="text" class="form-control" placeholder="Nom de l'entreprise">
+                                                                <input type="text" name="nomEntMoe" class="form-control" placeholder="Nom de l'entreprise">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Date de création :</label>
-                                                                <input type="text" class="form-control" placeholder="Adresse complète">
+                                                                <input type="text" name="dateCreationEntMoe" class="form-control" placeholder="Adresse complète">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Secteur d'activité :</label>
-                                                                <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                                <select name="sectActivEntMoe" id="SecteurActiviteEntreprise" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($SecteurActivites as $SecteurActivite)
                                                                         <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
@@ -205,7 +259,7 @@
                                                             </div>
                                                             <div class="col-md-4 ">
                                                                 <label>Forme Juridique :</label>
-                                                                <select name="FormeJuridique" id="FormeJuridique" class="form-control">
+                                                                <select name="FormeJuriEntMoe" id="FormeJuridique" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($formeJuridiques as $formeJuridique)
                                                                         <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
@@ -220,19 +274,19 @@
                                                         <div class="row">
                                                             <div class="col-md-6">
                                                                 <label>Numéro d’Immatriculation :</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro RCCM">
+                                                                <input type="text" name="NumImmEntMoe" class="form-control" placeholder="Numéro RCCM">
                                                             </div>
                                                             <div class="col-md-6">
                                                                 <label>Numéro d’Identification Fiscale (NIF) :</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                                <input type="text" name="NIFEntMoe" class="form-control" placeholder="Numéro fiscal">
                                                             </div>
                                                             <div class="col-md-6 mt-2">
                                                                 <label>Capital Social :</label>
-                                                                <input type="number" class="form-control" placeholder="Capital social de l’entreprise">
+                                                                <input type="number" name="CapitalEntMoe" class="form-control" placeholder="Capital social de l’entreprise">
                                                             </div>
                                                             <div class="col-md-6 mt-2">
                                                                 <label>Numéro d'agrément :</label>
-                                                                <input type="text" name="Numéroagrement" id="Numéroagrement" class="form-control">
+                                                                <input type="text"  name="NumAgreEntMoe" id="Numéroagrement" class="form-control">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -242,49 +296,49 @@
                                                         <div class="row">
                                                             <div class="col-4">
                                                                 <label>Code postale</label>
-                                                                <input type="text" class="form-control" name="CodePostaleEntreprise" placeholder="Code postale">
+                                                                <input type="text" name="CodePostEntMoe" class="form-control"  placeholder="Code postale">
                                                             </div>
                                                             <div class="col-4">
                                                                 <label>Adresse postale</label>
-                                                                <input type="text" class="form-control" name="AdressePostaleEntreprise" placeholder="Code postale">
+                                                                <input type="text"  class="form-control" name="AddPostEntMoe" placeholder="Code postale">
                                                             </div>
                                                             <div class="col-4">
                                                                 <label>Adresse Siège</label>
-                                                                <input type="text" class="form-control" name="AdresseSiègeEntreprise" placeholder="Code postale">
+                                                                <input type="text" class="form-control" name="AddSieEntMoe" placeholder="Code postale">
                                                             </div>
                                                             <hr>
                                                             <div class="col-md-3">
                                                                 <label>Représentant Légal :</label>
-                                                                <input type="text" class="form-control"  placeholder="Nom du représentant légal">
+                                                                <input type="text" class="form-control"  name="RepLeEntMoe" placeholder="Nom du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Email:</label>
-                                                                <input type="email" class="form-control" placeholder="Email du représentant légal">
+                                                                <input type="email" class="form-control" name="EmailRepLeEntMoe" placeholder="Email du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 1:</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 1 du représentant légal">
+                                                                <input type="text" class="form-control" name="Tel1RepLeEntMoe" placeholder="Téléphone 1 du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 2:</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 2 du représentant légal">
+                                                                <input type="text" class="form-control" name="Tel2RepLeEntMoe" placeholder="Téléphone 2 du représentant légal">
                                                             </div>
                                                             <hr>
                                                             <div class="col-md-3">
                                                                 <label>Personne de Contact :</label>
-                                                                <input type="text" class="form-control" placeholder="Nom de la personne de contact">
+                                                                <input type="text" class="form-control" name="NomPersContEntMoe" placeholder="Nom de la personne de contact">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Email:</label>
-                                                                <input type="email" class="form-control" placeholder="Email du personne de Contact">
+                                                                <input type="email" class="form-control" name="EmailPersContEntMoe" placeholder="Email du personne de Contact">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 1:</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 1 de la ersonne de Contact">
+                                                                <input type="text" class="form-control" name="Tel1PersContEntMoe" placeholder="Téléphone 1 de la ersonne de Contact">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 2:</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 2 de la Personne de Contact">
+                                                                <input type="text" class="form-control" name="Tel2PersContEntMoe" placeholder="Téléphone 2 de la Personne de Contact">
                                                             </div>
                                                             <hr>
                                                         </div>
@@ -313,28 +367,42 @@
                                                     <!-- Tab 1: Informations Personnelles -->
                                                     <div class="tab-pane fade show active" id="moeindividu-general" role="tabpanel" aria-labelledby="moeindividu-general-tab">
                                                         <div class="row">
-                                                            <div class="col-md-6">
-                                                                <label>Nom :</label>
-                                                                <input type="text" class="form-control" placeholder="Nom">
+                                                            <div class="col-md-4">
+                                                                <label>Nom *:</label>
+                                                                <input type="text" name="NomIndMoe" class="form-control" placeholder="Nom">
                                                             </div>
-                                                            <div class="col-md-6">
-                                                                <label>Prénom :</label>
-                                                                <input type="text" class="form-control" placeholder="Prénom">
+                                                            <div class="col-md-4">
+                                                                <label>Prénom *:</label>
+                                                                <input type="text" name="PrenomIndMoe" class="form-control" placeholder="Prénom">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Date de Naissance :</label>
-                                                                <input type="date" class="form-control">
+                                                                <input type="date" name="DateNaissanceIndMoe" class="form-control">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Nationalité :</label>
-                                                                <input type="text" class="form-control" placeholder="Nationalité">
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <label>Secteur d'activité :</label>
-                                                                <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                                <label>Genre</label>
+                                                                <select name="genreIndMoe" id="genre" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
-                                                                    @foreach ($formeJuridiques as $formeJuridique)
-                                                                        <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                                    @foreach ($genres as $genre)
+                                                                    <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4 ">
+                                                                <label>Situation Matrimoniale :</label>
+                                                                <select class="form-control" name="SitMatIndMoe">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                                        <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Pays d'origine :</label>
+                                                                <select name="nationnaliteIndMoe" id="nationnalite" class="form-control">
+                                                                    <option value="">Sélectionner le pays </option>
+                                                                    @foreach ($tousPays  as $pay)
+                                                                        <option value="{{ $pay->id }}">{{ $pay->nom_fr_fr }}</option>
                                                                     @endforeach
                                                                 </select>
                                                             </div>
@@ -345,28 +413,28 @@
                                                     <div class="tab-pane fade" id="moeindividu-contact" role="tabpanel" aria-labelledby="moeindividu-contact-tab">
                                                         <div class="row">
                                                             <div class="col-md-4">
-                                                                <label>Email :</label>
-                                                                <input type="email" class="form-control" placeholder="Email">
+                                                                <label>Email *:</label>
+                                                                <input type="email" name="emailIndMoe" class="form-control" placeholder="Email">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label for="codePostal">Code postal</label>
-                                                                <input type="text" name="CodePostal" id="CodePostal" class="form-control">
+                                                                <input type="text" name="CodePostalIndMoe" id="CodePostal" class="form-control">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Adresse :</label>
-                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                                <label>Adresse postale:</label>
+                                                                <input type="text" name="AddPostIndMoe" class="form-control" placeholder="Adresse">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Adresse siège :</label>
-                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                                <label>Adresse *</label>
+                                                                <input type="text" name="AddSiegeIndMoe" class="form-control" placeholder="Adresse">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Téléphone Bureau:</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone">
+                                                                <label>Téléphone Bureau *</label>
+                                                                <input type="text" name="TelBureauIndMoe" class="form-control" placeholder="Téléphone">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Téléphone mobile:</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone">
+                                                                <label>Téléphone mobile *</label>
+                                                                <input type="text" name="TelMobileIndMoe" class="form-control" placeholder="Téléphone">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -374,33 +442,39 @@
                                                     <!-- Tab 3: Informations Administratives -->
                                                     <div class="tab-pane fade" id="moeindividu-admin" role="tabpanel" aria-labelledby="moeindividu-admin-tab">
                                                         <div class="row">
-                                                            <div class="col-md-6">
-                                                                <label>Numéro de Carte d’Identité :</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro de CNI">
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <label>Date de vailidité :</label>
-                                                                <input type="date" class="form-control" placeholder="Numéro de CNI">
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <label>Numéro Fiscal :</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
-                                                            </div>
-                                                            <div class="col-md-4 ">
-                                                                <label>Situation Matrimoniale :</label>
-                                                                <select class="form-control">
-                                                                    <option value="">Sélectionnez...</option>
-                                                                    @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
-                                                                        <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
-                                                                    @endforeach
+                                                            <div class="col-md-3">
+                                                                <label>Pièce d’Identité :</label>
+                                                                <select class="form-control" name="PieceIdIndMoe">
+                                                                    @foreach($Pieceidentite as $Pieceidentit)
+                                                                    <option value="{{ $Pieceidentit->idPieceIdent }}">{{ $Pieceidentit->libelle_long }}</option>
+								                                    @endforeach
+
                                                                 </select>
+
                                                             </div>
-                                                            <div class="col-md-4">
-                                                                <label>Genre</label>
-                                                                <select name="genre" id="genre" class="form-control">
+                                                            <div class="col-md-3">
+                                                                <label>Numéro Pièce:</label>
+                                                                <input type="text" name="NumPeceIndMoe" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Date de etablissement:</label>
+                                                                <input type="date" name="DateEtablissementIndMoe" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Date de expiration:</label>
+                                                                <input type="date" name="DateExpIndMoe" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <label>Numéro Fiscal :</label>
+                                                                <input type="text" name="NumFiscIndMoe" class="form-control" placeholder="Numéro fiscal">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label>Secteur d'activité :</label>
+                                                                <select name="sectActIndMoe" id="SecteurActiviteEntreprise" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
-                                                                    @foreach ($genres as $genre)
-                                                                    <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                                    @foreach ($formeJuridiques as $formeJuridique)
+                                                                        <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
                                                                     @endforeach
                                                                 </select>
                                                             </div>
@@ -425,6 +499,7 @@
                                 </div>
 
                             </div>
+
                           <!-- Étape  : Informations sur le Maître d’Ouvrage -->
                             <div class="step" id="step-2">
                                 <h5 class="text-secondary">🏗️ Informations / Maître d'œuvre</h5>
@@ -459,8 +534,8 @@
                                     </div>
                                     <div class="col">
                                         <!-- ✅ Sélection de l’Acteur -->
-                                        <label>Acteur Responsable *</label>
-                                        <select class="form-control required" id="acteurSelect">
+                                        <label>Nom Acteur *</label>
+                                        <select class="form-control required" name="acteurSelect" id="acteurSelect">
                                             <option value="">Sélectionnez un acteur</option>
 
                                         </select>
@@ -469,7 +544,7 @@
                                     <div class="col">
                                         <!-- ✅ Sélection "En Charge de" -->
                                         <label>En Charge de *</label>
-                                        <select class="form-control required" id="enChargeSelect">
+                                        <select class="form-control required" name="enChargeSelect" id="enChargeSelect">
                                             <option value="">Sélectionnez la responsabilité</option>
                                             @foreach ($SecteurActivites as $SecteurActivite)
                                             <option value="{{$SecteurActivite->code}}">{{$SecteurActivite->libelle}}</option>
@@ -503,15 +578,15 @@
                                                         <div class="row">
                                                             <div class="col-md-6">
                                                                 <label>Raison social * </label>
-                                                                <input type="text" class="form-control" placeholder="Nom de l'entreprise">
+                                                                <input type="text" name="raisonSocialeEnt" class="form-control" placeholder="Nom de l'entreprise">
                                                             </div>
                                                             <div class="col-md-6">
                                                                 <label>Date de création * </label>
-                                                                <input type="text" class="form-control" placeholder="Adresse complète">
+                                                                <input type="text" name="DateCreatEnt" class="form-control" placeholder="Adresse complète">
                                                             </div>
                                                             <div class="col-md-6">
                                                                 <label>Secteur d'activité * </label>
-                                                                <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                                <select name="SectActEnt" id="SecteurActiviteEntreprise" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($SecteurActivites as $SecteurActivite)
                                                                         <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
@@ -520,7 +595,7 @@
                                                             </div>
                                                             <div class="col-md-6 ">
                                                                 <label>Forme Juridique *</label>
-                                                                <select name="FormeJuridique" id="FormeJuridique" class="form-control">
+                                                                <select name="FormeJurEnt" id="FormeJuridique" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
                                                                     @foreach ($formeJuridiques as $formeJuridique)
                                                                         <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
@@ -535,23 +610,23 @@
                                                         <div class="row">
                                                             <div class="col-md-4">
                                                                 <label>Numéro d’Immatriculation *:</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro RCCM">
+                                                                <input type="text" name="NumImmEnt" class="form-control" placeholder="Numéro RCCM">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Numéro d’Identification Fiscale (NIF) :</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                                <input type="text" name="NumIdentEnt" class="form-control" placeholder="Numéro fiscal">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Registre du commerce (RCCM) :</label>
-                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                                <input type="text" name="RCCMEnt" class="form-control" placeholder="Numéro fiscal">
                                                             </div>
                                                             <div class="col-md-6 mt-2">
                                                                 <label>Capital Social :</label>
-                                                                <input type="number" class="form-control" placeholder="Capital social de l’entreprise">
+                                                                <input type="number" name="CapitalEnt" class="form-control" placeholder="Capital social de l’entreprise">
                                                             </div>
                                                             <div class="col-md-6 mt-2">
                                                                 <label>Numéro d'agrément :</label>
-                                                                <input type="text" name="Numéroagrement" id="Numéroagrement" class="form-control">
+                                                                <input type="text" name="NumAgreEnt" id="Numéroagrement" class="form-control">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -561,49 +636,49 @@
                                                         <div class="row">
                                                             <div class="col-4">
                                                                 <label>Code postale</label>
-                                                                <input type="text" class="form-control" name="CodePostaleEntreprise" placeholder="Code postale">
+                                                                <input type="text" class="form-control" name="CodePostEnt" placeholder="Code postale">
                                                             </div>
                                                             <div class="col-4">
                                                                 <label>Adresse postale</label>
-                                                                <input type="text" class="form-control" name="AdressePostaleEntreprise" placeholder="Code postale">
+                                                                <input type="text" class="form-control" name="addPostEnt" placeholder="Code postale">
                                                             </div>
                                                             <div class="col-4">
                                                                 <label>Adresse Siège</label>
-                                                                <input type="text" class="form-control" name="AdresseSiègeEntreprise" placeholder="Code postale">
+                                                                <input type="text" class="form-control" name="AddSiegEnt" placeholder="Code postale">
                                                             </div>
                                                             <hr>
                                                             <div class="col-md-3">
                                                                 <label>Représentant Légal *</label>
-                                                                <input type="text" class="form-control"  placeholder="Nom du représentant légal">
+                                                                <input type="text" class="form-control" name="RepLegEnt" placeholder="Nom du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Email *</label>
-                                                                <input type="email" class="form-control" placeholder="Email du représentant légal">
+                                                                <input type="email" class="form-control" name="emailRepLegEnt" placeholder="Email du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 1 *</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 1 du représentant légal">
+                                                                <input type="text" class="form-control" name="Tel1RepLegEnt" placeholder="Téléphone 1 du représentant légal">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 2 *</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 2 du représentant légal">
+                                                                <input type="text" class="form-control" name="Tel2RepLegEnt" placeholder="Téléphone 2 du représentant légal">
                                                             </div>
                                                             <hr>
                                                             <div class="col-md-3">
                                                                 <label>Personne de Contact </label>
-                                                                <input type="text" class="form-control" placeholder="Nom de la personne de contact">
+                                                                <input type="text" class="form-control" name="PersContEnt" placeholder="Nom de la personne de contact">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Email</label>
-                                                                <input type="email" class="form-control" placeholder="Email du personne de Contact">
+                                                                <input type="email" class="form-control" name="emailPersContEnt" placeholder="Email du personne de Contact">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 1</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 1 de la ersonne de Contact">
+                                                                <input type="text" class="form-control" name="Tel1PersContEnt" placeholder="Téléphone 1 de la ersonne de Contact">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Téléphone 2</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone 2 de la Personne de Contact">
+                                                                <input type="text" class="form-control" name="Tel2PersContEnt" placeholder="Téléphone 2 de la Personne de Contact">
                                                             </div>
                                                             <hr>
                                                         </div>
@@ -622,38 +697,53 @@
                                                         <button class="nav-link active" id="individu-general-tab" data-bs-toggle="tab" data-bs-target="#individu-general" type="button" role="tab" aria-controls="individu-general" aria-selected="true">Informations Personnelles</button>
                                                     </li>
                                                     <li class="nav-item" role="presentation">
-                                                        <button class="nav-link" id="individu-contact-tab" data-bs-toggle="tab" data-bs-target="#individu-contact" type="button" role="tab" aria-controls="individu-contact" aria-selected="false">Informations de Contact</button>
+                                                        <button class="nav-link" id="individu-admin-tab" data-bs-toggle="tab" data-bs-target="#individu-admin" type="button" role="tab" aria-controls="individu-admin" aria-selected="false">Informations Professionnelles</button>
                                                     </li>
                                                     <li class="nav-item" role="presentation">
-                                                        <button class="nav-link" id="individu-admin-tab" data-bs-toggle="tab" data-bs-target="#individu-admin" type="button" role="tab" aria-controls="individu-admin" aria-selected="false">Informations Administratives</button>
+                                                        <button class="nav-link" id="individu-contact-tab" data-bs-toggle="tab" data-bs-target="#individu-contact" type="button" role="tab" aria-controls="individu-contact" aria-selected="false">Informations de Contact</button>
                                                     </li>
                                                 </ul>
                                                 <div class="tab-content mt-3" id="individuTabsContent">
                                                     <!-- Tab 1: Informations Personnelles -->
                                                     <div class="tab-pane fade show active" id="individu-general" role="tabpanel" aria-labelledby="individu-general-tab">
                                                         <div class="row">
-                                                            <div class="col-md-6">
+                                                            <div class="col-md-4">
                                                                 <label>Nom *</label>
-                                                                <input type="text" class="form-control" placeholder="Nom">
+                                                                <input type="text" name="nomInd" class="form-control" placeholder="Nom">
                                                             </div>
-                                                            <div class="col-md-6">
+                                                            <div class="col-md-4">
                                                                 <label>Prénom *</label>
-                                                                <input type="text" class="form-control" placeholder="Prénom">
+                                                                <input type="text" name="PrenomInd" class="form-control" placeholder="Prénom">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Date de Naissance </label>
-                                                                <input type="date" class="form-control">
+                                                                <input type="date" name="DateNaissInd" class="form-control">
                                                             </div>
+
                                                             <div class="col-md-4">
-                                                                <label>Nationalité *</label>
-                                                                <input type="text" class="form-control" placeholder="Nationalité">
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <label>Secteur d'activité *</label>
-                                                                <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                                <label>Genre</label>
+                                                                <select name="genreInd" id="genre" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
-                                                                    @foreach ($formeJuridiques as $formeJuridique)
-                                                                        <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                                    @foreach ($genres as $genre)
+                                                                    <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4 ">
+                                                                <label>Situation Matrimoniale :</label>
+                                                                <select class="form-control" name="SitMatrInd">
+                                                                    <option value="">Sélectionnez...</option>
+                                                                    @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                                        <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                            <label>Pays d'origine :</label>
+                                                                <select name="nationnaliteInd" id="nationnalite" class="form-control">
+                                                                    <option value="">Sélectionner le pays </option>
+                                                                    @foreach ($tousPays  as $pay)
+                                                                        <option value="{{ $pay->id }}">{{ $pay->nom_fr_fr }}</option>
                                                                     @endforeach
                                                                 </select>
                                                             </div>
@@ -665,27 +755,27 @@
                                                         <div class="row">
                                                             <div class="col-md-4">
                                                                 <label>Email *</label>
-                                                                <input type="email" class="form-control" placeholder="Email">
+                                                                <input type="email" name="emailInd" class="form-control" placeholder="Email">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label for="codePostal">Code postal</label>
-                                                                <input type="text" name="CodePostal" id="CodePostal" class="form-control">
+                                                                <input type="text" name="CodePostalInd" id="CodePostal" class="form-control">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Adresse postale</label>
-                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                                <input type="text" name="AddPostlInd" class="form-control" placeholder="Adresse">
                                                             </div>
                                                             <div class="col-md-4">
-                                                                <label>Adresse siège *</label>
-                                                                <input type="text" class="form-control" placeholder="Adresse">
+                                                                <label>Adresse *</label>
+                                                                <input type="text" name="AddInd" class="form-control" placeholder="Adresse">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Téléphone Bureau *</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone">
+                                                                <input type="text" name="TelBureauInd" class="form-control" placeholder="Téléphone">
                                                             </div>
                                                             <div class="col-md-4">
                                                                 <label>Téléphone mobile *</label>
-                                                                <input type="text" class="form-control" placeholder="Téléphone">
+                                                                <input type="text" name="TelMobileInd" class="form-control" placeholder="Téléphone">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -693,33 +783,40 @@
                                                     <!-- Tab 3: Informations Administratives -->
                                                     <div class="tab-pane fade" id="individu-admin" role="tabpanel" aria-labelledby="individu-admin-tab">
                                                         <div class="row">
-                                                            <div class="col-md-6">
-                                                                <label>Numéro de Carte d’Identité </label>
-                                                                <input type="text" class="form-control" placeholder="Numéro de CNI">
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <label>Date de vailidité </label>
-                                                                <input type="date" class="form-control" placeholder="Numéro de CNI">
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <label>Numéro Fiscal </label>
-                                                                <input type="text" class="form-control" placeholder="Numéro fiscal">
-                                                            </div>
-                                                            <div class="col-md-4 ">
-                                                                <label>Situation Matrimoniale :</label>
-                                                                <select class="form-control">
-                                                                    <option value="">Sélectionnez...</option>
-                                                                    @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
-                                                                        <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
-                                                                    @endforeach
+                                                            <div class="col-md-3">
+                                                                <label>Pièce d’Identité :</label>
+                                                                <select class="form-control" name="PieceIdentInd">
+                                                                    @foreach($Pieceidentite as $Pieceidentit)
+                                                                    <option value="{{ $Pieceidentit->idPieceIdent }}">{{ $Pieceidentit->libelle_long }}</option>
+								                                    @endforeach
+
                                                                 </select>
+
                                                             </div>
-                                                            <div class="col-md-4">
-                                                                <label>Genre</label>
-                                                                <select name="genre" id="genre" class="form-control">
+                                                            <div class="col-md-3">
+                                                                <label>Numéro Pièce:</label>
+                                                                <input type="text" name="NumPieceInd" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Date de etablissement:</label>
+                                                                <input type="date" name="DateEtablInd" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Date de expiration:</label>
+                                                                <input type="date" name="DateExpiraInd" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <label>Numéro Fiscal </label>
+                                                                <input type="text" name="NumFiscInd" class="form-control" placeholder="Numéro fiscal">
+                                                            </div>
+
+                                                            <div class="col-md-6">
+                                                                <label>Secteur d'activité *</label>
+                                                                <select name="SectActInd" id="SecteurActiviteEntreprise" class="form-control">
                                                                     <option value="">Sélectionnez...</option>
-                                                                    @foreach ($genres as $genre)
-                                                                    <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                                    @foreach ($formeJuridiques as $formeJuridique)
+                                                                        <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
                                                                     @endforeach
                                                                 </select>
                                                             </div>
@@ -732,7 +829,7 @@
                                 <!-- ✅ Zone de description complémentaire -->
                                 <div class="row">
                                     <label>Description / Observations</label>
-                                    <textarea class="form-control" id="descriptionMO" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
+                                    <textarea class="form-control" id="descriptionInd" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
                                 </div><br>
                                 <div class="row">
 
@@ -746,151 +843,11 @@
 
                             </div>
 
-                            <!-- Étape : Informations sur le Chef de Projet -->
-                            <div class="step" id="step-3">
-                                <h5 class="text-secondary">👨‍💼 Informations / Chef de Projet</h5>
-
-                                <!-- Recherche et sélection du Chef de Projet -->
-                                <div class="col-4 position-relative">
-                                    <label>Chef de Projet *</label>
-                                    <input type="text" id="chefProjetInput" name="chefProjet" class="form-control" placeholder="Rechercher un chef de projet..." onkeyup="searchChefProjet()">
-                                    <ul class="list-group position-absolute w-100 d-none" id="chefProjetList" style="z-index: 1000;"></ul>
-                                    <small class="text-muted">Sélectionnez un chef de projet existant ou ajoutez un nouveau.</small>
-                                </div>
-
-                                <!-- Formulaire pour renseigner un nouveau chef de projet -->
-                                <div class="row mt-3 d-none" id="chefProjetFields">
-                                    <hr>
-                                    <h6>Détails du Chef de Projet</h6>
-
-                                    <div class="col-12">
-                                        <ul class="nav nav-tabs" id="chefProjetTabs" role="tablist">
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link active" id="chef-general-tab" data-bs-toggle="tab" data-bs-target="#chef-general" type="button" role="tab" aria-controls="chef-general" aria-selected="true">Informations Personnelles</button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="chef-contact-tab" data-bs-toggle="tab" data-bs-target="#chef-contact" type="button" role="tab" aria-controls="chef-contact" aria-selected="false">Informations de Contact</button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="chef-admin-tab" data-bs-toggle="tab" data-bs-target="#chef-admin" type="button" role="tab" aria-controls="chef-admin" aria-selected="false">Informations Administratives</button>
-                                            </li>
-                                        </ul>
-
-                                        <div class="tab-content mt-3" id="chefProjetTabsContent">
-                                            <!-- Tab 1: Informations Personnelles -->
-                                            <div class="tab-pane fade show active" id="chef-general" role="tabpanel" aria-labelledby="chef-general-tab">
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <label>Nom *</label>
-                                                        <input type="text" class="form-control" id="chefNom" placeholder="Nom">
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label>Prénom *</label>
-                                                        <input type="text" class="form-control" id="chefPrenom" placeholder="Prénom">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Date de Naissance</label>
-                                                        <input type="date" class="form-control" id="chefDateNaissance">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Nationalité *</label>
-                                                        <input type="text" class="form-control" id="chefNationalite" placeholder="Nationalité">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Secteur d'activité *</label>
-                                                        <select name="chefSecteurActivite" id="chefSecteurActivite" class="form-control">
-                                                            <option value="">Sélectionnez...</option>
-                                                            @foreach ($formeJuridiques as $formeJuridique)
-                                                                <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Tab 2: Informations de Contact -->
-                                            <div class="tab-pane fade" id="chef-contact" role="tabpanel" aria-labelledby="chef-contact-tab">
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <label>Email *</label>
-                                                        <input type="email" class="form-control" id="chefEmail" placeholder="Email">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label for="codePostal">Code postal</label>
-                                                        <input type="text" name="chefCodePostal" id="chefCodePostal" class="form-control">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Adresse postale</label>
-                                                        <input type="text" class="form-control" placeholder="Adresse">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Adresse siège *</label>
-                                                        <input type="text" class="form-control" placeholder="Adresse">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Téléphone Bureau *</label>
-                                                        <input type="text" class="form-control" placeholder="Téléphone">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Téléphone mobile *</label>
-                                                        <input type="text" class="form-control" id="chefTelephoneMobille" placeholder="Téléphone">
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Tab 3: Informations Administratives -->
-                                            <div class="tab-pane fade" id="chef-admin" role="tabpanel" aria-labelledby="chef-admin-tab">
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <label>Numéro de Carte d’Identité </label>
-                                                        <input type="text" class="form-control" placeholder="Numéro de CNI">
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label>Date de vailidité </label>
-                                                        <input type="date" class="form-control" placeholder="Numéro de CNI">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Numéro Fiscal </label>
-                                                        <input type="text" class="form-control" placeholder="Numéro fiscal">
-                                                    </div>
-                                                    <div class="col-md-4 ">
-                                                        <label>Situation Matrimoniale :</label>
-                                                        <select class="form-control">
-                                                            <option value="">Sélectionnez...</option>
-                                                            @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
-                                                                <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label>Genre</label>
-                                                        <select name="genre" id="genre" class="form-control">
-                                                            <option value="">Sélectionnez...</option>
-                                                            @foreach ($genres as $genre)
-                                                            <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Boutons de navigation -->
-                                <div class="row mt-3">
-                                    <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                    </div>
-                                    <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- 🔵 Étape : Financement -->
-                            <div class="step" id="step-4">
+                            <div class="step" id="step-3">
                                 <h5 class="text-secondary">💰 Ressources Financières</h5>
+
                                 <div class="col-2 mb-3">
                                     <label for="typeFinancement">Type de financement</label>
                                     <select id="typeFinancement" class="form-control">
@@ -902,39 +859,42 @@
 
                                 <!-- Formulaire pour ajouter des détails financiers -->
                                 <div class="row">
-                                    <div class="col-md-3">
+                                    <div class="col-1">
+                                        <label>Local</label>
+                                        <div class="form-check form-check-inline">
+                                            <input type="radio" id="BailOui" name="BaillOui" value="BaillOui" class="form-check-input">
+                                            <label for="BailOui" class="form-check-label">Oui</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input type="radio" id="BailNon" name="BaillOui" value="BaillNon" class="form-check-input">
+                                            <label for="BailNon" class="form-check-label">Non</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col">
                                         <label for="bailleur">Bailleur</label>
                                         <input type="text" id="bailleur" class="form-control" placeholder="Rechercher un bailleur...">
-                                        <ul class="list-group" id="bailleurList"></ul>
+                                        <ul class="list-group position-absolute w-100 d-none" id="bailleurList" style="z-index: 1000;"></ul>
+                                    </div>
+                                    <!-- Bouton pour Ajouter un Nouveau Bailleur -->
+                                    <div id="ajouterBailleurContainer" class="mt-2 d-none">
+                                        <li class="list-group-item text-primary list-group-item-action" id="ajouterBailleurBtn">
+                                            <i class="fas fa-plus-circle"></i> Ajouter "<span id="nouveauBailleurNom"></span>"
+                                        </li>
                                     </div>
                                     <div class="col-md-2">
                                         <label for="montant">Montant</label>
-                                        <input type="number" id="montant" class="form-control" placeholder="Montant">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label for="devise">Devise</label>
-                                        <select id="devise" class="form-control">
-                                            <option value="FCFA">FCFA</option>
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                        </select>
+                                        <input type="number" id="montant" name="MontantBailleur" class="form-control" placeholder="Montant">
                                     </div>
                                     <div class="col-md-1">
-                                        <label>Partie</label><br>
-                                        <div class="form-check form-check-inline">
-                                            <input type="radio" id="partieOui" name="partie" value="oui" class="form-check-input">
-                                            <label for="partieOui" class="form-check-label">Oui</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input type="radio" id="partieNon" name="partie" value="non" class="form-check-input">
-                                            <label for="partieNon" class="form-check-label">Non</label>
-                                        </div>
+                                        <label for="deviseBailleur">Devise</label>
+                                        <input type="text" name="deviseBailleur" id="deviseBailleur" class="form-control" placeholder="Devise" readonly>
                                     </div>
                                     <div class="col-md-3">
                                         <label for="commentaire">Commentaire</label>
-                                        <input type="text" id="commentaire" class="form-control" placeholder="Commentaire">
+                                        <input type="text" id="commentaire" name="CommentBailleur" class="form-control" placeholder="Commentaire">
                                     </div>
-                                    <div class="col-md-1 d-flex align-items-end">
+                                    <div class="col text-end">
                                         <button type="button" class="btn btn-secondary" id="addFinancementBtn">Ajouter</button>
                                     </div>
                                 </div>
@@ -947,7 +907,7 @@
                                                 <th>Bailleur</th>
                                                 <th>Montant</th>
                                                 <th>Devise</th>
-                                                <th>Partie</th>
+                                                <th>Local</th>
                                                 <th>Commentaire</th>
                                                 <th>Action</th>
                                             </tr>
@@ -956,6 +916,115 @@
                                             <!-- Les lignes seront ajoutées ici dynamiquement -->
                                         </tbody>
                                     </table>
+                                </div>
+                                <!-- MODAL D'AJOUT DE BAILLEUR -->
+                                <div class="modal fade" id="modalAjoutBailleur" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Ajouter un Nouveau Bailleur</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <!-- Sélection du type de bailleur -->
+                                                <div class="mb-3">
+                                                    <label>Type de Bailleur *</label>
+                                                    <select id="typeBailleur" class="form-control">
+                                                        <option value="">Sélectionnez...</option>
+                                                        <option value="morale">Personne Morale (Entreprise, Organisation)</option>
+                                                        <option value="physique">Personne Physique (Individu)</option>
+                                                    </select>
+                                                </div>
+
+                                                <!-- FORMULAIRE PERSONNE MORALE -->
+                                                <div id="bailleurMoraleFields" class="d-none">
+                                                    <h6 class="text-primary">Informations de l'Entreprise / Organisation</h6>
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <label>Raison Sociale *</label>
+                                                            <input type="text" id="raisonSocialeBail" class="form-control" placeholder="Nom de l'entreprise">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Date de Création *</label>
+                                                            <input type="date" id="dateCreationBail" class="form-control">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Secteur d'Activité *</label>
+                                                            <select id="secteurActiviteBail" class="form-control">
+                                                                <option value="">Sélectionnez...</option>
+                                                                <option value="Finance">Finance</option>
+                                                                <option value="Infrastructure">Infrastructure</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Forme Juridique *</label>
+                                                            <select id="formeJuridiqueBail" class="form-control">
+                                                                <option value="">Sélectionnez...</option>
+                                                                <option value="SARL">SARL</option>
+                                                                <option value="SA">SA</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Numéro d’Immatriculation *</label>
+                                                            <input type="text" id="numImmatBail" class="form-control" placeholder="RCCM">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Numéro d’Identification Fiscale (NIF) *</label>
+                                                            <input type="text" id="nifBail" class="form-control" placeholder="NIF">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Capital Social</label>
+                                                            <input type="number" id="capitalBail" class="form-control" placeholder="Montant">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Adresse Siège</label>
+                                                            <input type="text" id="adresseBail" class="form-control" placeholder="Adresse du siège">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- FORMULAIRE PERSONNE PHYSIQUE -->
+                                                <div id="bailleurPhysiqueFields" class="d-none">
+                                                    <h6 class="text-primary">Informations du Bailleur (Individu)</h6>
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <label>Nom *</label>
+                                                            <input type="text" id="nomBail" class="form-control" placeholder="Nom">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Prénom *</label>
+                                                            <input type="text" id="prenomBail" class="form-control" placeholder="Prénom">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Date de Naissance *</label>
+                                                            <input type="date" id="dateNaissanceBail" class="form-control">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Nationalité *</label>
+                                                            <select id="nationaliteBail" class="form-control">
+                                                                <option value="">Sélectionnez...</option>
+                                                                <option value="CIV">Ivoirienne</option>
+                                                                <option value="FRA">Française</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Email *</label>
+                                                            <input type="email" id="emailBail" class="form-control" placeholder="Email">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Téléphone *</label>
+                                                            <input type="text" id="telephoneBail" class="form-control" placeholder="Téléphone">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                <button type="button" class="btn btn-primary" id="btnEnregistrerBailleur">Enregistrer</button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="row">
@@ -968,28 +1037,33 @@
                                 </div>
                             </div>
 
+
                             <!-- 🟢 Étape  : Informations Générales -->
-                            <div class="step" id="step-5">
+                            <div class="step" id="step-4">
                                 <h5 class="text-secondary">📋 Informations Générales</h5>
                                 <div class="row">
                                     <div class="col-4">
                                         <label>Nature des travaux *</label>
-                                        
+
                                         <select name="natureTraveaux" id="natureTraveaux" class="form-control">
-                                            <option>Sélectionner une nature</option>    
+                                            <option>Sélectionner une nature</option>
                                             @foreach ($NaturesTravaux as $NaturesTravau)
                                                 <option value="{{ $NaturesTravau->code }}">{{ $NaturesTravau->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-4">
-                                        <label>Groupe de Projet *</label>
-                                        <select class="form-control">
-                                            <option>Sélectionner un groupe</option>
-                                            @foreach ($GroupeProjets as $groupe)
-                                            <option value="{{ $groupe->code }}">{{ $groupe->libelle }}</option>
-                                            @endforeach
-                                        </select>
+                                    <label>Groupe de Projet *</label>
+                                    <select class="form-control" name="groupe_projet" disabled>
+                                        <option value="">Sélectionner un groupe</option>
+                                        @foreach ($GroupeProjets as $groupe)
+                                            <option value="{{ $groupe->code }}"
+                                                {{ $groupeSelectionne == $groupe->code ? 'selected' : '' }}>
+                                                {{ $groupe->libelle }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+
                                     </div>
 
                                     <div class="col-4">
@@ -1000,24 +1074,33 @@
                                 <div class="row">
                                     <div class="col">
                                         <label for="Domaine">Domaine *</label>
-                                        <select name="domaine" id="domaine" class="form-control">
+                                        <select name="domaine" id="domaineSelect" class="form-control">
                                             <option value="">Sélectionner domaine</option>
                                             @foreach ($Domaines as $domaine)
                                                 <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
                                             @endforeach
                                         </select>
                                     </div>
+
                                     <div class="col">
                                         <label for="SousDomaine">Sous-Domaine *</label>
-                                        <select name="SousDomaine" id="SousDomaine" class="form-control">
+                                        <select name="SousDomaine" id="sousDomaineSelect" class="form-control">
                                             <option value="">Sélectionner sous domaine</option>
-                                            @foreach ($SousDomaines as $SousDomaine)
-                                               <option value="{{ $SousDomaine->code }}">{{ $SousDomaine->libelle }}</option>
-                                            @endforeach
                                         </select>
                                     </div>
+
+
+				                    <div class="col">
+                                        <label for="SousDomaine">Date Début prévisionnelle *</label>
+                                        <input type="date" class="form-control">
+                                    </div>
+				                    <div class="col">
+                                        <label for="SousDomaine">Date Fin prévisionnelle *</label>
+                                        <input type="date" class="form-control">
+                                    </div>
+
                                 </div><br>
-                                
+
 
                                 <div class="row">
                                     <div class="col">
@@ -1030,69 +1113,60 @@
                             </div>
 
                             <!-- 🟠 Étape  : Localisation -->
-                            <div class="step" id="step-6">
+                            <div class="step" id="step-5">
                                 <h5 class="text-secondary">🌍 Localisation</h5>
-                                <div class="row">
-                                    <br>
-                                    <div class="col">
-                                        <div class="row">
-                                            <div class="col-md-12">
-                                                <label>Pays *</label>
-                                                <select class="form-control" id="paysSelect">
-                                                    <option value="">Sélectionnez un pays</option>
-                                                    @foreach ($Pays as $alpha3 => $nom_fr_fr)
-                                                        <option value="{{ $alpha3 }}">{{ $nom_fr_fr }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label id="niveau1Label">Niveau 1 *</label>
-                                                <select class="form-control" id="niveau1Select" disabled>
-                                                    <option value="">Sélectionnez un niveau</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="row mt-3">
-                                            <div class="col-md-12">
-                                                <label id="niveau2Label">Niveau 2 *</label>
-                                                <select class="form-control" id="niveau2Select" disabled>
-                                                    <option value="">Sélectionnez un niveau</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label id="niveau3Label">Niveau 3 *</label>
-                                                <select class="form-control" id="niveau3Select" disabled>
-                                                    <option value="">Sélectionnez un niveau</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="row mt-3">
-                                            <div class="col-md-6 d-none" id="fixedPositionContainer">
-                                                <label>Position Fixe :</label>
-                                                <input type="text" id="fixedPosition" class="form-control" placeholder="Entrez une adresse précise...">
-                                                <ul class="list-group position-absolute w-100 d-none" id="fixedPositionResults" style="z-index: 1000;"></ul>
-                                            </div>
-                                        </div>
-                                        <div class="row mt-3">
-                                            <div class="col-md-6">
-                                                <label>Latitude</label>
-                                                <input type="text" id="latitude" class="form-control" readonly>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label>Longitude</label>
-                                                <input type="text" id="longitude" class="form-control" readonly>
-                                            </div>
+
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <label>Pays *</label>
+                                                @foreach ($Pays as $alpha3 => $nom_fr_fr)
+                                                <input type="text" value="{{ $nom_fr_fr }}" id="paysSelect1" class="form-control" readonly>
+                                                <input type="hidden" value="{{ $alpha3 }}" id="paysSelect" class="form-control" readonly>
+                                            @endforeach
                                         </div>
                                     </div>
-                                    <div class="col">
-                                            <div class="col-md-12">
-                                                <label>📍 Sélectionner l'Emplacement sur la Carte</label>
-                                                <div id="countryMap" style="height: 400px; border: 1px solid #ddd;"></div>
-                                            </div>
-                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label id="niveau1Label">localité *</label>
+                                            <select class="form-control" id="niveau1Select" >
+                                                <option value="">Sélectionnez un niveau</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label id="niveau2Label">Niveau </label>
+                                            <select class="form-control" id="niveau2Select" disabled>
+                                                <option value="">Sélectionnez un niveau</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label id="niveau3Label">Découpage</label>
+                                            <select class="form-control" id="niveau3Select" disabled>
+                                                <option value="">Sélectionnez un niveau</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            <button type="button" class="btn btn-secondary" id="addLocliteBtn">Ajouter</button>
+                                        </div>
+                                    </div> <br>
+                                    <div class="row">
+                                        <div class="col"> <br> <br>
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Localité</th>
+                                                        <th>Niveau</th>
+                                                        <th>Découpage</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tableLocalites">
+                                                    <!-- Les lignes seront ajoutées ici dynamiquement -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                 </div>
-                                
-                                
+
+
                                 <div class="row mt-3">
                                     <div class="col">
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
@@ -1103,134 +1177,168 @@
                                 </div>
                             </div>
 
-                            <!-- 🔵 Étape : Bénéficiaire -->
-                            <div class="step" id="step-7">
-                                <h5 class="text-secondary">🧍 Bénéficiaires</h5>
+                            <div class="step" id="step-6">
+                                <h5 class="text-secondary">🌍 Infrastructures</h5>
                                 <div class="row">
-                                    <div class="col-md-1">
-                                        <label for="nOrdre">N°</label>
-                                        <input type="number" id="nOrdre" class="form-control" value="1" readonly>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label for="action">Action à mener</label>
-                                        <select id="action" class="form-control">
-                                            <option value="">Sélectionner</option>
-                                            <option value="Action 1">Action 1</option>
-                                            <option value="Action 2">Action 2</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label for="quantite">Quantité</label>
-                                        <input type="number" id="quantite" class="form-control" placeholder="Quantité">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label for="infrastructure">Infrastructure</label>
-                                        <select id="infrastructure" class="form-control">
-                                            <option value="">Sélectionner</option>
-                                            <option value="Route">Route</option>
-                                            <option value="Pont">Pont</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <button type="button" class="btn btn-secondary me-2" id="openBeneficiaireModalBtn" data-bs-toggle="modal" data-bs-target="#beneficiaireModal">
-                                            Bénéficiaire
-                                        </button>
-                                    </div>
-                                </div>
+                                    <br>
+                                    <div style="width: 100%;">
+                                <fieldset class="border p-2 mt-5">
+                                    <legend class="w-auto">Actions</legend>
+                                    <div class="row">
+                                        <div class="col-1" style="width: 10%;">
+                                            <p for="action">N ordre:</p>
+                                            <input type="number" name="nordre" id="nordre" value="1" readonly class="form-control">
+                                        </div>
+                                        <div class="col-2" style="width: 25%;">
+                                            <p for="action">Action à mener:</p>
+                                            <select id="action" class="form-select" name="actionMener">
+                                                <option value="">Sélectionner </option>
+                                                @foreach ($actionMener as $action)
+                                                <option value="{{ $action->code }}">{{ $action->libelle }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
 
-                                <!-- Tableau des Bénéficiaires -->
-                                <div class="mt-4">
-                                    <table class="table table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th>N° d’ordre</th>
-                                                <th>Action</th>
-                                                <th>Quantité</th>
-                                                <th>Infrastructure</th>
-                                                <th>Libellé Bénéficiaires</th>
-                                                <th>Code Bénéficiaire</th>
-                                                <th>Type Bénéficiaire</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="beneficiaireMainTable">
-                                            <!-- Les lignes seront ajoutées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        <div class="col-2" style="width: 11%;">
+                                            <p for="quantite">Quantité:</p>
+                                            <input type="number" class="form-control"  min="0" id="quantite" name="quantite" style="width: 88%; text-align: right; justify-content: right;" >
+                                        </div>
+                                        <div class="col-2" style="width: 15%;">
+                                            <p for="action">Unité mésure:</p>
+                                            <select id="action_unite_mesure" class="form-select" name="uniteMesure">
+                                                <option value="">Unité mésure</option>
 
-                                <!-- Modal pour gérer les bénéficiaires -->
-                                <div class="modal fade" id="beneficiaireModal" tabindex="-1" aria-labelledby="beneficiaireModalLabel" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="beneficiaireModalLabel">🧍 Ajouter des Bénéficiaires</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </select>
+                                        </div>
+                                        <div class="col-2" style="width: 22%;">
+                                            <p for="infrastructure">Infrastructure:</p>
+                                            <select name="infrastructure" class="form-select" id="insfrastructureSelect">
+                                                <option value="">Sélectionner l'infrastructure</option>
+
+                                            </select>
+                                        </div>
+                                        <div class="col-2" style="margin-top: 7px; width: 17%;">
+                                            <a href="#"  id="toggleBeneficiaire">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                                                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"></path>
+                                                </svg>
+                                                Bénéficiaire
+                                            </a>
+
+
+
+
+                                                <button type="button" style="margin-top: 7px; float: right;" class="btn btn-secondary" id="addAction">
+                                                    <i class="fas fa-plus"></i>
+                                                    Action
+                                                </button>
+                                        </div>
+                                </fieldset>
+                                <div class="row mt-3 d-none" id="infrastructureField">
+                                    <div class="row">
+                                        <div class="row">
+                                            <label for="structure_ratache">Bénéficiaire :</label>
+                                            <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
+                                            <input type="hidden" name="numOrdreBene" id="numOrdreBene">
+
+                                            <div class="col">
+                                                <label for="age">Localité :</label>
+                                                <input type="radio" name="beneficiaire_type[]" value="localite" id="age" checked="true" onclick="afficheSelect('localite')" style="margin-right: 15px;">
                                             </div>
-                                            <div class="modal-body">
-                                                <!-- Types de bénéficiaires -->
-                                                <div class="row mb-3">
-                                                    <label>Bénéficiaire :</label>
-                                                    <div class="col-md-12">
-                                                        <div class="form-check form-check-inline">
-                                                            <input type="radio" id="localite" name="beneficiaireType" value="Localité" class="form-check-input">
-                                                            <label class="form-check-label" for="localite">Localité</label>
-                                                        </div>
-                                                        <div class="form-check form-check-inline">
-                                                            <input type="radio" id="sousPrefecture" name="beneficiaireType" value="Sous-préfecture" class="form-check-input">
-                                                            <label class="form-check-label" for="sousPrefecture">Sous-préfecture</label>
-                                                        </div>
-                                                        <div class="form-check form-check-inline">
-                                                            <input type="radio" id="departement" name="beneficiaireType" value="Département" class="form-check-input">
-                                                            <label class="form-check-label" for="departement">Département</label>
-                                                        </div>
-                                                        <div class="form-check form-check-inline">
-                                                            <input type="radio" id="region" name="beneficiaireType" value="Région" class="form-check-input">
-                                                            <label class="form-check-label" for="region">Région</label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Liste déroulante pour sélectionner les bénéficiaires -->
-                                                <div class="row">
-                                                    <div class="col-md-8">
-                                                        <label for="beneficiaireSelect">Sélectionner Bénéficiaire</label>
-                                                        <select id="beneficiaireSelect" class="form-control">
-                                                            <option value="B001">Bénéficiaire 1</option>
-                                                            <option value="B002">Bénéficiaire 2</option>
-                                                            <option value="B003">Bénéficiaire 3</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-4 d-flex align-items-end">
-                                                        <button type="button" class="btn btn-primary" id="addBeneficiaireBtn">Ajouter</button>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Tableau des bénéficiaires sélectionnés -->
-                                                <div class="mt-3">
-                                                    <table class="table table-bordered">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Code</th>
-                                                                <th>Libellé</th>
-                                                                <th>Type</th>
-                                                                <th>Action</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody id="beneficiaireTableBody">
-                                                            <!-- Lignes ajoutées dynamiquement -->
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                            <div class="col">
+                                                <label for="sousp">Acteur :</label>
+                                                <input type="radio" name="beneficiaire_type[]" value="sous_prefecture1" id="sousp" onclick="afficheSelect('acteur')" style="margin-right: 15px;">
                                             </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                            <div class="col" >
+                                                <label for="min">infrastructure :</label>
+                                                <input type="radio" name="beneficiaire_type[]" value="departement" id="dep" onclick="afficheSelect('infrastructure')" style="margin-right: 15px;">
+
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col">
+                                                <select name="beneficiaire_code[]" id="localite" class="form-select" style="display: none;">
+                                                    <option value="">Sélectionner la localité</option>
+
+                                                </select>
+                                                <select name="beneficiaire_code[]" id="acteur" class="form-select" style="display: none;">
+                                                    <option value="">Sélectionner l'acteur</option>
+
+                                                </select>
+                                                <select name="beneficiaire_code[]" id="infrastructure" class="form-select" style="display: none;">
+                                                    <option value="">Sélectionner l'infrastructure</option>
+
+                                                </select>
+                                            </div>
+
+                                            <div class="col">
+                                                <button type="button" class="btn btn-secondary" id="addBtn">
+                                                    <i class="fas fa-plus"></i>
+                                                    Ajouter
+                                                </button>
+                                            </div>
+                                            <div class="col">
+                                                <button type="button" class="btn btn-danger" style="width: 121px" id="deleteBtn">
+                                                    <i class="fas fa-trash"></i>
+                                                    Supprimer
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <br><br>
+                                    </div>
+                                    <br>
+                                    <div class="row" style="align-items: center;">
+                                        <div class="col">
+                                            <div class="table-container">
+                                                <table id="beneficiaireTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="etablissement"><input type="checkbox"></th>
+                                                            <th class="etablissement">Code</th>
+                                                            <th class="etablissement">Libellé</th>
+                                                            <th class="etablissement">Type</th>
+
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                                <hr>
+                                <div>
 
-                                <div class="row">
+                                    <div class="table table-bordered">
+                                        <table id="tableActionMener">
+                                            <thead>
+                                                <tr>
+                                                    <th>N° d'ordre</th>
+                                                    <th>Action</th>
+                                                    <th>Quantité</th>
+                                                    <th>Unité de mésure</th>
+                                                    <th>Infrastructure</th>
+                                                    <th>libelle Bénéficiaires</th>
+                                                    <th>Code bénéficiaire</th>
+                                                    <th>type bénéficiaire</th>
+                                                    <th hidden>ActionCode</th>
+                                                    <th hidden>mesureCode</th>
+                                                    <th hidden>InfrastructureCode</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="beneficiaire-table-body">
+                                                <!-- Le corps du tableau sera géré dynamiquement via JavaScript -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                                </div>
+
+
+                                <div class="row mt-3">
                                     <div class="col">
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
@@ -1238,8 +1346,8 @@
                                         <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
                                     </div>
                                 </div>
-
                             </div>
+
 
                             <!-- 📜 Modal pour la liste des documents -->
                             <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true" style="background: transparent;">
@@ -1263,7 +1371,7 @@
                                 </div>
                             </div>
                             <!-- 🟡 Étape  : Documents -->
-                            <div class="step" id="step-8">
+                            <div class="step" id="step-7">
                                 <h5 class="text-secondary">📎 Documents et Pièces Justificatives</h5>
                                 <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#documentModal">
                                     📜 Liste des documents à fournir
@@ -1292,7 +1400,7 @@
 
 <script>
     let currentStep = 1;
-    const totalSteps = 8;
+    const totalSteps = 7;
     let uploadedFiles = [];
 
     function showStep(step) {
@@ -1374,100 +1482,167 @@
 
     ////////////////ACTEURS
     document.addEventListener("DOMContentLoaded", function () {
-    let acteurInput = document.getElementById("acteurMoeInput");
-    let acteurList = document.getElementById("acteurMoeList");
-    let entrepriseFields = document.getElementById("moeEntrepriseFields");
-    let individuFields = document.getElementById("moeIndividuFields");
+        let acteurInput = document.getElementById("acteurMoeInput");
+        let acteurList = document.getElementById("acteurMoeList");
+        let entrepriseFields = document.getElementById("moeEntrepriseFields");
+        let individuFields = document.getElementById("moeIndividuFields");
 
-    acteurInput.addEventListener("keyup", function () {
-        let searchValue = acteurInput.value.trim();
+        acteurInput.addEventListener("keyup", function () {
+            let searchValue = acteurInput.value.trim();
 
-        if (searchValue.length > 1) {
-            fetch(`/api/acteurs?search=${searchValue}`)
-                .then(response => response.json())
-                .then(data => {
-                    acteurList.innerHTML = "";
-                    data.forEach(item => {
-                        let li = document.createElement("li");
-                        li.classList.add("list-group-item", "list-group-item-action");
-                        li.textContent = item.libelle_long;
-                        li.dataset.id = item.code_acteur;
-                        li.dataset.type = item.type_acteur; // Stocker le type d'acteur
-
-                        li.onclick = () => {
-                            acteurInput.value = item.libelle_long;
-                            acteurList.innerHTML = "";
-
-                            // Remplissage automatique des champs selon le type d'acteur
-                            remplirChampsActeur(item);
-
-                            // Désactivation des autres champs si acteur existant sélectionné
-                            if (item.type_acteur === "Entreprise") {
-                                entrepriseFields.classList.remove("d-none");
-                                individuFields.classList.add("d-none");
-                            } else if (item.type_acteur === "Individu") {
-                                entrepriseFields.classList.add("d-none");
-                                individuFields.classList.remove("d-none");
-                            }
-                        };
-
-                        acteurList.appendChild(li);
-                    });
-
-                    // Option pour ajouter un nouvel acteur
-                    let addNewOption = document.createElement("li");
-                    addNewOption.classList.add("list-group-item", "text-primary");
-                    addNewOption.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${searchValue}"`;
-                    addNewOption.onclick = () => {
-                        acteurInput.value = searchValue;
+            if (searchValue.length > 1) {
+                fetch(`/api/acteurs?search=${searchValue}`)
+                    .then(response => response.json())
+                    .then(data => {
                         acteurList.innerHTML = "";
-                        entrepriseFields.classList.add("d-none");
-                        individuFields.classList.add("d-none");
-                        activerChampsActeur(); // Activer tous les champs pour une saisie manuelle
-                    };
-                    acteurList.appendChild(addNewOption);
-                })
-                .catch(error => console.error("Erreur lors de la recherche des acteurs :", error));
-        } else {
-            acteurList.innerHTML = "";
+                        data.forEach(item => {
+                            let li = document.createElement("li");
+                            li.classList.add("list-group-item", "list-group-item-action");
+                            li.textContent = item.libelle_long;
+                            li.dataset.id = item.code_acteur;
+                            li.dataset.type = item.type_acteur; // Stocker le type d'acteur
+
+                            li.onclick = () => {
+                                acteurInput.value = item.libelle_long;
+                                acteurList.innerHTML = "";
+
+                                // Remplissage automatique des champs selon le type d'acteur
+                                remplirChampsActeur(item);
+
+                                // Désactivation des autres champs si acteur existant sélectionné
+                                if (item.type_acteur === "Entreprise") {
+                                    entrepriseFields.classList.remove("d-none");
+                                    individuFields.classList.add("d-none");
+                                } else if (item.type_acteur === "Individu") {
+                                    entrepriseFields.classList.add("d-none");
+                                    individuFields.classList.remove("d-none");
+                                }
+                            };
+
+                            acteurList.appendChild(li);
+                        });
+
+                        // Option pour ajouter un nouvel acteur
+                        let addNewOption = document.createElement("li");
+                        addNewOption.classList.add("list-group-item", "text-primary");
+                        addNewOption.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${searchValue}"`;
+                        addNewOption.onclick = () => {
+                            acteurInput.value = searchValue;
+                            acteurList.innerHTML = "";
+                            entrepriseFields.classList.add("d-none");
+                            individuFields.classList.add("d-none");
+                            activerChampsActeur(); // Activer tous les champs pour une saisie manuelle
+                        };
+                        acteurList.appendChild(addNewOption);
+                    })
+                    .catch(error => console.error("Erreur lors de la recherche des acteurs :", error));
+            } else {
+                acteurList.innerHTML = "";
+            }
+        });
+
+        function remplirChampsActeur(acteur) {
+            document.getElementById("nomEntreprise").value = acteur.nom_entreprise || "";
+            document.getElementById("adresseEntreprise").value = acteur.adresse || "";
+            document.getElementById("emailEntreprise").value = acteur.email || "";
+            document.getElementById("telephoneEntreprise").value = acteur.telephone || "";
+            document.getElementById("numImmatriculation").value = acteur.num_immatriculation || "";
+            document.getElementById("numFiscal").value = acteur.num_fiscal || "";
+
+            document.getElementById("nomIndividu").value = acteur.nom || "";
+            document.getElementById("prenomIndividu").value = acteur.prenom || "";
+            document.getElementById("emailIndividu").value = acteur.email || "";
+            document.getElementById("telephoneIndividu").value = acteur.telephone || "";
+            document.getElementById("cniIndividu").value = acteur.num_cni || "";
+
+            // Désactiver les champs si acteur existant
+            desactiverChampsActeur();
+        }
+
+        function desactiverChampsActeur() {
+            document.querySelectorAll("#moeEntrepriseFields input, #moeIndividuFields input").forEach(input => {
+                input.disabled = true;
+            });
+        }
+
+        function activerChampsActeur() {
+            document.querySelectorAll("#moeEntrepriseFields input, #moeIndividuFields input").forEach(input => {
+                input.disabled = false;
+                input.value = ""; // Réinitialiser les champs
+            });
         }
     });
-
-    function remplirChampsActeur(acteur) {
-        document.getElementById("nomEntreprise").value = acteur.nom_entreprise || "";
-        document.getElementById("adresseEntreprise").value = acteur.adresse || "";
-        document.getElementById("emailEntreprise").value = acteur.email || "";
-        document.getElementById("telephoneEntreprise").value = acteur.telephone || "";
-        document.getElementById("numImmatriculation").value = acteur.num_immatriculation || "";
-        document.getElementById("numFiscal").value = acteur.num_fiscal || "";
-
-        document.getElementById("nomIndividu").value = acteur.nom || "";
-        document.getElementById("prenomIndividu").value = acteur.prenom || "";
-        document.getElementById("emailIndividu").value = acteur.email || "";
-        document.getElementById("telephoneIndividu").value = acteur.telephone || "";
-        document.getElementById("cniIndividu").value = acteur.num_cni || "";
-
-        // Désactiver les champs si acteur existant
-        desactiverChampsActeur();
-    }
-
-    function desactiverChampsActeur() {
-        document.querySelectorAll("#moeEntrepriseFields input, #moeIndividuFields input").forEach(input => {
-            input.disabled = true;
-        });
-    }
-
-    function activerChampsActeur() {
-        document.querySelectorAll("#moeEntrepriseFields input, #moeIndividuFields input").forEach(input => {
-            input.disabled = false;
-            input.value = ""; // Réinitialiser les champs
-        });
-    }
-});
 
 
 
    //////////////////////////FINANCEMENT
+   document.addEventListener('DOMContentLoaded', function () {
+    const typeBailleur = document.getElementById('typeBailleur');
+    const bailleurMoraleFields = document.getElementById('bailleurMoraleFields');
+    const bailleurPhysiqueFields = document.getElementById('bailleurPhysiqueFields');
+
+    // Affichage dynamique du formulaire selon le type sélectionné
+    typeBailleur.addEventListener('change', function () {
+        bailleurMoraleFields.classList.toggle('d-none', typeBailleur.value !== 'morale');
+        bailleurPhysiqueFields.classList.toggle('d-none', typeBailleur.value !== 'physique');
+    });
+
+    const bailleurInput = document.getElementById('bailleur');
+    const bailleurList = document.getElementById('bailleurList');
+    const ajouterBailleurContainer = document.getElementById('ajouterBailleurContainer');
+    const ajouterBailleurBtn = document.getElementById('ajouterBailleurBtn');
+    const nouveauBailleurNom = document.getElementById('nouveauBailleurNom');
+
+    bailleurInput.addEventListener('input', function () {
+        const query = bailleurInput.value.trim();
+        if (query.length < 2) {
+            bailleurList.innerHTML = '';
+            ajouterBailleurContainer.classList.add('d-none');
+            return;
+        }
+
+        fetch(`/api/bailleurs?search=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                bailleurList.innerHTML = '';
+                if (data.length === 0) {
+                    nouveauBailleurNom.textContent = query;
+                    ajouterBailleurContainer.classList.remove('d-none');
+                    return;
+                }
+
+                ajouterBailleurContainer.classList.add('d-none');
+                data.forEach(bailleur => {
+                    const li = document.createElement('li');
+                    li.classList.add('list-group-item', 'list-group-item-action');
+                    li.textContent = `${bailleur.libelle_long} (${bailleur.type_acteur})`;
+                    li.dataset.id = bailleur.code_acteur;
+
+                    li.addEventListener('click', function () {
+                        bailleurInput.value = bailleur.libelle_long;
+                        bailleurInput.dataset.id = bailleur.code_acteur;
+                        bailleurList.innerHTML = '';
+                    });
+
+                    bailleurList.appendChild(li);
+                });
+            });
+    });
+
+    ajouterBailleurBtn.addEventListener('click', function () {
+        const modal = new bootstrap.Modal(document.getElementById('modalAjoutBailleur'));
+        modal.show();
+    });
+
+    document.getElementById('btnEnregistrerBailleur').addEventListener('click', function () {
+        alert('Bailleur enregistré avec succès !');
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAjoutBailleur'));
+        modal.hide();
+    });
+});
+
+
+
     document.addEventListener('DOMContentLoaded', function () {
         const tableBody = document.getElementById('tableFinancements');
         const addButton = document.getElementById('addFinancementBtn');
@@ -1475,34 +1650,30 @@
 
         // Fonction pour verrouiller les boutons radio
         function verrouillerBoutons() {
-            if (partieSelection === 'oui') {
-                document.getElementById('partieNon').disabled = true;
-            } else if (partieSelection === 'non') {
-                document.getElementById('partieOui').disabled = true;
-            }
+            document.getElementById('BailOui').disabled = (partieSelection === 'non');
+            document.getElementById('BailNon').disabled = (partieSelection === 'oui');
         }
 
-        // Fonction pour réinitialiser les champs
+        // Fonction pour réinitialiser les champs après ajout
         function resetFields() {
             document.getElementById('bailleur').value = '';
             document.getElementById('montant').value = '';
-            document.getElementById('devise').value = '';
-            document.querySelectorAll('input[name="partie"]').forEach((radio) => (radio.checked = false));
+            document.getElementById('deviseBailleur').value = '';
             document.getElementById('commentaire').value = '';
+            document.querySelectorAll('input[name="BaillOui"]').forEach((radio) => (radio.checked = false));
         }
 
-        // Fonction pour supprimer une ligne
+        // Fonction pour supprimer une ligne et réinitialiser les boutons si nécessaire
         tableBody.addEventListener('click', function (event) {
             if (event.target.classList.contains('btn-danger')) {
                 const row = event.target.closest('tr');
                 row.remove();
 
-                // Vérifier si le tableau est vide et réinitialiser les boutons radio
-                const rows = tableBody.querySelectorAll('tr');
-                if (rows.length === 0) {
+                // Vérifier si toutes les lignes ont été supprimées pour réactiver les radios
+                if (tableBody.querySelectorAll('tr').length === 0) {
                     partieSelection = null;
-                    document.getElementById('partieOui').disabled = false;
-                    document.getElementById('partieNon').disabled = false;
+                    document.getElementById('BailOui').disabled = false;
+                    document.getElementById('BailNon').disabled = false;
                 }
             }
         });
@@ -1510,11 +1681,11 @@
         // Fonction pour ajouter un financement
         addButton.addEventListener('click', function () {
             // Récupérer les valeurs des champs
-            const bailleur = document.getElementById('bailleur').value;
-            const montant = document.getElementById('montant').value;
-            const devise = document.getElementById('devise').value;
-            const partie = document.querySelector('input[name="partie"]:checked')?.value || '';
-            const commentaire = document.getElementById('commentaire').value;
+            const bailleur = document.getElementById('bailleur').value.trim();
+            const montant = document.getElementById('montant').value.trim();
+            const devise = document.getElementById('deviseBailleur').value.trim();
+            const partie = document.querySelector('input[name="BaillOui"]:checked')?.value || '';
+            const commentaire = document.getElementById('commentaire').value.trim();
 
             // Vérifications des champs obligatoires
             if (!bailleur || !montant || !devise) {
@@ -1523,22 +1694,22 @@
             }
 
             if (!partie) {
-                alert('Veuillez sélectionner si la ressource est partielle ou complète.');
+                alert('Veuillez sélectionner si la ressource est locale ou non.');
                 return;
             }
 
-            // Logique spécifique pour "Partie"
+            // Vérifier si un seul financement "Non" peut être ajouté
+            if (partie === 'BaillNon' && tableBody.querySelectorAll('tr td:nth-child(4)').textContent.includes('Non')) {
+                alert('Vous ne pouvez ajouter qu\'un seul financement marqué comme "Non".');
+                return;
+            }
+
+            // Mettre à jour la sélection "Partie"
             if (partieSelection === null) {
-                // Première sélection
                 partieSelection = partie;
                 verrouillerBoutons();
             } else if (partieSelection !== partie) {
                 alert(`Vous avez déjà sélectionné "${partieSelection}". Vous ne pouvez pas ajouter un financement avec "${partie}".`);
-                return;
-            }
-
-            if (partie === 'non' && tableBody.querySelectorAll('tr').length > 0) {
-                alert('Vous ne pouvez ajouter qu\'un seul financement marqué comme "Non".');
                 return;
             }
 
@@ -1548,286 +1719,89 @@
                 <td>${bailleur}</td>
                 <td>${montant}</td>
                 <td>${devise}</td>
-                <td>${partie === 'oui' ? 'Oui' : 'Non'}</td>
+                <td>${partie === 'BaillOui' ? 'Oui' : 'Non'}</td>
                 <td>${commentaire}</td>
                 <td><button class="btn btn-danger btn-sm">Supprimer</button></td>
             `;
             tableBody.appendChild(row);
 
-            // Réinitialiser les champs
+            // Réinitialiser les champs après ajout
             resetFields();
         });
     });
 
 
+
     ///////////////////////////LOCALLISATION
-document.addEventListener("DOMContentLoaded", function () {
-    let map = L.map('countryMap').setView([7.539989, -5.54708], 6); // Position initiale : Côte d'Ivoire
+$(document).ready(function() {
+    // Récupérer le code du pays
+    var paysCode = $("#paysSelect").val();
 
-    // Ajouter une couche OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    let marker = L.marker([7.539989, -5.54708], { draggable: true }).addTo(map);
-
-    // Mettre à jour les coordonnées GPS lors du déplacement du marqueur
-    marker.on('dragend', function () {
-        let position = marker.getLatLng();
-        document.getElementById("latitude").value = position.lat.toFixed(6);
-        document.getElementById("longitude").value = position.lng.toFixed(6);
-    });
-
-    // Sélection dynamique des niveaux
-    document.getElementById("paysSelect").addEventListener("change", function () {
-        let alpha3 = this.value;
-        resetSelect(niveau1Select, "Niveau 1 *");
-        resetSelect(niveau2Select, "Niveau 2 *");
-        resetSelect(niveau3Select, "Niveau 3 *");
-
-        if (!alpha3) return;
-
-        fetch(`/pays/${alpha3}/niveaux`)
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(niveau => {
-                    if (niveau.num_niveau_decoupage === 1) {
-                        niveau1Label.textContent = niveau.libelle_decoupage + " *";
-                        niveau1Select.disabled = false;
-                        loadLocalites(alpha3, 1, null, niveau1Select);
-                    } else if (niveau.num_niveau_decoupage === 2) {
-                        niveau2Label.textContent = niveau.libelle_decoupage + " *";
-                        niveau2Select.disabled = true;
-                    } else if (niveau.num_niveau_decoupage === 3) {
-                        niveau3Label.textContent = niveau.libelle_decoupage + " *";
-                        niveau3Select.disabled = true;
-                    }
+    if (paysCode) {
+        // Charger les localités du pays sélectionné
+        $.ajax({
+            url: "/get-localites/" + paysCode,
+            type: "GET",
+            success: function(data) {
+                $("#niveau1Select").empty().append('<option value="">Sélectionnez une localité</option>');
+                $.each(data, function(index, localite) {
+                    $("#niveau1Select").append('<option value="' + localite.id + '">' + localite.libelle + ' ('+localite.code_decoupage+')'+ '</option>');
                 });
-
-                // Zoomer sur le pays sélectionné
-                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.options[this.selectedIndex].text)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.length > 0) {
-                            let location = data[0];
-                            map.setView([location.lat, location.lon], 6);
-                            marker.setLatLng([location.lat, location.lon]);
-
-                            document.getElementById("latitude").value = location.lat;
-                            document.getElementById("longitude").value = location.lon;
-                        }
-                    });
-            })
-            .catch(error => console.error('Erreur chargement niveaux:', error));
-    });
-
-    // Sélection des sous-niveaux
-    document.getElementById("niveau1Select").addEventListener("change", function () {
-        let codeRattachement = this.value;
-        loadLocalites(document.getElementById("paysSelect").value, 2, codeRattachement, niveau2Select);
-    });
-
-    document.getElementById("niveau2Select").addEventListener("change", function () {
-        let codeRattachement = this.value;
-        loadLocalites(document.getElementById("paysSelect").value, 3, codeRattachement, niveau3Select);
-
-        // Afficher la zone de recherche de lieu fixe à partir du niveau 2
-        document.getElementById("fixedPositionContainer").classList.remove("d-none");
-
-        // Zoomer sur la carte en fonction du niveau 2 sélectionné
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.options[this.selectedIndex].text)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    let location = data[0];
-                    map.setView([location.lat, location.lon], 10);
-                    marker.setLatLng([location.lat, location.lon]);
-
-                    document.getElementById("latitude").value = location.lat;
-                    document.getElementById("longitude").value = location.lon;
-                }
-            });
-    });
-
-    document.getElementById("niveau3Select").addEventListener("change", function () {
-        // Zoomer sur la carte en fonction du niveau 3 sélectionné
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.options[this.selectedIndex].text)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    let location = data[0];
-                    map.setView([location.lat, location.lon], 12);
-                    marker.setLatLng([location.lat, location.lon]);
-
-                    document.getElementById("latitude").value = location.lat;
-                    document.getElementById("longitude").value = location.lon;
-                }
-            });
-    });
-
-    // Charger les localités en fonction du niveau
-    function loadLocalites(alpha3, niveau, codeRattachement, selectElement) {
-        let url = `/pays/${alpha3}/niveau/${niveau}/localites${codeRattachement ? `?code_rattachement=${codeRattachement}` : ""}`;
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                resetSelect(selectElement, `Niveau ${niveau} *`);
-                data.forEach(localite => {
-                    let option = document.createElement('option');
-                    option.value = localite.code_rattachement;
-                    option.textContent = localite.libelle;
-                    selectElement.appendChild(option);
-                });
-                selectElement.disabled = false;
-            })
-            .catch(error => console.error('Erreur chargement localités:', error));
+            }
+        });
     }
 
-    // Réinitialiser un select
-    function resetSelect(selectElement, defaultText) {
-        selectElement.innerHTML = `<option value="">${defaultText}</option>`;
-        selectElement.disabled = true;
-    }
+    // Lorsqu'on sélectionne une localité
+    $("#niveau1Select").change(function() {
+        var localiteId = $(this).val();
 
-    // Recherche et mise à jour des coordonnées en fonction du lieu entré manuellement
-    document.getElementById("fixedPosition").addEventListener("keyup", function () {
-        let input = this.value.trim();
-        if (input.length < 3) return;
-
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    let location = data[0];
-                    map.setView([location.lat, location.lon], 14);
-                    marker.setLatLng([location.lat, location.lon]);
-
-                    document.getElementById("latitude").value = location.lat;
-                    document.getElementById("longitude").value = location.lon;
+        if (localiteId) {
+            // Charger le niveau et découpage associés
+            $.ajax({
+                url: "/get-decoupage-niveau/" + localiteId,
+                type: "GET",
+                success: function(data) {
+                    $("#niveau2Select").empty().append('<option value="' + data.niveau + '">' + data.niveau + '</option>').prop("disabled", false);
+                    $("#niveau3Select").empty().append('<option value="' + data.decoupage + '">' + data.decoupage + '</option>').prop("disabled", false);
                 }
             });
-    });
-
-    // Mise à jour des coordonnées GPS en cliquant sur la carte
-    map.on('click', function (e) {
-        let lat = e.latlng.lat.toFixed(6);
-        let lon = e.latlng.lng.toFixed(6);
-
-        document.getElementById("latitude").value = lat;
-        document.getElementById("longitude").value = lon;
-
-        marker.setLatLng([lat, lon]);
+        }
     });
 });
-
-
-
-
-
-
-
-    ////////////////////////////BENEFICAIRE
-    document.addEventListener("DOMContentLoaded", function () {
-        const beneficiaireTableBody = document.getElementById("beneficiaireTableBody");
-        const beneficiaireMainTable = document.getElementById("beneficiaireMainTable");
-        const addBeneficiaireBtn = document.getElementById("addBeneficiaireBtn");
-
-        let selectedBeneficiaires = []; // Tableau des bénéficiaires sélectionnés
-
-        // Ajouter un bénéficiaire depuis le modal
-        addBeneficiaireBtn.addEventListener("click", function () {
-            const beneficiaireType = document.querySelector('input[name="beneficiaireType"]:checked');
-            const beneficiaireSelect = document.getElementById("beneficiaireSelect");
-
-            if (!beneficiaireType || !beneficiaireSelect.value) {
-                alert("Veuillez sélectionner un type et un bénéficiaire.");
-                return;
-            }
-
-            // Ajouter le bénéficiaire dans le tableau modal
-            const beneficiaire = {
-                code: beneficiaireSelect.value,
-                libelle: beneficiaireSelect.options[beneficiaireSelect.selectedIndex].text,
-                type: beneficiaireType.value
-            };
-
-            selectedBeneficiaires.push(beneficiaire);
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${beneficiaire.code}</td>
-                <td>${beneficiaire.libelle}</td>
-                <td>${beneficiaire.type}</td>
-                <td><button class="btn btn-danger btn-sm removeBeneficiaire">Supprimer</button></td>
-            `;
-            beneficiaireTableBody.appendChild(row);
-        });
-
-        // Supprimer un bénéficiaire dans le modal
-        beneficiaireTableBody.addEventListener("click", function (e) {
-            if (e.target.classList.contains("removeBeneficiaire")) {
-                const row = e.target.closest("tr");
-                const code = row.children[0].textContent;
-
-                // Retirer du tableau des bénéficiaires sélectionnés
-                selectedBeneficiaires = selectedBeneficiaires.filter(b => b.code !== code);
-
-                // Supprimer la ligne du tableau
-                row.remove();
-            }
-        });
-
-        // Ajouter les bénéficiaires dans le tableau principal
-        document.getElementById("openBeneficiaireModalBtn").addEventListener("click", function () {
-            if (selectedBeneficiaires.length === 0) {
-                alert("Veuillez ajouter au moins un bénéficiaire.");
-                return;
-            }
-
-            const nOrdre = document.getElementById("nOrdre").value;
-            const action = document.getElementById("action").value;
-            const quantite = document.getElementById("quantite").value;
-            const infrastructure = document.getElementById("infrastructure").value;
-
-            if (!action || !quantite || !infrastructure) {
-                alert("Veuillez remplir tous les champs.");
-                return;
-            }
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${nOrdre}</td>
-                <td>${action}</td>
-                <td>${quantite}</td>
-                <td>${infrastructure}</td>
-                <td>${selectedBeneficiaires.map(b => b.libelle).join(", ")}</td>
-                <td>${selectedBeneficiaires.map(b => b.code).join(", ")}</td>
-                <td>${selectedBeneficiaires.map(b => b.type).join(", ")}</td>
-                <td><button class="btn btn-danger btn-sm removeAction">Supprimer</button></td>
-            `;
-
-            beneficiaireMainTable.appendChild(row);
-
-            // Réinitialiser les bénéficiaires
-            selectedBeneficiaires = [];
-            beneficiaireTableBody.innerHTML = "";
-        });
-
-        // Supprimer une action dans le tableau principal
-        beneficiaireMainTable.addEventListener("click", function (e) {
-            if (e.target.classList.contains("removeAction")) {
-                e.target.closest("tr").remove();
-            }
-        });
-    });
-
-
   </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+    ////////////////GENERALITE PROJET//////////////////////
+    document.addEventListener("DOMContentLoaded", function () {
+        let domaineSelect = document.getElementById("domaineSelect");
+        let sousDomaineSelect = document.getElementById("sousDomaineSelect");
+
+        domaineSelect.addEventListener("change", function () {
+            let domaineCode = this.value;
+
+            // Réinitialiser la liste des sous-domaines
+            sousDomaineSelect.innerHTML = '<option value="">Sélectionner sous domaine</option>';
+
+            if (domaineCode) {
+                fetch(`/get-sous-domaines/${domaineCode}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(sousDomaine => {
+                            let option = document.createElement("option");
+                            option.value = sousDomaine.code;
+                            option.textContent = sousDomaine.libelle;
+                            sousDomaineSelect.appendChild(option);
+                        });
+                        sousDomaineSelect.disabled = false;
+                    })
+                    .catch(error => console.error("Erreur lors du chargement des sous-domaines :", error));
+            } else {
+                sousDomaineSelect.disabled = true;
+            }
+        });
+    });
 
 
     ///////////////INFORMATION / MAITRE OUVRAGE
@@ -1883,69 +1857,69 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </script>
 <script>
-function toggleType() {
-    const publicRadio = document.getElementById('public'); // Checkbox "Public"
-    const priveRadio = document.getElementById('prive');   // Checkbox "Privé"
-    const optionsPrive = document.getElementById('optionsPrive'); // Section pour "Entreprise" ou "Individu"
-    const entrepriseFields = document.getElementById('entrepriseFields'); // Champs pour "Entreprise"
-    const individuFields = document.getElementById('individuFields'); // Champs pour "Individu"
-    const acteurSelect = document.getElementById('acteurSelect');
+    function toggleType() {
+        const publicRadio = document.getElementById('public'); // Checkbox "Public"
+        const priveRadio = document.getElementById('prive');   // Checkbox "Privé"
+        const optionsPrive = document.getElementById('optionsPrive'); // Section pour "Entreprise" ou "Individu"
+        const entrepriseFields = document.getElementById('entrepriseFields'); // Champs pour "Entreprise"
+        const individuFields = document.getElementById('individuFields'); // Champs pour "Individu"
+        const acteurSelect = document.getElementById('acteurSelect');
 
-    // Si "Public" est sélectionné
-    if (publicRadio.checked) {
-        optionsPrive.classList.add('d-none'); // Cacher les options pour "Privé"
-        entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
-        individuFields.classList.add('d-none'); // Cacher les champs "Individu"
-        fetchActeurs('Public');
-    }
-    // Si "Privé" est sélectionné
-    else if (priveRadio.checked) {
-        optionsPrive.classList.remove('d-none'); // Afficher les options pour "Entreprise" ou "Individu"
-        acteurSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
-        // Vérifier si une sous-option ("Entreprise" ou "Individu") est déjà sélectionnée
-        const entrepriseRadio = document.getElementById('entreprise');
-        const individuRadio = document.getElementById('individu');
-
-        if (entrepriseRadio.checked) {
-            // Si "Entreprise" est sélectionné, afficher ses champs et cacher ceux d'"Individu"
-            entrepriseFields.classList.remove('d-none');
-            individuFields.classList.add('d-none');
-        } else if (individuRadio.checked) {
-            // Si "Individu" est sélectionné, afficher ses champs et cacher ceux d'"Entreprise"
-            individuFields.classList.remove('d-none');
-            entrepriseFields.classList.add('d-none');
-        } else {
-            // Si aucune sous-option n'est encore sélectionnée, cacher les deux sections
-            entrepriseFields.classList.add('d-none');
-            individuFields.classList.add('d-none');
+        // Si "Public" est sélectionné
+        if (publicRadio.checked) {
+            optionsPrive.classList.add('d-none'); // Cacher les options pour "Privé"
+            entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
+            individuFields.classList.add('d-none'); // Cacher les champs "Individu"
+            fetchActeurs('Public');
         }
-    }else{
-        optionsPrive.classList.add('d-none');
-        acteurSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
-    }
-}
+        // Si "Privé" est sélectionné
+        else if (priveRadio.checked) {
+            optionsPrive.classList.remove('d-none'); // Afficher les options pour "Entreprise" ou "Individu"
+            acteurSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
+            // Vérifier si une sous-option ("Entreprise" ou "Individu") est déjà sélectionnée
+            const entrepriseRadio = document.getElementById('entreprise');
+            const individuRadio = document.getElementById('individu');
 
-// Fonction pour basculer entre "Entreprise" et "Individu" lorsque "Privé" est sélectionné
-function togglePriveFields() {
-    const entrepriseRadio = document.getElementById('entreprise'); // Radio "Entreprise"
-    const individuRadio = document.getElementById('individu');     // Radio "Individu"
-    const entrepriseFields = document.getElementById('entrepriseFields'); // Champs "Entreprise"
-    const individuFields = document.getElementById('individuFields'); // Champs "Individu"
-    const acteurSelect = document.getElementById('acteurSelect');
+            if (entrepriseRadio.checked) {
+                // Si "Entreprise" est sélectionné, afficher ses champs et cacher ceux d'"Individu"
+                entrepriseFields.classList.remove('d-none');
+                individuFields.classList.add('d-none');
+            } else if (individuRadio.checked) {
+                // Si "Individu" est sélectionné, afficher ses champs et cacher ceux d'"Entreprise"
+                individuFields.classList.remove('d-none');
+                entrepriseFields.classList.add('d-none');
+            } else {
+                // Si aucune sous-option n'est encore sélectionnée, cacher les deux sections
+                entrepriseFields.classList.add('d-none');
+                individuFields.classList.add('d-none');
+            }
+        }else{
+            optionsPrive.classList.add('d-none');
+            acteurSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
+        }
+    }
 
-    // Si "Entreprise" est sélectionné
-    if (entrepriseRadio.checked) {
-        fetchActeurs('Privé', 'Entreprise');
-        entrepriseFields.classList.remove('d-none'); // Afficher les champs "Entreprise"
-        individuFields.classList.add('d-none'); // Cacher les champs "Individu"
+    // Fonction pour basculer entre "Entreprise" et "Individu" lorsque "Privé" est sélectionné
+    function togglePriveFields() {
+        const entrepriseRadio = document.getElementById('entreprise'); // Radio "Entreprise"
+        const individuRadio = document.getElementById('individu');     // Radio "Individu"
+        const entrepriseFields = document.getElementById('entrepriseFields'); // Champs "Entreprise"
+        const individuFields = document.getElementById('individuFields'); // Champs "Individu"
+        const acteurSelect = document.getElementById('acteurSelect');
+
+        // Si "Entreprise" est sélectionné
+        if (entrepriseRadio.checked) {
+            fetchActeurs('Privé', 'Entreprise');
+            entrepriseFields.classList.remove('d-none'); // Afficher les champs "Entreprise"
+            individuFields.classList.add('d-none'); // Cacher les champs "Individu"
+        }
+        // Si "Individu" est sélectionné
+        else if (individuRadio.checked) {
+            fetchActeurs('Privé', 'Individu');
+            individuFields.classList.remove('d-none'); // Afficher les champs "Individu"
+            entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
+        }
     }
-    // Si "Individu" est sélectionné
-    else if (individuRadio.checked) {
-        fetchActeurs('Privé', 'Individu');
-        individuFields.classList.remove('d-none'); // Afficher les champs "Individu"
-        entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
-    }
-}
     // Fonction pour récupérer les acteurs via API
     function fetchActeurs(type_mo, priveType = null) {
         const acteurSelect = document.getElementById('acteurSelect'); // Select des acteurs
@@ -1973,16 +1947,16 @@ function togglePriveFields() {
             })
             .catch(error => console.error("Erreur lors du chargement des acteurs :", error));
     }
-// Ajout des écouteurs d'événements sur les éléments pour assurer le bon fonctionnement
-document.addEventListener("DOMContentLoaded", function () {
-    // Écouter les changements sur les checkboxes "Public" et "Privé"
-    document.getElementById('public').addEventListener('change', toggleType);
-    document.getElementById('prive').addEventListener('change', toggleType);
+    // Ajout des écouteurs d'événements sur les éléments pour assurer le bon fonctionnement
+    document.addEventListener("DOMContentLoaded", function () {
+        // Écouter les changements sur les checkboxes "Public" et "Privé"
+        document.getElementById('public').addEventListener('change', toggleType);
+        document.getElementById('prive').addEventListener('change', toggleType);
 
-    // Écouter les changements sur les radios "Entreprise" et "Individu"
-    document.getElementById('entreprise').addEventListener('change', togglePriveFields);
-    document.getElementById('individu').addEventListener('change', togglePriveFields);
-});
+        // Écouter les changements sur les radios "Entreprise" et "Individu"
+        document.getElementById('entreprise').addEventListener('change', togglePriveFields);
+        document.getElementById('individu').addEventListener('change', togglePriveFields);
+    });
 </script>
 
 <script>
@@ -2040,8 +2014,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     });
-
-
     ////////////////MAITRE D'OEUVRE
     document.addEventListener("DOMContentLoaded", function () {
         // Empêcher la sélection de plusieurs options pour type_ouvrage
@@ -2141,76 +2113,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-    ///////////////////////// CHEF DE PROJET ////////////////////////////////
-    document.addEventListener("DOMContentLoaded", function () {
-        const chefProjetInput = document.getElementById('chefProjetInput');
-        const chefProjetList = document.getElementById('chefProjetList');
+////////////////INFRASTRUCTURES
+document.addEventListener("DOMContentLoaded", function () {
+    // Sélectionnez le bouton "Bénéficiaire"
+    const beneficiaireBtn =  document.getElementById("toggleBeneficiaire");
+    const infrastructureField = document.getElementById("infrastructureField");
 
-        chefProjetInput.addEventListener('keyup', function () {
-            searchChefProjet();
+    if (beneficiaireBtn && infrastructureField) {
+        beneficiaireBtn.addEventListener("click", function (event) {
+            event.preventDefault(); // Empêche le lien de rediriger
+            infrastructureField.classList.toggle("d-none"); // Afficher/Masquer le formulaire
         });
-    });
+    }
+});
 
-    function searchChefProjet() {
-        const input = document.getElementById('chefProjetInput');
-        const list = document.getElementById('chefProjetList');
-        const query = input.value.trim();
+function afficheSelect(selectId) {
+            // Hide all selects
+            $('#localite, #infrastructure ,  #acteur').hide();
 
-        if (query.length < 2) {
-            list.innerHTML = '';
-            list.classList.add('d-none');
-            return;
+            // Show the selected select
+            $('#' + selectId).show();
         }
-
-        fetch(`/get-chefs-projet?search=${query}`)
-            .then(response => response.json())
-            .then(data => {
-                list.innerHTML = '';
-                list.classList.remove('d-none');
-
-                if (data.length === 0) {
-                    let li = document.createElement('li');
-                    li.classList.add('list-group-item', 'text-primary');
-                    li.innerHTML = `<i class="fas fa-plus-circle"></i> Ajouter "${query}"`;
-                    li.onclick = () => addNewChefProjet(query);
-                    list.appendChild(li);
-                } else {
-                    data.forEach(acteur => {
-                        let li = document.createElement('li');
-                        li.classList.add('list-group-item', 'list-group-item-action');
-                        li.textContent = acteur.libelle_long;
-                        li.onclick = () => selectChefProjet(acteur);
-                        list.appendChild(li);
-                    });
-                }
-            })
-            .catch(error => console.error("Erreur lors de la recherche :", error));
-    }
-
-    function selectChefProjet(acteur) {
-        document.getElementById('chefProjetInput').value = acteur.libelle_long;
-        document.getElementById('chefProjetList').innerHTML = '';
-        document.getElementById('chefProjetList').classList.add('d-none');
-
-        // Remplir les champs automatiquement
-        document.getElementById('chefEmail').value = acteur.email || '';
-        document.getElementById('chefTelephoneMobille').value = acteur.telephone || '';
-
-        // Cacher le formulaire d'ajout
-        document.getElementById('chefProjetFields').classList.add('d-none');
-    }
-
-    function addNewChefProjet(nom) {
-        document.getElementById('chefProjetInput').value = nom;
-        document.getElementById('chefProjetList').innerHTML = '';
-        document.getElementById('chefProjetList').classList.add('d-none');
-
-        // Afficher le formulaire pour renseigner les informations
-        document.getElementById('chefProjetFields').classList.remove('d-none');
-    }
-
-
-
+        $(document).ready(function() {
+            $("#age").prop("checked", true);
+            afficheSelect('localite');
+        });
 </script>
 
 @endsection

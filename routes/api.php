@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
 use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\WorkflowValidationController;
@@ -49,3 +50,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflow/rejeter/{id}', [WorkflowValidationController::class, 'rejeterDemande']);
     Route::get('/workflow/mes-demandes', [WorkflowValidationController::class, 'mesDemandes']);
 });
+
+Route::get('/bailleurs', [EtudeProjet::class, 'search']);
+

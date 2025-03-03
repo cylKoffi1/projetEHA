@@ -140,8 +140,8 @@
                         <div class="col-12 col-md-6 text-bg-primary">
                             <div class="d-flex align-items-center justify-content-center h-100" style="margin-top: 50px;">
                                 <div class="text-center">
-                                    <img class="img-fluid rounded mb-4" loading="lazy" src="{{ asset('logoseul.png') }}" width="200" height="200" alt="Logo BTP Project">
-                                    <h2 class="h1 mb-4 text-white">BTP Project</h2>
+                                    <img class="img-fluid rounded mb-4" loading="lazy" src="{{ asset('logoseul.png') }}" width="400" height="200" alt="Logo BTP Project">
+                                    <h2 class="h1 mb-4 text-white" style="color:rgb(52, 96, 227);">BTP PROJECT</h2>
                                 </div>
                             </div>
                         </div>

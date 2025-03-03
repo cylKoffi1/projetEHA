@@ -360,7 +360,7 @@
     });
     $(document).ready(function() {
 
-        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table', 'Listes des renforcements de capacités');
+        initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table', 'Listes des renforcements de capacités');
     });
     window.addEventListener('DOMContentLoaded', function() {
 

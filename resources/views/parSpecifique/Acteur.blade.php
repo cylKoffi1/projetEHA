@@ -91,76 +91,335 @@
             <h5> Acteurs</h5>
         </div>
         <div class="card-body">
-            <form id="acteur-form" action="{{ route('acteurs.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('acteurs.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" id="method" name="_method" value="POST">
                 <input type="hidden" id="acteur-id" name="id">
 
                 <div class="row">
-
-
-                <div class="row ">
-                    <!-- Pays -->
-                    <div class="form-group col-md-4">
-                        <label for="code_pays">Pays</label>
-                        <input type="hidden" name="code_pays" id="code_pays" value="{{ $pays->alpha3 }}">
-                        <input type="text" name="pays" class="form-control" id="pays" value="{{ $pays->nom_fr_fr }}" readonly>
-                    </div>
-                    <div class="col-6"></div>
-                    <div class="form-group col-2 text-end">
-                        <label>Photo / Logo :</label>
-                        <div class="photo-preview">
-                            <img id="photo-preview" src="#" alt="Aperçu de la photo" style="display: none;">
-
+                    <div class="row ">
+                        <!-- Pays -->
+                        <div class="form-group col-md-4">
+                            <label for="code_pays">Pays</label>
+                            <input type="hidden" name="code_pays" id="code_pays" value="{{ $pays->alpha3 }}">
+                            <input type="text" name="pays" class="form-control" id="pays" value="{{ $pays->nom_fr_fr }}" readonly>
                         </div>
-                        <input type="file"  id="photo" name="photo" class="form-control" accept="image/*" style="width:100%">
+                        <div class="col-6"></div>
+                        <div class="form-group col-2 text-end">
+                            <label>Photo / Logo :</label>
+                            <div class="photo-preview">
+                                <img id="photo-preview" src="#" alt="Aperçu de la photo" style="display: none;">
+
+                            </div>
+                            <input type="file"  id="photo" name="photo" class="form-control" accept="image/*" style="width:100%">
+                        </div>
                     </div>
-                </div>
 
-
-                    <!-- Conteneur pour l'aperçu de la photo -->
-
-                    <!-- Libellé court -->
                     <div class="form-group col-md-4">
-                        <label for="libelle_court">Libellé court / Nom</label>
-                        <input type="text" class="form-control" id="libelle_court" name="libelle_court" required>
+                        <label>Acteur *</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="type_personne" id="personnePhysique" value="physique" onchange="togglePersonneFields()">
+                            <label class="form-check-label" for="personnePhysique">Personne Physique</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="type_personne" id="personneMorale" value="morale" onchange="togglePersonneFields()">
+                            <label class="form-check-label" for="personneMorale">Personne Morale (Entreprise)</label>
+                        </div>
                     </div>
-
-                    <!-- Libellé long -->
                     <div class="form-group col-md-4">
-                        <label for="libelle_long">Libellé long / Prénoms</label>
-                        <input type="text" class="form-control" id="libelle_long" name="libelle_long"  required>
+                        <label>Status *</label>
+                        <select class="form-control" name="type_financement">
+                            <option value="">Sélectionner le statut</option>
+                            @foreach($typeFinancements as $typeFin)
+                                <option value="{{ $typeFin->code_type_financement }}"> {{ $typeFin->libelle }} </option>
+                            @endforeach
+                        </select>
                     </div>
-
                     <!-- Type d'acteur -->
                     <div class="form-group col-md-4">
                         <label for="type_acteur">Type d'acteur</label>
                         <select class="form-control" id="type_acteur" name="type_acteur" >
+                            <option value="">Sélectionner le type d'acteur</option>
                             @foreach ($TypeActeurs as $TypeActeur)
                                 <option value="{{ $TypeActeur->cd_type_acteur }}">{{ $TypeActeur->libelle_type_acteur }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
 
-                <div class="row mt-3">
-                    <!-- Email -->
-                    <div class="form-group col-md-4">
-                        <label for="email">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+                    <!-- MOE Entreprise Fields -->
+                    <div class="row mt-3 d-none" id="entrepriseFields">
+                        <hr>
+                        <h6>Détails pour l’Entreprise</h6>
+                        <div class="col-12">
+                            <ul class="nav nav-tabs" id="entrepriseTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="entreprise-general-tab" data-bs-toggle="tab" data-bs-target="#entreprise-general" type="button" role="tab" aria-controls="entreprise-general" aria-selected="true">Informations Générales</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="entreprise-legal-tab" data-bs-toggle="tab" data-bs-target="#entreprise-legal" type="button" role="tab" aria-controls="entreprise-legal" aria-selected="false">Informations Juridiques</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="entreprise-contact-tab" data-bs-toggle="tab" data-bs-target="#entreprise-contact" type="button" role="tab" aria-controls="entreprise-contact" aria-selected="false">Informations de Contact</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content mt-3" id="entrepriseTabsContent">
+                                <!-- Tab 1: Informations Générales -->
+                                <div class="tab-pane fade show active" id="entreprise-general" role="tabpanel" aria-labelledby="entreprise-general-tab">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label>Nom complet (Raison sociale) *</label>
+                                            <input type="text" class="form-control" name="libelle_long" placeholder="Nom complet de l'entreprise" >
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Nom abrégé *</label>
+                                            <input type="text" class="form-control" name="libelle_court" placeholder="Nom abrégé de l'entreprise" >
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label>Date de création * </label>
+                                            <input type="text" class="form-control" name="date_creation" placeholder="Adresse complète">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Secteur d'activité * </label>
+                                            <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($SecteurActivites as $SecteurActivite)
+                                                    <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 ">
+                                            <label>Forme Juridique *</label>
+                                            <select name="FormeJuridique" id="FormeJuridique" class="form-control">
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($formeJuridiques as $formeJuridique)
+                                                    <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 2: Informations Juridiques -->
+                                <div class="tab-pane fade" id="entreprise-legal" role="tabpanel" aria-labelledby="entreprise-legal-tab">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label>Numéro d’Immatriculation *:</label>
+                                            <input type="text" class="form-control" name="NumeroImmatriculation" placeholder="Numéro RCCM">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Numéro d’Identification Fiscale (NIF) :</label>
+                                            <input type="text" class="form-control" name="nif" placeholder="Numéro fiscal">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Registre du commerce (RCCM) :</label>
+                                            <input type="text" class="form-control" name="rccm" placeholder="Numéro fiscal">
+                                        </div>
+                                        <div class="col-md-6 mt-2">
+                                            <label>Capital Social :</label>
+                                            <input type="number" class="form-control" name="CapitalSocial" placeholder="Capital social de l’entreprise">
+                                        </div>
+                                        <div class="col-md-6 mt-2">
+                                            <label>Numéro d'agrément :</label>
+                                            <input type="text" name="Numéroagrement" id="Numéroagrement" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 3: Informations de Contact -->
+                                <div class="tab-pane fade" id="entreprise-contact" role="tabpanel" aria-labelledby="entreprise-contact-tab">
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <label>Code postale</label>
+                                            <input type="text" class="form-control" name="CodePostaleEntreprise" placeholder="Code postale">
+                                        </div>
+                                        <div class="col-4">
+                                            <label>Adresse postale</label>
+                                            <input type="text" class="form-control" name="AdressePostaleEntreprise" placeholder="Code postale">
+                                        </div>
+                                        <div class="col-4">
+                                            <label>Adresse Siège</label>
+                                            <input type="text" class="form-control" name="AdresseSiègeEntreprise" placeholder="Code postale">
+                                        </div>
+                                        <hr>
+                                        <div class="col-md-3">
+                                            <label>Représentant Légal *</label>
+                                            <input type="text" name="nomRL" class="form-control" placeholder="Nom du représentant légal">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Email *</label>
+                                            <input type="email" name="emailRL" class="form-control" placeholder="Email du représentant légal">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Téléphone 1 *</label>
+                                            <input type="text" name="telephone1RL" class="form-control" placeholder="Téléphone 1 du représentant légal">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Téléphone 2 *</label>
+                                            <input type="text" name="telephone2RL" class="form-control" placeholder="Téléphone 2 du représentant légal">
+                                        </div>
+                                        <hr>
+                                        <div class="col-md-3">
+                                            <label>Personne de Contact</label>
+                                            <input type="text" name="nomPC" class="form-control" placeholder="Nom de la personne de contact">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Email</label>
+                                            <input type="email" name="emailPC" class="form-control" placeholder="Email de la personne de Contact">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Téléphone 1</label>
+                                            <input type="text" name="telephone1PC" class="form-control" placeholder="Téléphone 1 de la Personne de Contact">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Téléphone 2</label>
+                                            <input type="text" name="telephone2PC" class="form-control" placeholder="Téléphone 2 de la Personne de Contact">
+                                        </div>
+
+                                        <hr>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Téléphone -->
-                    <div class="form-group col-md-4">
-                        <label for="telephone">Téléphone</label>
-                        <input type="text" class="form-control" id="telephone" name="telephone" placeholder="Téléphone">
+                    <!-- MOE Individu Fields -->
+                    <div class="row mt-3 d-none" id="individuFields">
+                        <hr>
+                        <h6>Détails pour l’Individu</h6>
+                        <div class="col-12">
+                            <ul class="nav nav-tabs" id="individuTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="individu-general-tab" data-bs-toggle="tab" data-bs-target="#individu-general" type="button" role="tab" aria-controls="individu-general" aria-selected="true">Informations Personnelles</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="individu-contact-tab" data-bs-toggle="tab" data-bs-target="#individu-contact" type="button" role="tab" aria-controls="individu-contact" aria-selected="false">Informations de Contact</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="individu-admin-tab" data-bs-toggle="tab" data-bs-target="#individu-admin" type="button" role="tab" aria-controls="individu-admin" aria-selected="false">Informations Administratives</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content mt-3" id="individuTabsContent">
+                                <!-- Tab 1: Informations Personnelles -->
+                                <div class="tab-pane fade show active" id="individu-general" role="tabpanel" aria-labelledby="individu-general-tab">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label>Nom *</label>
+                                            <input type="text" name="nom" class="form-control" placeholder="Nom" >
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Prénom *</label>
+                                            <input type="text" name="prenom" class="form-control" placeholder="Prénom" >
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Date de Naissance </label>
+                                            <input type="date" name="date_naissance" id="date_naissance" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Nationalité *</label>
+                                            <input type="text" class="form-control" name="nationalite" placeholder="Nationalité" >
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Secteur d'activité *</label>
+                                            <select name="SecteurActiviteIndividu" id="SecteurActiviteEntreprise" class="form-control" >
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($formeJuridiques as $formeJuridique)
+                                                    <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 2: Informations de Contact -->
+                                <div class="tab-pane fade" id="individu-contact" role="tabpanel" aria-labelledby="individu-contact-tab">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label>Email *</label>
+                                            <input type="email" name="emailI" class="form-control" placeholder="Email" >
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="codePostal">Code postal</label>
+                                            <input type="text" name="CodePostalI" id="CodePostal" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Adresse postale</label>
+                                            <input type="text" name="AdressePostaleIndividu" class="form-control" placeholder="Adresse">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Adresse siège *</label>
+                                            <input type="text" name="adresseSiegeIndividu" class="form-control" placeholder="Adresse">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Téléphone Bureau *</label>
+                                            <input type="text" name="telephoneBureauIndividu" class="form-control" placeholder="Téléphone">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Téléphone mobile *</label>
+                                            <input type="text" name="telephoneMobileIndividu" class="form-control" placeholder="Téléphone">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 3: Informations Administratives -->
+                                <div class="tab-pane fade" id="individu-admin" role="tabpanel" aria-labelledby="individu-admin-tab">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label>Pièce d’Identité :</label>
+                                            <select class="form-control" name="piece_identite" id="piece_identite">
+                                                <option value="">Sélectionner une pièce d'identité</option>
+                                                @foreach($Pieceidentite as $Pieceidentit)
+                                                <option value="{{ $Pieceidentit->idPieceIdent }}">{{ $Pieceidentit->libelle_long }}</option>
+                                                @endforeach
+
+                                            </select>
+
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Numéro Pièce:</label>
+                                            <input type="text" class="form-control" name="numeroPiece" placeholder="Numéro de CNI">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Date de etablissement:</label>
+                                            <input type="date" class="form-control" name="dateEtablissement" placeholder="Numéro de CNI">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label>Date de expiration:</label>
+                                            <input type="date" class="form-control" name="dateExpiration" placeholder="Numéro de CNI">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Date de vailidité </label>
+                                            <input type="date" class="form-control" placeholder="Numéro de CNI">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Numéro Fiscal </label>
+                                            <input type="text" class="form-control" name="numeroFiscal" placeholder="Numéro fiscal">
+                                        </div>
+                                        <div class="col-md-4 ">
+                                            <label>Situation Matrimoniale :</label>
+                                            <select class="form-control" name="situationMatrimoniale" id="situationMatrimoniale">
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                    <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Genre</label>
+                                            <select name="genre" id="genre" class="form-control">
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($genres as $genre)
+                                                <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Adresse -->
-                    <div class="form-group col-md-4">
-                        <label for="adresse">Adresse</label>
-                        <input type="text" class="form-control" id="adresse" name="adresse" placeholder="Adresse">
-                    </div>
                 </div>
 
                 <div class="row mt-3">
@@ -270,7 +529,7 @@
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des acteurs')
+        initDataTable('{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}', 'table1', 'Liste des acteurs')
     });
     document.addEventListener('DOMContentLoaded', function () {
         // Gestion de la modification
@@ -350,6 +609,35 @@
 
 </script>
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Sélectionner l'input de date de naissance
+    var dateNaissanceInput = document.getElementById("date_naissance");
+
+    if (dateNaissanceInput) {
+        // Calculer la date minimum autorisée (18 ans en arrière)
+        var today = new Date();
+        var minDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
+        // Formater la date en YYYY-MM-DD pour l'attribut max
+        var formattedDate = minDate.toISOString().split("T")[0];
+
+        // Définir la date max sur l'input
+        dateNaissanceInput.setAttribute("max", formattedDate);
+
+        // Vérification au changement de valeur
+        dateNaissanceInput.addEventListener("change", function () {
+            var selectedDate = new Date(this.value);
+
+            if (selectedDate > minDate) {
+                alert("Vous devez avoir au moins 18 ans.");
+                this.value = ""; // Réinitialise le champ
+            }
+        });
+    }
+});
+</script>
+
+<script>
     document.getElementById('photo').addEventListener('change', function(event) {
         const file = event.target.files[0];
 
@@ -365,6 +653,27 @@
             reader.readAsDataURL(file); // Lire le fichier comme une URL de données
         }
     });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        function togglePersonneFields() {
+            const personnePhysique = document.getElementById("personnePhysique");
+            const personneMorale = document.getElementById("personneMorale");
+            const entrepriseFields = document.getElementById("entrepriseFields");
+            const individuFields = document.getElementById("individuFields");
+
+            if (personnePhysique.checked) {
+                individuFields.classList.remove("d-none");
+                entrepriseFields.classList.add("d-none");
+            } else if (personneMorale.checked) {
+                entrepriseFields.classList.remove("d-none");
+                individuFields.classList.add("d-none");
+            }
+        }
+
+        document.getElementById("personnePhysique").addEventListener("change", togglePersonneFields);
+        document.getElementById("personneMorale").addEventListener("change", togglePersonneFields);
+    });
+
 </script>
 
 @endsection

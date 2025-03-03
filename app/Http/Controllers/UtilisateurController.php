@@ -83,10 +83,12 @@ class UtilisateurController extends Controller
 
             $acteurs = Acteur::where('is_user', 0)
             ->where('type_acteur', 'etp')
+            ->where('code_pays', $paysSelectionne)
             ->orderBy('libelle_court', 'asc')->get();
 
             $acteurUpdate = Acteur::where('is_user', 1)
             ->where('type_acteur', 'etp')
+            ->where('code_pays', $paysSelectionne)
             ->orderBy('libelle_court', 'asc')->get();
 
             $codePays = Pays::where('alpha3', $paysSelectionne)->first();

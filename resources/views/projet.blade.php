@@ -347,6 +347,170 @@
                                 <button class="button btn-navigate-form-step" type="button" step_number="2" style="float: right; margin-left: auto;">Suivant</button>
                             </div>
                         </section>
+    <!-- Étape : Informations sur le Chef de Projet -->
+    <div class="step" id="step-3">
+                                <h5 class="text-secondary">👨‍💼 Informations / Chef de Projet</h5>
+
+                                <!-- Recherche et sélection du Chef de Projet -->
+                                <div class="col-4 position-relative">
+                                    <label>Chef de Projet *</label>
+                                    <input type="text" id="chefProjetInput" name="chefProjet" class="form-control" placeholder="Rechercher un chef de projet..." onkeyup="searchChefProjet()">
+                                    <ul class="list-group position-absolute w-100 d-none" id="chefProjetList" style="z-index: 1000;"></ul>
+                                    <small class="text-muted">Sélectionnez un chef de projet existant ou ajoutez un nouveau.</small>
+                                </div>
+
+                                <!-- Formulaire pour renseigner un nouveau chef de projet -->
+                                <div class="row mt-3 d-none" id="chefProjetFields">
+                                    <hr>
+                                    <h6>Détails du Chef de Projet</h6>
+
+                                    <div class="col-12">
+                                        <ul class="nav nav-tabs" id="chefProjetTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="chef-general-tab" data-bs-toggle="tab" data-bs-target="#chef-general" type="button" role="tab" aria-controls="chef-general" aria-selected="true">Informations Personnelles</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="chef-contact-tab" data-bs-toggle="tab" data-bs-target="#chef-contact" type="button" role="tab" aria-controls="chef-contact" aria-selected="false">Informations de Contact</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="chef-admin-tab" data-bs-toggle="tab" data-bs-target="#chef-admin" type="button" role="tab" aria-controls="chef-admin" aria-selected="false">Informations Administratives</button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content mt-3" id="chefProjetTabsContent">
+                                            <!-- Tab 1: Informations Personnelles -->
+                                            <div class="tab-pane fade show active" id="chef-general" role="tabpanel" aria-labelledby="chef-general-tab">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label>Nom *</label>
+                                                        <input type="text" class="form-control" id="chefNom" placeholder="Nom">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label>Prénom *</label>
+                                                        <input type="text" class="form-control" id="chefPrenom" placeholder="Prénom">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Date de Naissance</label>
+                                                        <input type="date" class="form-control" id="chefDateNaissance">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Genre</label>
+                                                        <select name="genre" id="genre" class="form-control">
+                                                            <option value="">Sélectionnez...</option>
+                                                            @foreach ($genres as $genre)
+                                                            <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Pays d'origine :</label>
+                                                        <select name="nationnalite" id="nationnalite" class="form-control">
+                                                            <option value="">Sélectionner le pays </option>
+                                                            @foreach ($tousPays  as $pay)
+                                                                <option value="{{ $pay->id }}">{{ $pay->nom_fr_fr }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+
+                                            <!-- Tab 2: Informations de Contact -->
+                                            <div class="tab-pane fade" id="chef-contact" role="tabpanel" aria-labelledby="chef-contact-tab">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label>Email *</label>
+                                                        <input type="email" class="form-control" id="chefEmail" placeholder="Email">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="codePostal">Code postal</label>
+                                                        <input type="text" name="chefCodePostal" id="chefCodePostal" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Adresse postale</label>
+                                                        <input type="text" class="form-control" placeholder="Adresse">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Adresse siège *</label>
+                                                        <input type="text" class="form-control" placeholder="Adresse">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Téléphone Bureau *</label>
+                                                        <input type="text" class="form-control" placeholder="Téléphone">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Téléphone mobile *</label>
+                                                        <input type="text" class="form-control" id="chefTelephoneMobille" placeholder="Téléphone">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Tab 3: Informations Administratives -->
+                                            <div class="tab-pane fade" id="chef-admin" role="tabpanel" aria-labelledby="chef-admin-tab">
+                                                <div class="row">
+                                                <div class="col-md-4">
+                                                        <label>Secteur d'activité *</label>
+                                                        <select name="chefSecteurActivite" id="chefSecteurActivite" class="form-control">
+                                                            <option value="">Sélectionnez...</option>
+                                                            @foreach ($formeJuridiques as $formeJuridique)
+                                                                <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                	<div class="col-md-3">
+                                                                <label>Pièce d’Identité :</label>
+                                                                <select class="form-control">
+                                                                    @foreach($Pieceidentite as $Pieceidentit)
+                                                                    <option value="{{ $Pieceidentit->idPieceIdent }}">{{ $Pieceidentit->libelle_long }}</option>
+								@endforeach
+
+                                                                </select>                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Numéro Pièce:</label>
+                                                                <input type="text" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Date de etablissement:</label>
+                                                                <input type="date" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label>Date de expiration:</label>
+                                                                <input type="date" class="form-control" placeholder="Numéro de CNI">
+                                                            </div>
+                                                    <div class="col-md-6">
+                                                        <label>Date de vailidité </label>
+                                                        <input type="date" class="form-control" placeholder="Numéro de CNI">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label>Numéro Fiscal </label>
+                                                        <input type="text" class="form-control" placeholder="Numéro fiscal">
+                                                    </div>
+                                                    <div class="col-md-4 ">
+                                                        <label>Situation Matrimoniale :</label>
+                                                        <select class="form-control">
+                                                            <option value="">Sélectionnez...</option>
+                                                            @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                                <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Boutons de navigation -->
+                                <div class="row mt-3">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
+                                    <div class="col text-end">
+                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                    </div>
+                                </div>
+                            </div>
 
                         <section id="step-2" class="form-step d-none">
                             <h2 class="font-normal">But du projet</h2>

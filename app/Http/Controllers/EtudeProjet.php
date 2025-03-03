@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Acteur;
+use App\Models\ActionMener;
 use App\Models\Approbateur;
 use App\Models\Bailleur;
 use App\Models\DecoupageAdministratif;
 use App\Models\DecoupageAdminPays;
+use App\Models\Devise;
 use App\Models\Domaine;
 use App\Models\Ecran;
 use App\Models\Entreprise;
@@ -24,6 +26,8 @@ use App\Models\NatureTravaux;
 use App\Models\Particulier;
 use App\Models\Pays;
 use App\Models\Personnel;
+use App\Models\Pieceidentite;
+use App\Models\Possederpiece;
 use App\Models\ProjectApproval;
 use App\Models\Projet;
 use App\Models\ProjetEha2;
@@ -56,53 +60,127 @@ class EtudeProjet extends Controller
             $ecran = Ecran::find($request->input('ecran_id'));
             $natures = NatureTravaux::all();
             $GroupeProjets = GroupeProjet::all();
-            $Domaines = Domaine::all();
+            $Domaines = Domaine::where('groupe_projet_code', $groupeSelectionne)->get();
             $SousDomaines = SousDomaine::all();
             $SecteurActivites = SecteurActivite::all();
             $localite = LocalitesPays::all();
             $Pays = GroupeProjetPaysUser::with('pays')
             ->select('pays_code') // Sélectionne uniquement le code pays
             ->distinct() // Évite les doublons
+            ->where('pays_code', $paysSelectionne)
             ->get()
             ->pluck('pays.nom_fr_fr', 'pays.alpha3') // Associe alpha3 avec le nom
             ->sort();
+
+            $actionMener = ActionMener::all();
+
+            $tousPays = Pays::whereNotIn('id',  [0, 300, 301, 302, 303, 304])->get();
             $DecoupageAdminPays = DecoupageAdminPays::all();
             $Niveau = DecoupageAdministratif::all();
             $formeJuridiques = FormeJuridique::all();
             $genres = Genre::all();
             $NaturesTravaux = NatureTravaux::all();
             $SituationMatrimoniales = SituationMatrimonial::all();
-            return view('etudes_projets.naissance', compact('NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures'));
+
+            $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
+            $Pieceidentite = Pieceidentite::all();
+            return view('etudes_projets.naissance', compact('Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+        }
+        public function search(Request $request)
+        {
+            $query = $request->input('search');
+
+            if (!$query) {
+                return response()->json([]);
+            }
+
+            // Recherche des bailleurs en filtrant sur `libelle_long` ou `libelle_court`
+            $bailleurs = Acteur::where(function($q) use ($query) {
+                                $q->where('libelle_long', 'LIKE', "%{$query}%")
+                                  ->orWhere('libelle_court', 'LIKE', "%{$query}%");
+                            })
+                            ->where('is_active', true) // Ajouter une condition pour les actifs
+                            ->limit(10)
+                            ->get(['code_acteur', 'libelle_long', 'libelle_court']); // Sélection des colonnes nécessaires
+
+            return response()->json($bailleurs);
+        }
+        // Récupérer les localités associées à un pays donné
+        public function getLocalites($paysCode)
+        {
+
+            $localites = LocalitesPays::where('id_pays', $paysCode)
+            ->orderBy('libelle', 'asc')
+            ->get(['id', 'libelle']);
+            return response()->json($localites);
+        }
+
+        // Récupérer le niveau et découpage associés à une localité sélectionnée
+        public function getDecoupageNiveau($localiteId)
+        {
+            $localite = LocalitesPays::find($localiteId);
+
+            if (!$localite) {
+                return response()->json(['message' => 'Localité non trouvée'], 404);
+            }
+
+            $niveau = DecoupageAdminPays::where('id_pays', $localite->id_pays)
+                                        ->where('code_decoupage', $localite->code_decoupage)
+                                        ->first();
+
+            return response()->json([
+                'niveau' => $niveau ? $niveau->num_niveau_decoupage : 'Non défini',
+                'decoupage' => $localite->code_decoupage
+            ]);
         }
         public function getActeurs(Request $request)
         {
-
             // Vérification du type de requête : Maître d’Ouvrage ou Maître d’Œuvre
             $type_mo = $request->input('type_mo'); // Public ou Privé (Maître d'Ouvrage)
             $priveType = $request->input('priveType'); // Entreprise ou Individu (Maître d'Ouvrage)
 
             $type_ouvrage = $request->input('type_ouvrage'); // Public ou Privé (Maître d'Œuvre)
             $priveMoeType = $request->input('priveMoeType'); // Entreprise ou Individu (Maître d'Œuvre)
-            //dd('Privé type:'.$priveMoeType, 'Type Ouvrage:'.$type_ouvrage);
-            $acteurs = collect(); // Collection vide par défaut
 
-            if (!empty($type_ouvrage)) {
-                // 🔹 Logique pour le Maître d'Œuvre
-                if ($type_ouvrage === 'Public') {
-                    $acteurs = Acteur::whereIn('type_acteur', ['eta', 'clt'])->get();
-                } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Entreprise') {
-                    $acteurs = Acteur::whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])->get();
-                } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Individu') {
-                    $acteurs = Acteur::where('type_acteur', 'etp')->get();
-                }
-            } elseif(!empty($type_mo)) {
-                // 🔹 Logique pour le Maître d'Ouvrage
-                if ($type_mo === 'Public') {
-                    $acteurs = Acteur::whereIn('type_acteur', ['eta', 'clt'])->get();
-                } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
-                    $acteurs = Acteur::whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])->get();
-                } elseif ($type_mo === 'Privé' && $priveType === 'Individu') {
-                    $acteurs = Acteur::where('type_acteur', 'etp')->get();
+            // Initialisation d'une collection vide
+            $acteurs = collect();
+            $paysSelectionne = session('pays_selectionne');
+
+            // Vérification si le pays est bien défini
+            $pays = Pays::where('alpha3', $paysSelectionne)->first();
+            $code_pays = $pays ? $pays->id : null;
+
+            if ($code_pays) {
+                if (!empty($type_ouvrage)) {
+                    // 🔹 Logique pour le Maître d'Œuvre
+                    if ($type_ouvrage === 'Public') {
+                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                            ->whereIn('type_acteur', ['eta', 'clt'])
+                            ->get();
+                    } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Entreprise') {
+                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                            ->whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])
+                            ->get();
+                    } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Individu') {
+                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                            ->where('type_acteur', 'etp')
+                            ->get();
+                    }
+                } elseif (!empty($type_mo)) {
+                    // 🔹 Logique pour le Maître d'Ouvrage
+                    if ($type_mo === 'Public') {
+                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                            ->whereIn('type_acteur', ['eta', 'clt'])
+                            ->get();
+                    } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
+                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                            ->whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])
+                            ->get();
+                    } elseif ($type_mo === 'Privé' && $priveType === 'Individu') {
+                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                            ->where('type_acteur', 'etp')
+                            ->get();
+                    }
                 }
             }
 
@@ -117,35 +195,7 @@ class EtudeProjet extends Controller
             return response()->json($acteurs);
         }
 
-            /**
-         * Recherche des chefs de projet existants.
-         */
-        public function getChefsProjet(Request $request)
-        {
-            $search = $request->input('search');
 
-            $query = Acteur::where('type_acteur', 'etp');
-
-            if (!empty($search)) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('libelle_long', 'like', "%$search%")
-                    ->orWhere('libelle_court', 'like', "%$search%");
-                });
-            }
-
-            $chefsProjet = $query->get()->map(function ($acteur) {
-                return [
-                    'code_acteur' => $acteur->code_acteur,
-                    'libelle_long' => trim(($acteur->libelle_court ?? '') . ' ' . ($acteur->libelle_long ?? '')),
-                    'email' => $acteur->email,
-                    'telephone' => $acteur->telephone,
-                    'adresse' => $acteur->adresse,
-                    'nationalite' => $acteur->pays?->nom_fr_fr,
-                ];
-            });
-
-            return response()->json($chefsProjet);
-        }
 
 
 

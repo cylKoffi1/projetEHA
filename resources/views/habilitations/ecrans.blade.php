@@ -121,12 +121,12 @@
                                                 <span style="color: white"></span>
                                             </a>
                                             <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                                @can("modifier_ecran_" . $ecran->id)
+                                                {{--@can("modifier_ecran_" . $ecran->id)--}}
                                                 <li><a class="dropdown-item" onclick="showEditRubrique('{{ $ecrann->id }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
-                                                @endcan
-                                                @can("supprimer_ecran_" . $ecran->id)
+                                                {{--@endcan
+                                                @can("supprimer_ecran_" . $ecran->id)--}}
                                                 <li><a class="dropdown-item" onclick="deleteRubrique('{{ $ecrann->id }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                                @endcan
+
                                             </ul>
                                         </div>
                                     </td>
@@ -219,12 +219,12 @@
                                 </div>
                             </div>
                         </div>
-                        @can("ajouter_ecran_" . $ecran->id)
+                        {{--@can("ajouter_ecran_" . $ecran->id)--}}
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
                         </div>
-                        @endcan
+
 
                     </form>
                 </div>
@@ -242,7 +242,7 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" >
                     <form class="form" method="POST" action="{{ route('ecran.update') }}" data-parsley-validate>
                         @csrf
                         <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
@@ -308,12 +308,12 @@
                                 </div>
                             </div>
                         </div>
-                        @can("modifier_ecran_" . $ecran->id)
+                        {{--@can("modifier_ecran_" . $ecran->id)--}}
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
                         </div>
-                        @endcan
+
                     </form>
                 </div>
             </div>
@@ -329,7 +329,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_court }}', 'table1', 'Liste des écrans')
+        initDataTable('{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_court }}', 'table1', 'Liste des écrans')
     });
 
     // Lorsque l'utilisateur clique sur un bouton "Modifier"

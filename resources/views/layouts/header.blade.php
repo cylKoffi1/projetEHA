@@ -170,6 +170,9 @@
                 <li class="nav-item">
                     <a class="nav-link" style="color: white;" href="{{ url('/')}}">Accueil</a>
                 </li>
+                <li>
+                    <a href="" class="nav-link" style="color: white;">Demande D'adhésion</a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link" style="color: white;" href="{{ url('/connexion')}}">Connexion</a>
                 </li>

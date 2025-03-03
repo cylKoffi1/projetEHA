@@ -109,7 +109,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm" style="background-color: rgba(250, 250, 250, 0.9);">
                 <div class="card-body p-3">
-                    <h6 class="card-title mb-2 text-center text-dark">Répartition des Acteurs</h6>
+                    <h6 class="card-title mb-2 text-center text-dark">Répartition en nombre d'Acteurs</h6>
                     <canvas id="actorsChart" style="max-height: 200px;"></canvas>
                 </div>
             </div>

@@ -13,8 +13,9 @@ use App\Models\SousMenu;
 use App\Models\View;
 use Illuminate\Http\Request;
 use App\Models\Permission;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RoleAssignmentController extends Controller
@@ -29,240 +30,217 @@ class RoleAssignmentController extends Controller
         return view('habilitations.role-assignment', compact('groupes', 'ecran',  'roles'));
     }
 
-
     public function assignRoles(Request $request)
     {
+        // Récupérer les données du formulaire
+        $role_id = $request->input('role');
+        $consulterRubrique = json_decode($request->input('consulterRubrique'));
+        $consulterRubriqueEcran = json_decode($request->input('consulterRubriqueEcran'));
+        $consulterSousMenu = json_decode($request->input('consulterSousMenu'));
+        $consulterSousMenuEcran = json_decode($request->input('consulterSousMenuEcran'));
 
-        try {
-            set_time_limit(600);
-            Log::info("Début de la fonction assignRoles");
-            // Récupérer les données du formulaire
-            $role_id = $request->input('role');
-            $consulterRubrique = json_decode($request->input('consulterRubrique'));
-            $consulterRubriqueEcran = json_decode($request->input('consulterRubriqueEcran'));
-            $consulterSousMenu = json_decode($request->input('consulterSousMenu'));
-            $consulterSousMenuEcran = json_decode($request->input('consulterSousMenuEcran'));
+        $ajouterRubriqueEcran = json_decode($request->input('ajouterRubriqueEcran'));
+        $modifierRubriqueEcran = json_decode($request->input('modifierRubriqueEcran'));
+        $supprimerRubriqueEcran = json_decode($request->input('supprimerRubriqueEcran'));
 
-            $ajouterRubriqueEcran = json_decode($request->input('ajouterRubriqueEcran'));
-            $modifierRubriqueEcran = json_decode($request->input('modifierRubriqueEcran'));
-            $supprimerRubriqueEcran = json_decode($request->input('supprimerRubriqueEcran'));
+        $ajouterSousMenuEcran = json_decode($request->input('ajouterSousMenuEcran'));
+        $modifierSousMenuEcran = json_decode($request->input('modifierSousMenuEcran'));
+        $supprimerSousMenuEcran = json_decode($request->input('supprimerSousMenuEcran'));
 
-            $ajouterSousMenuEcran = json_decode($request->input('ajouterSousMenuEcran'));
-            $modifierSousMenuEcran = json_decode($request->input('modifierSousMenuEcran'));
-            $supprimerSousMenuEcran = json_decode($request->input('supprimerSousMenuEcran'));
 
-            $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer'));
+        $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer'));
 
-            Log::info("Données récupérées du formulaire", [
-                'role_id' => $role_id,
-                'consulterRubrique' => $consulterRubrique,
-                'consulterRubriqueEcran' => $consulterRubriqueEcran,
-                'consulterSousMenu' => $consulterSousMenu,
-                'consulterSousMenuEcran' => $consulterSousMenuEcran,
-                'ajouterRubriqueEcran' => $ajouterRubriqueEcran,
-                'modifierRubriqueEcran' => $modifierRubriqueEcran,
-                'supprimerRubriqueEcran' => $supprimerRubriqueEcran,
-                'ajouterSousMenuEcran' => $ajouterSousMenuEcran,
-                'modifierSousMenuEcran' => $modifierSousMenuEcran,
-                'supprimerSousMenuEcran' => $supprimerSousMenuEcran,
-                'permissionsAsupprimer' => $permissionsAsupprimer,
-            ]);
 
-            // Récupérer le rôle
-            $role = GroupeUtilisateur::where('code', $role_id)->firstOrFail();
-            if (!$role) {
-                Log::error("Le rôle avec l'ID {$role_id} n'existe pas.");
-                return response()->json(['error' => "Rôle non trouvé"], 404);
-            }
-            $users = $role->utilisateurs;
+        // Récupérer le rôle
+        $role = GroupeUtilisateur::where('code', $role_id)->firstOrFail();
+        LOG::info('Role: ' . $role);
+        $users = $role->users;
+        
+        // Supprimer les associations non cochées
+        RoleHasRubrique::where('role_id', $role_id)
+            ->whereNotIn('rubrique_id', $consulterRubrique)
+            ->delete();
+        // Parcourir et enregistrer chaque ID dans le tableau consulterRubrique
+        foreach ($consulterRubrique as $id) {
+            // Vérifier si une association existe déjà pour ce rôle et cette rubrique
+            $existingAssociation = RoleHasRubrique::where('role_id', $role_id)
+                ->where('rubrique_id', $id)
+                ->first();
 
-            Log::info("Rôle et utilisateurs associés récupérés", ['role_id' => $role_id, 'user_count' => count($users)]);
+            // Si aucune association n'existe, créez-en une nouvelle
+            if (!$existingAssociation) {
+                $roleHasRubrique = new RoleHasRubrique;
+                $roleHasRubrique->rubrique_id = $id;
+                $roleHasRubrique->role_id = $role_id;
+                $roleHasRubrique->save();
 
-            // Supprimer les associations non cochées
-            RoleHasRubrique::where('role_id', $role_id)
-                ->whereNotIn('rubrique_id', $consulterRubrique)
-                ->delete();
-            Log::info("Associations non cochées supprimées pour le rôle", ['role_id' => $role_id]);
-
-            Log::info("Début du traitement de consulterRubrique");
-            // Parcourir et enregistrer chaque ID dans le tableau consulterRubrique
-            foreach ($consulterRubrique as $id) {
-                // Vérifier si une association existe déjà pour ce rôle et cette rubrique
-                $existingAssociation = RoleHasRubrique::where('role_id', $role_id)
-                    ->where('rubrique_id', $id)
-                    ->first();
-
-                // Si aucune association n'existe, créez-en une nouvelle
-                if (!$existingAssociation) {
-                    $roleHasRubrique = new RoleHasRubrique;
-                    $roleHasRubrique->rubrique_id = $id;
-                    $roleHasRubrique->role_id = $role_id;
-                    $roleHasRubrique->save();
-                    Log::info("Nouvelle association ajoutée pour rubrique", ['role_id' => $role_id, 'rubrique_id' => $id]);
-
-                    // Ajouter la permission à synchroniser
-                    $rubrique = Rubriques::find($id);
-                    $permission = Permission::findById($rubrique->permission_id);
-                    $role->givePermissionTo($permission->name);
-                    Log::info("Permission accordée pour rubrique", ['rubrique_id' => $id, 'permission' => $permission->name]);
-                    Log::info("Traitement de rubrique {$id}");
-                    foreach ($users as $user) {
-                        // $user->givePermissionTo($permission->name);
-                        $user->assignRole($role->name);
-                    }
-                } else {
-                    // Ajouter la permission à synchroniser
-                    $rubrique = Rubriques::find($id);
-                    $permission = Permission::findById($rubrique->permission_id);
-                    $role->givePermissionTo($permission->name);
-                    Log::info("Permission accordée pour rubrique", ['rubrique_id' => $id, 'permission' => $permission->name]);
-                    Log::info("Traitement de rubrique {$id}");
-
-                    foreach ($users as $user) {
-                        //$user->givePermissionTo($permission->name);
-                        $user->assignRole($role->name);
-                    }
-                }
-            }
-            Log::info("Fin du traitement de consulterRubrique");
-
-            // Parcourir et enregistrer chaque ID dans le tableau consulterRubriqueEcran
-            foreach ($consulterRubriqueEcran as $id) {
-                $ecran = Ecran::find($id);
-                $permissionName = $ecran->permission->name;
-                $permission = Permission::findByName($permissionName);
-                $role->givePermissionTo($permission);
-                Log::info("Permission accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-                foreach ($users as $user) {
-                    $user->assignRole($role->name);
-                }
-            }
-
-            // Parcourir et enregistrer chaque ID dans le tableau consulterSousMenu
-            foreach ($consulterSousMenu as $id) {
                 // Ajouter la permission à synchroniser
-                $sous_menu = SousMenu::find($id);
-                $permissionName = $sous_menu->permission->name;
-                $permission = Permission::findByName($permissionName);
-                $role->givePermissionTo($permission);
-                Log::info("Permission accordée pour sous-menu", ['sous_menu_id' => $id, 'permission' => $permissionName]);
+                $rubrique = Rubriques::find($id);
+                $permission = Permission::findById($rubrique->permission_id);
+                $role->givePermissionTo($permission->name);
 
                 foreach ($users as $user) {
+                    // $user->givePermissionTo($permission->name);
+                    $user->assignRole($role->name);
+                }
+            } else {
+                // Ajouter la permission à synchroniser
+                $rubrique = Rubriques::find($id);
+                $permission = Permission::findById($rubrique->permission_id);
+                $role->givePermissionTo($permission->name);
+
+                foreach ($users as $user) {
+                    //$user->givePermissionTo($permission->name);
                     $user->assignRole($role->name);
                 }
             }
-
-            // Parcourir et enregistrer chaque ID dans le tableau consulterSousMenuEcran
-            foreach ($consulterSousMenuEcran as $id) {
-                $ecran = Ecran::find($id);
-                $permissionName = $ecran->permission->name;
-                $permission = Permission::findByName($permissionName);
-                $role->givePermissionTo($permission);
-                Log::info("Permission accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-
-                foreach ($users as $user) {
-                    $user->assignRole($role->name);
-                }
-            }
-
-            // Parcourir et accorder la permission pour chaque écran associé à une action dans une rubrique
-            foreach ($ajouterRubriqueEcran as $id) {
-                $permissionName = 'ajouter_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'ajouter' accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($modifierRubriqueEcran as $id) {
-                $permissionName = 'modifier_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'modifier' accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($supprimerRubriqueEcran as $id) {
-                $permissionName = 'supprimer_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'supprimer' accordée pour écran rubrique", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            // Parcourir et accorder la permission pour chaque écran associé à une action dans un sous-menu
-            foreach ($ajouterSousMenuEcran as $id) {
-                $permissionName = 'ajouter_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'ajouter' accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($modifierSousMenuEcran as $id) {
-                $permissionName = 'modifier_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'modifier' accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            foreach ($supprimerSousMenuEcran as $id) {
-                $permissionName = 'supprimer_ecran_' . $id;
-                $permission = Permission::findOrCreate($permissionName);
-                $role->givePermissionTo($permission->name);
-                Log::info("Permission 'supprimer' accordée pour écran sous-menu", ['ecran_id' => $id, 'permission' => $permissionName]);
-            }
-
-            $permissionsConsulterSousMenuAsupprimer = SousMenu::whereNotIn('code', $consulterSousMenu)->get();
-            $permissionsConsulterRubriquesAsupprimer = Rubriques::whereNotIn('code', $consulterRubrique)->get();
-
-            foreach ($permissionsConsulterRubriquesAsupprimer as $rubrique) {
-                try {
-                    if ($rubrique->permission && $role->hasPermissionTo($rubrique->permission->name)) {
-                        // Révoquer la permission
-                        $permission = Permission::findByName($rubrique->permission->name);
-                        $role->revokePermissionTo($permission);
-                        Log::info("Permission révoquée pour rubrique", ['rubrique_id' => $rubrique->id, 'permission' => $rubrique->permission->name]);
-                    }
-                } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                    Log::error("Permission '{$rubrique->permission->name}' does not exist: " . $e->getMessage());
-                }
-            }
-
-            foreach ($permissionsConsulterSousMenuAsupprimer as $sous_menu) {
-                try {
-                    if ($sous_menu->permission && $role->hasPermissionTo($sous_menu->permission->name)) {
-                        // Révoquer la permission
-                        $permission = Permission::findByName($sous_menu->permission->name);
-                        $role->revokePermissionTo($permission);
-                        Log::info("Permission révoquée pour sous-menu", ['sous_menu_id' => $sous_menu->id, 'permission' => $sous_menu->permission->name]);
-                    }
-                } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                    Log::error("Permission '{$sous_menu->permission->name}' does not exist: " . $e->getMessage());
-                }
-            }
-
-            foreach ($permissionsAsupprimer as $permis) {
-                try {
-                    if ($role->hasPermissionTo($permis)) {
-                        // Révoquer la permission
-                        $permission = Permission::findByName($permis);
-                        $role->revokePermissionTo($permission);
-                        Log::info("Permission révoquée", ['permission' => $permis]);
-                    }
-                } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                    Log::error("Permission '{$permis}' does not exist: " . $e->getMessage());
-                }
-            }
-
-            // Retourner une réponse JSON
-            return response()->json([
-                'message' => 'Données enregistrées avec succès.',
-                'donnee' => $permissionsAsupprimer,
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Erreur lors de l'assignation des rôles: " . $e->getMessage());
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 500);
         }
+
+
+        // Parcourir et enregistrer chaque ID dans le tableau consulterRubriqueEcran
+        foreach ($consulterRubriqueEcran as $id) {
+            $ecran = Ecran::find($id);
+            $permissionName = $ecran->permission->name;
+            $permission = Permission::findByName($permissionName);
+            if ($permission) {
+                $role->givePermissionTo($permission->name);
+            } else {
+                Log::error("La permission '{$permissionName}' n'existe pas dans la base de données.");
+            }
+            foreach ($users as $user) {
+                $user->assignRole($role->name);
+            }
+        }
+
+        // Parcourir et enregistrer chaque ID dans le tableau consulterSousMenu
+        foreach ($consulterSousMenu as $id) {
+            // Ajouter la permission à synchroniser
+            $sous_menu = SousMenu::find($id);
+            $permissionName = $sous_menu->permission->name;
+            $permission = Permission::findByName($permissionName);
+            if ($permission) {
+                $role->givePermissionTo($permission->name);
+            } else {
+                Log::error("La permission '{$permissionName}' n'existe pas dans la base de données.");
+            }
+            foreach ($users as $user) {
+                $user->assignRole($role->name);
+            }
+        }
+
+        // Parcourir et enregistrer chaque ID dans le tableau consulterSousMenuEcran
+        foreach ($consulterSousMenuEcran as $id) {
+            $ecran = Ecran::find($id);
+            $permissionName = $ecran->permission->name;
+            $permission = Permission::findByName($permissionName);
+            if ($permission) {
+                $role->givePermissionTo($permission->name);
+            } else {
+                Log::error("La permission '{$permissionName}' n'existe pas dans la base de données.");
+            }
+            foreach ($users as $user) {
+                $user->assignRole($role->name);
+            }
+        }
+
+
+
+        // Parcourir et accorder la permission pour chaque écran associé à une action dans une rubrique
+        foreach ($ajouterRubriqueEcran as $id) {
+            $permissionName = 'ajouter_ecran_' . $id;
+            $permission = Permission::findOrCreate($permissionName);
+            $role->givePermissionTo($permission->name);
+        }
+
+        foreach ($modifierRubriqueEcran as $id) {
+            $permissionName = 'modifier_ecran_' . $id;
+            $permission = Permission::findOrCreate($permissionName);
+            $role->givePermissionTo($permission->name);
+        }
+
+        foreach ($supprimerRubriqueEcran as $id) {
+            $permissionName = 'supprimer_ecran_' . $id;
+            $permission = Permission::findOrCreate($permissionName);
+            $role->givePermissionTo($permission->name);
+        }
+
+        // Parcourir et accorder la permission pour chaque écran associé à une action dans un sous-menu
+        foreach ($ajouterSousMenuEcran as $id) {
+            $permissionName = 'ajouter_ecran_' . $id;
+            $permission = Permission::findOrCreate($permissionName);
+            $role->givePermissionTo($permission->name);
+        }
+
+        foreach ($modifierSousMenuEcran as $id) {
+            $permissionName = 'modifier_ecran_' . $id;
+            $permission = Permission::findOrCreate($permissionName);
+            $role->givePermissionTo($permission->name);
+        }
+
+        foreach ($supprimerSousMenuEcran as $id) {
+            $permissionName = 'supprimer_ecran_' . $id;
+            $permission = Permission::findOrCreate($permissionName);
+            $role->givePermissionTo($permission->name);
+        }
+
+        $permissionsConsulterSousMenuAsupprimer = SousMenu::whereNotIn('code', $consulterSousMenu)->get();
+        $permissionsConsulterRubriquesAsupprimer = Rubriques::whereNotIn('code', $consulterRubrique)->get();
+
+        foreach ($permissionsConsulterRubriquesAsupprimer as $rubrique) {
+            try {
+                if ($rubrique->permission && $role->hasPermissionTo($rubrique->permission->name)) {
+                    // Révoquer la permission
+                    $permission = Permission::findByName($rubrique->permission->name);
+                    $role->revokePermissionTo($permission);
+                }
+            } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
+                // Gérer l'erreur si la permission n'existe pas
+                // Vous pouvez journaliser l'erreur ou effectuer toute autre action nécessaire
+                // Par exemple :
+                Log::error("Permission '{$permissionName}' does not exist: " . $e->getMessage());
+            }
+        }
+
+        foreach ($permissionsConsulterSousMenuAsupprimer as $sous_menu) {
+            try {
+                if ($sous_menu->permission && $role->hasPermissionTo($sous_menu->permission->name)) {
+                    // Révoquer la permission
+                    $permission = Permission::findByName($sous_menu->permission->name);
+                    $role->revokePermissionTo($permission);
+                }
+            } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
+                // Gérer l'erreur si la permission n'existe pas
+                // Vous pouvez journaliser l'erreur ou effectuer toute autre action nécessaire
+                // Par exemple :
+                Log::error("Permission '{$permission->name}' does not exist: " . $e->getMessage());
+            }
+        }
+
+        foreach ($permissionsAsupprimer as $permis) {
+            try {
+                if ($role->hasPermissionTo($permis)) {
+                    // Révoquer la permission
+                    $permission = Permission::findByName($permis);
+                    $role->revokePermissionTo($permission);
+                }
+            } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
+                // Gérer l'erreur si la permission n'existe pas
+                // Vous pouvez journaliser l'erreur ou effectuer toute autre action nécessaire
+                // Par exemple :
+                Log::error("Permission '{$permission->name}' does not exist: " . $e->getMessage());
+            }
+        }
+
+
+
+        // Retourner une réponse JSON
+        return response()->json([
+            'message' => 'Données enregistrées avec succès.',
+            'donnee' => $permissionsAsupprimer,
+        ]);
     }
+
+
 
 
 

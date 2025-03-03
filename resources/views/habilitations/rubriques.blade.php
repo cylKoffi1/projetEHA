@@ -240,7 +240,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des rubriques')
+        initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des rubriques')
     });
 
     // Lorsque l'utilisateur clique sur un bouton "Modifier"

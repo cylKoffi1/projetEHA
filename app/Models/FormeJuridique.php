@@ -13,4 +13,8 @@ class FormeJuridique extends Model
 
     protected $table ='forme_juridique';
     protected $primaryKey ='id';
+
+    protected $fillable = [
+        'forme', 'description', 'date_creation'
+    ];
 }

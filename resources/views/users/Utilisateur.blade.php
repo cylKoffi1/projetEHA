@@ -202,10 +202,10 @@
                 <tbody>
                     @foreach ($utilisateurs as $utilisateur)
                         <tr>
-                            <td>{{ $utilisateur->pays->first()->nom_fr_fr ?? 'Aucun pays' }}</td>
-                            <td>{{ $utilisateur->acteur->libelle_long }}</td>
+                            <td>{{ $utilisateur?->pays?->first()->nom_fr_fr ?? 'Aucun pays' }}</td>
+                            <td>{{ $utilisateur?->acteur?->libelle_long }}</td>
                             <td>{{ $utilisateur->login }}</td>
-                            <td>{{ $utilisateur->groupeUtilisateur->libelle_groupe }}</td>
+                            <td>{{ $utilisateur?->groupeUtilisateur?->libelle_groupe }}</td>
                             <td>
                                 @if ($utilisateur->is_active)
                                     <span class="badge bg-success">Actif</span>
