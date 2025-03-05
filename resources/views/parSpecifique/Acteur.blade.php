@@ -298,11 +298,11 @@
                                 <!-- Tab 1: Informations Personnelles -->
                                 <div class="tab-pane fade show active" id="individu-general" role="tabpanel" aria-labelledby="individu-general-tab">
                                     <div class="row">
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <label>Nom *</label>
                                             <input type="text" name="nom" class="form-control" placeholder="Nom" >
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <label>Prénom *</label>
                                             <input type="text" name="prenom" class="form-control" placeholder="Prénom" >
                                         </div>
