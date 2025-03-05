@@ -376,7 +376,7 @@
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->acteur->code_acteur }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des pays')
+        initDataTable('{{ auth()->user()?->acteur?->code_acteur }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des pays')
         $('#code').on('input', function() {
             // Get the input value
             var code = $(this).val();

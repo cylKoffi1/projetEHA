@@ -10,13 +10,13 @@ class Possederpiece extends Model
     use HasFactory;
 
     public $timestamps = false;
-    
+
     protected $table = 'possederpiece';
     protected $primaryKey = 'idPosseder';
 
     protected $fillable = [
-        'idPieceIdent', 'idPersonnePhysique', 'NumPieceIdent', 'DateValidite',
-        'DateExpiration'
+        'idPieceIdent', 'idPersonnePhysique', 'NumPieceIdent',
+        'DateExpiration', 'DateEtablissement'
     ];
     public function acteur()
     {

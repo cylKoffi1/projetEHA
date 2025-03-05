@@ -128,7 +128,7 @@
                     </div>
                     <div class="form-group col-md-4">
                         <label>Status *</label>
-                        <select class="form-control" name="type_financement">
+                        <select class="form-control" name="type_financement" required>
                             <option value="">Sélectionner le statut</option>
                             @foreach($typeFinancements as $typeFin)
                                 <option value="{{ $typeFin->code_type_financement }}"> {{ $typeFin->libelle }} </option>
@@ -138,7 +138,7 @@
                     <!-- Type d'acteur -->
                     <div class="form-group col-md-4">
                         <label for="type_acteur">Type d'acteur</label>
-                        <select class="form-control" id="type_acteur" name="type_acteur" >
+                        <select class="form-control" id="type_acteur" name="type_acteur" required >
                             <option value="">Sélectionner le type d'acteur</option>
                             @foreach ($TypeActeurs as $TypeActeur)
                                 <option value="{{ $TypeActeur->cd_type_acteur }}">{{ $TypeActeur->libelle_type_acteur }}</option>
@@ -177,16 +177,7 @@
 
                                         <div class="col-md-6">
                                             <label>Date de création * </label>
-                                            <input type="text" class="form-control" name="date_creation" placeholder="Adresse complète">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Secteur d'activité * </label>
-                                            <select name="SecteurActiviteEntreprise" id="SecteurActiviteEntreprise" class="form-control">
-                                                <option value="">Sélectionnez...</option>
-                                                @foreach ($SecteurActivites as $SecteurActivite)
-                                                    <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
-                                                @endforeach
-                                            </select>
+                                            <input type="date" class="form-control" name="date_creation" placeholder="Adresse complète">
                                         </div>
                                         <div class="col-md-6 ">
                                             <label>Forme Juridique *</label>
@@ -244,11 +235,16 @@
                                         <hr>
                                         <div class="col-md-3">
                                             <label>Représentant Légal *</label>
-                                            <input type="text" name="nomRL" class="form-control" placeholder="Nom du représentant légal">
+                                            <lookup-select name="nomRL" id="nomRL">
+                                                @foreach ($acteurRepres as $acteurRepre)
+                                                    <option value="{{ $acteurRepre->code_acteur }}">{{ $acteurRepre->libelle_court }} {{ $acteurRepre->libelle_long }}</option>
+                                                @endforeach
+                                            </lookup-select>
+
                                         </div>
                                         <div class="col-md-3">
                                             <label>Email *</label>
-                                            <input type="email" name="emailRL" class="form-control" placeholder="Email du représentant légal">
+                                            <input type="email" name="emailRL" class="form-control" placeholder="Email du représentant légal" >
                                         </div>
                                         <div class="col-md-3">
                                             <label>Téléphone 1 *</label>
@@ -259,25 +255,24 @@
                                             <input type="text" name="telephone2RL" class="form-control" placeholder="Téléphone 2 du représentant légal">
                                         </div>
                                         <hr>
+
+                                    </div>
+                                    <div class="row align-items-end">
+                                        <!-- Lookup-Multiselect -->
                                         <div class="col-md-3">
                                             <label>Personne de Contact</label>
-                                            <input type="text" name="nomPC" class="form-control" placeholder="Nom de la personne de contact">
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label>Email</label>
-                                            <input type="email" name="emailPC" class="form-control" placeholder="Email de la personne de Contact">
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label>Téléphone 1</label>
-                                            <input type="text" name="telephone1PC" class="form-control" placeholder="Téléphone 1 de la Personne de Contact">
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label>Téléphone 2</label>
-                                            <input type="text" name="telephone2PC" class="form-control" placeholder="Téléphone 2 de la Personne de Contact">
+                                            <lookup-multiselect name="nomPC" id="nomPC">
+                                                @foreach ($acteurRepres as $acteurRepre)
+                                                    <option value="{{ $acteurRepre->code_acteur }}">{{ $acteurRepre->libelle_court }} {{ $acteurRepre->libelle_long }}</option>
+                                                @endforeach
+                                            </lookup-multiselect>
                                         </div>
 
-                                        <hr>
+                                        <!-- Conteneur pour afficher dynamiquement les champs -->
+                                        <div class="col-md-9 d-flex flex-wrap" id="contactContainer"></div>
                                     </div>
+                                    <hr>
+
                                 </div>
                             </div>
                         </div>
@@ -316,18 +311,33 @@
                                             <input type="date" name="date_naissance" id="date_naissance" class="form-control">
                                         </div>
                                         <div class="col-md-4">
-                                            <label>Nationalité *</label>
-                                            <input type="text" class="form-control" name="nationalite" placeholder="Nationalité" >
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label>Secteur d'activité *</label>
-                                            <select name="SecteurActiviteIndividu" id="SecteurActiviteEntreprise" class="form-control" >
+                                            <label>Genre</label>
+                                            <select name="genre" id="genre" class="form-control">
                                                 <option value="">Sélectionnez...</option>
-                                                @foreach ($formeJuridiques as $formeJuridique)
-                                                    <option value="{{ $formeJuridique->id }}">{{ $formeJuridique->forme }}</option>
+                                                @foreach ($genres as $genre)
+                                                <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
+                                        <div class="col-md-4 ">
+                                            <label>Situation Matrimoniale :</label>
+                                            <select class="form-control" name="situationMatrimoniale" id="situationMatrimoniale">
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
+                                                    <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label>Pays d'origine *</label>
+                                            <lookup-select name="nationnalite" id="nationnalite">
+                                                <option value="">Sélectionnez...</option>
+                                                @foreach ($tousPays as $tousPay)
+                                                    <option value="{{ $tousPay->id }}">{{ $tousPay->nom_fr_fr }}</option>
+                                                @endforeach
+                                            </lookup-select>
+                                        </div>
+
                                     </div>
                                 </div>
 
@@ -336,7 +346,7 @@
                                     <div class="row">
                                         <div class="col-md-4">
                                             <label>Email *</label>
-                                            <input type="email" name="emailI" class="form-control" placeholder="Email" >
+                                            <input type="email" name="emailI" class="form-control" placeholder="Email">
                                         </div>
                                         <div class="col-md-4">
                                             <label for="codePostal">Code postal</label>
@@ -389,30 +399,8 @@
                                             <input type="date" class="form-control" name="dateExpiration" placeholder="Numéro de CNI">
                                         </div>
                                         <div class="col-md-6">
-                                            <label>Date de vailidité </label>
-                                            <input type="date" class="form-control" placeholder="Numéro de CNI">
-                                        </div>
-                                        <div class="col-md-4">
                                             <label>Numéro Fiscal </label>
                                             <input type="text" class="form-control" name="numeroFiscal" placeholder="Numéro fiscal">
-                                        </div>
-                                        <div class="col-md-4 ">
-                                            <label>Situation Matrimoniale :</label>
-                                            <select class="form-control" name="situationMatrimoniale" id="situationMatrimoniale">
-                                                <option value="">Sélectionnez...</option>
-                                                @foreach ($SituationMatrimoniales as $SituationMatrimoniale)
-                                                    <option value="{{ $SituationMatrimoniale->id }}">{{ $SituationMatrimoniale->libelle }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label>Genre</label>
-                                            <select name="genre" id="genre" class="form-control">
-                                                <option value="">Sélectionnez...</option>
-                                                @foreach ($genres as $genre)
-                                                <option value="{{ $genre->code_genre }}">{{ $genre->libelle_genre }}</option>
-                                                @endforeach
-                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -675,5 +663,115 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 </script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const lookup = document.getElementById("nomPC"); // Sélection du lookup-multiselect
+        const contactContainer = document.getElementById("contactContainer");
+        const acteurs = @json($acteurRepres); // Récupération des contacts depuis Laravel
+
+        function updateContacts() {
+            contactContainer.innerHTML = ""; // Vider le contenu
+
+            let selectedValues = lookup.value; // Récupère les valeurs sélectionnées
+
+            if (selectedValues.length === 0) {
+                return; // Si aucune sélection, ne rien afficher
+            }
+
+            selectedValues.forEach(code => {
+                let acteur = acteurs.find(a => a.code_acteur == code);
+            // console.log('acteur :',acteur);
+                if (acteur) {
+                    let row = document.createElement("div");
+                    row.classList.add("d-flex", "align-items-center", "me-3");
+
+                    row.innerHTML = `
+                        <div class="me-3">
+                            <label>Nom</label>
+                            <input type="text" class="form-control" value="${acteur.libelle_court} ${acteur.libelle_long}" readonly>
+                        </div>
+                        <div class="me-3">
+                            <label>Email</label>
+                            <input type="email" class="form-control" name="emailPC" value="${acteur.email || ''}">
+                        </div>
+                        <div class="me-3">
+                            <label>Téléphone 1</label>
+                            <input type="text" class="form-control" name="Tel1Pc" value="${acteur.telephone_mobile || ''}">
+                        </div>
+                        <div class="me-3">
+                            <label>Téléphone 2</label>
+                            <input type="text" class="form-control" name="Tel2PC" value="${acteur.telephone_bureau || ''}">
+                        </div>
+                    `;
+
+                    contactContainer.appendChild(row);
+                }
+            });
+        }
+
+        // Écouter le changement de sélection sur `lookup-multiselect`
+        lookup.addEventListener("change", updateContacts);
+
+        // Optionnel : Afficher les données au chargement si des valeurs sont déjà sélectionnées
+        setTimeout(updateContacts, 500);
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const lookupRL = document.getElementById("nomRL"); // Sélecteur du lookup-select
+        const emailRL = document.querySelector("input[name='emailRL']");
+        const telephone1RL = document.querySelector("input[name='telephone1RL']");
+        const telephone2RL = document.querySelector("input[name='telephone2RL']");
+
+        const acteurs = @json($acteurRepres); // Récupération des acteurs depuis Laravel Blade
+
+        function updateRepresentantLegal() {
+            let selectedValue = lookupRL.value; // Récupérer l'ID sélectionné
+
+            // Trouver les données du représentant légal
+            let acteur = acteurs.find(a => a.code_acteur == selectedValue);
+
+            if (acteur) {
+                emailRL.value = acteur.email || ""; // Mettre à jour l'email
+                telephone1RL.value = acteur.telephone_mobile || ""; // Mettre à jour Téléphone 1
+                telephone2RL.value = acteur.telephone_bureau || ""; // Mettre à jour Téléphone 2
+            } else {
+                emailRL.value = ""; // Vider si aucun représentant légal trouvé
+                telephone1RL.value = "";
+                telephone2RL.value = "";
+            }
+        }
+
+        // Écouter les changements sur le `lookup-select`
+        lookupRL.addEventListener("change", updateRepresentantLegal);
+
+        // Optionnel : Remplir les champs au chargement si une valeur est déjà sélectionnée
+        setTimeout(updateRepresentantLegal, 500);
+
+        // Ajouter les champs cachés dynamiques pour conserver les modifications lors du submit
+        const form = document.querySelector("form");
+        form.addEventListener("submit", function () {
+            // Ajouter des champs cachés pour les valeurs modifiées
+            let hiddenEmail = document.createElement("input");
+            hiddenEmail.type = "hidden";
+            hiddenEmail.name = "emailRL_modified";
+            hiddenEmail.value = emailRL.value;
+            form.appendChild(hiddenEmail);
+
+            let hiddenTel1 = document.createElement("input");
+            hiddenTel1.type = "hidden";
+            hiddenTel1.name = "telephone1RL_modified";
+            hiddenTel1.value = telephone1RL.value;
+            form.appendChild(hiddenTel1);
+
+            let hiddenTel2 = document.createElement("input");
+            hiddenTel2.type = "hidden";
+            hiddenTel2.name = "telephone2RL_modified";
+            hiddenTel2.value = telephone2RL.value;
+            form.appendChild(hiddenTel2);
+        });
+    });
+</script>
+
 
 @endsection

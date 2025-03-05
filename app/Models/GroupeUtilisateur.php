@@ -98,6 +98,6 @@ class GroupeUtilisateur extends Model implements RoleContract
 
     public function users()
     {
-        return $this->hasMany(User::class, 'groupe_utilisateur_id', 'code'); 
+        return $this->hasMany(User::class, 'groupe_utilisateur_id', 'code');
     }
 }

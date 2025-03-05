@@ -4,6 +4,8 @@ use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
 use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\WorkflowValidationController;
+use App\Models\Acteur;
+use App\Models\PersonnePhysique;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -52,4 +54,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::get('/bailleurs', [EtudeProjet::class, 'search']);
+Route::get('/get-representant-legal/{code_acteur}', function ($code_acteur) {
+    $representant = PersonnePhysique::where('code_acteur', $code_acteur)->first();
+    return response()->json($representant);
+});
+
+
 

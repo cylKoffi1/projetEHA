@@ -111,10 +111,10 @@
                                         <th>code</th>
                                         <th>Page</th>
                                         <th>+/-</th>
-                                        <th>Ajouter</th>
-                                        <th>Modifier</th>
-                                        <th>Supprimer</th>
-                                        <th>Consulter</th>
+                                        <th><input type="checkbox" id="checkAllAjouter" onclick="toggleAll('ajouter')"> Ajouter</th>
+                                        <th><input type="checkbox" id="checkAllModifier" onclick="toggleAll('modifier')"> Modifier</th>
+                                        <th><input type="checkbox" id="checkAllSupprimer" onclick="toggleAll('supprimer')"> Supprimer</th>
+                                        <th><input type="checkbox" id="checkAllConsulter" onclick="toggleAll('consulter')"> Consulter</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sousMenuTable_body">
@@ -155,11 +155,11 @@
                             {{-- <button type="reset" class="btn btn-light-secondary me-1 mb-1">
                                         Annuler
                                     </button> --}}
-                                    {{--@can("ajouter_ecran_" . $ecran->id)--}}
+                                    {{--@can("ajouter_ecran_" . $ecran->id) --}}
                             <button type="submit" id="soumettre_personnel" class="btn btn-primary me-1 mb-1">
                                 Enregistrer
                             </button>
-                            {{--@endcan--}}
+                            {{-- @endcan --}}
 
                         </div>
                     </div>
@@ -172,6 +172,28 @@
     </div>
 
 </section>
+<script>
+    function toggleAll(type) {
+        let checkboxes;
+        switch(type) {
+            case 'ajouter':
+                checkboxes = document.querySelectorAll('input[name="ajouter_rubrique_ecran"], input[name="ajouter_sous_menu_ecran"]');
+                break;
+            case 'modifier':
+                checkboxes = document.querySelectorAll('input[name="modifier_rubrique_ecran"], input[name="modifier_sous_menu_ecran"]');
+                break;
+            case 'supprimer':
+                checkboxes = document.querySelectorAll('input[name="supprimer_rubrique_ecran"], input[name="supprimer_sous_menu_ecran"]');
+                break;
+            case 'consulter':
+                checkboxes = document.querySelectorAll('input[name="consulter_rubrique"], input[name="consulter_sous_menu"], input[name="consulter_rubrique_ecran"], input[name="consulter_sous_menu_ecran"]');
+                break;
+        }
+
+        let masterCheckbox = document.getElementById('checkAll' + type.charAt(0).toUpperCase() + type.slice(1));
+        checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+    }
+</script>
 
 <script>
     function toggleSubMenu(btn, className) {
@@ -279,7 +301,7 @@
                 showPopup(data.message);
             })
             .catch(error => {
-                
+
             });
     });
 

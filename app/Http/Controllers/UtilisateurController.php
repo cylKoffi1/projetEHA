@@ -158,6 +158,15 @@ class UtilisateurController extends Controller
             Acteur::where('code_acteur', $request->acteur_id)
                 ->update(['is_user' => true]);
 
+            // 🔹 **ASSIGNATION AUTOMATIQUE DES ROLES**
+            if ($request->groupe_utilisateur_id) {
+                $groupe = GroupeUtilisateur::where('code', $request->groupe_utilisateur_id)->first();
+                if ($groupe) {
+                    // S'assurer que l'utilisateur n'a qu'un seul rôle
+                    $utilisateur->syncRoles([$groupe->libelle_groupe]);
+                }
+            }
+
             // Assigner les groupes projets (plusieurs groupes) avec contrôle
             if ($request->groupe_utilisateur_id) {
                 if ($request->groupe_utilisateur_id === 'ab') {
@@ -315,7 +324,14 @@ class UtilisateurController extends Controller
             }
 
             $utilisateur->update($updateData);
+            // 🔹 GESTION DES ROLES (Met à jour le rôle de l'utilisateur si modifié)
+            if ($request->groupe_utilisateur_id) {
+                $groupe = GroupeUtilisateur::where('code', $request->groupe_utilisateur_id)->first();
 
+                if ($groupe) {
+                    $utilisateur->syncRoles([$groupe->libelle_groupe]); // Remplace l'ancien rôle
+                }
+            }
             // ✅ Étape 4 : Mise à jour des groupes projets
             $paysSelectionne = session('pays_selectionne');
             $groupeSelectionne = session('projet_selectionne');

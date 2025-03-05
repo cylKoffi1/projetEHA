@@ -237,11 +237,11 @@
                                                     <div class="tab-pane fade show active" id="moeentreprise-general" role="tabpanel" aria-labelledby="moeentreprise-general-tab">
                                                         <div class="row">
                                                             <div class="col-md-6">
-                                                                <label>Code de l'Entreprise :</label>
+                                                                <label>Nom complet (Raison sociale) * :</label>
                                                                 <input type="text" name="codeEntMoe" class="form-control" placeholder="Nom de l'entreprise">
                                                             </div>
                                                             <div class="col-md-6">
-                                                                <label>Nom de l'Entreprise :</label>
+                                                                <label>Nom abrégé :</label>
                                                                 <input type="text" name="nomEntMoe" class="form-control" placeholder="Nom de l'entreprise">
                                                             </div>
                                                             <div class="col-md-4">
@@ -272,13 +272,17 @@
                                                     <!-- Tab 2: Informations Juridiques -->
                                                     <div class="tab-pane fade" id="moeentreprise-legal" role="tabpanel" aria-labelledby="moeentreprise-legal-tab">
                                                         <div class="row">
-                                                            <div class="col-md-6">
+                                                            <div class="col-md-4">
                                                                 <label>Numéro d’Immatriculation :</label>
                                                                 <input type="text" name="NumImmEntMoe" class="form-control" placeholder="Numéro RCCM">
                                                             </div>
-                                                            <div class="col-md-6">
+                                                            <div class="col-md-4">
                                                                 <label>Numéro d’Identification Fiscale (NIF) :</label>
                                                                 <input type="text" name="NIFEntMoe" class="form-control" placeholder="Numéro fiscal">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label>Registre du commerce (RCCM) :</label>
+                                                                <input type="text" class="form-control" name="RCCMEntMoe" placeholder="Numéro fiscal">
                                                             </div>
                                                             <div class="col-md-6 mt-2">
                                                                 <label>Capital Social :</label>

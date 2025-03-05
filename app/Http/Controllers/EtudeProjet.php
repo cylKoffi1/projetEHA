@@ -19,6 +19,7 @@ use App\Models\FormeJuridique;
 use App\Models\Genre;
 use App\Models\GroupeProjet;
 use App\Models\GroupeProjetPaysUser;
+use App\Models\GroupeUtilisateur;
 use App\Models\LocalitesPays;
 use App\Models\Ministere;
 use App\Models\MotDePasseUtilisateur;
@@ -56,7 +57,8 @@ class EtudeProjet extends Controller
             $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA', 1); // 1 pour Public
             $paysSelectionne = session('pays_selectionne');
             $groupeSelectionne = session('projet_selectionne');
-
+            $user = auth()->user();
+            $groupe = GroupeUtilisateur::where('code', $user->groupe_utilisateur_id)->first();
             $ecran = Ecran::find($request->input('ecran_id'));
             $natures = NatureTravaux::all();
             $GroupeProjets = GroupeProjet::all();
@@ -81,6 +83,7 @@ class EtudeProjet extends Controller
             $genres = Genre::all();
             $NaturesTravaux = NatureTravaux::all();
             $SituationMatrimoniales = SituationMatrimonial::all();
+
 
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
@@ -149,7 +152,7 @@ class EtudeProjet extends Controller
             // Vérification si le pays est bien défini
             $pays = Pays::where('alpha3', $paysSelectionne)->first();
             $code_pays = $pays ? $pays->id : null;
-
+            
             if ($code_pays) {
                 if (!empty($type_ouvrage)) {
                     // 🔹 Logique pour le Maître d'Œuvre

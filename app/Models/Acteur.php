@@ -24,7 +24,8 @@ class Acteur extends Model
         'updated_at',
         'is_active',
         'Photo',
-        'is_user'
+        'is_user',
+        'type_financement'
     ];
 
     public function pays()

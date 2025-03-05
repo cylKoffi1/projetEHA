@@ -11,14 +11,20 @@ use App\Models\Genre;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\Pays;
 use App\Models\PaysUser;
+use App\Models\PersonneMorale;
+use App\Models\PersonnePhysique;
 use App\Models\Pieceidentite;
+use App\Models\Possederpiece;
+use App\Models\Representants;
 use App\Models\SecteurActivite;
 use App\Models\SituationMatrimonial;
 use App\Models\TypeActeur;
 use App\Models\TypeFinancement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ActeurController extends Controller
 {
@@ -35,18 +41,14 @@ class ActeurController extends Controller
                 return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])
                     ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un pays avant de continuer.');
             }
+            $tousPays = Pays::whereNotIn('id',  [0, 300, 301, 302, 303, 304])->get();
 
 
             $pays = Pays::where('alpha3', $paysSelectionne)->first();
             $ecran = Ecran::find($request->input('ecran_id'));
             $groupe = auth()->user()->groupe_utilisateur_id;
 
-            $TypeActeurs = match ($groupe) {
-                'ab' => TypeActeur::where('cd_type_acteur', 'ogi')->get(),
-                'ad' => TypeActeur::where('cd_type_acteur', 'eta')->get(),
-                'ag' => TypeActeur::whereNotIn('cd_type_acteur', ['eta', 'ogi'])->get(),
-                default => TypeActeur::all(),
-            };
+            $TypeActeurs = TypeActeur::all();
             // Filtrer les acteurs selon le statut (activé ou désactivé)
             $filter = $request->input('filter'); // Récupérer le paramètre "filter" de la requête
             if ($filter === 'inactif') {
@@ -68,7 +70,16 @@ class ActeurController extends Controller
             $Pieceidentite = Pieceidentite::all();
             $formeJuridiques = FormeJuridique::all();
             $typeFinancements = TypeFinancement::all();
-            return view('parSpecifique.Acteur', compact('typeFinancements','formeJuridiques','Pieceidentite','genres','SituationMatrimoniales','SecteurActivites','ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
+
+            $acteurRepres = DB::table('acteur as a')
+            ->join('personne_physique as pp', 'pp.code_acteur', '=', 'a.code_acteur')
+            ->select('a.code_acteur', 'a.libelle_long', 'a.libelle_court', 'pp.telephone_mobile', 'pp.telephone_bureau', 'pp.email')
+            ->where('a.type_acteur', 'etp')
+            ->where('a.code_pays', $pays->id)
+            ->get();
+
+
+            return view('parSpecifique.Acteur', compact('acteurRepres','tousPays','typeFinancements','formeJuridiques','Pieceidentite','genres','SituationMatrimoniales','SecteurActivites','ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
         } catch (\Exception $e) {
             Log::error("Erreur lors de la récupération des acteurs : " . $e->getMessage());
             return redirect()->back()->withErrors('Une erreur est survenue lors du chargement des acteurs.');
@@ -83,36 +94,85 @@ class ActeurController extends Controller
     {
         try {
             // 🔍 **Validation stricte des données**
+        $validator = Validator::make($request->all(), [
+            // Validation pour les Acteurs
+            'libelle_long' => 'required|string|max:255',
+            'libelle_court' => 'nullable|string|max:255',
+            'type_acteur' => 'required|string',
+            'code_pays' => 'required|string|max:3',
+            'emailI' => 'nullable|email|max:255',
+            'emailRL' => 'nullable|email|max:255',
+            'telephone1RL' => 'nullable|string|max:20',
+            'telephoneBureau' => 'nullable|string|max:20',
+            'AdresseSiègeEntreprise' => 'nullable|string|max:255',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
 
-            // 🔹 **Création de l'acteur**
-            $acteur = new Acteur([
-                'libelle_long' => $request->libelle_long ?? $request->prenom,
-                'libelle_court' => $request->libelle_court ?? $request->nom,
-                'type_acteur' => $request->type_acteur,
-                'email' => $request->emailI ?? $request->emailRL,
-                'telephone' => $request->telephoneBureau ?? $request->telephone1RL,
-                'adresse' => $request->AdresseSiègeEntreprise ?? $request->adresseSiegeIndividu,
-                'code_pays' => $request->code_pays,
-                'is_user' => false,
-                'type_financement' => $request->type_financementtype_financement,
-            ]);
+            // Validation pour les Personnes Physiques
+            'nom' => 'required_if:type_personne,physique|string|max:255',
+            'prenom' => 'required_if:type_personne,physique|string|max:255',
+            'date_naissance' => 'required_if:type_personne,physique|date',
+            'nationalite' => 'nullable|string|max:255',
+            'CodePostalI' => 'nullable|string|max:10',
+            'AdressePostaleIndividu' => 'nullable|string|max:255',
+            'adresseSiegeIndividu' => 'nullable|string|max:255',
+            'telephoneBureauIndividu' => 'nullable|string|max:20',
+            'telephoneMobileIndividu' => 'nullable|string|max:20',
+            'numeroFiscal' => 'required_if:type_personne,physique|string|max:50|unique:personne_physique,num_fiscal',
+            'genre' => 'required_if:type_personne,physique|integer',
+            'situationMatrimoniale' => 'required_if:type_personne,physique|integer',
 
-            // 📌 **Gestion du stockage de l'image**
-            if ($request->hasFile('photo')) {
-                $acteur->photo = $request->file('photo')->store('Data/acteur', 'public');
-            }
+            // Validation pour les Personnes Morales
+            'date_creation' => 'required_if:type_personne,morale|date',
+            'FormeJuridique' => 'required_if:type_personne,morale|string|max:255',
+            'NumeroImmatriculation' => 'required_if:type_personne,morale|string|max:100',
+            'nif' => 'required_if:type_personne,morale|string|max:100',
+            'rccm' => 'required_if:type_personne,morale|string|max:100',
+            'CapitalSocial' => 'required_if:type_personne,morale|numeric',
+            'Numéroagrement' => 'nullable|string|max:100',
+            'CodePostaleEntreprise' => 'nullable|string|max:10',
+            'AdressePostaleEntreprise' => 'nullable|string|max:255',
 
-            $acteur->save();
+            // Validation pour les représentants et contacts
+            'nomRL' => 'nullable|array',
+            'nomRL.*' => 'exists:acteur,code_acteur',
+            'nomPC' => 'nullable|array',
+            'nomPC.*' => 'exists:acteur,code_acteur',
 
+            // Validation pour la pièce d'identité
+            'piece_identite' => 'nullable|integer|exists:pieces_identites,id',
+            'numeroPiece' => 'nullable|string|max:50',
+            'dateEtablissement' => 'nullable|date',
+            'dateExpiration' => 'nullable|date|after_or_equal:dateEtablissement',
+        ]);
+
+        // 🔹 Vérification des erreurs de validation
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
             // 🔹 **Gestion des Personnes Physiques**
             if ($request->type_personne == "physique") {
+                $acteur = new Acteur([
+                    'libelle_long' => $request->libelle_long ,
+                    'libelle_court' => $request->libelle_court ,
+                    'type_acteur' => $request->type_acteur,
+                    'email' => $request->emailI,
+                    'telephone' => $request->telephoneBureau,
+                    'adresse' => $request->AdresseSiègeEntreprise,
+                    'code_pays' => $request->code_pays,
+                    'is_user' => false,
+                    'type_financement' => $request->type_financement,
+                ]);
+                $acteur->save();
+                if ($request->hasFile('photo')) {
+                    $acteur->photo = $request->file('photo')->store('Data/acteur', 'public');
+                }
+
                 $personne = PersonnePhysique::create([
                     'code_acteur' => $acteur->code_acteur,
                     'nom' => $request->nom,
                     'prenom' => $request->prenom,
                     'date_naissance' => $request->date_naissance,
                     'nationalite' => $request->nationalite,
-                    'secteur_activite' => $request->SecteurActiviteIndividu,
                     'email' => $request->emailI,
                     'code_postal' => $request->CodePostalI,
                     'adresse_postale' => $request->AdressePostaleIndividu,
@@ -133,17 +193,33 @@ class ActeurController extends Controller
                         'NumPieceIdent' => $request->numeroPiece,
                         'DateEtablissement' => $request->dateEtablissement,
                         'DateExpiration' => $request->dateExpiration,
+                        'DateEtablissement' => $request->dateEtablissement
                     ]);
                 }
             }
 
             // 🔹 **Gestion des Personnes Morales**
             elseif ($request->type_personne == "morale") {
+                $acteur = new Acteur([
+                    'libelle_long' => $request->libelle_long ,
+                    'libelle_court' => $request->libelle_court,
+                    'type_acteur' => $request->type_acteur,
+                    'email' =>  $request->emailRL,
+                    'telephone' =>  $request->telephone1RL,
+                    'adresse' => $request->adresseSiegeIndividu,
+                    'code_pays' => $request->code_pays,
+                    'is_user' => false,
+                    'type_financement' => $request->type_financement,
+                ]);
+                $acteur->save();
+                if ($request->hasFile('photo')) {
+                    $acteur->photo = $request->file('photo')->store('Data/acteur', 'public');
+                }
+
                 $entreprise = PersonneMorale::create([
                     'code_acteur' => $acteur->code_acteur,
                     'raison_sociale' => $request->libelle_long,
                     'date_creation' => $request->date_creation,
-                    'secteur_activite' => $request->SecteurActiviteEntreprise,
                     'forme_juridique' => $request->FormeJuridique,
                     'num_immatriculation' => $request->NumeroImmatriculation,
                     'nif' => $request->nif,
@@ -156,41 +232,25 @@ class ActeurController extends Controller
                 ]);
 
                 // 📌 **Enregistrement du représentant légal**
-                if ($request->nomRL && $request->emailRL) {
-                    $representantRL = Acteur::create([
-                        'libelle_long' => $request->nomRL,
-                        'email' => $request->emailRL,
-                        'telephone' => $request->telephone1RL ?? $request->telephone2RL,
-                        'code_pays' => $request->code_pays,
-                        'type_financement' => $request->type_financement,
-                        'type_acteur' => 'Représentant Légal',
-                        'is_user' => false
-                    ]);
-
-                    Representants::create([
-                        'entreprise_id' => $entreprise->id,
-                        'representant_id' => $representantRL->code_acteur,
-                        'role' => 'Représentant Légal',
-                    ]);
+                if ($request->nomRL) {
+                    foreach ($request->nomRL as $representantId) {
+                        Representants::create([
+                            'entreprise_id' => $entreprise->id,
+                            'representant_id' => $representantId,
+                            'role' => 'Représentant Légal',
+                        ]);
+                    }
                 }
 
-                // 📌 **Enregistrement de la personne de contact**
-                if ($request->nomPC && $request->emailPC) {
-                    $personneContact = Acteur::create([
-                        'libelle_long' => $request->nomPC,
-                        'email' => $request->emailPC,
-                        'telephone' => $request->telephone1PC ?? $request->telephone2PC,
-                        'code_pays' => $request->code_pays,
-                        'type_financement' => $request->type_financement,
-                        'type_acteur' => 'Personne de Contact',
-                        'is_user' => false
-                    ]);
-
-                    Representants::create([
-                        'entreprise_id' => $entreprise->id,
-                        'representant_id' => $personneContact->code_acteur,
-                        'role' => 'Personne de Contact',
-                    ]);
+                // 📌 **Enregistrement des personnes de contact**
+                if ($request->nomPC) {
+                    foreach ($request->nomPC as $contactId) {
+                        Representants::create([
+                            'entreprise_id' => $entreprise->id,
+                            'representant_id' => $contactId,
+                            'role' => 'Personne de Contact',
+                        ]);
+                    }
                 }
             }
 

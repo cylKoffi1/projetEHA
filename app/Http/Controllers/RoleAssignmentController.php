@@ -55,7 +55,7 @@ class RoleAssignmentController extends Controller
         $role = GroupeUtilisateur::where('code', $role_id)->firstOrFail();
         LOG::info('Role: ' . $role);
         $users = $role->users;
-        
+
         // Supprimer les associations non cochées
         RoleHasRubrique::where('role_id', $role_id)
             ->whereNotIn('rubrique_id', $consulterRubrique)
@@ -65,7 +65,7 @@ class RoleAssignmentController extends Controller
             // Vérifier si une association existe déjà pour ce rôle et cette rubrique
             $existingAssociation = RoleHasRubrique::where('role_id', $role_id)
                 ->where('rubrique_id', $id)
-                ->first();
+                ->get();
 
             // Si aucune association n'existe, créez-en une nouvelle
             if (!$existingAssociation) {

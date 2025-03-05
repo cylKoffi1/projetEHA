@@ -7,6 +7,8 @@
     <title>BTP-Project</title>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ asset('assets/compiled/js/lookup-select.js') }}" defer></script>
+    <script src="{{ asset('assets/compiled/js/lookup-multiselect.js') }}" defer></script>
 
     <script src="{{ asset('assets/static/js/helper/isDesktop.js') }}"></script>
     <script src="{{ asset('assets/static/js/components/sidebar.js') }}"></script>

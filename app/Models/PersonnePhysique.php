@@ -14,7 +14,7 @@ class PersonnePhysique extends Model
 
     protected $fillable = [
         'code_acteur', 'nom', 'prenom', 'date_naissance', 'nationalite',
-        'secteur_activite', 'email', 'code_postal', 'adresse_postale', 'adresse_siege',
+        'email', 'code_postal', 'adresse_postale', 'adresse_siege',
         'telephone_bureau', 'telephone_mobile', 'date_validite',
         'num_fiscal', 'genre_id', 'situation_matrimoniale_id', 'is_active'
     ];
