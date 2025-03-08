@@ -36,7 +36,7 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         'two_factor_confirmed_at',
         'is_active',
         'email',
-
+        'must_change_password'
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $guard_name = 'web';

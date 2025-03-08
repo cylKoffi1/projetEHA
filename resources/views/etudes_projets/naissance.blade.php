@@ -1118,57 +1118,136 @@
 
                             <!-- 🟠 Étape  : Localisation -->
                             <div class="step" id="step-5">
-                                <h5 class="text-secondary">🌍 Localisation</h5>
+                                <ul class="nav nav-tabs" id="localisationTab" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="localisation-tab" data-bs-toggle="tab" data-bs-target="#localisation" type="button" role="tab">🌍 Localisation</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="infrastructures-tab" data-bs-toggle="tab" data-bs-target="#infrastructures" type="button" role="tab">🏗️ Infrastructures</button>
+                                    </li>
+                                </ul>
 
-                                    <div class="row">
-                                        <div class="col-4">
-                                            <label>Pays *</label>
+                                <div class="tab-content mt-3" id="tabContent">
+                                    <!-- Localisation Tab -->
+                                    <div class="tab-pane fade show active" id="localisation" role="tabpanel">
+                                        <h5 class="text-secondary">🌍 Localisation</h5>
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <label>Pays *</label>
                                                 @foreach ($Pays as $alpha3 => $nom_fr_fr)
-                                                <input type="text" value="{{ $nom_fr_fr }}" id="paysSelect1" class="form-control" readonly>
-                                                <input type="hidden" value="{{ $alpha3 }}" id="paysSelect" class="form-control" readonly>
-                                            @endforeach
+                                                    <input type="text" value="{{ $nom_fr_fr }}" id="paysSelect1" class="form-control" readonly>
+                                                    <input type="hidden" value="{{ $alpha3 }}" id="paysSelect" class="form-control" readonly>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label id="niveau1Label">Localité *</label>
+                                                <select class="form-control" id="niveau1Select">
+                                                    <option value="">Sélectionnez un niveau</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label id="niveau2Label">Niveau </label>
+                                                <select class="form-control" id="niveau2Select" disabled>
+                                                    <option value="">Sélectionnez un niveau</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label id="niveau3Label">Découpage</label>
+                                                <select class="form-control" id="niveau3Select" disabled>
+                                                    <option value="">Sélectionnez un niveau</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2 text-end">
+                                                <button type="button" class="btn btn-secondary" id="addLocaliteBtn">Ajouter</button>
+                                            </div>
+                                        </div> <br>
+                                        <div class="row">
+                                            <div class="col">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Localité</th>
+                                                            <th>Niveau</th>
+                                                            <th>Découpage</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tableLocalites">
+                                                        <!-- Dynamically added rows -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <label id="niveau1Label">localité *</label>
-                                            <select class="form-control" id="niveau1Select" >
-                                                <option value="">Sélectionnez un niveau</option>
-                                            </select>
+
+                                    <!-- Infrastructures Tab -->
+                                    <div class="tab-pane fade" id="infrastructures" role="tabpanel">
+                                        <h5 class="text-secondary">🏗️ Infrastructures</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label>Type d'Infrastructure *</label>
+                                                <select class="form-control" id="infrastructureType">
+                                                    <option value="">Sélectionnez un type</option>
+
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Type caractéristique *</label>
+                                                <select name="typeCaracteristique" id="typeCaracteristique">
+                                                    <option value=""></option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label >Caractéristique *</label>
+                                                <Select name="Caracteristique" id="Caracteristique">
+                                                    <option value=""></option>
+
+                                                </Select>
+                                            </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <label id="niveau2Label">Niveau </label>
-                                            <select class="form-control" id="niveau2Select" disabled>
-                                                <option value="">Sélectionnez un niveau</option>
-                                            </select>
+                                        <br>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label>Localisation *</label>
+                                                <input type="text" class="form-control" id="infrastructureLocation" placeholder="Entrez la localisation">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Statut *</label>
+                                                <select class="form-control" id="infrastructureStatus">
+                                                    <option value="">Sélectionnez un statut</option>
+                                                    <option value="actif">Actif</option>
+                                                    <option value="inactif">Inactif</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <label id="niveau3Label">Découpage</label>
-                                            <select class="form-control" id="niveau3Select" disabled>
-                                                <option value="">Sélectionnez un niveau</option>
-                                            </select>
+                                        <br>
+                                        <div class="text-end">
+                                            <button type="button" class="btn btn-secondary" id="addInfrastructureBtn">Ajouter</button>
                                         </div>
-                                        <div class="col-md-2 text-end">
-                                            <button type="button" class="btn btn-secondary" id="addLocliteBtn">Ajouter</button>
+                                        <br>
+                                        <div class="row">
+                                            <div class="col">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Type</th>
+                                                            <th>Nom</th>
+                                                            <th>Localisation</th>
+                                                            <th>Statut</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tableInfrastructures">
+                                                        <!-- Dynamically added rows -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
-                                    </div> <br>
-                                    <div class="row">
-                                        <div class="col"> <br> <br>
-                                            <table class="table table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Localité</th>
-                                                        <th>Niveau</th>
-                                                        <th>Découpage</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="tableLocalites">
-                                                    <!-- Les lignes seront ajoutées ici dynamiquement -->
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                    </div>
                                 </div>
+
 
 
                                 <div class="row mt-3">

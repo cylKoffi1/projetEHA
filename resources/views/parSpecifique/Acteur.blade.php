@@ -196,7 +196,7 @@
                                     <div class="row">
                                         <div class="col-md-4">
                                             <label>Numéro d’Immatriculation *:</label>
-                                            <input type="text" class="form-control" name="NumeroImmatriculation" placeholder="Numéro RCCM">
+                                            <input type="text" class="form-control" name="NumeroImmatriculation" placeholder="Numéro d'immatriculation">
                                         </div>
                                         <div class="col-md-4">
                                             <label>Numéro d’Identification Fiscale (NIF) :</label>

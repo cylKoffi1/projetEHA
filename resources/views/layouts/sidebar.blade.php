@@ -60,13 +60,15 @@
             margin-left: 230px;
         }
     }
-
+    .nav-second-level .collapse .show{
+        background-color: #435EBE !important;
+    }
     .show {
-        background-color: white;
+        background-color: white !important;
         display: flex;
         flex-direction: column;
         justify-content: space-around;
-        color: white;
+        color: white !important;
     }
 
     .show li {
@@ -99,12 +101,18 @@
         padding-right: 15px;
     }
 
+    @media (min-width: 1200px) {
+
+        .sidebar-toggle {
+            display: none;
+        }
+    }
 </style>
 
 
 <div id="sidebar">
-    <div class="sidebar-wrapper active" style="margin-top: 90px;">
-        <ul class="navbar-nav mr-auto sidenav" id="navAccordion">
+    <div class="sidebar-wrapper active" style="margin-top: 90px;" id="sidebar">
+        <ul class="navbar-nav mr-auto sidenav" id="navAccordion" style="width: 100%;">
             @php
                 $userPermissions = auth()->user()->groupeUtilisateur->permissions->pluck('name');
             @endphp
@@ -172,6 +180,11 @@
 
     function logout(formId) {
         document.getElementById(formId).submit();
+    }
+</script>
+<script>
+    function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("active");
     }
 </script>
 @endif

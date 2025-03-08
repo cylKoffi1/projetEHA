@@ -54,7 +54,7 @@ use PasswordResetController as GlobalPasswordResetController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-Route::get('/', function () {
+Route::get('/', function () {   
     $ecran = Ecran::find(29);
     $ecrans = Ecran::all();
     return view('index', compact('ecran','ecrans'));

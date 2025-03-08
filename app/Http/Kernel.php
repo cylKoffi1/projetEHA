@@ -25,6 +25,8 @@ class Kernel extends HttpKernel
 
     protected $routeMiddleware = [
         'ensure.step' => \App\Http\Middleware\EnsureStepCompleted::class,
+
+        'force.password.change' => \App\Http\Middleware\ForcePasswordChange::class,
     ];
 
     /**

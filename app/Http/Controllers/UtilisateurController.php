@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Mail\UserCreatedMail;
+use Illuminate\Support\Facades\Mail;
 
 use App\Models\Utilisateur;
 use App\Models\Acteur;
@@ -24,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class UtilisateurController extends Controller
 {
@@ -152,7 +155,8 @@ class UtilisateurController extends Controller
                 'login' => $login,
                 'password' => $password,
                 'email' => $request->email,
-                'is_active' => true, // Par défaut actif
+                'is_active' => true,
+                'must_change_password' => true,  // Par défaut actif
             ]);
 
             Acteur::where('code_acteur', $request->acteur_id)
@@ -238,6 +242,11 @@ class UtilisateurController extends Controller
                 }
             }
 
+
+
+            Mail::to($utilisateur->email)->send(new UserCreatedMail($utilisateur, '123456789'));
+
+
             Log::info('Utilisateur enregistré avec succès.', ['utilisateur_id' => $utilisateur->id]);
             return redirect()->back()->with('success', 'Utilisateur enregistré avec succès.');
         } catch (\Exception $e) {
@@ -270,7 +279,7 @@ class UtilisateurController extends Controller
             Log::info("Tentative de modification de l'utilisateur ID {$id}.", ['data' => $request->all()]);
 
             // ✅ Étape 1 : Validation des données
-            $validator = \Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), [
                 'acteur_id_Modifier' => 'required|exists:acteur,code_acteur',
                 'groupe_utilisateur_id' => 'required|exists:groupe_utilisateur,code',
                 'fonction_utilisateur' => 'nullable|string|max:255',

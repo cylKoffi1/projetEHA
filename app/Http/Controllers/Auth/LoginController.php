@@ -36,44 +36,45 @@ class LoginController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            Log::info('Connexion réussie.', ['user_id' => $user->acteur_id]);
+        if (!Auth::attempt($credentials)) {
+            Log::error('Échec de la connexion.', ['email' => $request->email]);
+            return response()->json(['error' => 'Identifiants incorrects.'], 401);
+        }
 
-            if (!$user->is_active) {
-                Log::warning('Compte désactivé.', ['user_id' => $user->acteur_id]);
-                Auth::logout();
-                return response()->json(['error' => 'Votre compte est désactivé.'], 403);
-                }
+        $user = Auth::user();
+        Log::info('Connexion réussie.', ['user_id' => $user->acteur_id]);
 
-            // Récupérer les pays associés à l'utilisateur
-            $pays = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
+        if (!$user->is_active) {
+            Log::warning('Compte désactivé.', ['user_id' => $user->acteur_id]);
+            Auth::logout();
+            return response()->json(['error' => 'Votre compte est désactivé.'], 403);
+        }
+
+        // Récupérer les pays associés à l'utilisateur
+        $pays = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
             ->join('pays', 'groupe_projet_pays_user.pays_code', '=', 'pays.alpha3')
             ->distinct()
             ->get(['pays.alpha3', 'pays.nom_fr_fr']);
 
-            Log::info('Pays associés récupérés.', ['count' => $pays->count()]);
-
-            if ($pays->count() >= 1) {
-                Log::info('Utilisateur associé à plusieurs pays.', ['user_id' => $user->acteur_id]);
-                session(['step' => 'choose_country']);
-                return response()->json(['step' => 'choose_country', 'data' => $pays]);
-            }
-
-            if ($pays->count() === 1) {
-                session(['pays_selectionne' => $pays->first()]);
-                Log::info('Utilisateur associé à un seul pays.', ['pays_code' => $pays->first()]);
-
-                return $this->handleGroupSelection($user, $pays->first());
-            }
-
+        if ($pays->isEmpty()) {
             Log::error('Aucun pays associé à l\'utilisateur.', ['user_id' => $user->acteur_id]);
             Auth::logout();
             return response()->json(['error' => 'Vous n\'êtes associé à aucun pays.'], 403);
         }
 
-        Log::error('Échec de la connexion.', ['email' => $request->email]);
-        return response()->json(['error' => 'Identifiants incorrects.'], 401);
+        // Si l'utilisateur a un seul pays
+        if ($pays->count() === 1) {
+            $paysSelectionne = $pays->first();
+            session(['pays_selectionne' => $paysSelectionne->alpha3]);
+            Log::info('Utilisateur associé à un seul pays.', ['pays_code' => $paysSelectionne->alpha3]);
+
+            return $this->handleGroupSelection($user, $paysSelectionne->alpha3);
+        }
+
+        // Si l'utilisateur a plusieurs pays, il doit en choisir un
+        Log::info('Utilisateur associé à plusieurs pays.', ['user_id' => $user->acteur_id]);
+        session(['step' => 'choose_country']);
+        return response()->json(['step' => 'choose_country', 'data' => $pays]);
     }
 
     /**
@@ -85,24 +86,25 @@ class LoginController extends Controller
             ->where('pays_code', $paysCode)
             ->with('groupeProjet')
             ->get();
-            Log::info('Groupes projets récupérés :', $groupes->toArray());
-        Log::info('Projets récupérés après sélection du pays.', ['count' => $groupes->count()]);
 
-        if ($groupes->count() >= 1) {
-            session(['step' => 'choose_group']);
-            return response()->json(['step' => 'choose_group', 'data' => $groupes]);
-        }
-
-        if ($groupes->count() === 0) {
-            Log::warning('Aucun groupe projet disponible pour l\'utilisateur dans ce pays.', ['pays_code' => $paysCode]);
+        if ($groupes->isEmpty()) {
+            Log::warning('Aucun groupe projet disponible pour l\'utilisateur.', ['pays_code' => $paysCode]);
             Auth::logout();
             return response()->json(['error' => 'Vous n\'êtes associé à aucun groupe projet dans ce pays.'], 403);
         }
 
-        session(['projet_selectionne' => $groupes->first()->groupe_projet_id]);
+        // Si l'utilisateur n'a qu'un seul groupe projet, on le sélectionne automatiquement
+        if ($groupes->count() === 1) {
+            session(['projet_selectionne' => $groupes->first()->groupe_projet_id]);
+            session(['step' => 'finalize']);
+            Log::info('Utilisateur associé à un seul groupe projet.', ['projet_id' => $groupes->first()->groupe_projet_id]);
 
-        session(['step' => 'finalize']);
-        return response()->json(['step' => 'finalize']);
+            return response()->json(['step' => 'finalize']);
+        }
+
+        // Sinon, demander à l'utilisateur de choisir son groupe
+        session(['step' => 'choose_group']);
+        return response()->json(['step' => 'choose_group', 'data' => $groupes]);
     }
 
     /**
@@ -111,17 +113,13 @@ class LoginController extends Controller
     public function selectCountry(Request $request)
     {
         if (!Auth::check()) {
-            Log::error('Utilisateur non authentifié lors de la sélection du pays.');
             return response()->json(['error' => 'Votre session a expiré. Veuillez vous reconnecter.'], 401);
         }
 
         $request->validate(['pays_code' => 'required|string']);
-
         session(['pays_selectionne' => $request->pays_code]);
-        Log::info('Pays sélectionné.', ['pays_code' => $request->pays_code]);
 
-        $user = Auth::user();
-        return $this->handleGroupSelection($user, $request->pays_code);
+        return $this->handleGroupSelection(Auth::user(), $request->pays_code);
     }
 
     /**
@@ -130,15 +128,12 @@ class LoginController extends Controller
     public function selectGroup(Request $request)
     {
         if (!Auth::check()) {
-            Log::error('Utilisateur non authentifié lors de la sélection du groupe projet.');
             return response()->json(['error' => 'Votre session a expiré. Veuillez vous reconnecter.'], 401);
         }
 
         $request->validate(['projet_id' => 'required|exists:groupe_projet_pays_user,groupe_projet_id']);
-
         session(['projet_selectionne' => $request->projet_id]);
         session(['step' => 'finalize']);
-        Log::info('Groupe projet sélectionné.', ['projet_id' => $request->projet_id]);
 
         return response()->json(['step' => 'finalize']);
     }
@@ -146,36 +141,14 @@ class LoginController extends Controller
     /**
      * Finalise la connexion.
      */
-    public function finalizeLogin(Request $request)
+    public function finalizeLogin()
     {
         if (session('step') !== 'finalize') {
-            Log::warning('Tentative d\'accès non autorisée à la page admin.');
             return redirect()->route('login')->with('error', 'Veuillez compléter toutes les étapes.');
         }
 
-        Log::info('Connexion finalisée. Redirection vers la page admin.');
         session()->forget('step');
         return redirect()->intended('admin')->with('success', 'Connexion réussie.');
-    }
-
-    /**
-     * Affiche la page d'administration.
-     */
-    public function adminDashboard(Request $request)
-    {
-        if (!Auth::check() || session('step') !== 'finalize') {
-            Log::warning('Accès non autorisé à la page admin. Redirection vers la page de connexion.');
-            return redirect()->route('pays',['ecran' => $request->input('ecran_id')])->with('error', 'Accès interdit. Veuillez vous reconnecter.');
-        }
-
-        Log::info('Affichage de la page admin.');
-        $pays = Pays::all();
-        return view('layouts.header', [
-            'ecran' => $request->input('ecran_id'),
-            'pays_selectionne' => session('pays_selectionne'),
-            'projet_selectionne' => session('projet_selectionne'),
-            'pays'=> $pays
-        ]);
     }
 
     /**
@@ -183,47 +156,78 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
-        Log::info('Déconnexion de l\'utilisateur.', ['user_id' => Auth::id()]);
-
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        Log::info('Déconnexion réussie.');
         return redirect()->route('login');
     }
+
+
+
     /**
-     *
-     *
-     **/
+     * Page pour changer de groupe projet et de pays .
+     */
+    /**
+     * Récupère les groupes projets associés à un pays donné pour l'utilisateur connecté.
+     */
+    public function getGroupsByCountry(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Votre session a expiré. Veuillez vous reconnecter.'], 401);
+        }
 
-     public function getGroupsByCountry(Request $request)
-     {
-         $request->validate(['pays_code' => 'required|string']);
+        $request->validate(['pays_code' => 'required|string']);
 
-         $user = Auth::user();
-         $groupes = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
-             ->where('pays_code', $request->pays_code)
-             ->with('groupeProjet')
-             ->get();
+        $user = Auth::user();
+        $groupes = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
+            ->where('pays_code', $request->pays_code)
+            ->with('groupeProjet')
+            ->get();
 
-         return response()->json($groupes);
-     }
+        if ($groupes->isEmpty()) {
+            return response()->json(['error' => 'Aucun groupe projet trouvé pour ce pays.'], 404);
+        }
 
-     public function changeGroup(Request $request)
-     {
-         $request->validate([
-             'pays_code' => 'required|string',
-             'projet_id' => 'required|exists:groupe_projet_pays_user,groupe_projet_id'
-         ]);
+        return response()->json($groupes);
+    }
+    /**
+     * Change le pays et le groupe projet sélectionné par l'utilisateur.
+     */
+    public function changeGroup(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Votre session a expiré. Veuillez vous reconnecter.'], 401);
+        }
 
-         session([
-             'pays_selectionne' => $request->pays_code,
-             'projet_selectionne' => $request->projet_id
-         ]);
+        $request->validate([
+            'pays_code' => 'required|string',
+            'projet_id' => 'required|exists:groupe_projet_pays_user,groupe_projet_id'
+        ]);
 
-         return response()->json(['success' => true]);
-     }
+        // Vérifier si l'utilisateur est bien associé au pays et au groupe projet
+        $user = Auth::user();
+        $exists = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
+            ->where('pays_code', $request->pays_code)
+            ->where('groupe_projet_id', $request->projet_id)
+            ->exists();
 
+        if (!$exists) {
+            return response()->json(['error' => 'Vous n\'êtes pas autorisé à rejoindre ce groupe projet.'], 403);
+        }
 
+        // Mettre à jour la session avec le nouveau pays et groupe projet
+        session([
+            'pays_selectionne' => $request->pays_code,
+            'projet_selectionne' => $request->projet_id
+        ]);
+
+        Log::info('Changement du pays et groupe projet', [
+            'user_id' => $user->acteur_id,
+            'pays_code' => $request->pays_code,
+            'projet_id' => $request->projet_id
+        ]);
+
+        return response()->json(['success' => true]);
+    }
 }

@@ -173,7 +173,7 @@
 
                                     <hr class="mt-4">
                                     <button type="submit" id="verify-login" class="btn btn-primary  w-100"  style="float: right;">Suivant</button><br>
-                                    <div class="text-end">
+                                    <div>
                                         <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>
                                     </div><br>
                                 </div>

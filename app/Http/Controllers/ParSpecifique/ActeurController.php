@@ -24,7 +24,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class ActeurController extends Controller
 {
@@ -93,72 +92,17 @@ class ActeurController extends Controller
     public function store(Request $request)
     {
         try {
-            // 🔍 **Validation stricte des données**
-        $validator = Validator::make($request->all(), [
-            // Validation pour les Acteurs
-            'libelle_long' => 'required|string|max:255',
-            'libelle_court' => 'nullable|string|max:255',
-            'type_acteur' => 'required|string',
-            'code_pays' => 'required|string|max:3',
-            'emailI' => 'nullable|email|max:255',
-            'emailRL' => 'nullable|email|max:255',
-            'telephone1RL' => 'nullable|string|max:20',
-            'telephoneBureau' => 'nullable|string|max:20',
-            'AdresseSiègeEntreprise' => 'nullable|string|max:255',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
 
-            // Validation pour les Personnes Physiques
-            'nom' => 'required_if:type_personne,physique|string|max:255',
-            'prenom' => 'required_if:type_personne,physique|string|max:255',
-            'date_naissance' => 'required_if:type_personne,physique|date',
-            'nationalite' => 'nullable|string|max:255',
-            'CodePostalI' => 'nullable|string|max:10',
-            'AdressePostaleIndividu' => 'nullable|string|max:255',
-            'adresseSiegeIndividu' => 'nullable|string|max:255',
-            'telephoneBureauIndividu' => 'nullable|string|max:20',
-            'telephoneMobileIndividu' => 'nullable|string|max:20',
-            'numeroFiscal' => 'required_if:type_personne,physique|string|max:50|unique:personne_physique,num_fiscal',
-            'genre' => 'required_if:type_personne,physique|integer',
-            'situationMatrimoniale' => 'required_if:type_personne,physique|integer',
-
-            // Validation pour les Personnes Morales
-            'date_creation' => 'required_if:type_personne,morale|date',
-            'FormeJuridique' => 'required_if:type_personne,morale|string|max:255',
-            'NumeroImmatriculation' => 'required_if:type_personne,morale|string|max:100',
-            'nif' => 'required_if:type_personne,morale|string|max:100',
-            'rccm' => 'required_if:type_personne,morale|string|max:100',
-            'CapitalSocial' => 'required_if:type_personne,morale|numeric',
-            'Numéroagrement' => 'nullable|string|max:100',
-            'CodePostaleEntreprise' => 'nullable|string|max:10',
-            'AdressePostaleEntreprise' => 'nullable|string|max:255',
-
-            // Validation pour les représentants et contacts
-            'nomRL' => 'nullable|array',
-            'nomRL.*' => 'exists:acteur,code_acteur',
-            'nomPC' => 'nullable|array',
-            'nomPC.*' => 'exists:acteur,code_acteur',
-
-            // Validation pour la pièce d'identité
-            'piece_identite' => 'nullable|integer|exists:pieces_identites,id',
-            'numeroPiece' => 'nullable|string|max:50',
-            'dateEtablissement' => 'nullable|date',
-            'dateExpiration' => 'nullable|date|after_or_equal:dateEtablissement',
-        ]);
-
-        // 🔹 Vérification des erreurs de validation
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
             // 🔹 **Gestion des Personnes Physiques**
             if ($request->type_personne == "physique") {
                 $acteur = new Acteur([
-                    'libelle_long' => $request->libelle_long ,
-                    'libelle_court' => $request->libelle_court ,
+                    'libelle_long' => $request->nom ,
+                    'libelle_court' => $request->prenom ,
                     'type_acteur' => $request->type_acteur,
                     'email' => $request->emailI,
-                    'telephone' => $request->telephoneBureau,
+                    'telephone' => $request->telephoneBureauIndividu,
                     'adresse' => $request->AdresseSiègeEntreprise,
-                    'code_pays' => $request->code_pays,
+                    'code_pays' => Pays::where('alpha3', $request->code_pays)->first()->id,
                     'is_user' => false,
                     'type_financement' => $request->type_financement,
                 ]);
@@ -172,7 +116,7 @@ class ActeurController extends Controller
                     'nom' => $request->nom,
                     'prenom' => $request->prenom,
                     'date_naissance' => $request->date_naissance,
-                    'nationalite' => $request->nationalite,
+                    'nationalite' => $request->nationnalite,
                     'email' => $request->emailI,
                     'code_postal' => $request->CodePostalI,
                     'adresse_postale' => $request->AdressePostaleIndividu,
