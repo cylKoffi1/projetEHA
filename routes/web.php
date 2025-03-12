@@ -44,6 +44,15 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Ui\Presets\React;
 use PasswordResetController as GlobalPasswordResetController;
 
+
+use Illuminate\Support\Facades\Session;
+Session::start();
+
+Route::get('/test-session', function () {
+    session(['projet_selectionne' => 'test_projet']);
+    return response()->json(session()->all());
+});
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -66,7 +75,7 @@ Route::get('/admin/modele', function () {
 });
 
 // Exemple de route protégée (accessible uniquement aux utilisateurs authentifiés)
-Route::middleware(['auth', 'auth.session'])->group(function () {
+Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('admin', [AdminController::class, 'index'])->name('projets.index');
     Route::get('/projets-data', [AdminController::class, 'getProjetData']);
     Route::get('/admin/initSidebar', [AdminController::class, 'initSidebar']);

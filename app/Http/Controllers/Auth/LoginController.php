@@ -235,4 +235,16 @@ class LoginController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function groupeProjetSelectionne()
+    {
+        // Vérifiez si l'utilisateur est authentifié
+        if (!auth()->check() || !session('projet_selectionne')) {
+            // Redirigez vers la page de connexion
+            return redirect()->route('login');
+        }
+
+        // Logique pour afficher la vue
+        return view('auth.connexion');
+    }
 }
