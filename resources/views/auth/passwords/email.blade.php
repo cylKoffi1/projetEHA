@@ -1,6 +1,7 @@
 <!doctype html>
 <html class="no-js" lang="en">
 
+@include('layouts.menu')
 <head>
     <!-- meta data -->
     <meta charset="utf-8">
@@ -162,7 +163,6 @@ label {
                 {{ session('error') }}
             </div>
         @endif
-        @include('layouts.menu')
         <section class="d-flex align-items-center justify-content-center" >
             <div class="container"  style="max-width: 500px;">
                 <div class="row justify-content-center">

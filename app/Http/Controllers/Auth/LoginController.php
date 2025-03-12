@@ -163,7 +163,12 @@ class LoginController extends Controller
         return redirect()->route('login');
     }
 
-
+    public function showResetForm(Request $request, $token = null)
+    {
+        return view('users.reset-password')->with(
+            ['token' => $token, 'email' => $request->email]
+        );
+    }
 
     /**
      * Page pour changer de groupe projet et de pays .

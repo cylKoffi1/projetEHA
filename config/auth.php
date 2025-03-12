@@ -98,8 +98,8 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => 'password_reset_tokens',
-            'expire' => 60,
-            'throttle' => 60,
+            'expire' => 15,
+            'throttle' => 5,
         ],
         'mot_de_passe_utilisateur' => [
             'provider' => 'mot_de_passe_utilisateur',

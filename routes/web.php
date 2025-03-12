@@ -54,7 +54,7 @@ use PasswordResetController as GlobalPasswordResetController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-Route::get('/', function () {   
+Route::get('/', function () {
     $ecran = Ecran::find(29);
     $ecrans = Ecran::all();
     return view('index', compact('ecran','ecrans'));
@@ -641,10 +641,10 @@ Route::get('/test', [AdminController::class, 'test']);
 Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
 Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
+Route::post('password/reset', [ResetPasswordController::class, 'resetPassword'])->name('password.update');
 
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
+
 Route::get('/etat/pdf', [EtatController::class, 'generatePDF'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 

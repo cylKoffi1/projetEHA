@@ -26,7 +26,8 @@
         }
 
         .welcome-hero-txt {
-            position: relative;
+            top: 50%; /* Ajustez cette valeur selon vos besoins */
+            left: 50%;
             z-index: 1;
             color: white;
             text-align: center; /* Centrer le texte */
@@ -66,10 +67,10 @@
 
 
             <div class="container" >
-                <div class="welcome-hero-txt" style="bottom: -50px;">
+                <!--<div class="welcome-hero-txt">
                     <h2>GESTION DE PROJETS</h2>
                     <h2>DU BÂTIMENT ET DES TRAVAUX PUBLICS</h2>
-                </div>
+                </div>-->
             </div>
         </section>
     </main>

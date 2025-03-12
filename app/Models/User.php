@@ -21,6 +21,7 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
 
     protected $table = 'utilisateurs';
     protected $fillable = [
+        'id',
         'acteur_id',
         'groupe_utilisateur_id',
         'fonction_utilisateur',

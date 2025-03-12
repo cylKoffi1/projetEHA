@@ -151,14 +151,14 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="display: flex; align-items: center; padding: 0px;">
                         <div class="user-profile d-flex flex-column align-items-center text-white" style="margin-right: 10px;">
-                            <span class="user-name fw-bold" style="color: #F1C40F;">{{ auth()->user()->login }}</span>
-                            <span class="user-group text-sm" style="color: #F1C40F;">{{ auth()->user()->groupeUtilisateur->libelle_groupe }}</span>
+                            <span class="user-name fw-bold" style="color: #F1C40F;">{{ auth()?->user()?->login }}</span>
+                            <span class="user-group text-sm" style="color: #F1C40F;">{{ auth()?->user()?->groupeUtilisateur?->libelle_groupe }}</span>
                         </div>
                         <img class="profile-img" src="{{ asset(auth()->user()->acteur?->Photo ?? 'users/user.png') }}" alt="Profile Picture" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end text-dark" aria-labelledby="navbarDropdown">
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" style="color: black;" href="{{ url('/admin/users/details-user/' . auth()->user()->id) }}"><i class="fas fa-user-circle"></i> Mon compte</a></li>
+                        <li><a class="dropdown-item" style="color: black;" href="{{ url('/admin/users/details-user/' . dd(auth()?->user()?->id)) }}"><i class="fas fa-user-circle"></i> Mon compte</a></li>
                         <li><a class="dropdown-item" style="color: black;" href="#" data-bs-toggle="modal" data-bs-target="#changeGroupModal"><i class="bi bi-box-arrow-left"></i> Changer de groupe projet</a></li>
                     </ul>
                 </li>

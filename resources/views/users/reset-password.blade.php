@@ -13,11 +13,11 @@
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/app.css') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     {{-- @include('layouts.lurl') --}}
-    
+
 </head>
 
 <body class="welcom-hero">
-    @include('layouts.header') 
+    @include('layouts.header')
     <div class="container mt-5" >
         <div class="row justify-content-center">
             <div class="col-md-6" style="margin-top: 100px;">
