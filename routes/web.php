@@ -532,21 +532,21 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::delete('/type-acteurs/bulk-delete', [TypeActeurController::class, 'bulkDelete'])->name('type-acteurs.bulkDelete');
     Route::get('/get-localites/{pays}', [EtudeProjet::class, 'getLocalites']);
     Route::get('/get-decoupage-niveau/{localite}', [EtudeProjet::class, 'getDecoupageNiveau']);
-Route::get('/get-sous-domaines/{domaineCode}', function ($domaineCode) {
-    $sousDomaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
-        ->
-    whereRaw("LEFT(code_sous_domaine, 2) = ?", [$domaineCode])
-        ->get()
-        ->map(function ($sousDomaine) {
-            return [
-                'code' => $sousDomaine->code_sous_domaine,
-                'libelle' => $sousDomaine->lib_sous_domaine,
-                'prefix' => substr($sousDomaine->code_sous_domaine, 0, 2), // Extracts the first two characters
-            ];
-        });
+    Route::get('/get-sous-domaines/{domaineCode}', function ($domaineCode) {
+        $sousDomaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
+            ->
+        whereRaw("LEFT(code_sous_domaine, 2) = ?", [$domaineCode])
+            ->get()
+            ->map(function ($sousDomaine) {
+                return [
+                    'code' => $sousDomaine->code_sous_domaine,
+                    'libelle' => $sousDomaine->lib_sous_domaine,
+                    'prefix' => substr($sousDomaine->code_sous_domaine, 0, 2), // Extracts the first two characters
+                ];
+            });
 
-    return response()->json($sousDomaines);
-});
+        return response()->json($sousDomaines);
+    });
 
 
     /*************************ACTEURS *******/
@@ -555,7 +555,7 @@ Route::get('/get-sous-domaines/{domaineCode}', function ($domaineCode) {
     Route::put('/acteurs/{id}', [ActeurController::class, 'update'])->name('acteurs.update');
     Route::delete('/acteurs/{id}', [ActeurController::class, 'destroy'])->name('acteurs.destroy');
     Route::patch('admin/acteurs/{id}/restore', [ActeurController::class, 'restore'])->name('acteurs.restore');
-
+    Route::get('/acteurs/{id}/edit', [ActeurController::class, 'edit'])->name('acteurs.edit');
     /************************FONCTION TYPE ACTEUR */
     Route::get('admin/fonction-type-acteur', [FonctionTypeActeurController::class, 'index'])->name('fonction-type-acteur.index');
     Route::post('/fonction-type-acteur', [FonctionTypeActeurController::class, 'store'])->name('fonction-type-acteur.store');

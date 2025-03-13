@@ -40,6 +40,49 @@ class Acteur extends Model
     {
         return $this->hasMany(User::class, 'code_acteur', 'acteur_id');
     }
+
+     /**
+     * Relation avec `personne_physique`
+     */
+    public function personnePhysique()
+    {
+        return $this->hasOne(PersonnePhysique::class, 'code_acteur', 'code_acteur');
+    }
+
+    /**
+     * Relation avec `personne_morale`
+     */
+    public function personneMorale()
+    {
+        return $this->hasOne(PersonneMorale::class, 'code_acteur', 'code_acteur');
+    }
+
+    /**
+     * Relation avec `secteuractiviteacteur`
+     */
+    public function secteurActiviteActeur()
+    {
+        return $this->hasMany(SecteurActiviteActeur::class, 'code_acteur', 'code_acteur');
+    }
+
+    /**
+     * Relation avec `representants`
+     */
+    public function representants()
+    {
+        return $this->belongsToMany(Acteur::class, 'representants', 'entreprise_id', 'representant_id')
+            ->withPivot('role');
+    }
+
+    /**
+     * Relation avec `possederpiece`
+     */
+    public function possederpiece()
+    {
+        return $this->hasMany(Possederpiece::class, 'idPersonnePhysique', 'code_acteur');
+    }
+
+
     // Portée par défaut pour inclure uniquement les acteurs actifs
     protected static function booted()
     {
@@ -53,5 +96,6 @@ class Acteur extends Model
     {
         return $query->withoutGlobalScope('active'); // Désactive la portée par défaut pour inclure les désactivés
     }
+
 
 }

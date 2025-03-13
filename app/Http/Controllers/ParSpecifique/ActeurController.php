@@ -17,6 +17,7 @@ use App\Models\Pieceidentite;
 use App\Models\Possederpiece;
 use App\Models\Representants;
 use App\Models\SecteurActivite;
+use App\Models\SecteurActiviteActeur;
 use App\Models\SituationMatrimonial;
 use App\Models\TypeActeur;
 use App\Models\TypeFinancement;
@@ -102,7 +103,7 @@ class ActeurController extends Controller
                     'email' => $request->emailI,
                     'telephone' => $request->telephoneBureauIndividu,
                     'adresse' => $request->AdresseSiègeEntreprise,
-                    'code_pays' => Pays::where('alpha3', $request->code_pays)->first()->id,
+                    'code_pays' => $request->code_pays,
                     'is_user' => false,
                     'type_financement' => $request->type_financement,
                 ]);
@@ -139,6 +140,14 @@ class ActeurController extends Controller
                         'DateExpiration' => $request->dateExpiration,
                         'DateEtablissement' => $request->dateEtablissement
                     ]);
+                }
+                if($request->SecteurActI){
+                    foreach($request->SecteurActI as $secteurs){
+                        SecteurActiviteActeur::create([
+                            'code_acteur' => $acteur->code_acteur,
+                            'code_secteur' => $secteurs
+                        ]);
+                    }
                 }
             }
 
@@ -196,6 +205,14 @@ class ActeurController extends Controller
                         ]);
                     }
                 }
+                if($request->secteurActivite){
+                    foreach($request->secteurActivite as $secteur){
+                        SecteurActiviteActeur::create([
+                            'code_acteur' => $acteur->code_acteur,
+                            'code_secteur' => $secteur
+                        ]);
+                    }
+                }
             }
 
             Log::info("✅ Acteur ajouté avec succès : " . $acteur->libelle_long);
@@ -205,10 +222,6 @@ class ActeurController extends Controller
             return redirect()->back()->withErrors('Une erreur est survenue lors de l\'enregistrement de l\'acteur.');
         }
     }
-
-
-
-
 
     public function update(Request $request, $id)
     {
@@ -264,10 +277,6 @@ class ActeurController extends Controller
         }
     }
 
-
-
-
-
     public function destroy($id)
     {
         try {
@@ -312,38 +321,6 @@ class ActeurController extends Controller
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public function search(Request $request)
     {
             $query = Acteur::where(function ($q) use ($request) {
@@ -373,6 +350,22 @@ class ActeurController extends Controller
         return response()->json($acteur);
     }
 
+    public function edit($id)
+    {
+        try {
+            $acteur = Acteur::with([
+                'personnePhysique',
+                'secteurActiviteActeur',
+                'representants',
+                'personneMorale',
+                'possederpiece'
+            ])->findOrFail($id);
+            return response()->json($acteur);
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de la récupération des données de l'acteur : " . $e->getMessage());
+            return response()->json(['error' => 'Erreur lors de la récupération des données'], 500);
+        }
+    }
 
 }
 

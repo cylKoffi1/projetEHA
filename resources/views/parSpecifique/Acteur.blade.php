@@ -175,11 +175,19 @@
                                             <input type="text" class="form-control" name="libelle_court" placeholder="Nom abrégé de l'entreprise" >
                                         </div>
 
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <label>Date de création * </label>
                                             <input type="date" class="form-control" name="date_creation" placeholder="Adresse complète">
                                         </div>
-                                        <div class="col-md-6 ">
+                                        <div class="col-4">
+                                            <label >Secteur d'activité</label>
+                                            <lookup-multiselect name="secteurActivite" id="secteurActivite">
+                                                @foreach ($SecteurActivites as  $SecteurActivite)
+                                                    <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
+                                                @endforeach
+                                            </lookup-multiselect>
+                                        </div>
+                                        <div class="col-md-4 ">
                                             <label>Forme Juridique *</label>
                                             <select name="FormeJuridique" id="FormeJuridique" class="form-control">
                                                 <option value="">Sélectionnez...</option>
@@ -394,13 +402,21 @@
                                             <input type="date" class="form-control" name="dateEtablissement" placeholder="Numéro de CNI">
                                         </div>
 
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <label>Date de expiration:</label>
                                             <input type="date" class="form-control" name="dateExpiration" placeholder="Numéro de CNI">
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <label>Numéro Fiscal </label>
                                             <input type="text" class="form-control" name="numeroFiscal" placeholder="Numéro fiscal">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label >Secteur d'activité</label>
+                                            <lookup-multiselect name="SecteurActI" id="SecteurActI">
+                                                @foreach ($SecteurActivites as $SecteurActivite)
+                                                    <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
+                                                @endforeach
+                                            </lookup-multiselect>
                                         </div>
                                     </div>
                                 </div>
@@ -524,31 +540,29 @@
         document.querySelectorAll('.edit-button').forEach(button => {
             button.addEventListener('click', function () {
                 const id = this.getAttribute('data-id');
-                const libelleLong = this.getAttribute('data-libelle-long');
-                const libelleCourt = this.getAttribute('data-libelle-court');
-                const email = this.getAttribute('data-email');
-                const telephone = this.getAttribute('data-telephone');
-                const adresse = this.getAttribute('data-adresse');
-                const typeActeur = this.getAttribute('data-type-acteur');
-                const paysNom = this.getAttribute('data-pays-nom'); // Récupérer le nom du pays
+                fetch(`/acteurs/${id}/edit`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('les données', data);
+                        // Remplir le formulaire avec les données récupérées
+                        document.getElementById('acteur-id').value = data.id;
+                        document.getElementById('libelle_long').value = data.libelle_long;
+                        document.getElementById('libelle_court').value = data.libelle_court;
+                        document.getElementById('email').value = data.email;
+                        document.getElementById('telephone').value = data.telephone;
+                        document.getElementById('adresse').value = data.adresse;
+                        document.getElementById('type_acteur').value = data.type_acteur;
+                        document.getElementById('pays').value = data.pays.nom_fr_fr;
 
-                // Mise à jour des valeurs du formulaire
-                document.getElementById('acteur-id').value = id;
-                document.getElementById('libelle_long').value = libelleLong;
-                document.getElementById('libelle_court').value = libelleCourt;
-                document.getElementById('email').value = email;
-                document.getElementById('telephone').value = telephone;
-                document.getElementById('adresse').value = adresse;
-                document.getElementById('type_acteur').value = typeActeur;
-                document.getElementById('pays').value = paysNom; // Afficher le nom du pays
+                        // Mettre à jour l'action du formulaire pour modification
+                        const form = document.getElementById('acteur-form');
+                        form.action = `{{ url('/acteurs') }}/${id}`;
+                        document.getElementById('method').value = 'PUT';
 
-                // Mise à jour de l'action du formulaire pour modification
-                const form = document.getElementById('acteur-form');
-                form.action = `{{ url('/acteurs') }}/${id}`;
-                document.getElementById('method').value = 'PUT';
-
-                // Changer le texte du bouton
-                document.getElementById('submit-button').textContent = 'Modifier';
+                  // Changer le texte du bouton
+                        document.getElementById('submit-button').textContent = 'Modifier';
+                    })
+                    .catch(error => console.error('Erreur:', error));
             });
         });
 

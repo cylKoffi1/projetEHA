@@ -185,6 +185,7 @@ class LoginController extends Controller
         $request->validate(['pays_code' => 'required|string']);
 
         $user = Auth::user();
+        
         $groupes = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
             ->where('pays_code', $request->pays_code)
             ->with('groupeProjet')
