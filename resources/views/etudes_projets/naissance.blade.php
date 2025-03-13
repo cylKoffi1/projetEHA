@@ -211,6 +211,15 @@
                                         </select>
                                         <small class="text-muted">Sélectionnez l’entité qui assure le rôle de Maître d’œuvre.</small>
                                     </div>
+                                    <div class="col-md-4">
+                                        <label>De :</label>
+                                        <select name="sectActivEntMoe" id="sectActivEntMoe" class="form-control" >
+                                            <option value="">Sélectionnez...</option>
+                                            @foreach ($SecteurActivites as $SecteurActivite)
+                                                <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
 
                                 </div>
 
@@ -247,15 +256,6 @@
                                                             <div class="col-md-4">
                                                                 <label>Date de création :</label>
                                                                 <input type="text" name="dateCreationEntMoe" class="form-control" placeholder="Adresse complète">
-                                                            </div>
-                                                            <div class="col-md-4">
-                                                                <label>Secteur d'activité :</label>
-                                                                <select name="sectActivEntMoe" id="SecteurActiviteEntreprise" class="form-control">
-                                                                    <option value="">Sélectionnez...</option>
-                                                                    @foreach ($SecteurActivites as $SecteurActivite)
-                                                                        <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
                                                             </div>
                                                             <div class="col-md-4 ">
                                                                 <label>Forme Juridique :</label>
@@ -1480,7 +1480,31 @@
         </div>
     </div>
 </section>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const acteurSelect = document.getElementById('acteurMoeSelect');
+        const secteurActiviteContainer = document.getElementById('sectActivEntMoe').parentElement;
 
+        acteurSelect.addEventListener('change', function () {
+            const selectedValue = acteurSelect.value;
+
+            if (selectedValue === 'NEU') {
+                // Afficher le secteur d'activité
+                secteurActiviteContainer.style.display = 'block';
+            } else {
+                // Masquer le secteur d'activité
+                secteurActiviteContainer.style.display = 'none';
+            }
+        });
+
+        // Initialiser l'affichage en fonction de la sélection actuelle
+        if (acteurSelect.value === 'NEU') {
+            secteurActiviteContainer.style.display = 'block';
+        } else {
+            secteurActiviteContainer.style.display = 'none';
+        }
+    });
+</script>
 <script>
     let currentStep = 1;
     const totalSteps = 7;

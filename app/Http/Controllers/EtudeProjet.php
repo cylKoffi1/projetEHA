@@ -157,30 +157,30 @@ class EtudeProjet extends Controller
                 if (!empty($type_ouvrage)) {
                     // 🔹 Logique pour le Maître d'Œuvre
                     if ($type_ouvrage === 'Public') {
-                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne, 'NEU'])
                             ->whereIn('type_acteur', ['eta', 'clt'])
                             ->get();
                     } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Entreprise') {
-                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne])
                             ->whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])
                             ->get();
                     } elseif ($type_ouvrage === 'Privé' && $priveMoeType === 'Individu') {
-                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne])
                             ->where('type_acteur', 'etp')
                             ->get();
                     }
                 } elseif (!empty($type_mo)) {
                     // 🔹 Logique pour le Maître d'Ouvrage
                     if ($type_mo === 'Public') {
-                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne])
                             ->whereIn('type_acteur', ['eta', 'clt'])
                             ->get();
                     } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
-                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne])
                             ->whereIn('type_acteur', ['ogi', 'fat', 'sa', 'sar', 'sup', 'op'])
                             ->get();
                     } elseif ($type_mo === 'Privé' && $priveType === 'Individu') {
-                        $acteurs = Acteur::whereIn('code_pays', [$code_pays, 0])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne])
                             ->where('type_acteur', 'etp')
                             ->get();
                     }
