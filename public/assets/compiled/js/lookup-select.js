@@ -45,47 +45,87 @@ class LookupSelect extends HTMLElement {
                 <div class="dropdown-list"></div>
             </div>
         `;
+
+        this._value = null;
+        this.selectedOption = null;
+        this.options = [];
     }
 
     connectedCallback() {
         this.name = this.getAttribute("name") || "";
         this.id = this.getAttribute("id") || "";
+
         this.input = this.shadowRoot.querySelector("input");
         this.dropdownList = this.shadowRoot.querySelector(".dropdown-list");
 
-        // Récupération des options internes
+        this.input.placeholder = this.getAttribute("placeholder") || "Sélectionner une option...";
+
+        // Désactiver si l’attribut disabled est présent
+        if (this.hasAttribute("disabled")) {
+            this.input.disabled = true;
+        }
+
+        // Charger options internes
+        this.loadOptionsFromDOM();
+
+        // Observateur si options changent dynamiquement
+        this.observer = new MutationObserver(() => this.loadOptionsFromDOM());
+        this.observer.observe(this, { childList: true });
+
+        this.addEventListeners();
+    }
+
+    loadOptionsFromDOM() {
         this.options = Array.from(this.querySelectorAll("option")).map(option => ({
             value: option.value,
             text: option.textContent
         }));
-
         this.populateDropdown();
-        this.addEventListeners();
     }
 
     populateDropdown() {
         this.dropdownList.innerHTML = "";
-        this.options.forEach(option => {
+        this.options.forEach((option, index) => {
             let div = document.createElement("div");
             div.className = "dropdown-item";
             div.textContent = option.text;
             div.dataset.value = option.value;
+            div.tabIndex = -1;
             div.onclick = () => this.selectOption(option);
             this.dropdownList.appendChild(div);
         });
     }
 
     addEventListeners() {
-        this.input.addEventListener("focus", () => {
-            this.showDropdown();
-        });
+        this.input.addEventListener("focus", () => this.showDropdown());
 
         this.input.addEventListener("input", () => {
-            let filter = this.input.value.toLowerCase();
+            const filter = this.input.value.toLowerCase();
             Array.from(this.dropdownList.children).forEach(item => {
                 item.style.display = item.textContent.toLowerCase().includes(filter) ? "block" : "none";
             });
             this.showDropdown();
+        });
+
+        // Sélection clavier (↑ ↓ Enter Esc)
+        this.input.addEventListener("keydown", e => {
+            const items = Array.from(this.dropdownList.querySelectorAll(".dropdown-item"));
+            const currentIndex = items.findIndex(item => item.classList.contains("active"));
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextIndex = currentIndex + 1 < items.length ? currentIndex + 1 : 0;
+                this.setActiveItem(items, nextIndex);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : items.length - 1;
+                this.setActiveItem(items, prevIndex);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (currentIndex >= 0) items[currentIndex].click();
+            } else if (e.key === "Escape") {
+                this.hideDropdown();
+            }
         });
 
         document.addEventListener("click", (event) => {
@@ -95,8 +135,16 @@ class LookupSelect extends HTMLElement {
         });
     }
 
+    setActiveItem(items, index) {
+        items.forEach(item => item.classList.remove("active"));
+        items[index].classList.add("active");
+        items[index].scrollIntoView({ block: "nearest" });
+    }
+
     selectOption(option) {
+        this.selectedOption = option;
         this.input.value = option.text;
+        this._value = option.value;
         this.setAttribute("value", option.value);
         this.dispatchChangeEvent();
         this.hideDropdown();
@@ -111,18 +159,32 @@ class LookupSelect extends HTMLElement {
     }
 
     get value() {
-        return this.getAttribute("value");
+        return this._value;
     }
 
     set value(newValue) {
-        let option = this.options.find(opt => opt.value === newValue);
+        this._value = newValue;
+        const option = this.options.find(opt => opt.value === newValue);
         if (option) {
-            this.selectOption(option);
+            this.input.value = option.text;
+            this.selectedOption = option;
         }
     }
 
+    getSelected() {
+        return this.selectedOption;
+    }
+
+    setOptions(optionList) {
+        this.options = optionList.map(opt => ({
+            value: opt.value,
+            text: opt.text
+        }));
+        this.populateDropdown();
+    }
+
     dispatchChangeEvent() {
-        this.dispatchEvent(new Event("change"));
+        this.dispatchEvent(new Event("change", { bubbles: true }));
     }
 }
 

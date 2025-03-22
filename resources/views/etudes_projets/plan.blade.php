@@ -449,7 +449,7 @@ $(document).ready(function() {
             });
 
             // Ajuster dynamiquement la largeur du Gantt en fonction des tâches affichées
-            function adjustGanttWidth() {gantt_layout_content
+            function adjustGanttWidth() {
                 let taskArea = document.querySelector(".gantt_task");
                 if (taskArea) {
                     let gridWidth = document.querySelector(".gantt_grid").offsetWidth; // Largeur de la grille

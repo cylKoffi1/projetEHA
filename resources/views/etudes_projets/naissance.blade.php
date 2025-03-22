@@ -174,7 +174,7 @@
 
                         <form class="col-12" id="projectForm">
                             <!-- Étape : Informations sur le Maître d’Œuvre -->
-                            <div class="step active" id="step-1">
+                            <div class="step " id="step-4">
                                 <h5 class="text-secondary">👷 Informations / Maître d’ouvrage</h5>
 
                                 <div class="row">
@@ -211,7 +211,7 @@
                                         </select>
                                         <small class="text-muted">Sélectionnez l’entité qui assure le rôle de Maître d’œuvre.</small>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col">
                                         <label>De :</label>
                                         <select name="sectActivEntMoe" id="sectActivEntMoe" class="form-control" >
                                             <option value="">Sélectionnez...</option>
@@ -313,7 +313,11 @@
                                                             <hr>
                                                             <div class="col-md-3">
                                                                 <label>Représentant Légal :</label>
-                                                                <input type="text" class="form-control"  name="RepLeEntMoe" placeholder="Nom du représentant légal">
+                                                                <lookup-select name="RepLeEntMoe" id="RepLeEntMoe">
+                                                                    @foreach ($acteurRepres as $acteurRepre)
+                                                                        <option value="{{ $acteurRepre->code_acteur }}">{{ $acteurRepre->libelle_court }} {{ $acteurRepre->libelle_long }}</option>
+                                                                    @endforeach
+                                                                </lookup-select>
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label>Email:</label>
@@ -328,23 +332,22 @@
                                                                 <input type="text" class="form-control" name="Tel2RepLeEntMoe" placeholder="Téléphone 2 du représentant légal">
                                                             </div>
                                                             <hr>
-                                                            <div class="col-md-3">
-                                                                <label>Personne de Contact :</label>
-                                                                <input type="text" class="form-control" name="NomPersContEntMoe" placeholder="Nom de la personne de contact">
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <label>Email:</label>
-                                                                <input type="email" class="form-control" name="EmailPersContEntMoe" placeholder="Email du personne de Contact">
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <label>Téléphone 1:</label>
-                                                                <input type="text" class="form-control" name="Tel1PersContEntMoe" placeholder="Téléphone 1 de la ersonne de Contact">
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <label>Téléphone 2:</label>
-                                                                <input type="text" class="form-control" name="Tel2PersContEntMoe" placeholder="Téléphone 2 de la Personne de Contact">
-                                                            </div>
+                                                            
                                                             <hr>
+                                                        </div>
+                                                        <div class="row align-items-end">
+                                                            <!-- Lookup-Multiselect -->
+                                                            <div class="col-md-3">
+                                                                <label>Personne de Contact</label>
+                                                                <lookup-multiselect name="nomPCMoe" id="nomPCMoe">
+                                                                    @foreach ($acteurRepres as $acteurRepre)
+                                                                        <option value="{{ $acteurRepre->code_acteur }}">{{ $acteurRepre->libelle_court }} {{ $acteurRepre->libelle_long }}</option>
+                                                                    @endforeach
+                                                                </lookup-multiselect>
+                                                            </div>
+
+                                                            <!-- Conteneur pour afficher dynamiquement les champs -->
+                                                            <div class="col-md-9 d-flex flex-wrap" id="contactContainerMoe"></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -487,7 +490,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                </div>                                <!-- Champs pour Entreprise -->
+                                </div>                  
 
 
                                 <hr>
@@ -497,15 +500,18 @@
                                 </div><br>
                                 <div class="row">
 
+                                    <div class="col">
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary " onclick="nextStep()">Suivant</button>
                                     </div>
                                 </div>
 
                             </div>
 
                           <!-- Étape  : Informations sur le Maître d’Ouvrage -->
-                            <div class="step" id="step-2">
+                            <div class="step" id="step-5">
                                 <h5 class="text-secondary">🏗️ Informations / Maître d'œuvre</h5>
 
                                 <!-- ✅ Sélection du Type -->
@@ -837,7 +843,7 @@
                                 </div><br>
                                 <div class="row">
 
-                                <div class="col">
+                                    <div class="col">
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
                                     <div class="col text-end">
@@ -849,7 +855,7 @@
 
 
                             <!-- 🔵 Étape : Financement -->
-                            <div class="step" id="step-3">
+                            <div class="step" id="step-6">
                                 <h5 class="text-secondary">💰 Ressources Financières</h5>
 
                                 <div class="col-2 mb-3">
@@ -1043,7 +1049,7 @@
 
 
                             <!-- 🟢 Étape  : Informations Générales -->
-                            <div class="step" id="step-4">
+                            <div class="step active" id="step-1">
                                 <h5 class="text-secondary">📋 Informations Générales</h5>
                                 <div class="row">
                                     <div class="col-4">
@@ -1103,21 +1109,74 @@
                                         <input type="date" class="form-control">
                                     </div>
 
-                                </div><br>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label>Coût du projet</label>
+                                        <input type="text" name="coutProjet" id="coutProjet" class="form-control text-end" oninput="formatNumber(this)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label>Devise du coût</label>
+                                        <select name="deviseCout" id="deviseCout" class="form-control">
+                                            @foreach ($deviseCouts as $deviseCout)
+                                                <option value="{{ $deviseCout?->code }}">{{ $deviseCout?->code_long }}: {{ $deviseCout?->libelle }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col">
+                                        <label for="">Commentaire</label>
+                                        <textarea class="form-control" name="commentaireProjet" id="commentaireProjet"></textarea>
+                                    </div>
+                                </div>
+                                <br>
 
 
                                 <div class="row">
-                                    <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
-                                    </div>
                                     <div class="col text-end">
                                         <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
                                     </div>
                                 </div>
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                function saveStep1() {
+                                    const data = {
+                                        _token: '{{ csrf_token() }}',
+                                        libelle_projet: $('input[placeholder="Nom du projet"]').val(),
+                                        code_sous_domaine: $('#sousDomaineSelect').val(),
+                                        date_demarrage_prevue: $('input[type="date"]').eq(0).val(),
+                                        date_fin_prevue: $('input[type="date"]').eq(1).val(),
+                                        cout_projet: $('#coutProjet').val().replace(/\s/g, ''), // nettoie les espaces
+                                        code_devise: $('#deviseCout').val(),
+                                        commentaire: $('#commentaireProjet').val(),
+                                        code_nature: $('#natureTraveaux').val(),
+                                        code_pays: '{{ $codePays ?? auth()->user()->code_pays }}', // ajustable selon ton contexte
+                                    };
+
+                                    $.ajax({
+                                        url: '{{ route("projets.temp.save.step1") }}',
+                                        method: 'POST',
+                                        data: data,
+                                        success: function(response) {
+                                            if (response.success) {
+                                                console.log("Step 1 sauvegardé temporairement.");
+                                                localStorage.setItem("code_projet_temp", response.code_projet);
+                                                if (typeof callback === 'function') callback();
+                                            }
+                                        },
+                                        error: function(xhr) {
+                                            console.warn("Erreur, mais on ne bloque pas l'utilisateur.");
+                                            if (typeof callback === 'function') callback(); // continue quand même
+                                        }
+                                    });
+                                }
+                            </script>
+
 
                             <!-- 🟠 Étape  : Localisation -->
-                            <div class="step" id="step-5">
+                            <div class="step" id="step-2">
                                 <ul class="nav nav-tabs" id="localisationTab" role="tablist">
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link active" id="localisation-tab" data-bs-toggle="tab" data-bs-target="#localisation" type="button" role="tab">🌍 Localisation</button>
@@ -1143,9 +1202,9 @@
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <label id="niveau1Label">Localité *</label>
-                                                <select class="form-control" id="niveau1Select">
+                                                <lookup-select id="niveau1Select">
                                                     <option value="">Sélectionnez un niveau</option>
-                                                </select>
+                                                </lookup-select>
                                             </div>
                                             <div class="col-md-3">
                                                 <label id="niveau2Label">Niveau </label>
@@ -1260,7 +1319,7 @@
                                 </div>
                             </div>
 
-                            <div class="step" id="step-6">
+                            <div class="step" id="step-3">
                                 <h5 class="text-secondary">🌍 Infrastructures</h5>
                                 <div class="row">
                                     <br>
@@ -1481,14 +1540,30 @@
     </div>
 </section>
 <script>
+    //Séparateur de milliers
+function formatNumber(input) {
+    let value = input.value.replace(/\s/g, '').replace(/[^\d]/g, '');
+    if (value === '') {
+        input.value = '';
+        return;
+    }
+    input.value = Number(value).toLocaleString('fr-FR'); // espace comme séparateur de milliers
+}
+</script>
+<script>
     document.addEventListener('DOMContentLoaded', function () {
         const acteurSelect = document.getElementById('acteurMoeSelect');
         const secteurActiviteContainer = document.getElementById('sectActivEntMoe').parentElement;
-
+        if (!acteurSelect || !secteurActiviteContainer) {
+            console.error("Les éléments HTML avec les identifiants 'acteurMoeSelect' ou 'sectActivEntMoe' n'ont pas été trouvés.");
+            return;
+        }
         acteurSelect.addEventListener('change', function () {
             const selectedValue = acteurSelect.value;
+            console.log("Valeur sélectionnée :", selectedValue);
 
-            if (selectedValue === 'NEU') {
+
+            if (selectedValue === '5689') {
                 // Afficher le secteur d'activité
                 secteurActiviteContainer.style.display = 'block';
             } else {
@@ -1498,11 +1573,116 @@
         });
 
         // Initialiser l'affichage en fonction de la sélection actuelle
-        if (acteurSelect.value === 'NEU') {
+        if (acteurSelect.value === '5689') {
             secteurActiviteContainer.style.display = 'block';
         } else {
             secteurActiviteContainer.style.display = 'none';
         }
+    });
+    document.addEventListener("DOMContentLoaded", function () {
+        const lookupRL = document.getElementById("RepLeEntMoe"); // Sélecteur du lookup-select
+        const emailRL = document.querySelector("input[name='EmailRepLeEntMoe']");
+        const telephone1RL = document.querySelector("input[name='Tel1RepLeEntMoe']");
+        const telephone2RL = document.querySelector("input[name='Tel2RepLeEntMoe']");
+
+        const acteurs = @json($acteurRepres); // Récupération des acteurs depuis Laravel Blade
+
+        function updateRepresentantLegal() {
+            let selectedValue = lookupRL.value; // Récupérer l'ID sélectionné
+
+            // Trouver les données du représentant légal
+            let acteur = acteurs.find(a => a.code_acteur == selectedValue);
+
+            if (acteur) {
+                emailRL.value = acteur.email || ""; // Mettre à jour l'email
+                telephone1RL.value = acteur.telephone_mobile || ""; // Mettre à jour Téléphone 1
+                telephone2RL.value = acteur.telephone_bureau || ""; // Mettre à jour Téléphone 2
+            } else {
+                emailRL.value = ""; // Vider si aucun représentant légal trouvé
+                telephone1RL.value = "";
+                telephone2RL.value = "";
+            }
+        }
+
+        // Écouter les changements sur le `lookup-select`
+        lookupRL.addEventListener("change", updateRepresentantLegal);
+
+        // Optionnel : Remplir les champs au chargement si une valeur est déjà sélectionnée
+        setTimeout(updateRepresentantLegal, 500);
+
+        // Ajouter les champs cachés dynamiques pour conserver les modifications lors du submit
+        const form = document.querySelector("form");
+        form.addEventListener("submit", function () {
+            // Ajouter des champs cachés pour les valeurs modifiées
+            let hiddenEmail = document.createElement("input");
+            hiddenEmail.type = "hidden";
+            hiddenEmail.name = "emailRL_modified";
+            hiddenEmail.value = emailRL.value;
+            form.appendChild(hiddenEmail);
+
+            let hiddenTel1 = document.createElement("input");
+            hiddenTel1.type = "hidden";
+            hiddenTel1.name = "telephone1RL_modified";
+            hiddenTel1.value = telephone1RL.value;
+            form.appendChild(hiddenTel1);
+
+            let hiddenTel2 = document.createElement("input");
+            hiddenTel2.type = "hidden";
+            hiddenTel2.name = "telephone2RL_modified";
+            hiddenTel2.value = telephone2RL.value;
+            form.appendChild(hiddenTel2);
+        });
+    });
+    document.addEventListener("DOMContentLoaded", function () {
+        const lookup = document.getElementById("nomPCMoe"); // Sélection du lookup-multiselect
+        const contactContainer = document.getElementById("contactContainerMoe");
+        const acteurs = @json($acteurRepres); // Récupération des contacts depuis Laravel
+
+        function updateContacts() {
+            contactContainer.innerHTML = ""; // Vider le contenu
+
+            let selectedValues = lookup.value; // Récupère les valeurs sélectionnées
+
+            if (selectedValues.length === 0) {
+                return; // Si aucune sélection, ne rien afficher
+            }
+
+            selectedValues.forEach(code => {
+                let acteur = acteurs.find(a => a.code_acteur == code);
+            // console.log('acteur :',acteur);
+                if (acteur) {
+                    let row = document.createElement("div");
+                    row.classList.add("d-flex", "align-items-center", "me-3");
+
+                    row.innerHTML = `
+                        <div class="me-3">
+                            <label>Nom</label>
+                            <input type="text" class="form-control" value="${acteur.libelle_court} ${acteur.libelle_long}" readonly>
+                        </div>
+                        <div class="me-3">
+                            <label>Email</label>
+                            <input type="email" class="form-control" name="emailPCMoe" value="${acteur.email || ''}">
+                        </div>
+                        <div class="me-3">
+                            <label>Téléphone 1</label>
+                            <input type="text" class="form-control" name="Tel1PcMoe" value="${acteur.telephone_mobile || ''}">
+                        </div>
+                        <div class="me-3">
+                            <label>Téléphone 2</label>
+                            <input type="text" class="form-control" name="Tel2PCMoe" value="${acteur.telephone_bureau || ''}">
+                        </div>
+                    `;
+
+                    contactContainer.appendChild(row);
+                }
+            });
+        }
+
+        // Écouter le changement de sélection sur `lookup-multiselect`
+        lookup.addEventListener("change", updateContacts);
+
+        // Optionnel : Afficher les données au chargement si des valeurs sont déjà sélectionnées
+        setTimeout(updateContacts, 500);
     });
 </script>
 <script>
@@ -1593,7 +1773,7 @@
         let acteurList = document.getElementById("acteurMoeList");
         let entrepriseFields = document.getElementById("moeEntrepriseFields");
         let individuFields = document.getElementById("moeIndividuFields");
-
+        if (!acteurInput) return; // Sécurité si l'élément n'est pas présent
         acteurInput.addEventListener("keyup", function () {
             let searchValue = acteurInput.value.trim();
 
@@ -1840,41 +2020,87 @@
 
 
     ///////////////////////////LOCALLISATION
-$(document).ready(function() {
-    // Récupérer le code du pays
-    var paysCode = $("#paysSelect").val();
+    let selectedLocalite = {
+        id: null,
+        libelle: null,
+        niveau: null,
+        code_decoupage: null,
+        libelle_decoupage: null
+    };
+    $(document).ready(function() {
+        // Récupérer le code du pays
+        var paysCode = $("#paysSelect").val();
 
-    if (paysCode) {
-        // Charger les localités du pays sélectionné
-        $.ajax({
-            url: "/get-localites/" + paysCode,
-            type: "GET",
-            success: function(data) {
-                $("#niveau1Select").empty().append('<option value="">Sélectionnez une localité</option>');
-                $.each(data, function(index, localite) {
-                    $("#niveau1Select").append('<option value="' + localite.id + '">' + localite.libelle + ' ('+localite.code_decoupage+')'+ '</option>');
-                });
-            }
-        });
-    }
-
-    // Lorsqu'on sélectionne une localité
-    $("#niveau1Select").change(function() {
-        var localiteId = $(this).val();
-
-        if (localiteId) {
-            // Charger le niveau et découpage associés
+        if (paysCode) {
+            // Charger les localités du pays sélectionné
             $.ajax({
-                url: "/get-decoupage-niveau/" + localiteId,
+                url: "/get-localites/" + paysCode,
                 type: "GET",
                 success: function(data) {
-                    $("#niveau2Select").empty().append('<option value="' + data.niveau + '">' + data.niveau + '</option>').prop("disabled", false);
-                    $("#niveau3Select").empty().append('<option value="' + data.decoupage + '">' + data.decoupage + '</option>').prop("disabled", false);
+                    $("#niveau1Select").empty().append('<option value="">Sélectionnez une localité</option>');
+                    $.each(data, function(index, localite) {
+                        $("#niveau1Select").append('<option value="' + localite.id + '">' + localite.libelle+ '</option>');
+                    });
                 }
             });
         }
+
+        // Lorsqu'on sélectionne une localité
+        $("#niveau1Select").change(function () {
+            var localiteId = $(this).val();
+            var localiteText = $("#niveau1Select option:selected").text();
+
+            if (localiteId) {
+                // Charger le niveau et découpage associés
+                $.ajax({
+                    url: "/get-decoupage-niveau/" + localiteId,
+                    type: "GET",
+                    success: function (data) {
+                        $("#niveau2Select").empty().append('<option value="' + data.niveau + '">' + data.niveau + '</option>').prop("disabled", false);
+                        $("#niveau3Select").empty().append('<option value="' + data.code_decoupage + '">' + data.libelle_decoupage + '</option>').prop("disabled", false);
+
+                        // Stocker les données dans une variable pour les réutiliser plus tard
+                        selectedLocalite.id = localiteId;
+                        selectedLocalite.libelle = localiteText;
+                        selectedLocalite.niveau = data.niveau;
+                        selectedLocalite.code_decoupage = data.code_decoupage;
+                        selectedLocalite.libelle_decoupage = data.libelle_decoupage;
+                    }
+                });
+            }
+        });
     });
-});
+    // Lorsqu'on clique sur "Ajouter"
+    $("#addLocaliteBtn").click(function () {
+        if (!selectedLocalite.id || !selectedLocalite.niveau || !selectedLocalite.code_decoupage) {
+            alert("Veuillez sélectionner une localité avec son niveau et découpage.");
+            return;
+        }
+
+        // Ajouter une ligne dans le tableau
+        var newRow = `
+            <tr data-id="${selectedLocalite.id}">
+                <td>${selectedLocalite.libelle}</td>
+                <td>${selectedLocalite.niveau}</td>
+                <td>${selectedLocalite.code_decoupage}</td>
+                <td>${selectedLocalite.libelle_decoupage}</td>
+                <td><button type="button" class="btn btn-danger btn-sm deleteRowBtn">Supprimer</button></td>
+            </tr>
+        `;
+
+        $("#tableLocalites").append(newRow);
+
+        // Réinitialiser les sélections
+        $("#niveau1Select").val("");
+        $("#niveau2Select").empty().append('<option value="">Sélectionnez un niveau</option>').prop("disabled", true);
+        $("#niveau3Select").empty().append('<option value="">Sélectionnez un niveau</option>').prop("disabled", true);
+        selectedLocalite = {}; // Réinitialiser les données
+    });
+
+    // Supprimer une ligne du tableau
+    $(document).on("click", ".deleteRowBtn", function () {
+        $(this).closest("tr").remove();
+    });
   </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

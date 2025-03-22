@@ -95,7 +95,7 @@
     }
     #changeGroupModal .modal-body, #changeGroupModal .modal-header, #changeGroupModal .modal-footer {
     background: rgb(255 255 255 / 60%);
-}
+    }
     .modal-content{
         width: 57% !important;
     }

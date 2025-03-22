@@ -199,7 +199,7 @@
             hour: "numeric",
             minute: "numeric",
         });
-        var userName = "{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}";
+        var userName = "{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}";
         $("#" + table).DataTable({
             fixedColumns: true,
             language: {

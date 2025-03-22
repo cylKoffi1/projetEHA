@@ -15,14 +15,13 @@ class Projet extends Model
     // Colonnes modifiables
     protected $fillable = [
         'code_alpha3_pays',
-        'code_maitre_oeuvre',
+        'libelle_projet',
         'commentaire',
         'code_sous_domaine',
         'date_demarrage_prevue',
         'date_fin_prevue',
         'cout_projet',
         'code_devise',
-        'code_chef_projet',
         'created_at',
         'updated_at',
     ];

@@ -75,10 +75,9 @@ class ActeurController extends Controller
             ->join('personne_physique as pp', 'pp.code_acteur', '=', 'a.code_acteur')
             ->select('a.code_acteur', 'a.libelle_long', 'a.libelle_court', 'pp.telephone_mobile', 'pp.telephone_bureau', 'pp.email')
             ->where('a.type_acteur', 'etp')
-            ->where('a.code_pays', $pays->id)
+            ->where('a.code_pays',  $pays->alpha3)
             ->get();
-
-
+          //  dd( $acteurRepres );
             return view('parSpecifique.Acteur', compact('acteurRepres','tousPays','typeFinancements','formeJuridiques','Pieceidentite','genres','SituationMatrimoniales','SecteurActivites','ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
         } catch (\Exception $e) {
             Log::error("Erreur lors de la récupération des acteurs : " . $e->getMessage());

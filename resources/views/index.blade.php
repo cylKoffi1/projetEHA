@@ -66,14 +66,19 @@
 
 
             <div class="container" >
-                  <!-- <div class="welcome-hero-txt" >
+                 <div class="welcome-hero-txt" >
                  <h2>GESTION DE PROJETS</h2>
                     <h2>DU BÂTIMENT ET DES TRAVAUX PUBLICS</h2>
-                </div>-->
+                </div>
             </div>
         </section>
+
     </main>
 
+   <footer >
+   
+    
+    </footer>
 
 
     <!-- Include all js compiled plugins (below), or include individual files as needed -->

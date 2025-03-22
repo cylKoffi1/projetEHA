@@ -92,7 +92,7 @@ class LookupMultiSelect extends HTMLElement {
                 .table-custom span:hover {
                     color: darkred;
                 }
-        </style>
+        </style> 
         <div class="custom-dropdown">
             <div class="selected-items" tabindex="0">
                 <input type="text" class="form-control" style="color: black;" placeholder="Sélectionner des options..." autocomplete="off">
@@ -105,31 +105,58 @@ class LookupMultiSelect extends HTMLElement {
         </div>
         `;
 
+        this.options = [];
+        this.selectedOptions = [];
     }
+
     connectedCallback() {
         this.input = this.shadowRoot.querySelector(".form-control");
         this.dropdownList = this.shadowRoot.querySelector(".dropdown-list");
         this.selectedContainer = this.shadowRoot.querySelector(".selected-items");
         this.selectAllCheckbox = this.shadowRoot.querySelector("#select-all");
-        this.selectedOptions = [];
 
-        this.options = Array.from(this.querySelectorAll("option")).map(option => ({
-            value: option.value,
-            text: option.textContent
-        }));
-
+        this.loadInitialOptions();
         this.populateDropdown();
         this.addEventListeners();
     }
 
+    loadInitialOptions() {
+        this.options = Array.from(this.querySelectorAll("option")).map(option => ({
+            value: option.value,
+            text: option.textContent
+        }));
+    }
+
+    setOptions(optionList) {
+        this.options = optionList.map(opt => ({
+            value: opt.value,
+            text: opt.text
+        }));
+        this.selectedOptions = []; // reset selection
+        this.populateDropdown();
+        this.updateSelectedDisplay();
+    }
+
+    getSelected() {
+        return this.selectedOptions;
+    }
+
     populateDropdown() {
+        const existingItems = this.shadowRoot.querySelectorAll(".dropdown-item");
+        existingItems.forEach(item => item.remove());
+
         this.options.forEach(option => {
-            let div = document.createElement("div");
+            const div = document.createElement("div");
             div.className = "dropdown-item";
 
-            let checkbox = document.createElement("input");
+            const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.dataset.value = option.value;
+
+            const isSelected = this.selectedOptions.some(sel => sel.value === option.value);
+            checkbox.checked = isSelected;
+            if (isSelected) div.classList.add("selected");
+
             checkbox.onchange = () => this.toggleOption(option, checkbox.checked);
 
             div.appendChild(checkbox);
@@ -150,65 +177,70 @@ class LookupMultiSelect extends HTMLElement {
             }
         });
 
+        this.input.addEventListener("input", () => {
+            const filter = this.input.value.toLowerCase();
+            this.dropdownList.querySelectorAll(".dropdown-item").forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(filter) ? "flex" : "none";
+            });
+            this.showDropdown();
+        });
+
         this.selectAllCheckbox.addEventListener("change", (event) => {
-            let checked = event.target.checked;
-            this.toggleAll(checked);
+            this.toggleAll(event.target.checked);
         });
     }
 
     toggleOption(option, isChecked) {
-        let item = this.dropdownList.querySelector(`.dropdown-item input[data-value='${option.value}']`).parentElement;
         if (isChecked) {
-            if (!this.selectedOptions.find(opt => opt.value === option.value)) {
+            if (!this.selectedOptions.some(opt => opt.value === option.value)) {
                 this.selectedOptions.push(option);
             }
-            item.classList.add("selected");
         } else {
             this.selectedOptions = this.selectedOptions.filter(opt => opt.value !== option.value);
-            item.classList.remove("selected");
         }
         this.updateSelectedDisplay();
+        this.populateDropdown(); // refresh state
         this.dispatchChangeEvent();
     }
 
     toggleAll(isChecked) {
         this.selectedOptions = isChecked ? [...this.options] : [];
-        this.dropdownList.querySelectorAll(".dropdown-item input").forEach(checkbox => {
-            checkbox.checked = isChecked;
-            let item = checkbox.parentElement;
-            if (isChecked) {
-                item.classList.add("selected");
-            } else {
-                item.classList.remove("selected");
-            }
-        });
+        this.populateDropdown();
         this.updateSelectedDisplay();
+        this.dispatchChangeEvent();
+    }
+
+    removeOption(option) {
+        this.selectedOptions = this.selectedOptions.filter(opt => opt.value !== option.value);
+        const checkbox = this.dropdownList.querySelector(`.dropdown-item input[data-value='${option.value}']`);
+        if (checkbox) {
+            checkbox.checked = false;
+            checkbox.parentElement.classList.remove("selected");
+        }
+        this.updateSelectedDisplay();
+        this.populateDropdown();
         this.dispatchChangeEvent();
     }
 
     updateSelectedDisplay() {
         this.selectedContainer.innerHTML = "";
 
-        let table = document.createElement("table");
+        const table = document.createElement("table");
         table.className = "table-custom";
 
-        let tbody = document.createElement("tbody");
+        const tbody = document.createElement("tbody");
 
         this.selectedOptions.forEach(option => {
-            let row = document.createElement("tr");
+            const row = document.createElement("tr");
 
-            let textCell = document.createElement("td");
-            textCell.className = "col-10";
+            const textCell = document.createElement("td");
             textCell.textContent = option.text;
 
-            let actionCell = document.createElement("td");
-            actionCell.className = "col-2";
-
-            let closeBtn = document.createElement("span");
+            const actionCell = document.createElement("td");
+            const closeBtn = document.createElement("span");
             closeBtn.textContent = "❌";
-            closeBtn.style.cursor = "pointer";
             closeBtn.onclick = () => this.removeOption(option);
-
             actionCell.appendChild(closeBtn);
 
             row.appendChild(textCell);
@@ -220,21 +252,6 @@ class LookupMultiSelect extends HTMLElement {
         this.selectedContainer.appendChild(table);
         this.selectedContainer.appendChild(this.input);
         this.input.value = "";
-
-        // Déclencher l'événement `change` pour détecter la mise à jour de la sélection
-        this.dispatchChangeEvent();
-    }
-
-
-    removeOption(option) {
-        this.selectedOptions = this.selectedOptions.filter(opt => opt.value !== option.value);
-        let checkbox = this.dropdownList.querySelector(`.dropdown-item input[data-value='${option.value}']`);
-        if (checkbox) {
-            checkbox.checked = false;
-            checkbox.parentElement.classList.remove("selected");
-        }
-        this.updateSelectedDisplay();
-        this.dispatchChangeEvent();
     }
 
     showDropdown() {
@@ -252,10 +269,17 @@ class LookupMultiSelect extends HTMLElement {
     set value(newValues) {
         this.selectedOptions = this.options.filter(opt => newValues.includes(opt.value));
         this.updateSelectedDisplay();
+        this.populateDropdown();
     }
 
     dispatchChangeEvent() {
-        this.dispatchEvent(new Event("change"));
+        const event = new CustomEvent("change", {
+            detail: {
+                selectedValues: this.value,
+                selectedObjects: this.getSelected()
+            }
+        });
+        this.dispatchEvent(event);
     }
 }
 

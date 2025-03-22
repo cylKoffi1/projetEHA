@@ -247,7 +247,7 @@
 
 
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des Actions à mener')
+        initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des Actions à mener')
 
 
         $('#code').on('input', function() {

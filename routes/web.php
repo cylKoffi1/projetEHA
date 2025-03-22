@@ -324,9 +324,11 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
         Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
         Route::get('/pays/{alpha3}/niveaux', [EtudeProjet::class, 'getNiveauxAdministratifs']);
         Route::get('/pays/{alpha3}/niveau/{niveau}/localites', [EtudeProjet::class, 'getLocalitesByNiveau']);
-        Route::post('/projects/store', [EtudeProjet::class, 'storeNaissance'])->name('project.store');
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
+
+            /*******************SAUVEGARDE DE DEMANDE DE PROJET */
+            Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
 
         /***********************VALIDATION***************** */
 

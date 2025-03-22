@@ -73,7 +73,10 @@ class EtudeProjet extends Controller
             ->get()
             ->pluck('pays.nom_fr_fr', 'pays.alpha3') // Associe alpha3 avec le nom
             ->sort();
-
+            $deviseCouts = Devise::where('libelle', '!=', 'neutre')
+            ->whereNotNull('libelle')
+            ->where('libelle', '!=', '')
+            ->get();
             $actionMener = ActionMener::all();
 
             $tousPays = Pays::whereNotIn('id',  [0, 300, 301, 302, 303, 304])->get();
@@ -84,10 +87,16 @@ class EtudeProjet extends Controller
             $NaturesTravaux = NatureTravaux::all();
             $SituationMatrimoniales = SituationMatrimonial::all();
 
+            $acteurRepres = DB::table('acteur as a')
+            ->join('personne_physique as pp', 'pp.code_acteur', '=', 'a.code_acteur')
+            ->select('a.code_acteur', 'a.libelle_long', 'a.libelle_court', 'pp.telephone_mobile', 'pp.telephone_bureau', 'pp.email')
+            ->where('a.type_acteur', 'etp')
+            ->where('a.code_pays', $paysSelectionne)
+            ->get();
 
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
-            return view('etudes_projets.naissance', compact('Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            return view('etudes_projets.naissance', compact('deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
         public function search(Request $request)
         {
@@ -121,21 +130,31 @@ class EtudeProjet extends Controller
         // Récupérer le niveau et découpage associés à une localité sélectionnée
         public function getDecoupageNiveau($localiteId)
         {
-            $localite = LocalitesPays::find($localiteId);
-
+            // Récupération de la localité (un seul objet, pas une collection)
+            $localite = LocalitesPays::find($localiteId); // ou ->where('id', $localiteId)->first();
+        
             if (!$localite) {
                 return response()->json(['message' => 'Localité non trouvée'], 404);
             }
-
-            $niveau = DecoupageAdminPays::where('id_pays', $localite->id_pays)
-                                        ->where('code_decoupage', $localite->code_decoupage)
+            
+            // Récupération du découpage administratif du pays
+            $niveau = DecoupageAdminPays::where('code_decoupage', $localite->code_decoupage)
                                         ->first();
-
+            // Récupération du libellé de découpage
+            $libelle = null;
+            if ($niveau) {
+                $decoupage = DecoupageAdministratif::where('code_decoupage', $localite->code_decoupage)->first();
+                $libelle = $decoupage ? $decoupage->libelle_decoupage : null;
+            }
+        
             return response()->json([
                 'niveau' => $niveau ? $niveau->num_niveau_decoupage : 'Non défini',
-                'decoupage' => $localite->code_decoupage
+                'code_decoupage' => $localite->code_decoupage,
+                'libelle_decoupage' => $libelle ?? 'Non défini'
             ]);
         }
+        
+
         public function getActeurs(Request $request)
         {
             // Vérification du type de requête : Maître d’Ouvrage ou Maître d’Œuvre
@@ -198,10 +217,6 @@ class EtudeProjet extends Controller
             return response()->json($acteurs);
         }
 
-
-
-
-
         public function getNiveauxAdministratifs($alpha3)
         {
             $pays = Pays::where('alpha3', $alpha3)->first();
@@ -242,10 +257,48 @@ class EtudeProjet extends Controller
         }
 
 
-
+        public function saveStep1(Request $request)
+        {
+            $request->validate([
+                'libelle_projet' => 'required|string',
+                'code_sous_domaine' => 'required|string',
+                'date_demarrage_prevue' => 'required|date',
+                'date_fin_prevue' => 'required|date|after_or_equal:date_demarrage_prevue',
+                'cout_projet' => 'nullable|numeric',
+                'code_devise' => 'nullable|string',
+                'code_nature' => 'required|string',
+                'code_pays' => 'required|string',
+            ]);
+        
+            // Enregistrement temporaire du projet
+            $projet = Projet::create([
+                'libelle_projet' => $request->libelle_projet,
+                'commentaire' => $request->commentaire,
+                'code_sous_domaine' => $request->code_sous_domaine,
+                'date_demarrage_prevue' => $request->date_demarrage_prevue,
+                'date_fin_prevue' => $request->date_fin_prevue,
+                'cout_projet' => $request->cout_projet,
+                'code_devise' => $request->code_devise,
+                'code_alpha3_pays' => $request->code_pays,
+            ]);
+        
+            // Lier la nature des travaux
+            projets_natureTravaux::create([
+                'code_projet' => $projet->code_projet,
+                'code_nature' => $request->code_nature,
+                'date' => now(),
+            ]);
+        
+            return response()->json([
+                'success' => true,
+                'code_projet' => $projet->code_projet
+            ]);
+        }
+        
 
         const MAX_FILE_SIZE_KB = 2048; // 2 Mo
         const MAX_FILE_SIZE_MB = 2;
+        
         public function storeNaissance(Request $request)
         {
             DB::beginTransaction();
