@@ -1,212 +1,196 @@
 function initDataTable(userNameReplace, table, title) {
-    // Chemin de l'image
-    var imagePath;
+    let imagePath;
 
-    // Effectuer une requête AJAX pour récupérer le chemin de l'image encodée en base64
-    $.ajax({
-        url: '/getBase64Image',
-        type: 'GET',
-        async: false, // Attendre la réponse avant de continuer
-        success: function(response) {
-            imagePath = "data:image/png;base64," + response.base64Image;
-        },
-        error: function(xhr, status, error) {
-            console.error(error);
-        }
-    });
+    // Charger l'image base64 de manière synchrone
+    loadImage();
 
-    var logo ="http://localhost:8000/betsa/assets/images/ehaImages/armoirie.png";
-    var now = new Date();
-    var dateTime = now.toLocaleString("fr-FR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-    });
-    var lastColumnAction = $("#" + table + " thead tr:first-child th:last-child").text().trim() === "Action";
+    const now = new Date();
+    const dateTime = formatDate(now);
+    const userName = userNameReplace;
+    const lastColumnAction = isLastColumnAction(table);
 
-    var userName = userNameReplace;
-    $("#" + table).DataTable({
-        fixedColumns: true,
-        language: {
-            processing: "Traitement en cours...",
-            search: "",
-            searchPlaceholder: "Rechercher",
-            lengthMenu: "Afficher _MENU_ lignes",
-            info: "Affichage de l'&eacute;lement _START_ &agrave; _END_ sur _TOTAL_ &eacute;l&eacute;ments",
-            infoEmpty:
-                "Affichage de l'&eacute;lement 0 &agrave; 0 sur 0 &eacute;l&eacute;ments",
-            infoFiltered:
-                "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
-            infoPostFix: "",
-            loadingRecords: "Chargement en cours...",
-            zeroRecords: "Aucun &eacute;l&eacute;ment &agrave; afficher",
-            emptyTable: "Aucune donnée disponible dans le tableau",
-            paginate: {
-                first: "Premier",
-                previous: "Pr&eacute;c&eacute;dent",
-                next: "Suivant",
-                last: "Dernier",
-            },
-            aria: {
-                sortAscending:
-                    ": activer pour trier la colonne par ordre croissant",
-                sortDescending:
-                    ": activer pour trier la colonne par ordre décroissant",
-            },
-        },
-        select: {
-            items: "cell",
-            info: false,
-        },
-        scrollX: true,
-        dom: "Bfrtip",
-        lengthMenu: [
-            [10, 25, 50, -1],
-            ["10", "25", "50", "Tout"],
-        ],
+    initializeDataTable(table, title, dateTime, userName, lastColumnAction);
 
-        buttons: [
-            {
-                extend: "pageLength",
-                text(text) {
-                    return "Afficher les lignes";
-                },
-            },
-            {
-                extend: "excelHtml5",
-                text: "Exporter",
-                title: title,
-                exportOptions: {
-                        columns: lastColumnAction ? ":not(:last-child)" : "",// Exclure la dernière colonne de l'exportation
-                },
-            },
-            {
-                    extend: "pdfHtml5",
-                    text: "Imprimer",
-                    orientation: "landscape",
-                    pageSize: "A4",
-                    title: " ",
-                    filename: title,
-                    exportOptions: {
-                        columns: function (index, data, node) {
-                            // Vérifier si la dernière colonne est "Action"
-                            var lastColumnAction = $("#" + table + " thead tr:first-child th").last().text().trim() === "Action";
-                            // Exclure la dernière colonne si "Action" est présente
-                            if (lastColumnAction && index === $(node).closest('tr').find('th').length - 1) {
-                                return false;
-                            }
-                            return true;
-                        }
-                    },
-                    customize: function(doc) {
-                        doc.content[1].table.widths = '*'.repeat(doc.content[1].table.body[0].length).split(''); // Ajuster les colonnes à la largeur totale
-                        doc.defaultStyle.fontSize = 8; // Taille de police plus petite pour tout le document
-                        doc.content[1].layout = 'fullWidth'; // S'assurer que le tableau prend toute la largeur
-                        // Ajouter le header
-                        var headerHeight = 20; // Hauteur du header en pourcentage
-                        var footerHeight = 10; // Hauteur du footer en pourcentage
-                        var bodyHeight = 70; // Hauteur du contenu principal en pourcentage
+    function loadImage() {
+        $.ajax({
+            url: '/getBase64Image',
+            type: 'GET',
+            async: false,
+            success: function (response) {
+                imagePath = "data:image/png;base64," + response.base64Image;
+            },
+            error: function (xhr, status, error) {
+                console.error("Erreur lors du chargement de l'image :", error);
+            }
+        });
+    }
 
-                        var headerMargin = [30, 30]; // Marge du header
-                        var bodyMargin = [0, 0]; // Marge du contenu principal
-                        var footerMargin = [10, 0]; // Marge du footer
+    function formatDate(date) {
+        return date.toLocaleString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+        });
+    }
 
-                        var totalHeight = 100; // Hauteur totale de la page
+    function isLastColumnAction(table) {
+        return $("#" + table + " thead tr:first-child th:last-child").text().trim().toLowerCase() === "action";
+    }
 
-                        // Calculer les hauteurs en points
-                        var headerHeightPoints = (headerHeight / totalHeight) * 100;
-                        var bodyHeightPoints = (bodyHeight / totalHeight) * 100;
-                        var footerHeightPoints = (footerHeight / totalHeight) * 100;
-                        /*text: [
-                            'Image \n',
-                                { text: ' \n ', fontSize: 9 },
-                                { text: 'GERAC-EHA', fontSize: 9 }
-                            ],*/
-                            function htmlDecode(input) {
-                                var doc = new DOMParser().parseFromString(input, "text/html");
-                                return doc.documentElement.textContent;
-                              }
+    function initializeDataTable(table, title, dateTime, userName, lastColumnAction) {
+        $("#" + table).DataTable({
+            fixedColumns: true,
+            language: getLanguageSettings(),
+            select: { items: "cell", info: false },
+            scrollX: true,
+            dom: "Bfrtip",
+            lengthMenu: [[10, 25, 50, -1], ["10", "25", "50", "Tout"]],
+            buttons: getButtons(title, dateTime, userName, lastColumnAction)
+        });
+    }
 
-                        // Ajuster les marges pour correspondre aux hauteurs
-                        headerMargin[1] = headerHeightPoints;
-                        bodyMargin[1] = bodyHeightPoints;
-                        footerMargin[1] = footerHeightPoints;
-                        // Définir le header avec les marges ajustées
-                        doc['header'] = function() {
-                            return {
-                                columns: [
-                                    {
-                                        alignment: 'center',
-                                        table: {
-                                            widths: ['33.33%', '33.33%', '33.33%'],
-                                            body: [
-                                                // Première ligne
-                                                [
-                                                    {
-                                                        alignment: 'left',
-                                                        stack: [
-                                                            {
-                                                                image: imagePath, // chemin de l'image
-                                                                width: 25 // largeur de l'image en pourcentage
-                                                            },
-                                                            {
-                                                                text: 'GERAC-EHA', // texte à afficher à côté de l'image
-                                                                fontSize: 9 // taille de la police du texte
-                                                            }
-                                                        ]
-                                                    },
-                                                    {
-                                                        text: [{ text: '\n' }, { text: title.toUpperCase(), bold: true, fontSize: 12 }],
-                                                        alignment: 'center',
-                                                        hLineWidth: 0,
-                                                        border: false,
-                                                        vLineWidth: 0
-                                                    },
-                                                    {
-                                                        text: [
-                                                            'Impression le ' + dateTime,
-                                                            { text: '\n' },
-                                                            { text: '\nImprimé par: ' + htmlDecode(userName), fontSize: 9 }
-                                                        ],
-                                                        alignment: 'right',
-                                                        hLineWidth: 0,
-                                                        border: false,
-                                                        vLineWidth: 0
-                                                    },
-                                                ]
-                                            ]
-                                        },
-                                        hLineWidth: 0, // Pas de ligne horizontale
-                                        border: false,
-                                        vLineWidth: 0 // Pas de ligne verticale
-                                    },
-                                ]
-                            };
-                        };
+    function getLanguageSettings() {
+        return {
+            processing: "Traitement en cours...",
+            search: "",
+            searchPlaceholder: "Rechercher",
+            lengthMenu: "Afficher _MENU_ lignes",
+            info: "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+            infoEmpty: "Aucun élément à afficher",
+            infoFiltered: "(filtré de _MAX_ éléments au total)",
+            loadingRecords: "Chargement...",
+            zeroRecords: "Aucun résultat trouvé",
+            emptyTable: "Aucune donnée disponible",
+            paginate: {
+                first: "Premier",
+                previous: "Précédent",
+                next: "Suivant",
+                last: "Dernier",
+            },
+            aria: {
+                sortAscending: ": activer pour trier croissant",
+                sortDescending: ": activer pour trier décroissant",
+            },
+        };
+    }
 
+    function getButtons(title, dateTime, userName, lastColumnAction) {
+        return [
+            {
+                extend: "pageLength",
+                text: "Afficher les lignes",
+            },
+            {
+                extend: "excelHtml5",
+                text: "Exporter",
+                title: title,
+                exportOptions: {
+                    columns: lastColumnAction ? ":not(:last-child)" : "",
+                },
+            },
+            {
+                text: "Imprimer",
+                action: function (e, dt, node, config) {
+                    generatePDF(title, dateTime, userName, lastColumnAction);
+                }
+            }
+        ];
+    }
 
+    function generatePDF(title, dateTime, userName, lastColumnAction) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
 
+        const marginX = 40;
+        const logoWidth = 40;
+        const logoHeight = 35;
 
-                        // Définir le footer avec les marges ajustées
-                        doc['footer'] = function(page, pages) {
-                            return {
-                                columns: [
-                                    {
-                                        // This is the right column
-                                        alignment: 'right',
-                                        text: ['page ', { text: page.toString() },  ' sur ', { text: pages.toString() }]
-                                    }
-                                ],
-                                margin: footerMargin
-                            };
-                        };
-                    },
-                },
-        ],
-    });
+        // === 💠 FOND BLEU HEADER ===
+        const headerHeight = 90;
+        doc.setFillColor(0, 0, 70);
+        doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+        // === 📝 TEXTE DU HEADER SUR LE FOND BLEU ===
+        doc.setTextColor(255, 255, 255); // texte blanc
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text("BTP-PROJECT", marginX, 20);
+        doc.text(`Impression le : ${dateTime}`, pageWidth - marginX, 20, { align: "right" });
+
+        // Titre centré
+        doc.setFontSize(13);
+        doc.text(title.toUpperCase(), pageWidth / 2, 40, { align: "center" });
+
+        // Logo à gauche
+        doc.addImage(imagePath, 'PNG', marginX, 50, logoWidth, logoHeight);
+
+        // "Imprimé par" à droite
+        doc.setTextColor(255, 255, 255); // texte blanc
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Imprimé par : ${$('<div>').html(userName).text()}`, pageWidth - marginX, 70, { align: "right" });
+
+        // === 🔢 TABLEAU ===
+        const columns = getColumns(table, lastColumnAction);
+        const rows = getRows(table, columns, lastColumnAction);
+
+        doc.autoTable({
+            startY: headerHeight + 20,
+            head: [columns.map(col => col.header)],
+            body: rows.map(row => columns.map(col => row[col.dataKey])),
+            styles: {
+                fontSize: 9,
+                cellPadding: 4,
+                overflow: 'linebreak'
+            },
+            headStyles: {
+                fillColor: [240, 240, 240],
+                textColor: 20,
+                fontStyle: 'bold'
+            },
+            margin: { top: 90, left: marginX, right: marginX },
+            didDrawPage: function (data) {
+                const pageCount = doc.internal.getNumberOfPages();
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} sur ${pageCount}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+            }
+        });
+
+        doc.save(title + '.pdf');
+    }
+
+    function getColumns(table, lastColumnAction) {
+        const columns = [];
+        $("#" + table + " thead th").each(function () {
+            const text = $(this).text().trim();
+            if (!lastColumnAction || text.toLowerCase() !== "action") {
+                columns.push({ header: text, dataKey: text });
+            }
+        });
+        return columns;
+    }
+
+    function getRows(table, columns, lastColumnAction) {
+        const rows = [];
+        $("#" + table + " tbody tr").each(function () {
+            const row = {};
+            $(this).find("td").each(function (index) {
+                if (!lastColumnAction || index !== $(this).closest("tr").find("td").length - 1) {
+                    row[columns[index].dataKey] = $(this).text().trim();
+                }
+            });
+            rows.push(row);
+        });
+        return rows;
+    }
 }
+
 
 function goBack() {
     $(document).ready(function() {

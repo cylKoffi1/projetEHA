@@ -110,9 +110,12 @@
     <script src="{{ asset('assets/static/js/pages/date-picker.js')}}"></script> --}}
     <script src="{{ asset('assets/extensions/choices.js/public/assets/scripts/choices.js') }}"></script>
     <!-- Bootstrap Bundle avec Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-..." crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"  crossorigin="anonymous"></script>
 
     <script src="{{ asset('assets/static/js/pages/form-element-select.js') }}"></script>
+<!-- Include jsPDF and AutoTable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.24/jspdf.plugin.autotable.min.js"></script>
 
     <!-- au lieu d'utiliser les alert en js pour afficher les messages, on utilisera ce code pour les messages. le modal est celui qui se trouve ci dessous
     EXEMPLE pour afficher le message Veuillez sélectionner un projet. on fera:

@@ -222,11 +222,11 @@
                                     </div>
 
                                 </div>
-
+                                <!--
                                 <div class="row">
 
-                                    <!-- MOE Entreprise Fields -->
-                                        <div class="row mt-3 d-none" id="moeEntrepriseFields">
+                                    --><!-- MOE Entreprise Fields -->
+                                    <!--     <div class="row mt-3 d-none" id="moeEntrepriseFields">
                                             <hr>
                                             <h6>Détails pour l’Entreprise</h6>
                                             <div class="col-12">
@@ -241,9 +241,9 @@
                                                         <button class="nav-link" id="moeentreprise-contact-tab" data-bs-toggle="tab" data-bs-target="#moeentreprise-contact" type="button" role="tab" aria-controls="moeentreprise-contact" aria-selected="false">Informations de Contact</button>
                                                     </li>
                                                 </ul>
-                                                <div class="tab-content mt-3" id="moeentrepriseTabsContent">
+                                                <div class="tab-content mt-3" id="moeentrepriseTabsContent">-->
                                                     <!-- Tab 1: Informations Générales -->
-                                                    <div class="tab-pane fade show active" id="moeentreprise-general" role="tabpanel" aria-labelledby="moeentreprise-general-tab">
+                                                   <!--  <div class="tab-pane fade show active" id="moeentreprise-general" role="tabpanel" aria-labelledby="moeentreprise-general-tab">
                                                         <div class="row">
                                                             <div class="col-md-6">
                                                                 <label>Nom complet (Raison sociale) * :</label>
@@ -268,9 +268,9 @@
                                                             </div>
                                                         </div>
                                                     </div>
-
+                                                    -->
                                                     <!-- Tab 2: Informations Juridiques -->
-                                                    <div class="tab-pane fade" id="moeentreprise-legal" role="tabpanel" aria-labelledby="moeentreprise-legal-tab">
+                                                    <!--     <div class="tab-pane fade" id="moeentreprise-legal" role="tabpanel" aria-labelledby="moeentreprise-legal-tab">
                                                         <div class="row">
                                                             <div class="col-md-4">
                                                                 <label>Numéro d’Immatriculation :</label>
@@ -295,8 +295,8 @@
                                                         </div>
                                                     </div>
 
-                                                    <!-- Tab 3: Informations de Contact -->
-                                                    <div class="tab-pane fade" id="moeentreprise-contact" role="tabpanel" aria-labelledby="moeentreprise-contact-tab">
+                                                    --> <!-- Tab 3: Informations de Contact -->
+                                                     <!--<div class="tab-pane fade" id="moeentreprise-contact" role="tabpanel" aria-labelledby="moeentreprise-contact-tab">
                                                         <div class="row">
                                                             <div class="col-4">
                                                                 <label>Code postale</label>
@@ -335,27 +335,27 @@
                                                             
                                                             <hr>
                                                         </div>
-                                                        <div class="row align-items-end">
+                                                        <div class="row align-items-end">-->
                                                             <!-- Lookup-Multiselect -->
-                                                            <div class="col-md-3">
+                                                           <!--  <div class="col-md-3">
                                                                 <label>Personne de Contact</label>
                                                                 <lookup-multiselect name="nomPCMoe" id="nomPCMoe">
                                                                     @foreach ($acteurRepres as $acteurRepre)
                                                                         <option value="{{ $acteurRepre->code_acteur }}">{{ $acteurRepre->libelle_court }} {{ $acteurRepre->libelle_long }}</option>
                                                                     @endforeach
                                                                 </lookup-multiselect>
-                                                            </div>
+                                                            </div>-->
 
                                                             <!-- Conteneur pour afficher dynamiquement les champs -->
-                                                            <div class="col-md-9 d-flex flex-wrap" id="contactContainerMoe"></div>
+                                                             <!--<div class="col-md-9 d-flex flex-wrap" id="contactContainerMoe"></div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </div>-->
 
                                         <!-- MOE Individu Fields -->
-                                        <div class="row mt-3 d-none" id="moeIndividuFields">
+                                         <!--<div class="row mt-3 d-none" id="moeIndividuFields">
                                             <hr>
                                             <h6>Détails pour l’Individu</h6>
                                             <div class="col-12">
@@ -370,9 +370,9 @@
                                                         <button class="nav-link" id="moeindividu-admin-tab" data-bs-toggle="tab" data-bs-target="#moeindividu-admin" type="button" role="tab" aria-controls="moeindividu-admin" aria-selected="false">Informations Administratives</button>
                                                     </li>
                                                 </ul>
-                                                <div class="tab-content mt-3" id="moeindividuTabsContent">
+                                                <div class="tab-content mt-3" id="moeindividuTabsContent">-->
                                                     <!-- Tab 1: Informations Personnelles -->
-                                                    <div class="tab-pane fade show active" id="moeindividu-general" role="tabpanel" aria-labelledby="moeindividu-general-tab">
+                                                     <!--<div class="tab-pane fade show active" id="moeindividu-general" role="tabpanel" aria-labelledby="moeindividu-general-tab">
                                                         <div class="row">
                                                             <div class="col-md-4">
                                                                 <label>Nom *:</label>
@@ -414,10 +414,10 @@
                                                                 </select>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    </div>-->
 
                                                     <!-- Tab 2: Informations de Contact -->
-                                                    <div class="tab-pane fade" id="moeindividu-contact" role="tabpanel" aria-labelledby="moeindividu-contact-tab">
+                                                     <!--<div class="tab-pane fade" id="moeindividu-contact" role="tabpanel" aria-labelledby="moeindividu-contact-tab">
                                                         <div class="row">
                                                             <div class="col-md-4">
                                                                 <label>Email *:</label>
@@ -444,10 +444,10 @@
                                                                 <input type="text" name="TelMobileIndMoe" class="form-control" placeholder="Téléphone">
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    </div>-->
 
                                                     <!-- Tab 3: Informations Administratives -->
-                                                    <div class="tab-pane fade" id="moeindividu-admin" role="tabpanel" aria-labelledby="moeindividu-admin-tab">
+                                                     <!--<div class="tab-pane fade" id="moeindividu-admin" role="tabpanel" aria-labelledby="moeindividu-admin-tab">
                                                         <div class="row">
                                                             <div class="col-md-3">
                                                                 <label>Pièce d’Identité :</label>
@@ -490,7 +490,8 @@
                                                 </div>
                                             </div>
                                         </div>
-                                </div>                  
+                                </div>    
+                                -->          
 
 
                                 <hr>
@@ -1227,8 +1228,10 @@
                                                 <table class="table table-bordered">
                                                     <thead>
                                                         <tr>
+                                                            <th hidden></th>
                                                             <th>Localité</th>
                                                             <th>Niveau</th>
+                                                            <th hidden></th>
                                                             <th>Découpage</th>
                                                             <th>Action</th>
                                                         </tr>
@@ -1246,39 +1249,44 @@
                                         <h5 class="text-secondary">🏗️ Infrastructures</h5>
                                         <div class="row">
                                             <div class="col-md-6">
-                                                <label>Type d'Infrastructure *</label>
-                                                <select class="form-control" id="infrastructureType">
-                                                    <option value="">Sélectionnez un type</option>
-
+                                                <label>Famille d'Infrastructure *</label>
+                                                <select class="form-control" id="infrastructureType" >
+                                                    <option value="">Sélectionnez </option>
+                                                   
                                                 </select>
                                             </div>
                                             <div class="col-md-6">
-                                                <label>Type caractéristique *</label>
-                                                <select name="typeCaracteristique" id="typeCaracteristique">
-                                                    <option value=""></option>
-                                                </select>
+                                                <label>Infrastructure *</label>
+                                                <input type="text" class="form-control" name="typeCaracteristique" id="typeCaracteristique">
+                                                    
                                             </div>
-                                            <div class="col-md-6">
-                                                <label >Caractéristique *</label>
-                                                <Select name="Caracteristique" id="Caracteristique">
-                                                    <option value=""></option>
-
-                                                </Select>
-                                            </div>
+                                            
                                         </div>
-                                        <br>
                                         <div class="row">
-                                            <div class="col-md-6">
-                                                <label>Localisation *</label>
-                                                <input type="text" class="form-control" id="infrastructureLocation" placeholder="Entrez la localisation">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label>Statut *</label>
-                                                <select class="form-control" id="infrastructureStatus">
-                                                    <option value="">Sélectionnez un statut</option>
-                                                    <option value="actif">Actif</option>
-                                                    <option value="inactif">Inactif</option>
+                                            <div class="col-md-3">
+                                                <label>Type de caractéristique</label>
+                                                <select class="form-control" name="tyCaract" id="tyCaract">
+                                                    <option value="">Sélectionner le type </option>
+                                                    @foreach ($TypeCaracteristiques as $TypeCaracteristique)
+                                                        <option value="{{ $TypeCaracteristique->idTypeCaracteristique }}">{{ $TypeCaracteristique->libelleTypeCaracteristique }}</option>
+                                                    @endforeach
                                                 </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label>Caractéristique</label>
+                                                <select class="form-control" name="caract" id="caract">
+                                                    <option value="">Sélectionner la caractéristique</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label>Unité</label>
+                                                <select class="form-control" name="unitCaract" id="unitCaract">
+                                                    <option value="">Sélectionner l'unité</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label>Valeur</label>
+                                                <input type="text" class="form-control" name="caractValues[]">
                                             </div>
                                         </div>
                                         <br>
@@ -1318,156 +1326,215 @@
                                     </div>
                                 </div>
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                function saveStep2(callback = null) {
+                                    const codeProjet = localStorage.getItem("code_projet_temp");
+                                    if (!codeProjet) return alert("Aucun projet n’a encore été créé.");
+
+                                    // 🔁 Lecture des lignes de localisation
+                                    const localites = [];
+                                    $("#tableLocalites tr").each(function () {
+                                        const cols = $(this).find("td");
+                                        if (cols.length > 0) {
+                                            localites.push({
+                                                id: cols.eq(0).text(),
+                                                libelle: cols.eq(1).text(),
+                                                niveau: cols.eq(2).text(),
+                                                decoupage: cols.eq(3).text()
+                                            });
+                                        }
+                                    });
+
+                                    // 🔁 Lecture des infrastructures + caractéristiques
+                                    const infrastructures = [];
+                                    $("#tableInfrastructures tr").each(function () {
+                                        const type = $(this).find('input[name="typesCaracteristiques[]"]').val();
+                                        const caract = $(this).find('input[name="caracteristiques[]"]').val();
+                                        const unite = $(this).find('input[name="unites[]"]').val();
+                                        const valeur = $(this).find('input[name="valeursCaracteristiques[]"]').val();
+
+                                        infrastructures.push({
+                                            localisation_id: null, // à remplir si tu lies à une localité précise
+                                            statut: 'prévu',
+                                            caracteristiques: [
+                                                {
+                                                    id: caract,
+                                                    unite_id: unite,
+                                                    valeur: valeur,
+                                                }
+                                            ]
+                                        });
+                                    });
+
+                                    $.ajax({
+                                        url: '{{ route("projets.temp.save.step2") }}',
+                                        method: 'POST',
+                                        data: {
+                                            _token: '{{ csrf_token() }}',
+                                            code_projet: codeProjet,
+                                            localites: localites,
+                                            infrastructures: infrastructures
+                                        },
+                                        success: function (response) {
+                                            alert(response.message || "Étape 2 sauvegardée.");
+                                            if (typeof callback === "function") callback();
+                                        },
+                                        error: function (xhr) {
+                                            alert("Erreur lors de la sauvegarde !");
+                                            console.error(xhr.responseText);
+                                        }
+                                    });
+                                }
+
+                            </script>
 
                             <div class="step" id="step-3">
                                 <h5 class="text-secondary">🌍 Infrastructures</h5>
                                 <div class="row">
                                     <br>
                                     <div style="width: 100%;">
-                                <fieldset class="border p-2 mt-5">
-                                    <legend class="w-auto">Actions</legend>
-                                    <div class="row">
-                                        <div class="col-1" style="width: 10%;">
-                                            <p for="action">N ordre:</p>
-                                            <input type="number" name="nordre" id="nordre" value="1" readonly class="form-control">
-                                        </div>
-                                        <div class="col-2" style="width: 25%;">
-                                            <p for="action">Action à mener:</p>
-                                            <select id="action" class="form-select" name="actionMener">
-                                                <option value="">Sélectionner </option>
-                                                @foreach ($actionMener as $action)
-                                                <option value="{{ $action->code }}">{{ $action->libelle }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <fieldset class="border p-2 mt-5">
+                                            <legend class="w-auto">Actions</legend>
+                                            <div class="row">
+                                                <div class="col-1" style="width: 10%;">
+                                                    <p for="action">N ordre:</p>
+                                                    <input type="number" name="nordre" id="nordre" value="1" readonly class="form-control">
+                                                </div>
+                                                <div class="col-2" style="width: 25%;">
+                                                    <p for="action">Action à mener:</p>
+                                                    <select id="action" class="form-select" name="actionMener">
+                                                        <option value="">Sélectionner </option>
+                                                        @foreach ($actionMener as $action)
+                                                        <option value="{{ $action->code }}">{{ $action->libelle }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
 
-                                        <div class="col-2" style="width: 11%;">
-                                            <p for="quantite">Quantité:</p>
-                                            <input type="number" class="form-control"  min="0" id="quantite" name="quantite" style="width: 88%; text-align: right; justify-content: right;" >
-                                        </div>
-                                        <div class="col-2" style="width: 15%;">
-                                            <p for="action">Unité mésure:</p>
-                                            <select id="action_unite_mesure" class="form-select" name="uniteMesure">
-                                                <option value="">Unité mésure</option>
-
-                                            </select>
-                                        </div>
-                                        <div class="col-2" style="width: 22%;">
-                                            <p for="infrastructure">Infrastructure:</p>
-                                            <select name="infrastructure" class="form-select" id="insfrastructureSelect">
-                                                <option value="">Sélectionner l'infrastructure</option>
-
-                                            </select>
-                                        </div>
-                                        <div class="col-2" style="margin-top: 7px; width: 17%;">
-                                            <a href="#"  id="toggleBeneficiaire">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
-                                                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"></path>
-                                                </svg>
-                                                Bénéficiaire
-                                            </a>
+                                                <div class="col-2" style="width: 11%;">
+                                                    <p for="quantite">Quantité:</p>
+                                                    <input type="number" class="form-control"  min="0" id="quantite" name="quantite" style="width: 88%; text-align: right; justify-content: right;" >
+                                                </div>
+                                                <div class="col-2" style="width: 22%;">
+                                                    <p for="infrastructure">Infrastructure:</p>
+                                                    <lookup-select name="infrastructure" id="insfrastructureSelect">
+                                                        <option value="">Sélectionner l'infrastructure</option>
+                                                        @foreach ($infrastructures as $infrastructure)
+                                                            <option value="{{ $infrastructure->id }}">{{ $infrastructure->libelle }}</option>
+                                                        @endforeach
+                                                    </lookup-select>
+                                                </div>
+                                                <div class="col-2" style="margin-top: 7px; width: 17%;">
+                                                    <a href="#"  id="toggleBeneficiaire">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                                                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"></path>
+                                                        </svg>
+                                                        Bénéficiaire
+                                                    </a>
 
 
 
 
-                                                <button type="button" style="margin-top: 7px; float: right;" class="btn btn-secondary" id="addAction">
-                                                    <i class="fas fa-plus"></i>
-                                                    Action
-                                                </button>
-                                        </div>
-                                </fieldset>
-                                <div class="row mt-3 d-none" id="infrastructureField">
-                                    <div class="row">
-                                        <div class="row">
-                                            <label for="structure_ratache">Bénéficiaire :</label>
-                                            <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
-                                            <input type="hidden" name="numOrdreBene" id="numOrdreBene">
+                                                        <button type="button" style="margin-top: 7px; float: right;" class="btn btn-secondary" id="addAction">
+                                                            <i class="fas fa-plus"></i>
+                                                            Action
+                                                        </button>
+                                                </div>
+                                        </fieldset>
+                                        <div class="row mt-3 d-none" id="infrastructureField">
+                                            <div class="row">
+                                                <div class="row">
+                                                    <label for="structure_ratache">Bénéficiaire :</label>
+                                                    <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
+                                                    <input type="hidden" name="numOrdreBene" id="numOrdreBene">
 
-                                            <div class="col">
-                                                <label for="age">Localité :</label>
-                                                <input type="radio" name="beneficiaire_type[]" value="localite" id="age" checked="true" onclick="afficheSelect('localite')" style="margin-right: 15px;">
+                                                    <div class="col">
+                                                        <label for="age">Localité :</label>
+                                                        <input type="radio" name="beneficiaire_type[]" value="localite" id="age" checked="true" onclick="afficheSelect('localite')" style="margin-right: 15px;">
+                                                    </div>
+                                                    <div class="col">
+                                                        <label for="sousp">Acteur :</label>
+                                                        <input type="radio" name="beneficiaire_type[]" value="acteur" id="sousp" onclick="afficheSelect('acteur')" style="margin-right: 15px;">
+                                                    </div>
+                                                    <div class="col" >
+                                                        <label for="min">infrastructure :</label>
+                                                        <input type="radio" name="beneficiaire_type[]" value="infrastructure" id="dep" onclick="afficheSelect('infrastructure')" style="margin-right: 15px;">
+
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col">
+                                                        <lookup-select name="beneficiaire_code[]" id="localite" style="display: none;">
+                                                            <option value="">Sélectionner la localité</option>
+                                                            
+                                                        </lookup-select>
+                                                        <lookup-select name="beneficiaire_code[]" id="acteur" style="display: none;">
+                                                            <option value="">Sélectionner l'acteur</option>
+                                                            @foreach ($acteurs as $acteur)
+                                                                <option value="{{ $acteur?->code_acteur }}">{{ $acteur?->libelle_court }} {{ $acteur?->libelle_long }} </option>
+                                                            @endforeach
+                                                        </lookup-select>
+                                                        <lookup-select name="beneficiaire_code[]" id="infrastructure" style="display: none;">
+                                                            <option value="">Sélectionner l'infrastructure</option>
+                                                            @foreach ($infrastructures as $infrastructure)
+                                                                <option value="{{ $infrastructure->id }}">{{ $infrastructure->libelle }}</option>
+                                                            @endforeach
+                                                        </lookup-select>
+                                                    </div>
+
+                                                    <div class="col">
+                                                        <button type="button" class="btn btn-secondary" id="addBtnBene">
+                                                            <i class="fas fa-plus"></i>
+                                                            Ajouter
+                                                        </button>
+                                                    </div>
+                                                    <div class="col">
+                                                        <button type="button" class="btn btn-danger" style="width: 121px" id="deleteBtn">
+                                                            <i class="fas fa-trash"></i>
+                                                            Supprimer
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <br><br>
                                             </div>
-                                            <div class="col">
-                                                <label for="sousp">Acteur :</label>
-                                                <input type="radio" name="beneficiaire_type[]" value="sous_prefecture1" id="sousp" onclick="afficheSelect('acteur')" style="margin-right: 15px;">
-                                            </div>
-                                            <div class="col" >
-                                                <label for="min">infrastructure :</label>
-                                                <input type="radio" name="beneficiaire_type[]" value="departement" id="dep" onclick="afficheSelect('infrastructure')" style="margin-right: 15px;">
+                                            <br>
+                                            <div class="row" style="align-items: center;">
+                                                <div class="col">
+                                                    <div class="table-container">
+                                                        <table id="beneficiaireTable">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th class="etablissement"><input type="checkbox"></th>
+                                                                    <th class="etablissement">Code</th>
+                                                                    <th class="etablissement">Libellé</th>
+                                                                    <th class="etablissement">Type</th>
 
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col">
-                                                <select name="beneficiaire_code[]" id="localite" class="form-select" style="display: none;">
-                                                    <option value="">Sélectionner la localité</option>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
 
-                                                </select>
-                                                <select name="beneficiaire_code[]" id="acteur" class="form-select" style="display: none;">
-                                                    <option value="">Sélectionner l'acteur</option>
-
-                                                </select>
-                                                <select name="beneficiaire_code[]" id="infrastructure" class="form-select" style="display: none;">
-                                                    <option value="">Sélectionner l'infrastructure</option>
-
-                                                </select>
-                                            </div>
-
-                                            <div class="col">
-                                                <button type="button" class="btn btn-secondary" id="addBtn">
-                                                    <i class="fas fa-plus"></i>
-                                                    Ajouter
-                                                </button>
-                                            </div>
-                                            <div class="col">
-                                                <button type="button" class="btn btn-danger" style="width: 121px" id="deleteBtn">
-                                                    <i class="fas fa-trash"></i>
-                                                    Supprimer
-                                                </button>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <br><br>
-                                    </div>
-                                    <br>
-                                    <div class="row" style="align-items: center;">
-                                        <div class="col">
-                                            <div class="table-container">
-                                                <table id="beneficiaireTable">
-                                                    <thead>
-                                                        <tr>
-                                                            <th class="etablissement"><input type="checkbox"></th>
-                                                            <th class="etablissement">Code</th>
-                                                            <th class="etablissement">Libellé</th>
-                                                            <th class="etablissement">Type</th>
+                                        <hr>
+                                    <div>
 
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div>
-
-                                    <div class="table table-bordered">
-                                        <table id="tableActionMener">
+                                    <div class="table table-bordered" >
+                                        <table id="tableActionMener" style="width: 100%">
                                             <thead>
                                                 <tr>
                                                     <th>N° d'ordre</th>
                                                     <th>Action</th>
                                                     <th>Quantité</th>
-                                                    <th>Unité de mésure</th>
-                                                    <th>Infrastructure</th>
-                                                    <th>libelle Bénéficiaires</th>
-                                                    <th>Code bénéficiaire</th>
-                                                    <th>type bénéficiaire</th>
-                                                    <th hidden>ActionCode</th>
-                                                    <th hidden>mesureCode</th>
+                                                    <th>Infrastructure</th>                                                    
                                                     <th hidden>InfrastructureCode</th>
+                                                    <th>libelle Bénéficiaires</th>
+                                                    <th hidden>Code bénéficiaire</th>
+                                                    <th>type bénéficiaire</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="beneficiaire-table-body">
@@ -1489,7 +1556,67 @@
                                     </div>
                                 </div>
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                function saveStep3(callback = null) {
+                                    const codeProjet = localStorage.getItem("code_projet_temp");
+                                    if (!codeProjet) return alert("Aucun projet temporaire trouvé.");
 
+                                    const actions = [];
+                                    $("#tableActionMener tbody tr").each(function () {
+                                        const ordre = $(this).find("td:eq(0)").text();
+                                        const actionText = $(this).find("td:eq(1)").text();
+                                        const quantite = $(this).find("td:eq(2)").text();
+                                        const infraLabel = $(this).find("td:eq(3)").text();
+                                        const infraCode = $(this).find("td:eq(4)").text();
+
+                                        const codeB = $(this).find("td:eq(6)").text();
+                                        const typeB = $(this).find("td:eq(7)").text();
+                                        const codePays = $(this).find("td:eq(8)").text();
+                                        const codeRattachement = $(this).find("td:eq(9)").text();
+
+                                        actions.push({
+                                            ordre: ordre,
+                                            action_code: getActionCodeByLabel(actionText),
+                                            quantite: quantite,
+                                            infrastructure_code: infraCode,
+                                            beneficiaires: [{
+                                                code: codeB,
+                                                type: typeB,
+                                                codePays: codePays,
+                                                codeRattachement: codeRattachement
+                                            }]
+                                        });
+                                    });
+
+                                    $.ajax({
+                                        url: '{{ route("projets.temp.save.step3") }}',
+                                        method: 'POST',
+                                        data: {
+                                            _token: '{{ csrf_token() }}',
+                                            code_projet: codeProjet,
+                                            actions: actions
+                                        },
+                                        success: function (response) {
+                                            alert(response.message || "Étape 3 sauvegardée.");
+                                            if (typeof callback === "function") callback();
+                                        },
+                                        error: function (xhr) {
+                                            alert("Erreur lors de la sauvegarde !");
+                                            console.error(xhr.responseText);
+                                        }
+                                    });
+                                }
+
+                                // Cette fonction est à adapter si tu veux mapper l'intitulé de l'action à son code
+                                function getActionCodeByLabel(label) {
+                                    const select = document.getElementById('action');
+                                    for (let option of select.options) {
+                                        if (option.text === label) return option.value;
+                                    }
+                                    return null;
+                                }
+                            </script>
 
                             <!-- 📜 Modal pour la liste des documents -->
                             <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true" style="background: transparent;">
@@ -1579,7 +1706,7 @@ function formatNumber(input) {
             secteurActiviteContainer.style.display = 'none';
         }
     });
-    document.addEventListener("DOMContentLoaded", function () {
+    /*document.addEventListener("DOMContentLoaded", function () {
         const lookupRL = document.getElementById("RepLeEntMoe"); // Sélecteur du lookup-select
         const emailRL = document.querySelector("input[name='EmailRepLeEntMoe']");
         const telephone1RL = document.querySelector("input[name='Tel1RepLeEntMoe']");
@@ -1605,7 +1732,7 @@ function formatNumber(input) {
         }
 
         // Écouter les changements sur le `lookup-select`
-        lookupRL.addEventListener("change", updateRepresentantLegal);
+        //lookupRL.addEventListener("change", updateRepresentantLegal);
 
         // Optionnel : Remplir les champs au chargement si une valeur est déjà sélectionnée
         setTimeout(updateRepresentantLegal, 500);
@@ -1683,7 +1810,7 @@ function formatNumber(input) {
 
         // Optionnel : Afficher les données au chargement si des valeurs sont déjà sélectionnées
         setTimeout(updateContacts, 500);
-    });
+    });*/
 </script>
 <script>
     let currentStep = 1;
@@ -1771,7 +1898,7 @@ function formatNumber(input) {
     document.addEventListener("DOMContentLoaded", function () {
         let acteurInput = document.getElementById("acteurMoeInput");
         let acteurList = document.getElementById("acteurMoeList");
-        let entrepriseFields = document.getElementById("moeEntrepriseFields");
+        //let entrepriseFields = document.getElementById("moeEntrepriseFields");
         let individuFields = document.getElementById("moeIndividuFields");
         if (!acteurInput) return; // Sécurité si l'élément n'est pas présent
         acteurInput.addEventListener("keyup", function () {
@@ -2020,6 +2147,7 @@ function formatNumber(input) {
 
 
     ///////////////////////////LOCALLISATION
+    
     let selectedLocalite = {
         id: null,
         libelle: null,
@@ -2027,19 +2155,20 @@ function formatNumber(input) {
         code_decoupage: null,
         libelle_decoupage: null
     };
-    $(document).ready(function() {
+
+    $(document).ready(function () {
         // Récupérer le code du pays
-        var paysCode = $("#paysSelect").val();
+        const paysCode = $("#paysSelect").val();
 
         if (paysCode) {
             // Charger les localités du pays sélectionné
             $.ajax({
                 url: "/get-localites/" + paysCode,
                 type: "GET",
-                success: function(data) {
+                success: function (data) {
                     $("#niveau1Select").empty().append('<option value="">Sélectionnez une localité</option>');
-                    $.each(data, function(index, localite) {
-                        $("#niveau1Select").append('<option value="' + localite.id + '">' + localite.libelle+ '</option>');
+                    $.each(data, function (index, localite) {
+                        $("#niveau1Select").append('<option value="' + localite.id + '">' + localite.libelle + '</option>');
                     });
                 }
             });
@@ -2047,8 +2176,15 @@ function formatNumber(input) {
 
         // Lorsqu'on sélectionne une localité
         $("#niveau1Select").change(function () {
-            var localiteId = $(this).val();
-            var localiteText = $("#niveau1Select option:selected").text();
+            const lookup = document.getElementById("niveau1Select");
+            const localiteId = lookup.value;
+            const selected = lookup.getSelected(); // méthode qu’on a ajoutée dans ton composant
+            const localiteText = selected ? selected.text : "";
+
+
+            // Stocker le libellé sélectionné
+            selectedLocalite.libelle = localiteText;
+            selectedLocalite.id = localiteId;
 
             if (localiteId) {
                 // Charger le niveau et découpage associés
@@ -2056,12 +2192,14 @@ function formatNumber(input) {
                     url: "/get-decoupage-niveau/" + localiteId,
                     type: "GET",
                     success: function (data) {
-                        $("#niveau2Select").empty().append('<option value="' + data.niveau + '">' + data.niveau + '</option>').prop("disabled", false);
-                        $("#niveau3Select").empty().append('<option value="' + data.code_decoupage + '">' + data.libelle_decoupage + '</option>').prop("disabled", false);
+                        $("#niveau2Select").empty()
+                            .append('<option value="' + data.niveau + '">' + data.niveau + '</option>')
+                            .prop("disabled", false);
 
-                        // Stocker les données dans une variable pour les réutiliser plus tard
-                        selectedLocalite.id = localiteId;
-                        selectedLocalite.libelle = localiteText;
+                        $("#niveau3Select").empty()
+                            .append('<option value="' + data.code_decoupage + '">' + data.libelle_decoupage + '</option>')
+                            .prop("disabled", false);
+
                         selectedLocalite.niveau = data.niveau;
                         selectedLocalite.code_decoupage = data.code_decoupage;
                         selectedLocalite.libelle_decoupage = data.libelle_decoupage;
@@ -2069,38 +2207,168 @@ function formatNumber(input) {
                 });
             }
         });
+
+        // Lorsqu'on clique sur "Ajouter"
+        $("#addLocaliteBtn").click(function () {
+            if (!selectedLocalite.id || !selectedLocalite.niveau || !selectedLocalite.code_decoupage) {
+                alert("Veuillez sélectionner une localité avec son niveau et découpage.");
+                return;
+            }
+
+            // Ajouter une ligne dans le tableau avec libellés + identifiants
+            const newRow = `
+                <tr data-id="${selectedLocalite.id}">
+                    <td hidden>${selectedLocalite.id}</td>
+                    <td>${selectedLocalite.libelle} </td>
+                    <td>${selectedLocalite.niveau}</td>
+                    <td hidden>${selectedLocalite.code_decoupage}</td>
+                    <td>${selectedLocalite.libelle_decoupage} </td>
+                    <td><button type="button" class="btn btn-danger btn-sm deleteRowBtn">Supprimer</button></td>
+                </tr>
+            `;
+
+            $("#tableLocalites").append(newRow);
+
+            // Réinitialiser les sélections
+            $("#niveau1Select").val("");
+            $("#niveau2Select").empty().append('<option value="">Sélectionnez un niveau</option>').prop("disabled", true);
+            $("#niveau3Select").empty().append('<option value="">Sélectionnez un niveau</option>').prop("disabled", true);
+            selectedLocalite = {
+                id: null,
+                libelle: null,
+                niveau: null,
+                code_decoupage: null,
+                libelle_decoupage: null
+            };
+        });
+
+        // Supprimer une ligne du tableau
+        $(document).on("click", ".deleteRowBtn", function () {
+            $(this).closest("tr").remove();
+        });
     });
-    // Lorsqu'on clique sur "Ajouter"
-    $("#addLocaliteBtn").click(function () {
-        if (!selectedLocalite.id || !selectedLocalite.niveau || !selectedLocalite.code_decoupage) {
-            alert("Veuillez sélectionner une localité avec son niveau et découpage.");
+    ///////////////////////////INFRASTRUCTURES
+ 
+    document.getElementById('sousDomaineSelect').addEventListener('change', function() {
+        let codeSousDomaine = this.value;
+
+        fetch('/get-familles/' + codeSousDomaine)
+            .then(response => response.json())
+            .then(data => {
+                let select = document.getElementById('infrastructureType');
+                select.innerHTML = '<option value="">Sélectionnez</option>';
+
+                data.forEach(function(famille) {
+                    let option = document.createElement('option');
+                    option.value = famille.idFamille;
+                    option.text = famille.libelleFamille;
+                    select.appendChild(option);
+                });
+            });
+    });
+
+    document.getElementById('tyCaract').addEventListener('change', function() {
+        let idType = this.value;
+
+        // Si rien n’est sélectionné, vide simplement l'autre select
+        if (!idType) {
+            document.getElementById('caract').innerHTML = '<option value=""></option>';
             return;
         }
 
-        // Ajouter une ligne dans le tableau
-        var newRow = `
-            <tr data-id="${selectedLocalite.id}">
-                <td>${selectedLocalite.libelle}</td>
-                <td>${selectedLocalite.niveau}</td>
-                <td>${selectedLocalite.code_decoupage}</td>
-                <td>${selectedLocalite.libelle_decoupage}</td>
-                <td><button type="button" class="btn btn-danger btn-sm deleteRowBtn">Supprimer</button></td>
-            </tr>
-        `;
+        fetch('/get-caracteristiques/' + idType)
+            .then(response => response.json())
+            .then(data => {
+                let caractSelect = document.getElementById('caract');
+                caractSelect.innerHTML = '<option value=""></option>';
 
-        $("#tableLocalites").append(newRow);
-
-        // Réinitialiser les sélections
-        $("#niveau1Select").val("");
-        $("#niveau2Select").empty().append('<option value="">Sélectionnez un niveau</option>').prop("disabled", true);
-        $("#niveau3Select").empty().append('<option value="">Sélectionnez un niveau</option>').prop("disabled", true);
-        selectedLocalite = {}; // Réinitialiser les données
+                data.forEach(function(caract) {
+                    let option = document.createElement('option');
+                    option.value = caract.idCaracteristique;
+                    option.text = caract.libelleCaracteristique;
+                    caractSelect.appendChild(option);
+                });
+            });
     });
 
-    // Supprimer une ligne du tableau
-    $(document).on("click", ".deleteRowBtn", function () {
-        $(this).closest("tr").remove();
+    document.getElementById('caract').addEventListener('change', function () {
+        let idCaracteristique = this.value;
+
+        fetch('/get-unites/' + idCaracteristique)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Unites reçues:', data);
+
+                let selectUnite = document.getElementById('unitCaract');
+                selectUnite.innerHTML = '<option value="">Unité mésure</option>';
+
+                data.forEach(function (unite) {
+                    let option = document.createElement('option');
+                    option.value = unite.idUnite;
+                    option.text = unite.libelleUnite + (unite.symbole ? ' (' + unite.symbole + ')' : '');
+                    selectUnite.appendChild(option);
+                });
+            });
     });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const addBtn = document.getElementById('addInfrastructureBtn');
+        const tableBody = document.getElementById('tableInfrastructures');
+
+        addBtn.addEventListener('click', function () {
+            // Récupère les champs
+            const typeCaract = document.getElementById('tyCaract');
+            const caract = document.getElementById('caract');
+            const unit = document.getElementById('unitCaract');
+            const valeur = document.querySelector('input[name="caractValues[]"]');
+
+            // Vérifie que tout est rempli
+            if (!typeCaract.value || !caract.value || !unit.value || !valeur.value) {
+                alert('Veuillez remplir tous les champs pour ajouter une caractéristique.');
+                return;
+            }
+
+            // Crée une ligne
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="hidden" name="typesCaracteristiques[]" value="${typeCaract.value}">
+                    ${typeCaract.options[typeCaract.selectedIndex].text}
+                </td>
+                <td>
+                    <input type="hidden" name="caracteristiques[]" value="${caract.value}">
+                    ${caract.options[caract.selectedIndex].text}
+                </td>
+                <td>
+                    <input type="hidden" name="unites[]" value="${unit.value}">
+                    ${unit.options[unit.selectedIndex].text}
+                </td>
+                <td>
+                    <input type="hidden" name="valeursCaracteristiques[]" value="${valeur.value}">
+                    ${valeur.value}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm removeRow">Supprimer</button>
+                </td>
+            `;
+
+            tableBody.appendChild(row);
+
+            // Réinitialise les champs
+            caract.innerHTML = '<option value="">Sélectionner la caractéristique</option>';
+            unit.innerHTML = '<option value="">Sélectionner l\'unité</option>';
+            typeCaract.selectedIndex = 0;
+            valeur.value = '';
+        });
+
+        // Délégué pour bouton supprimer
+        tableBody.addEventListener('click', function (e) {
+            if (e.target && e.target.classList.contains('removeRow')) {
+                e.target.closest('tr').remove();
+            }
+        });
+    });
+
   </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -2123,8 +2391,8 @@ function formatNumber(input) {
                     .then(data => {
                         data.forEach(sousDomaine => {
                             let option = document.createElement("option");
-                            option.value = sousDomaine.code;
-                            option.textContent = sousDomaine.libelle;
+                            option.value = sousDomaine.code_sous_domaine;
+                            option.textContent = sousDomaine.lib_sous_domaine;
                             sousDomaineSelect.appendChild(option);
                         });
                         sousDomaineSelect.disabled = false;
@@ -2366,14 +2634,14 @@ function formatNumber(input) {
             const publicRadio = document.getElementById('moePublic');
             const priveRadio = document.getElementById('moePrive');
             const optionsMoePrive = document.getElementById('optionsMoePrive');
-            const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
+            //const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
             const individuFields = document.getElementById('moeIndividuFields');
             const acteurMoeSelect = document.getElementById('acteurMoeSelect');
 
             if (publicRadio.checked) {
                 optionsMoePrive.classList.add('d-none');
-                moeEntrepriseFields.classList.add('d-none');
-                individuFields.classList.add('d-none');
+                /*moeEntrepriseFields.classList.add('d-none');
+                individuFields.classList.add('d-none');*/
                 fetchMoeActeurs('Public');
             } else if (priveRadio.checked) {
                 optionsMoePrive.classList.remove('d-none');
@@ -2382,7 +2650,7 @@ function formatNumber(input) {
                 const entrepriseRadio = document.getElementById('moeEntreprise');
                 const individuRadio = document.getElementById('moeIndividu');
 
-                if (entrepriseRadio.checked) {
+                /*if (entrepriseRadio.checked) {
                     moeEntrepriseFields.classList.remove('d-none');
                     individuFields.classList.add('d-none');
                 } else if (individuRadio.checked) {
@@ -2391,7 +2659,7 @@ function formatNumber(input) {
                 } else {
                     moeEntrepriseFields.classList.add('d-none');
                     individuFields.classList.add('d-none');
-                }
+                }*/
             } else {
                 optionsMoePrive.classList.add('d-none');
                 acteurMoeSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
@@ -2401,18 +2669,18 @@ function formatNumber(input) {
         function toggleMoeFields() {
             const entrepriseRadio = document.getElementById('moeEntreprise');
             const individuRadio = document.getElementById('moeIndividu');
-            const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
+            //const moeEntrepriseFields = document.getElementById('moeEntrepriseFields');
             const individuFields = document.getElementById('moeIndividuFields');
             const typeOuvrage = document.querySelector('input[name="type_ouvrage"]:checked')?.value;
 
             if (entrepriseRadio.checked) {
                 fetchMoeActeurs(typeOuvrage, 'Entreprise');
-                moeEntrepriseFields.classList.remove('d-none');
-                individuFields.classList.add('d-none');
+                /*moeEntrepriseFields.classList.remove('d-none');
+                individuFields.classList.add('d-none');*/
             } else if (individuRadio.checked) {
                 fetchMoeActeurs(typeOuvrage, 'Individu');
-                individuFields.classList.remove('d-none');
-                moeEntrepriseFields.classList.add('d-none');
+                /*individuFields.classList.remove('d-none');
+                moeEntrepriseFields.classList.add('d-none');*/
             }
         }
 
@@ -2447,30 +2715,176 @@ function formatNumber(input) {
 
 
 ////////////////INFRASTRUCTURES
+$(document).ready(function () {
+    const paysCode = $("#paysSelect").val();
+
+    if (paysCode) {
+        $.ajax({
+            url: "/get-localites/" + paysCode,
+            type: "GET",
+            success: function (data) {
+                const $localite = $("#localite");
+                $localite.empty().append('<option value="">Sélectionnez une localité</option>');
+                $.each(data, function (index, localite) {
+                    $localite.append(
+                        `<option 
+                            value="${localite.id}" 
+                            data-code-pays="${localite.id_pays}" 
+                            data-code-rattachement="${localite.code_rattachement}">
+                            ${localite.libelle}
+                        </option>`
+                    );
+                });
+
+                // Force la mise à jour du lookup-select après ajout dynamique
+                const lookup = document.getElementById("localite");
+                if (lookup) lookup.loadOptionsFromDOM?.();
+            }
+        });
+    }
+
+    // Pré-sélection "localité"
+    $("#age").prop("checked", true);
+    afficheSelect('localite');
+});
+
+// Toggle formulaire de bénéficiaire
 document.addEventListener("DOMContentLoaded", function () {
-    // Sélectionnez le bouton "Bénéficiaire"
-    const beneficiaireBtn =  document.getElementById("toggleBeneficiaire");
+    const beneficiaireBtn = document.getElementById("toggleBeneficiaire");
     const infrastructureField = document.getElementById("infrastructureField");
 
     if (beneficiaireBtn && infrastructureField) {
         beneficiaireBtn.addEventListener("click", function (event) {
-            event.preventDefault(); // Empêche le lien de rediriger
-            infrastructureField.classList.toggle("d-none"); // Afficher/Masquer le formulaire
+            event.preventDefault();
+            infrastructureField.classList.toggle("d-none");
         });
     }
 });
 
 function afficheSelect(selectId) {
-            // Hide all selects
-            $('#localite, #infrastructure ,  #acteur').hide();
+    $('#localite, #infrastructure, #acteur').hide();
+    $('#' + selectId).show();
+}
 
-            // Show the selected select
-            $('#' + selectId).show();
+let actionCounter = 1;
+
+const typeToSelectId = {
+    localite: "localite",
+    acteur: "acteur",
+    infrastructure: "infrastructure"
+};
+
+// 🔹 Ajouter un bénéficiaire
+$("#addBtnBene").on("click", function () {
+    const selectedType = $("input[name='beneficiaire_type[]']:checked").val();
+    const selectId = typeToSelectId[selectedType];
+    const selectedLookup = document.getElementById(selectId);
+    const selectedOption = selectedLookup?.getSelected();
+
+    if (selectedOption && selectedOption.value) {
+        const code = selectedOption.value;
+        const libelle = selectedOption.text;
+        const type = selectId;
+
+        const row = `
+            <tr>
+                <td><input type="checkbox"></td>
+                <td>${code}</td>
+                <td>${libelle}</td>
+                <td>${type}</td>
+            </tr>
+        `;
+        $("#beneficiaireTable tbody").append(row);
+    } else {
+        alert("Veuillez sélectionner un bénéficiaire.");
+    }
+});
+
+// 🔹 Supprimer bénéficiaires sélectionnés
+$("#deleteBtn").on("click", function () {
+    $("#beneficiaireTable tbody input[type='checkbox']:checked").closest("tr").remove();
+});
+
+// 🔹 Ajouter une action avec ses bénéficiaires
+$("#addAction").on("click", function () {
+    const action = $("#action option:selected");
+    const quantite = $("#quantite").val();
+    const infrastructureLookup = document.getElementById("insfrastructureSelect");
+    const infrastructureOption = infrastructureLookup?.getSelected();
+
+    if (!action.val() || !quantite || !infrastructureOption || !infrastructureOption.value) {
+        alert("Veuillez remplir tous les champs pour l'action.");
+        return;
+    }
+
+    const infrastructureLibelle = infrastructureOption.text;
+    const infrastructureCode = infrastructureOption.value;
+
+    const $beneficiaires = $("#beneficiaireTable tbody tr");
+
+    if ($beneficiaires.length === 0) {
+        alert("Veuillez ajouter au moins un bénéficiaire.");
+        return;
+    }
+
+    $beneficiaires.each(function () {
+        const codeB = $(this).find("td:eq(1)").text();
+        const libelleB = $(this).find("td:eq(2)").text();
+        const typeB = $(this).find("td:eq(3)").text();
+
+        let extraData = {};
+
+        if (typeB === "localite") {
+            const localiteSelect = document.getElementById("localite");
+            const selected = localiteSelect?.getSelected();
+            extraData.codePays = selected?.codePays || "";
+            extraData.codeRattachement = selected?.codeRattachement || "";
+        } else {
+            extraData.codePays = "";
+            extraData.codeRattachement = "";
         }
-        $(document).ready(function() {
-            $("#age").prop("checked", true);
-            afficheSelect('localite');
-        });
+
+        const newRow = `
+            <tr>
+                <td>${actionCounter}</td>
+                <td>${action.text()}</td>
+                <td>${quantite}</td>
+                <td>${infrastructureLibelle}</td>
+                <td hidden>${infrastructureCode}</td>
+                <td>${libelleB}</td>
+                <td hidden>${codeB}</td>
+                <td>${typeB}</td>
+                <td hidden>${extraData.codePays}</td>
+                <td hidden>${extraData.codeRattachement}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm delete-row">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $("#beneficiaire-table-body").append(newRow);
+    });
+
+
+    actionCounter++;
+    $("#nordre").val(actionCounter);
+
+    // Nettoyage
+    $("#quantite").val('');
+    $("#action").val('');
+    infrastructureLookup.value = null;
+    infrastructureLookup.shadowRoot.querySelector("input").value = '';
+    $("#beneficiaireTable tbody").empty();
+    $("#infrastructureField").addClass("d-none");
+});
+
+// 🔹 Suppression ligne dans tableau final
+$(document).on("click", ".delete-row", function () {
+    $(this).closest("tr").remove();
+});
+
 </script>
 
 @endsection

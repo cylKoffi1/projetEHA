@@ -11,9 +11,9 @@ class SousDomaine extends Model
 
     public $timestamps = false;
 
-    protected $table = 'sous_domaine'; // Nom de la table
-    protected $keyType = 'string';
-    protected $primaryKey = 'code';
+    protected $table = 'sous_domaine'; 
+    protected $primaryKey = 'id';
+    protected $fillable = ['code_sous_domaine', 'lib_sous_domaine', 'code_domaine', 'code_groupe_projet', 'type'];
 
     public function Domaine()
     {

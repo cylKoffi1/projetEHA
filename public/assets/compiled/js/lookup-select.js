@@ -11,7 +11,7 @@ class LookupSelect extends HTMLElement {
                     width: 100%;
                 }
                 .dropdown-list {
-                   width: auto;
+                    width: auto;
                     background: white;
                     border: 1px solid #ccc;
                     border-radius: 5px;
@@ -60,33 +60,45 @@ class LookupSelect extends HTMLElement {
 
         this.input.placeholder = this.getAttribute("placeholder") || "Sélectionner une option...";
 
-        // Désactiver si l’attribut disabled est présent
         if (this.hasAttribute("disabled")) {
             this.input.disabled = true;
         }
 
-        // Charger options internes
         this.loadOptionsFromDOM();
 
-        // Observateur si options changent dynamiquement
         this.observer = new MutationObserver(() => this.loadOptionsFromDOM());
         this.observer.observe(this, { childList: true });
 
         this.addEventListeners();
     }
 
+    // 🔥 Modification ici : extraction des data-* depuis les options
     loadOptionsFromDOM() {
-        this.options = Array.from(this.querySelectorAll("option")).map(option => ({
-            value: option.value,
-            text: option.textContent
-        }));
+        this.options = Array.from(this.querySelectorAll("option")).map(option => {
+            const customData = {};
+            Array.from(option.attributes).forEach(attr => {
+                if (attr.name.startsWith("data-")) {
+                    const key = attr.name
+                        .replace("data-", "")
+                        .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()); // kebab-case -> camelCase
+                    customData[key] = attr.value;
+                }
+            });
+
+            return {
+                value: option.value,
+                text: option.textContent,
+                ...customData
+            };
+        });
+
         this.populateDropdown();
     }
 
     populateDropdown() {
         this.dropdownList.innerHTML = "";
-        this.options.forEach((option, index) => {
-            let div = document.createElement("div");
+        this.options.forEach(option => {
+            const div = document.createElement("div");
             div.className = "dropdown-item";
             div.textContent = option.text;
             div.dataset.value = option.value;
@@ -107,7 +119,6 @@ class LookupSelect extends HTMLElement {
             this.showDropdown();
         });
 
-        // Sélection clavier (↑ ↓ Enter Esc)
         this.input.addEventListener("keydown", e => {
             const items = Array.from(this.dropdownList.querySelectorAll(".dropdown-item"));
             const currentIndex = items.findIndex(item => item.classList.contains("active"));
@@ -171,6 +182,7 @@ class LookupSelect extends HTMLElement {
         }
     }
 
+    // ✅ Donne accès à tous les attributs : value, text, codePays, codeRattachement, etc.
     getSelected() {
         return this.selectedOption;
     }
@@ -178,7 +190,8 @@ class LookupSelect extends HTMLElement {
     setOptions(optionList) {
         this.options = optionList.map(opt => ({
             value: opt.value,
-            text: opt.text
+            text: opt.text,
+            ...opt
         }));
         this.populateDropdown();
     }

@@ -8,53 +8,31 @@ use Illuminate\Database\Eloquent\Model;
 class Caracteristique extends Model
 {
     use HasFactory;
+
+    protected $table = 'caracteristiques';
+    protected $primaryKey = 'idCaracteristique';
     public $timestamps = false;
-    protected $table = 'caracteristique';
-    protected $primaryKey = 'code';
 
-    protected $fillable = ['CodeProjet', 'Ordre', 'codeInfrastructure', 'codeFamille','CodeCaractFamille'];
+    protected $fillable = [
+        'libelleCaracteristique',
+        'idTypeCaracteristique',
+    ];
 
-    public function Infrastructure(){
-        return $this->belongsTo(Infrastructure::class, 'codeInfrastructure', 'code');
+    // Relation avec le type de caractéristique
+    public function typeCaracteristique()
+    {
+        return $this->belongsTo(TypeCaracteristique::class, 'idTypeCaracteristique');
     }
 
-    public function caractUniteTraitement()
+    // Relation avec les unités
+    public function unites()
     {
-        return $this->hasOne(CaractUniteTraitement::class, 'CodeCaractFamille');
+        return $this->hasMany(Unite::class, 'idCaracteristique');
     }
 
-    public function caractReservoir()
+    // Relation avec les valeurs de caractéristiques
+    public function valeursCaracteristiques()
     {
-        return $this->hasOne(CaractReservoir::class, 'CodeCaractFamille');
-    }
-
-    public function caractReseauCollectTransport()
-    {
-        return $this->hasOne(CaractReseauCollect::class, 'CodeCaractFamille');
-    }
-
-    public function caractOuvrageCaptage()
-    {
-        return $this->hasOne(CaractOuvrageCaptage::class, 'CodeCaractFamille');
-    }
-
-    public function caractOuvrageCaptageEau()
-    {
-        return $this->hasOne(CaractOuvrageCaptageEau::class, 'CodeCaractFamille');
-    }
-
-    public function caractOuvrageAssainissement()
-    {
-        return $this->hasOne(CaractOuvrageAssainiss::class, 'CodeCaractFamille');
-    }
-
-    public function caractOuvrage()
-    {
-        return $this->hasOne(CaractOuvrage::class, 'CodeCaractFamille');
-    }
-
-    public function caractInstrumentation()
-    {
-        return $this->hasOne(CaractInstrumentation::class, 'CodeCaractFamille');
+        return $this->hasMany(ValeurCaracteristique::class, 'idCaracteristique');
     }
 }

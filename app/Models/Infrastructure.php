@@ -8,21 +8,26 @@ use Illuminate\Database\Eloquent\Model;
 class Infrastructure extends Model
 {
     use HasFactory;
+
+    protected $table = 'infrastructures';
+    protected $primaryKey = 'id';
     public $timestamps = false;
 
-    protected $table = 'infrastructures'; // Nom de la table
-    protected $keyType = 'string';
-    protected $primaryKey = 'code';
-    protected $fillable = ['code', 'libelle','code_domaine', 'code_famille_infrastructure'];
+    protected $fillable = [
+        'code',
+        'libelle',
+        'code_famille_infrastructure',
+    ];
 
-    public function caractReseauCollect()
+    // Relation avec la famille d'infrastructure
+    public function familleInfrastructure()
     {
-        return $this->hasMany(CaractReseauCollect::class, 'typeOuvrage', 'code');
+        return $this->belongsTo(FamilleInfrastructure::class, 'code_famille_infrastructure', 'code_sdomaine');
     }
 
-    // Méthode pour obtenir les infrastructures avec code_domaine == 02
-    public static function getOuvragesByDomaine($codeDomaine = 02)
+    // Relation avec les valeurs de caractéristiques
+    public function valeursCaracteristiques()
     {
-        return self::where('code_domaine', $codeDomaine)->get();
+        return $this->hasMany(ValeurCaracteristique::class, 'idInfrastructure');
     }
 }

@@ -14,13 +14,14 @@ class ProjetActionAMener extends Model
     protected $table = 'projet_action_a_mener'; // Nom de la table
     protected $primaryKey = 'code';
     protected $fillable = [
-        'CodeProjet',
+        'code',
+        'code_projet',
         'Num_ordre',
         'Action_mener',
         'Quantite',
-        'Unite_mesure',
-        'Infrastrucrues'
+        'Infrastrucrues_id',
     ];
+
 
 
 }

@@ -48,6 +48,9 @@ use App\Models\UniteStockage;
 use App\Models\UniteSurface;
 use App\Models\UniteTraitement;
 use App\Models\uniteVolume;
+use App\Models\TypeCaracteristique;
+use App\Models\Caracteristique;
+use App\Models\Unite;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -1066,8 +1069,13 @@ class PlateformeController extends Controller
     public function familleinfrastructure(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
-        $familleinfrastructure = FamilleInfrastructure::orderBy('nom_famille', 'asc')->get();
-        return view('parGeneraux.familleinfrastructure', ['familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, ]);
+       
+       $groupeSelectionne = session('projet_selectionne');
+       $domaine = Domaine::where('groupe_projet_code', '=', $groupeSelectionne)->get();
+       $sous_domaines = SousDomaine::all();
+        $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')->get();
+        
+        return view('parGeneraux.familleinfrastructure', ['domaine' => $domaine,'sous_domaines'=>$sous_domaines,'familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, ]);
     }
 
     public function getFamilleinfrastructure($code)
@@ -1087,8 +1095,9 @@ class PlateformeController extends Controller
 
         // Créez un nouveau district dans la base de données.
         $familleinfrastructure = new FamilleInfrastructure;
-        $familleinfrastructure->code = $request->input('code');
-        $familleinfrastructure->nom_famille = $request->input('libelle');
+        $familleinfrastructure->code_sdomaine = $request->input('SDomaine');
+        $familleinfrastructure->libelleFamille = $request->input('libelle');
+        $familleinfrastructure->code_domaine = $request->input('domaine');
 
         $familleinfrastructure->save();
         $ecran_id = $request->input('ecran_id');
@@ -1096,49 +1105,37 @@ class PlateformeController extends Controller
         // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
         return redirect()->route('parGeneraux.familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure enregistré avec succès.');
     }
+    public function deleteFamilleInfrastructure($id)
+    {
+        $famille = FamilleInfrastructure::find($id);
+    
+        if (!$famille) {
+            return redirect()->back()->with('error', 'Famille non trouvée.');
+        }
+    
+        $famille->delete();
+    
+        return redirect()->back()->with('success', 'Famille supprimée avec succès.');
+    }
+    
     public function updateFamilleInfrastructure(Request $request)
     {
-        $familleinfrastructure = FamilleInfrastructure::find($request->input('code_edit'));
-
-        if (!$familleinfrastructure) {
-            return response()->json(['error' => 'Famille Infrastructure non trouvé'], 404);
-        }
-
-        $familleinfrastructure->nom_famille = $request->input('libelle_edit');
-
-
-        $familleinfrastructure->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure à jour avec succès.');
+        $request->validate([
+            'id' => 'required|exists:famille_infrastructures,id',
+            'libelle' => 'required|string|max:255',
+            'SDomaine' => 'required|exists:sous_domaines,code_sous_domaine',
+        ]);
+    
+        $famille = FamilleInfrastructure::find($request->input('id'));
+        $famille->libelleFamille = $request->input('libelle');
+        $famille->code_sdomaine = $request->input('SDomaine');
+        $famille->domaine = $request->input('domaine');
+        $famille->save();
+    
+        return redirect()->back()->with('success', 'Famille modifiée avec succès.');
     }
+    
 
-    public function deleteFamilleInfrastructure($code)
-    {
-        $familleinfrastructure = FamilleInfrastructure::find($code);
-
-        if (!$familleinfrastructure) {
-            return response()->json(['error' => 'Famille Infrastructure non trouvé'], 404);
-        }
-        //$projet = ProjetEha2::where('code_domaine', $code)->first();
-
-        // if ($projet) {
-        //     return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
-        // }
-        $familleinfrastructure->delete();
-
-        return response()->json(['success' => 'Famille Infrastructure supprimé avec succès']);
-    }
-
-    public function checkFamilleInfrastructureCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = FamilleInfrastructure::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
 
 
     //***************** FONCTION UTILISATEUR  ************* */
@@ -1787,5 +1784,156 @@ class PlateformeController extends Controller
         return view('parGeneraux.typeInstrument', ['typeInstrument' => $typeInstrument, 'ecran' => $ecran,]);
     }
 
+    /**
+     * Affiche la page de gestion des types de caractéristiques, caractéristiques et unités.
+     */
+    public function CaractTypeUniteIndex()
+    {
+        $typesCaracteristiques = TypeCaracteristique::all();
+        $caracteristiques = Caracteristique::with('typeCaracteristique')->get();
+        $unites = Unite::with('caracteristique')->get();
+
+        return view('parGeneraux.Caracteristiques-unite-Type', compact('typesCaracteristiques', 'caracteristiques', 'unites'));
+    }
+
+    /**
+     * Stocke un nouveau type de caractéristique.
+     */
+    public function storeTypeCaracteristique(Request $request)
+    {
+        $request->validate([
+            'libelleType' => 'required|string|max:255',
+        ]);
+
+        TypeCaracteristique::create([
+            'libelleTypeCaracteristique' => $request->libelleType,
+        ]);
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Type de caractéristique ajouté avec succès.');
+    }
+
+    /**
+     * Met à jour un type de caractéristique existant.
+     */
+    public function updateTypeCaracteristique(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:type_caracteristique,idTypeCaracteristique',
+            'libelleType' => 'required|string|max:255',
+        ]);
+
+        $type = TypeCaracteristique::find($request->id);
+        $type->libelleTypeCaracteristique = $request->libelleType;
+        $type->save();
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Type de caractéristique mis à jour avec succès.');
+    }
+
+    /**
+     * Supprime un type de caractéristique.
+     */
+    public function deleteTypeCaracteristique($id)
+    {
+        $type = TypeCaracteristique::findOrFail($id);
+        $type->delete();
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Type de caractéristique supprimé avec succès.');
+    }
+
+    /**
+     * Stocke une nouvelle caractéristique.
+     */
+    public function storeCaracteristique(Request $request)
+    {
+        $request->validate([
+            'typeCaracteristique' => 'required|exists:type_caracteristique,idTypeCaracteristique',
+            'libelleCaracteristique' => 'required|string|max:255',
+        ]);
+
+        Caracteristique::create([
+            'idTypeCaracteristique' => $request->typeCaracteristique,
+            'libelleCaracteristique' => $request->libelleCaracteristique,
+        ]);
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Caractéristique ajoutée avec succès.');
+    }
+
+    /**
+     * Met à jour une caractéristique existante.
+     */
+    public function updateCaracteristique(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:caracteristiques,idCaracteristique',
+            'typeCaracteristique' => 'required|exists:type_caracteristique,idTypeCaracteristique',
+            'libelleCaracteristique' => 'required|string|max:255',
+        ]);
+
+        $caracteristique = Caracteristique::find($request->id);
+        $caracteristique->idTypeCaracteristique = $request->typeCaracteristique;
+        $caracteristique->libelleCaracteristique = $request->libelleCaracteristique;
+        $caracteristique->save();
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Caractéristique mise à jour avec succès.');
+    }
+
+    /**
+     * Supprime une caractéristique.
+     */
+    public function deleteCaracteristique($id)
+    {
+        $caracteristique = Caracteristique::findOrFail($id);
+        $caracteristique->delete();
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Caractéristique supprimée avec succès.');
+    }
+
+    /**
+     * Stocke une nouvelle unité.
+     */
+    public function storeUnite(Request $request)
+    {
+        $request->validate([
+            'caracteristiqueUnite' => 'required|exists:caracteristiques,idCaracteristique',
+            'libelleUnite' => 'required|string|max:255',
+        ]);
+
+        Unite::create([
+            'idCaracteristique' => $request->caracteristiqueUnite,
+            'libelleUnite' => $request->libelleUnite,
+        ]);
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Unité ajoutée avec succès.');
+    }
+
+    /**
+     * Met à jour une unité existante.
+     */
+    public function updateUnite(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:unites,idUnite',
+            'caracteristiqueUnite' => 'required|exists:caracteristiques,idCaracteristique',
+            'libelleUnite' => 'required|string|max:255',
+        ]);
+
+        $unite = Unite::find($request->id);
+        $unite->idCaracteristique = $request->caracteristiqueUnite;
+        $unite->libelleUnite = $request->libelleUnite;
+        $unite->save();
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Unité mise à jour avec succès.');
+    }
+
+    /**
+     * Supprime une unité.
+     */
+    public function deleteUnite($id)
+    {
+        $unite = Unite::findOrFail($id);
+        $unite->delete();
+
+        return redirect()->route('CaractTypeUnite')->with('success', 'Unité supprimée avec succès.');
+    }
 
 }

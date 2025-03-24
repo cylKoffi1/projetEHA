@@ -41,6 +41,18 @@ use App\Models\TravauxConnexes;
 use App\Models\TypeTravauxConnexes;
 use App\Models\User;
 use App\Models\Validations;
+use App\Models\FamilleInfrastructure;
+use App\Models\TypeCaracteristique;
+use App\Models\Caracteristique; 
+use App\Models\Unite;
+use App\Models\ProjetLocalisation;
+use App\Models\ProjetInfrastructure;
+use App\Models\ValeurCaracteristique;
+use App\Models\Infrastructure;
+use App\Models\ProjetActionAMener;
+use App\Models\Jouir;
+use App\Models\Profiter;
+use App\Models\Beneficier;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
@@ -96,7 +108,12 @@ class EtudeProjet extends Controller
 
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
-            return view('etudes_projets.naissance', compact('deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            $TypeCaracteristiques = TypeCaracteristique::all();
+            $infrastructures = Infrastructure::all();
+            $acteurs = Acteur::where('type_acteur', '=', 'etp')
+            ->where('code_pays', $paysSelectionne)
+            ->get();
+            return view('etudes_projets.naissance', compact('infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
         public function search(Request $request)
         {
@@ -123,7 +140,7 @@ class EtudeProjet extends Controller
 
             $localites = LocalitesPays::where('id_pays', $paysCode)
             ->orderBy('libelle', 'asc')
-            ->get(['id', 'libelle']);
+            ->get(['id', 'libelle', 'code_rattachement', 'id_pays']);
             return response()->json($localites);
         }
 
@@ -154,6 +171,12 @@ class EtudeProjet extends Controller
             ]);
         }
         
+        public function getFamilles($code_sous_domaine)
+        {
+            $familles = FamilleInfrastructure::where('code_sdomaine', $code_sous_domaine)->get();
+
+            return response()->json($familles);
+        }
 
         public function getActeurs(Request $request)
         {
@@ -256,6 +279,19 @@ class EtudeProjet extends Controller
             return response()->json([], 404);
         }
 
+        public function getCaracteristiques($idType)
+        {
+            $caracteristiques = Caracteristique::where('idTypeCaracteristique', $idType)->get();
+
+            return response()->json($caracteristiques);
+        }
+
+        public function getUnites($idCaracteristique)
+        {
+            $unites = Unite::where('idCaracteristique', $idCaracteristique)->get();
+
+            return response()->json($unites);
+        }
 
         public function saveStep1(Request $request)
         {
@@ -294,7 +330,125 @@ class EtudeProjet extends Controller
                 'code_projet' => $projet->code_projet
             ]);
         }
-        
+
+        public function saveStep2(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|string|exists:projets,code_projet',
+                'localites' => 'nullable|array',
+                'localites.*.id' => 'required|string',
+                'localites.*.niveau' => 'nullable|string',
+                'localites.*.decoupage' => 'nullable|string',
+                'infrastructures' => 'nullable|array',
+            ]);
+
+            $codeProjet = $request->code_projet;
+
+            // 🔁 1. Sauvegarder les localisations
+            if ($request->has('localites')) {
+                foreach ($request->localites as $loc) {
+                    ProjetLocalisation::updateOrCreate(
+                        [
+                            'code_projet' => $codeProjet,
+                            'niveau1_id' => $loc['id'],
+                        ],
+                        [
+                            'pays_code' => $request->pays_code ?? auth()->user()->code_pays,
+                            'niveau2_id' => $loc['niveau'] ?? null,
+                            'niveau3_id' => $loc['decoupage'] ?? null,
+                        ]
+                    );
+                }
+            }
+
+            // 🔁 2. Sauvegarder les infrastructures + caractéristiques
+            if ($request->has('infrastructures')) {
+                foreach ($request->infrastructures as $infra) {
+                    // Génération d’un code unique pour l’infrastructure
+                    $infraCode = 'INFRA-' . strtoupper(Str::random(8));
+
+                    // 2.1 Création dans la table projetinfrastructure
+                    $infraDB = ProjetInfrastructure::create([
+                        'idInfrastructure' => $infraCode,
+                        'code_projet' => $codeProjet,
+                        'localisation_id' => $infra['localisation_id'] ?? null,
+                        'statut' => $infra['statut'] ?? 'prévu',
+                    ]);
+
+                    // 2.2 Enregistrer les caractéristiques
+                    if (!empty($infra['caracteristiques'])) {
+                        foreach ($infra['caracteristiques'] as $carac) {
+                            ValeurCaracteristique::create([
+                                'idInfrastructure' => $infraCode,
+                                'idCaracteristique' => $carac['id'],
+                                'idUnite' => $carac['unite_id'],
+                                'valeur' => $carac['valeur'],
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 2 enregistrée avec succès.',
+            ]);
+        }
+
+        public function saveStep3(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|exists:projets,code_projet',
+                'actions' => 'required|array',
+            ]);
+
+            $codeProjet = $request->code_projet;
+
+            foreach ($request->actions as $action) {
+                // 🔹 1. Enregistrement de l’action dans projet_action_a_mener
+                $actionModel = ProjetActionAMener::create([
+                    'code' => 'ACT-' . uniqid(),
+                    'code_projet' => $codeProjet,
+                    'Num_ordre' => $action['ordre'],
+                    'Action_mener' => $action['action_code'],
+                    'Quantite' => $action['quantite'],
+                    'Infrastrucrues_id' => $action['infrastructure_code'],
+                ]);
+
+                // 🔹 2. Répartition par type de bénéficiaire
+                foreach ($action['beneficiaires'] as $beneficiaire) {
+                    switch ($beneficiaire['type']) {
+                        case 'localite':
+                            Profiter::create([
+                                'code_projet' => $codeProjet,
+                                'code_pays' => $beneficiaire['codePays'],
+                                'code_rattachement' => $beneficiaire['codeRattachement'],
+                            ]);
+                            break;
+
+                        case 'acteur':
+                            Beneficier::create([
+                                'code_projet' => $codeProjet,
+                                'code_acteur' => $beneficiaire['code'],
+                                'is_active' => true,
+                            ]);
+                            break;
+
+                        case 'infrastructure':
+                            Jouir::create([
+                                'code_projet' => $codeProjet,
+                                'code_Infrastructure' => $beneficiaire['code'],
+                            ]);
+                            break;
+                    }
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 3 enregistrée avec succès.',
+            ]);
+        }
 
         const MAX_FILE_SIZE_KB = 2048; // 2 Mo
         const MAX_FILE_SIZE_MB = 2;

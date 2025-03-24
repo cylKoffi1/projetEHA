@@ -63,10 +63,7 @@
             <div class="card">
                 <div class="card-header">
                     <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                        <h5 class="card-title">
-                            Ajout d'une famille d'infrastructure
-                            <a  href="#" data-toggle="modal" data-target="#familleinfrastructure-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
-                        </h5>
+
                        
                         @if (count($errors) > 0)
                         <div class="alert alert-danger">
@@ -81,6 +78,55 @@
                     <div style="text-align: center;">
                         <h5 class="card-title"> Liste des familles d'infrastructures</h5>
                     </div>
+                    <section id="multiple-column-form">
+                        <div class="row match-height">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-content">
+                                        <div class="card-body">
+                                            <form class="form" method="POST" action="{{ route('familleinfrastructure.store') }}" data-parsley-validate>
+                                                @csrf
+                                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <div class="form-group mandatory">
+                                                            <label class="form-label" for="code">Domaine :</label>
+                                                            <select class="form-control" id="domaine" name="domaine" placeholder="domaine" required>
+                                                                <option value="">Selectionner le domaine</option>
+                                                                @foreach ($domaine as $sous_domaine)
+                                                                    <option value="{{ $sous_domaine->code }}">{{ $sous_domaine->libelle }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-group mandatory">
+                                                            <label class="form-label" for="code">Sous domaine :</label>
+                                                            <select class="form-control" id="SDomaine" name="SDomaine"  required>
+                                                                <option value="">Selectionner le sous domaine</option>
+                                                               
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-group mandatory">
+                                                            <label class="form-label" for="libelle">Libelle famille:</label>
+                                                            <input type="text" class="form-control" id="libelle" name="libelle" placeholder="Libelle" required>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="modal-footer">
+                                                    <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerFamilleinfrastructure">
+                                                </div>
+                                            </form>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
                 <div class="card-content">
                     <div class="card-body">
@@ -89,31 +135,41 @@
                         <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
-                                    <th>Code </th>
+                                    <th>Domaine</th>
+                                    <th>Sous domaine </th>
                                     <th>Libelle</th>
                                     <th>action</th>
                                 </tr>
                             </thead>
 
                             <tbody>
-                                @foreach ($familleinfrastructure as $familleinfrastructure)
-                                <tr>
-                                    <td>{{ $familleinfrastructure->code }}</td>
-                                    <td>{{ $familleinfrastructure->nom_famille }}</td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
-                                                <span style="color: white"></span>
-                                            </a>
-                                            <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                                <li><a class="dropdown-item" href="#" onclick="showEditFamilleinfrastructure('{{ $familleinfrastructure->code }}')"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
-                                                <li><a class="dropdown-item" href="#" onclick="deleteFamilleinfrastructure('{{ $familleinfrastructure->code }}')"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                                <li><a class="dropdown-item" href="#"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
+                            @foreach ($familleinfrastructure as $famille)
+                            <tr>
+                                <td>{{ $famille->domaine?->libelle }}</td>
+                                <td>{{ $famille->sousdomaine?->lib_sous_domaine }}</td>
+                                <td>{{ $famille->libelleFamille }}</td>
+                                <td>
+                                    <i class="bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;" 
+                                    onclick="editFamille(
+                                        '{{ $famille->idFamille }}',
+                                        '{{ $famille->code_sdomaine }}',
+                                        '{{ $famille->libelleFamille }}',
+                                        '{{ $famille->code_domaine }}'
+                                    )" 
+                                    title="Modifier"></i>
+
+                                    <form method="POST" action="{{ route('familleinfrastructure.delete', $famille->idFamille) }}" style="display: inline;" onsubmit="return confirm('Confirmer la suppression ?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" style="border: none; background: none; padding: 0; margin-left: 8px;">
+                                            <i class="bi bi-x-circle" style="font-size: 1.2rem; color: red; cursor: pointer;" title="Supprimer"></i>
+                                        </button>
+                                    </form>
+                                </td>
+
+                            </tr>
+                            @endforeach
+
                             </tbody>
                         </table>
 
@@ -125,192 +181,61 @@
     </div>
 
 
-    <!-- Modal Enregistrement -->
-    <div class="modal fade" id="familleinfrastructure-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Enregistrement de fammille d'infrastructure</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
 
-                    <!-- // Basic multiple Column Form section start -->
-                    <section id="multiple-column-form">
-                        <div class="row match-height">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-content">
-                                        <div class="card-body">
-                                            <form class="form" method="POST" action="{{ route('familleinfrastructure.store') }}" data-parsley-validate>
-                                                @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                                                <div class="row">
-                                                    <div class="col-md-6 col-12">
-                                                        <div class="form-group mandatory">
-                                                            <label class="form-label" for="code">Code :</label>
-                                                            <input type="text" class="form-control" id="code" name="code" placeholder="code" required>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6 col-12">
-                                                        <div class="form-group mandatory">
-                                                            <label class="form-label" for="libelle">Libelle :</label>
-                                                            <input type="text" class="form-control" id="libelle" name="libelle" placeholder="Libelle" required>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                                                    <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerFamilleinfrastructure">
-                                                </div>
-                                            </form>
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- // Basic multiple Column Form section end -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Modification -->
-    <div class="modal fade" id="familleinfrastructure-modal-edit" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Modification de famille d'infrastructure</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-
-                    <!-- // Basic multiple Column Form section start -->
-                    <section id="multiple-column-form">
-                        <div class="row match-height">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-content">
-                                        <div class="card-body">
-                                            <form class="form" method="POST" action="{{ route('familleinfrastructure.update') }}" data-parsley-validate>
-                                                @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                                                <div class="row">
-                                                    <div class="col-md-6 col-12">
-                                                        <div class="form-group mandatory">
-                                                            <label class="form-label" for="code">Code :</label>
-                                                            <input type="text" class="form-control" id="code_edit" name="code_edit" placeholder="Code" readonly>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6 col-12">
-                                                        <div class="form-group mandatory">
-                                                            <label class="form-label" for="libelle">Libelle :</label>
-                                                            <input type="text" class="form-control" id="libelle_edit" name="libelle_edit" placeholder="Libelle" required>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                @can("modifier_ecran_".$ecran->id)
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                                                    <input type="submit" class="btn btn-primary" id="submit-button-edit" value="Modifier">
-                                                </div>
-                                                @endcan
-                                            </form>
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- // Basic multiple Column Form section end -->
-                </div>
-            </div>
-        </div>
-    </div>
 </section>
 
-
-
 <script>
-    /* CODE JAVASCRIPT ICI */
+document.addEventListener('DOMContentLoaded', function () {
+    const domaineSelect = document.getElementById('domaine');
+    const sousDomaineSelect = document.getElementById('SDomaine');
 
+    domaineSelect.addEventListener('change', function () {
+        const codeDomaine = this.value;
 
-    $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des familles d\'infrastructures')
+        // Réinitialiser la liste des sous-domaines
+        sousDomaineSelect.innerHTML = '<option value="">Chargement...</option>';
 
-        $('#code').on('input', function() {
-            // Get the input value
-            var code = $(this).val();
-
-            // Send an AJAX request to check if the code already exists
-            $.ajax({
-                url: '/check-familleinfrastructure-code', // Replace with the actual URL in your Laravel routes
-                method: 'POST'
-                , data: {
-                    _token: '{{ csrf_token() }}', // Add CSRF token for Laravel
-                    code: code
-                }
-                , success: function(response) {
-                    if (response.exists) {
-                        $('#code').removeClass('is-valid').addClass('is-invalid');
-                        $('#enregistrerFamilleinfrastructure').prop('disabled', true);
-                    } else {
-                        $('#code').removeClass('is-invalid').addClass('is-valid');
-                        $('#enregistrerFamilleinfrastructure').prop('disabled', false);
-                    }
-                }
+        fetch(`/get-sous-domaines/${codeDomaine}`)
+            .then(response => response.json())
+            .then(data => {
+                sousDomaineSelect.innerHTML = '<option value="">Sélectionner le sous-domaine</option>';
+                data.forEach(sd => {
+                    sousDomaineSelect.innerHTML += `<option value="${sd.code_sous_domaine}">${sd.lib_sous_domaine}</option>`;
+                });
+            })
+            .catch(() => {
+                sousDomaineSelect.innerHTML = '<option value="">Erreur lors du chargement</option>';
             });
-        });
-
     });
+});
+</script>
+<script>
+function editFamille(id, codeSousDomaine, libelleFamille, codeDomaine) {
+    document.getElementById('libelle').value = libelleFamille;
+    document.getElementById('SDomaine').value = codeSousDomaine;
+    document.getElementById('domaine').value = codeDomaine;
 
-    // Lorsque l'utilisateur clique sur un bouton "Modifier"
-    function showEditFamilleinfrastructure(code) {
-        $('#familleinfrastructure-modal-edit').modal('show');
-        $.ajax({
-            type: 'GET'
-            , url: '/admin/familleinfrastructure/' + code
-            , success: function(data) {
-                // Remplir le formulaire modal avec les données du district
-                $('#code_edit').val(data.code);
-                $('#libelle_edit').val(data.nom_famille);
-            }
-            , error: function(data) {
-                // Gérer les erreurs de la requête AJAX
-                showPopup(data.responseJSON.error);
-            }
-        });
+    // Changer l'action du formulaire
+    const form = document.querySelector('form');
+    form.action = "{{ route('familleinfrastructure.update') }}";
+
+    // Ajouter un champ caché pour l'ID
+    let hidden = document.getElementById('famille_id_hidden');
+    if (!hidden) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'id';
+        hidden.id = 'famille_id_hidden';
+        form.appendChild(hidden);
     }
+    hidden.value = id;
+}
+</script>
 
-    function deleteFamilleinfrastructure(code) {
-        if (confirm("Êtes-vous sûr de vouloir supprimer cette fammille d'infrastructure ?")) {
-            $.ajax({
-                url: '/admin/familleinfrastructure/delete/' + code
-                , method: 'DELETE', // Utilisez la méthode DELETE pour la suppression
-                data: {
-                    _token: '{{ csrf_token() }}' // Assurez-vous d'envoyer le jeton CSRF
-                }
-                , success: function(response) {
-                    var message = "Famille d'infrastructure supprimé avec succès.";
-                    showPopup(message);
-                    window.location.reload(true);
-                }
-                , error: function(response) {
-                    // Gérer les erreurs de la requête AJAX
-                    showPopup(response.responseJSON.error);
-                }
-            });
-        }
-    }
-
+<!-- Your custom JavaScript -->
+<script>
+    $(document).ready(function() {
+        initDataTable('{{ auth()->user()->acteur?->lieblle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des familles d\'infrastructures');
+    });
 </script>
 @endsection

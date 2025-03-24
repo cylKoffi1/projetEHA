@@ -200,11 +200,11 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
 
 
     //***************** Famille d'infrastructure ************* */
-    Route::get('admin/familleinfrastructure', [PlateformeController::class, 'familleinfrastructure'])->name('familleinfrastructure');
+    Route::get('admin/familleinfrastructure', [PlateformeController::class, 'familleinfrastructure'])->name('parGeneraux.familleinfrastructure');
     Route::get('admin/familleinfrastructure/{code}', [PlateformeController::class, 'getFamilleinfrastructure'])->name('familleinfrastructure.show');
     Route::post('admin/familleinfrastructure', [PlateformeController::class, 'storeFamilleinfrastructure'])->name('familleinfrastructure.store');
-    Route::post('admin/familleinfrastructure/update', [PlateformeController::class, 'updateFamilleinfrastructure'])->name('familleinfrastructure.update');
-    Route::delete('admin/familleinfrastructure/delete/{code}', [PlateformeController::class, 'deleteFamilleinfrastructure'])->name('familleinfrastructure.delete');
+    Route::post('/familleinfrastructure/update', [PlateformeController::class, 'updateFamilleInfrastructure'])->name('familleinfrastructure.update');
+    Route::delete('/familleinfrastructure/delete/{id}', [PlateformeController::class, 'deleteFamilleInfrastructure'])->name('familleinfrastructure.delete');
     Route::post('/check-familleinfrastructure-code', [PlateformeController::class, 'checkFamilleinfrastructureCode']);
 
     //***************** Cour d'eau ************* */
@@ -305,6 +305,23 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('admin/etablissements', [PlateformeController::class, 'etablissements'])->name('etablissements');
     Route::get('admin/ministeres', [PlateformeController::class, 'ministeres'])->name('ministeres');
 
+       // Page principale
+        Route::get('admin/CaractTypeUnite', [PlateformeController::class, 'CaractTypeUniteIndex'])->name('CaractTypeUnite');
+
+        // Type de Caractéristique
+        Route::post('/type-caracteristique/store', [PlateformeController::class, 'storeTypeCaracteristique'])->name('type-caracteristique.store');
+        Route::post('/type-caracteristique/update', [PlateformeController::class, 'updateTypeCaracteristique'])->name('type-caracteristique.update');
+        Route::delete('/type-caracteristique/delete/{id}', [PlateformeController::class, 'deleteTypeCaracteristique'])->name('type-caracteristique.delete');
+
+        // Caractéristique
+        Route::post('/caracteristique/store', [PlateformeController::class, 'storeCaracteristique'])->name('caracteristique.store');
+        Route::post('/caracteristique/update', [PlateformeController::class, 'updateCaracteristique'])->name('caracteristique.update');
+        Route::delete('/caracteristique/delete/{id}', [PlateformeController::class, 'deleteCaracteristique'])->name('caracteristique.delete');
+
+        // Unité
+        Route::post('/unite/store', [PlateformeController::class, 'storeUnite'])->name('unite.store');
+        Route::post('/unite/update', [PlateformeController::class, 'updateUnite'])->name('unite.update');
+        Route::delete('/unite/delete/{id}', [PlateformeController::class, 'deleteUnite'])->name('unite.delete');
 
     //***************** PROJETS ************* */
     Route::get('admin/projet', [ProjetController::class, 'projet'])->name('projet');
@@ -329,6 +346,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
 
             /*******************SAUVEGARDE DE DEMANDE DE PROJET */
             Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
+            Route::post('/projets/temp/save-step2', [EtudeProjet::class, 'saveStep2'])->name('projets.temp.save.step2');
+            Route::post('/projets/temp/save-step3', [EtudeProjet::class, 'saveStep3'])->name('projets.temp.save.step3');
 
         /***********************VALIDATION***************** */
 
@@ -514,7 +533,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
 
 
 
-
     Route::get('/admin/validationProjet', [WorkflowValidationController::class, 'afficherValidation'])->name('workflow');
 
     Route::get('/notifications', function () {
@@ -533,20 +551,22 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::delete('/type-acteurs/{cd_type_acteur}', [TypeActeurController::class, 'destroy'])->name('type-acteurs.destroy');
     Route::delete('/type-acteurs/bulk-delete', [TypeActeurController::class, 'bulkDelete'])->name('type-acteurs.bulkDelete');
     Route::get('/get-localites/{pays}', [EtudeProjet::class, 'getLocalites']);
+    Route::get('/get-familles/{code_sous_domaine}', [EtudeProjet::class, 'getFamilles']);
+    Route::get('/get-caracteristiques/{idType}', [EtudeProjet::class, 'getCaracteristiques']);
+    Route::get('/get-unites/{idCaracteristique}', [EtudeProjet::class, 'getUnites']);
+
     Route::get('/get-decoupage-niveau/{localite}', [EtudeProjet::class, 'getDecoupageNiveau']);
     Route::get('/get-sous-domaines/{domaineCode}', function ($domaineCode) {
         $sousDomaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
-            ->
-        whereRaw("LEFT(code_sous_domaine, 2) = ?", [$domaineCode])
+            ->where('code_domaine', $domaineCode) // ← ajout de ce filtre
             ->get()
             ->map(function ($sousDomaine) {
                 return [
-                    'code' => $sousDomaine->code_sous_domaine,
-                    'libelle' => $sousDomaine->lib_sous_domaine,
-                    'prefix' => substr($sousDomaine->code_sous_domaine, 0, 2), // Extracts the first two characters
+                    'code_sous_domaine' => $sousDomaine->code_sous_domaine,
+                    'lib_sous_domaine' => $sousDomaine->lib_sous_domaine,
                 ];
             });
-
+    
         return response()->json($sousDomaines);
     });
 
