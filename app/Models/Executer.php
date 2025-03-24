@@ -18,6 +18,7 @@ class Executer extends Model
     protected $fillable = [
         'code_projet', 
         'code_acteur', 
+        'secteur_id',
         'is_active',
         'created_at',
         'updated_at'

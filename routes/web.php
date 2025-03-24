@@ -348,6 +348,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
             Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
             Route::post('/projets/temp/save-step2', [EtudeProjet::class, 'saveStep2'])->name('projets.temp.save.step2');
             Route::post('/projets/temp/save-step3', [EtudeProjet::class, 'saveStep3'])->name('projets.temp.save.step3');
+            Route::post('/projets/temp/save-step4', [EtudeProjet::class, 'saveStep4'])->name('projets.temp.save.step4');
+            Route::post('/projets/temp/save-step5', [EtudeProjet::class, 'saveStep5'])->name('projets.temp.save.step5');
 
         /***********************VALIDATION***************** */
 

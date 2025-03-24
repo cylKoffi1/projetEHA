@@ -16,6 +16,7 @@ class Posseder extends Model
     protected $fillable = [
         'code_projet',
         'code_acteur',
+        'secteur_id',
         'date',
         'is_active',
         'created_at',

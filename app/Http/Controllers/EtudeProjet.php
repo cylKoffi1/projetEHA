@@ -53,6 +53,7 @@ use App\Models\ProjetActionAMener;
 use App\Models\Jouir;
 use App\Models\Profiter;
 use App\Models\Beneficier;
+use App\Models\Executer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
@@ -214,7 +215,7 @@ class EtudeProjet extends Controller
                 } elseif (!empty($type_mo)) {
                     // 🔹 Logique pour le Maître d'Ouvrage
                     if ($type_mo === 'Public') {
-                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne])
+                        $acteurs = Acteur::whereIn('code_pays', [$paysSelectionne, 'NEU'])
                             ->whereIn('type_acteur', ['eta', 'clt'])
                             ->get();
                     } elseif ($type_mo === 'Privé' && $priveType === 'Entreprise') {
@@ -447,6 +448,60 @@ class EtudeProjet extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Étape 3 enregistrée avec succès.',
+            ]);
+        }
+
+        public function saveStep4(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|exists:projets,code_projet',
+                'code_acteur_moe' => 'required|exists:acteur,code_acteur',
+                'type_ouvrage' => 'nullable|string',
+                'priveMoeType' => 'nullable|string',
+                'sectActivEntMoe' => 'nullable|string',
+                'descriptionMoe' => 'nullable|string',
+            ]);
+
+            // On désactive les anciens maîtres d’ouvrage (si en mise à jour)
+            Posseder::where('code_projet', $request->code_projet)->update(['is_active' => false]);
+
+            // Nouveau maître d’ouvrage actif
+            Posseder::create([
+                'code_projet' => $request->code_projet,
+                'code_acteur' => $request->code_acteur_moe,
+                'secteur_id' => $request->sectActivEntMoe,
+                'date' => now(),
+                'is_active' => true,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Maître d’ouvrage enregistré avec succès.',
+            ]);
+        }
+
+        public function saveStep5(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|string|exists:projets,code_projet',
+                'code_acteur' => 'required|string|exists:acteur,code_acteur',
+                'secteur_id' => 'nullable|string|exists:secteur_activites,code', // ou autre nom de table
+            ]);
+
+            Executer::updateOrCreate(
+                [
+                    'code_projet' => $request->code_projet,
+                ],
+                [
+                    'code_acteur' => $request->code_acteur,
+                    'secteur_id' => $request->secteur_id,
+                    'is_active' => true,
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Maître d’œuvre enregistré avec succès.'
             ]);
         }
 

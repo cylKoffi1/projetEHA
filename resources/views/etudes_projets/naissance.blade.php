@@ -496,9 +496,32 @@
 
                                 <hr>
                                 <div class="row mt-3">
-                                    <label>Description / Observations</label>
-                                    <textarea class="form-control" id="descriptionMoe" rows="3" placeholder="Ajoutez des précisions sur le Maître d’œuvre"></textarea>
-                                </div><br>
+                                    <div class="col-10">
+                                        <label>Description / Observations</label>
+                                        <textarea class="form-control" id="descriptionMoe" rows="3" placeholder="Ajoutez des précisions sur le Maître d’œuvre"></textarea>
+                                    </div>
+                                    <div class="col-2  mt-4">
+                                        <button type="button" class="btn btn-secondary" id="addMoeBtn" style="heght: 34px">
+                                            <i class="fas fa-plus"></i> Ajouter 
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <table class="table table-bordered" id="moeTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Nom / Libellé court</th>
+                                                <th>Prénom / Libellé long</th>
+                                                <th>Secteur</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Ligne ajoutée dynamiquement -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <br>
                                 <div class="row">
 
                                     <div class="col">
@@ -510,6 +533,43 @@
                                 </div>
 
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                function saveStep4(callback = null) {
+                                    const codeProjet = localStorage.getItem('code_projet_temp');
+                                    if (!codeProjet) return alert("Projet non trouvé.");
+
+                                    const codeActeur = $('input[name="code_acteur_moe"]').val();
+                                    if (!codeActeur) return alert("Veuillez ajouter un maître d’ouvrage.");
+
+                                    const typeOuvrage = $('input[name="type_ouvrage"]:checked').val();
+                                    const priveMoeType = $('input[name="priveMoeType"]:checked').val();
+                                    const secteur = $('#sectActivEntMoe').val();
+                                    const description = $('#descriptionMoe').val();
+
+                                    $.ajax({
+                                        url: '{{ route("projets.temp.save.step4") }}',
+                                        method: 'POST',
+                                        data: {
+                                            _token: '{{ csrf_token() }}',
+                                            code_projet: codeProjet,
+                                            code_acteur_moe: codeActeur,
+                                            type_ouvrage: typeOuvrage,
+                                            priveMoeType: priveMoeType,
+                                            sectActivEntMoe: secteur,
+                                            descriptionMoe: description
+                                        },
+                                        success: function(response) {
+                                            alert(response.message || "Étape 4 sauvegardée.");
+                                            if (typeof callback === "function") callback();
+                                        },
+                                        error: function(xhr) {
+                                            alert("Erreur lors de la sauvegarde !");
+                                            console.error(xhr.responseText);
+                                        }
+                                    });
+                                }
+                            </script>
 
                           <!-- Étape  : Informations sur le Maître d’Ouvrage -->
                             <div class="step" id="step-5">
@@ -553,19 +613,17 @@
                                         <small class="text-muted">Sélectionnez l’entité qui assure le rôle de Maître d'œuvre.</small>
                                     </div>
                                     <div class="col">
-                                        <!-- ✅ Sélection "En Charge de" -->
-                                        <label>En Charge de *</label>
-                                        <select class="form-control required" name="enChargeSelect" id="enChargeSelect">
-                                            <option value="">Sélectionnez la responsabilité</option>
+                                        <label>De :</label>
+                                        <select name="sectActivEnt" id="sectActivEnt" class="form-control" >
+                                            <option value="">Sélectionnez...</option>
                                             @foreach ($SecteurActivites as $SecteurActivite)
-                                            <option value="{{$SecteurActivite->code}}">{{$SecteurActivite->libelle}}</option>
+                                                <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
                                             @endforeach
                                         </select>
-                                        <small class="text-muted">Définissez la responsabilité principale du Maître d'œuvre.</small>
                                     </div>
                                 </div>
 
-                                <div class="row">
+                                {{--<div class="row">
 
                                     <!-- MOE Entreprise Fields -->
                                         <div class="row mt-3 d-none" id="entrepriseFields">
@@ -836,12 +894,37 @@
                                                 </div>
                                             </div>
                                         </div>
-                                </div>
+                                </div>--}}
                                 <!-- ✅ Zone de description complémentaire -->
                                 <div class="row">
-                                    <label>Description / Observations</label>
-                                    <textarea class="form-control" id="descriptionInd" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
-                                </div><br>
+                                    <div class="col-10">                                            
+                                        <label>Description / Observations</label>
+                                        <textarea class="form-control" id="descriptionInd" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
+                                    </div>
+                                    <div class="col-2 mt-4">
+                                        <button type="button" class="btn btn-secondary" id="addMoeuvreBtn" style="heght: 34px">
+                                            <i class="fas fa-plus"></i> Ajouter
+                                        </button>
+
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <table class="table table-bordered" id="moeuvreTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Nom / Libellé court</th>
+                                                <th>Prénom / Libellé long</th>
+                                                <th>Secteur</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Rempli dynamiquement -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <br>
                                 <div class="row">
 
                                     <div class="col">
@@ -853,7 +936,40 @@
                                 </div>
 
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                function saveStep5(callback = null) {
+                                    const codeProjet = localStorage.getItem("code_projet_temp");
+                                    const row = $("#moeuvreTable tbody tr:first");
 
+                                    if (!codeProjet || row.length === 0) {
+                                        alert("Veuillez ajouter un maître d’œuvre.");
+                                        return;
+                                    }
+
+                                    const codeActeur = row.find('input[name="code_acteur_moeuvre"]').val();
+                                    const secteurCode = row.find("td:eq(3)").text() || null;
+
+                                    $.ajax({
+                                        url: '{{ route("projets.temp.save.step5") }}',
+                                        method: 'POST',
+                                        data: {
+                                            _token: '{{ csrf_token() }}',
+                                            code_projet: codeProjet,
+                                            code_acteur: codeActeur,
+                                            secteur_id: secteurCode
+                                        },
+                                        success: function (response) {
+                                            alert(response.message || "Étape 5 sauvegardée.");
+                                            if (typeof callback === "function") callback();
+                                        },
+                                        error: function (xhr) {
+                                            alert("Erreur lors de l’enregistrement du maître d’œuvre.");
+                                            console.error(xhr.responseText);
+                                        }
+                                    });
+                                }
+                            </script>
 
                             <!-- 🔵 Étape : Financement -->
                             <div class="step" id="step-6">
@@ -1681,7 +1797,10 @@ function formatNumber(input) {
     document.addEventListener('DOMContentLoaded', function () {
         const acteurSelect = document.getElementById('acteurMoeSelect');
         const secteurActiviteContainer = document.getElementById('sectActivEntMoe').parentElement;
-        if (!acteurSelect || !secteurActiviteContainer) {
+        const acteurSelect2 = document.getElementById('acteurSelect');
+        const secteurActiviteContainer2 = document.getElementById('sectActivEnt').parentElement;
+        
+        if (!acteurSelect || !secteurActiviteContainer|| !acteurSelect2 || !secteurActiviteContainer2 ) {
             console.error("Les éléments HTML avec les identifiants 'acteurMoeSelect' ou 'sectActivEntMoe' n'ont pas été trouvés.");
             return;
         }
@@ -1698,12 +1817,30 @@ function formatNumber(input) {
                 secteurActiviteContainer.style.display = 'none';
             }
         });
+        acteurSelect2.addEventListener('change', function () {
+            const selectedValue2 = acteurSelect2.value;
+            console.log("Valeur sélectionnée :", selectedValue2);
+
+
+            if (selectedValue2 === '5689') {
+                // Afficher le secteur d'activité
+                secteurActiviteContainer2.style.display = 'block';
+            } else {
+                // Masquer le secteur d'activité
+                secteurActiviteContainer2.style.display = 'none';
+            }
+        });
 
         // Initialiser l'affichage en fonction de la sélection actuelle
         if (acteurSelect.value === '5689') {
             secteurActiviteContainer.style.display = 'block';
         } else {
             secteurActiviteContainer.style.display = 'none';
+        }
+        if (acteurSelect2.value === '5689') {
+            secteurActiviteContainer2.style.display = 'block';
+        } else {
+            secteurActiviteContainer2.style.display = 'none';
         }
     });
     /*document.addEventListener("DOMContentLoaded", function () {
@@ -2456,21 +2593,63 @@ function formatNumber(input) {
         }
     });
 
+$("#addMoeuvreBtn").on("click", function () {
+    const selected = $("#acteurSelect option:selected");
+
+    if (!selected.val()) {
+        alert("Veuillez sélectionner un acteur.");
+        return;
+    }
+
+    const codeActeur = selected.val();
+    const libelleCourt = selected.data("libelle-court") || selected.text().split(" ")[0];
+    const libelleLong = selected.data("libelle-long") || selected.text().split(" ").slice(1).join(" ");
+    const secteur = $("#sectActivEnt option:selected").text();
+    const secteurCode = $("#sectActivEnt").val();
+    const tableBody = $("#moeuvreTable tbody");
+
+    // On remplace l’existant pour ne garder qu’un seul maître d’œuvre
+    tableBody.empty();
+    const isMinistere = libelleCourt?.toLowerCase().includes("minist");
+        
+    const row = `
+        <tr>
+            <td>${libelleCourt}</td>
+            <td>${libelleLong}</td>
+            <td>${isMinistere ? secteur : "-"}</td>
+                 
+            <td hidden>${isMinistere ? secteurCode : ""}</td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm remove-moeuvre">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <input type="hidden" name="code_acteur_moeuvre" value="${codeActeur}">
+            </td>
+        </tr>
+    `;
+    tableBody.append(row);
+});
+
+// Suppression
+$(document).on("click", ".remove-moeuvre", function () {
+    $(this).closest("tr").remove();
+});
+
 </script>
 <script>
     function toggleType() {
         const publicRadio = document.getElementById('public'); // Checkbox "Public"
         const priveRadio = document.getElementById('prive');   // Checkbox "Privé"
         const optionsPrive = document.getElementById('optionsPrive'); // Section pour "Entreprise" ou "Individu"
-        const entrepriseFields = document.getElementById('entrepriseFields'); // Champs pour "Entreprise"
+        //const entrepriseFields = document.getElementById('entrepriseFields'); // Champs pour "Entreprise"
         const individuFields = document.getElementById('individuFields'); // Champs pour "Individu"
         const acteurSelect = document.getElementById('acteurSelect');
 
         // Si "Public" est sélectionné
         if (publicRadio.checked) {
             optionsPrive.classList.add('d-none'); // Cacher les options pour "Privé"
-            entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
-            individuFields.classList.add('d-none'); // Cacher les champs "Individu"
+            /*entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
+            individuFields.classList.add('d-none'); */// Cacher les champs "Individu"
             fetchActeurs('Public');
         }
         // Si "Privé" est sélectionné
@@ -2481,7 +2660,7 @@ function formatNumber(input) {
             const entrepriseRadio = document.getElementById('entreprise');
             const individuRadio = document.getElementById('individu');
 
-            if (entrepriseRadio.checked) {
+            /*if (entrepriseRadio.checked) {
                 // Si "Entreprise" est sélectionné, afficher ses champs et cacher ceux d'"Individu"
                 entrepriseFields.classList.remove('d-none');
                 individuFields.classList.add('d-none');
@@ -2493,7 +2672,7 @@ function formatNumber(input) {
                 // Si aucune sous-option n'est encore sélectionnée, cacher les deux sections
                 entrepriseFields.classList.add('d-none');
                 individuFields.classList.add('d-none');
-            }
+            }*/
         }else{
             optionsPrive.classList.add('d-none');
             acteurSelect.innerHTML = '<option value="">Sélectionnez un acteur</option>';
@@ -2504,21 +2683,21 @@ function formatNumber(input) {
     function togglePriveFields() {
         const entrepriseRadio = document.getElementById('entreprise'); // Radio "Entreprise"
         const individuRadio = document.getElementById('individu');     // Radio "Individu"
-        const entrepriseFields = document.getElementById('entrepriseFields'); // Champs "Entreprise"
+        //const entrepriseFields = document.getElementById('entrepriseFields'); // Champs "Entreprise"
         const individuFields = document.getElementById('individuFields'); // Champs "Individu"
         const acteurSelect = document.getElementById('acteurSelect');
 
         // Si "Entreprise" est sélectionné
         if (entrepriseRadio.checked) {
             fetchActeurs('Privé', 'Entreprise');
-            entrepriseFields.classList.remove('d-none'); // Afficher les champs "Entreprise"
-            individuFields.classList.add('d-none'); // Cacher les champs "Individu"
+            /*entrepriseFields.classList.remove('d-none'); // Afficher les champs "Entreprise"
+            individuFields.classList.add('d-none');*/ // Cacher les champs "Individu"
         }
         // Si "Individu" est sélectionné
         else if (individuRadio.checked) {
             fetchActeurs('Privé', 'Individu');
-            individuFields.classList.remove('d-none'); // Afficher les champs "Individu"
-            entrepriseFields.classList.add('d-none'); // Cacher les champs "Entreprise"
+            /*individuFields.classList.remove('d-none'); // Afficher les champs "Individu"
+            entrepriseFields.classList.add('d-none');*/ // Cacher les champs "Entreprise"
         }
     }
     // Fonction pour récupérer les acteurs via API
@@ -2615,7 +2794,7 @@ function formatNumber(input) {
             });
         });
     });
-    ////////////////MAITRE D'OEUVRE
+    ////////////////MAITRE D'OUVRAGE
     document.addEventListener("DOMContentLoaded", function () {
         // Empêcher la sélection de plusieurs options pour type_ouvrage
         const type_ouvrages = document.querySelectorAll('input[name="type_ouvrage"]');
@@ -2712,6 +2891,48 @@ function formatNumber(input) {
         document.getElementById('moeIndividu').addEventListener('change', toggleMoeFields);
     });
 
+    $("#addMoeBtn").on("click", function () {
+        const selected = $("#acteurMoeSelect option:selected");
+
+        if (!selected.val()) {
+            alert("Veuillez sélectionner un acteur.");
+            return;
+        }
+
+        const codeActeur = selected.val();
+        const libelleCourt = selected.data("libelle-court") || selected.text().split(" ")[0];
+        const libelleLong = selected.data("libelle-long") || selected.text().split(" ").slice(1).join(" ");
+
+        const secteur = $("#sectActivEntMoe option:selected").text();
+        const secteurCode = $("#sectActivEntMoe").val();
+
+        const tableBody = $("#moeTable tbody");
+
+        // S'assurer qu’il n’y a qu’un seul maître d’ouvrage
+        tableBody.empty();
+        const isMinistere = libelleCourt?.toLowerCase().includes("minist");
+        const row = `
+            <tr>
+                <td>${libelleCourt}</td>
+                <td>${libelleLong}</td>
+                <td>${isMinistere ? secteur : "-"}</td>
+                 
+                <td hidden>${isMinistere ? secteurCode : ""}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-moe">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <input type="hidden" name="code_acteur_moe" value="${codeActeur}">
+                </td>
+            </tr>
+        `;
+        tableBody.append(row);
+    });
+
+    // Suppression de la ligne
+    $(document).on("click", ".remove-moe", function () {
+        $(this).closest("tr").remove();
+    });
 
 
 ////////////////INFRASTRUCTURES
