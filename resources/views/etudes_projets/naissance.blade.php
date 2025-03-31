@@ -528,7 +528,7 @@
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary " onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary " onclick="saveStep4(nextStep)">Suivant</button>
                                     </div>
                                 </div>
 
@@ -560,8 +560,9 @@
                                             descriptionMoe: description
                                         },
                                         success: function(response) {
-                                            alert(response.message || "Étape 4 sauvegardée.");
-                                            if (typeof callback === "function") callback();
+                                            //alert(response.message || "Étape 4 sauvegardée.");
+                                            nextStep();
+                                            //if (typeof callback === "function") callback();
                                         },
                                         error: function(xhr) {
                                             alert("Erreur lors de la sauvegarde !");
@@ -931,7 +932,7 @@
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary " onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary " onclick="saveStep5(nextStep)">Suivant</button>
                                     </div>
                                 </div>
 
@@ -940,15 +941,27 @@
                             <script>
                                 function saveStep5(callback = null) {
                                     const codeProjet = localStorage.getItem("code_projet_temp");
-                                    const row = $("#moeuvreTable tbody tr:first");
-
-                                    if (!codeProjet || row.length === 0) {
-                                        alert("Veuillez ajouter un maître d’œuvre.");
+                                    if (!codeProjet) {
+                                        alert("Aucun projet temporaire trouvé.");
                                         return;
                                     }
 
-                                    const codeActeur = row.find('input[name="code_acteur_moeuvre"]').val();
-                                    const secteurCode = row.find("td:eq(3)").text() || null;
+                                    const acteurs = [];
+
+                                    $("#moeuvreTable tbody tr").each(function () {
+                                        const codeActeur = $(this).find('input[name="code_acteur_moeuvre[]"]').val();
+                                        const secteurId = $(this).find('input[name="secteur_id[]"]').val();
+
+                                        acteurs.push({
+                                            code_acteur: codeActeur,
+                                            secteur_id: secteurId
+                                        });
+                                    });
+
+                                    if (acteurs.length === 0) {
+                                        alert("Veuillez ajouter au moins un maître d’œuvre.");
+                                        return;
+                                    }
 
                                     $.ajax({
                                         url: '{{ route("projets.temp.save.step5") }}',
@@ -956,19 +969,20 @@
                                         data: {
                                             _token: '{{ csrf_token() }}',
                                             code_projet: codeProjet,
-                                            code_acteur: codeActeur,
-                                            secteur_id: secteurCode
+                                            acteurs: acteurs
                                         },
-                                        success: function (response) {
-                                            alert(response.message || "Étape 5 sauvegardée.");
-                                            if (typeof callback === "function") callback();
+                                        success: function (res) {
+                                            //alert(res.message);
+                                            nextStep();
+                                            //if (typeof callback === "function") callback();
                                         },
                                         error: function (xhr) {
-                                            alert("Erreur lors de l’enregistrement du maître d’œuvre.");
                                             console.error(xhr.responseText);
+                                            alert("Erreur lors de l’enregistrement des maîtres d’œuvre.");
                                         }
                                     });
                                 }
+
                             </script>
 
                             <!-- 🔵 Étape : Financement -->
@@ -1000,14 +1014,12 @@
 
                                     <div class="col">
                                         <label for="bailleur">Bailleur</label>
-                                        <input type="text" id="bailleur" class="form-control" placeholder="Rechercher un bailleur...">
-                                        <ul class="list-group position-absolute w-100 d-none" id="bailleurList" style="z-index: 1000;"></ul>
-                                    </div>
-                                    <!-- Bouton pour Ajouter un Nouveau Bailleur -->
-                                    <div id="ajouterBailleurContainer" class="mt-2 d-none">
-                                        <li class="list-group-item text-primary list-group-item-action" id="ajouterBailleurBtn">
-                                            <i class="fas fa-plus-circle"></i> Ajouter "<span id="nouveauBailleurNom"></span>"
-                                        </li>
+                                        <lookup-select name="bailleur" id="bailleur">
+                                            <option value="">Selectionner le bailleur </option>
+                                            @foreach ($bailleurActeurs as $bailleurActeur)
+                                                <option value="{{ $bailleurActeur->code_acteur }}">{{ $bailleurActeur->libelle_court }} {{$bailleurActeur->libelle_long }}</option>
+                                            @endforeach 
+                                        </lookup-select>
                                     </div>
                                     <div class="col-md-2">
                                         <label for="montant">Montant</label>
@@ -1015,11 +1027,15 @@
                                     </div>
                                     <div class="col-md-1">
                                         <label for="deviseBailleur">Devise</label>
-                                        <input type="text" name="deviseBailleur" id="deviseBailleur" class="form-control" placeholder="Devise" readonly>
+                                        @foreach ($Devises as $Devise)
+                                        <input type="text" name="deviseBailleur" id="deviseBailleur" value="{{ $Devise->code_devise }}" class="form-control"  readonly>
+                                            @endforeach
+                                        
                                     </div>
                                     <div class="col-md-3">
                                         <label for="commentaire">Commentaire</label>
-                                        <input type="text" id="commentaire" name="CommentBailleur" class="form-control" placeholder="Commentaire">
+                                       
+                                        <input type="text" id="commentaire" name="CommentBailleur"  class="form-control" placeholder="Commentaire">
                                     </div>
                                     <div class="col text-end">
                                         <button type="button" class="btn btn-secondary" id="addFinancementBtn">Ajouter</button>
@@ -1044,126 +1060,83 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <!-- MODAL D'AJOUT DE BAILLEUR -->
-                                <div class="modal fade" id="modalAjoutBailleur" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Ajouter un Nouveau Bailleur</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <!-- Sélection du type de bailleur -->
-                                                <div class="mb-3">
-                                                    <label>Type de Bailleur *</label>
-                                                    <select id="typeBailleur" class="form-control">
-                                                        <option value="">Sélectionnez...</option>
-                                                        <option value="morale">Personne Morale (Entreprise, Organisation)</option>
-                                                        <option value="physique">Personne Physique (Individu)</option>
-                                                    </select>
-                                                </div>
-
-                                                <!-- FORMULAIRE PERSONNE MORALE -->
-                                                <div id="bailleurMoraleFields" class="d-none">
-                                                    <h6 class="text-primary">Informations de l'Entreprise / Organisation</h6>
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <label>Raison Sociale *</label>
-                                                            <input type="text" id="raisonSocialeBail" class="form-control" placeholder="Nom de l'entreprise">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Date de Création *</label>
-                                                            <input type="date" id="dateCreationBail" class="form-control">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Secteur d'Activité *</label>
-                                                            <select id="secteurActiviteBail" class="form-control">
-                                                                <option value="">Sélectionnez...</option>
-                                                                <option value="Finance">Finance</option>
-                                                                <option value="Infrastructure">Infrastructure</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Forme Juridique *</label>
-                                                            <select id="formeJuridiqueBail" class="form-control">
-                                                                <option value="">Sélectionnez...</option>
-                                                                <option value="SARL">SARL</option>
-                                                                <option value="SA">SA</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Numéro d’Immatriculation *</label>
-                                                            <input type="text" id="numImmatBail" class="form-control" placeholder="RCCM">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Numéro d’Identification Fiscale (NIF) *</label>
-                                                            <input type="text" id="nifBail" class="form-control" placeholder="NIF">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Capital Social</label>
-                                                            <input type="number" id="capitalBail" class="form-control" placeholder="Montant">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Adresse Siège</label>
-                                                            <input type="text" id="adresseBail" class="form-control" placeholder="Adresse du siège">
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- FORMULAIRE PERSONNE PHYSIQUE -->
-                                                <div id="bailleurPhysiqueFields" class="d-none">
-                                                    <h6 class="text-primary">Informations du Bailleur (Individu)</h6>
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <label>Nom *</label>
-                                                            <input type="text" id="nomBail" class="form-control" placeholder="Nom">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Prénom *</label>
-                                                            <input type="text" id="prenomBail" class="form-control" placeholder="Prénom">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Date de Naissance *</label>
-                                                            <input type="date" id="dateNaissanceBail" class="form-control">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Nationalité *</label>
-                                                            <select id="nationaliteBail" class="form-control">
-                                                                <option value="">Sélectionnez...</option>
-                                                                <option value="CIV">Ivoirienne</option>
-                                                                <option value="FRA">Française</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Email *</label>
-                                                            <input type="email" id="emailBail" class="form-control" placeholder="Email">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label>Téléphone *</label>
-                                                            <input type="text" id="telephoneBail" class="form-control" placeholder="Téléphone">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                <button type="button" class="btn btn-primary" id="btnEnregistrerBailleur">Enregistrer</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 <div class="row">
                                     <div class="col">
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep6(nextStep)">Suivant</button>
                                     </div>
                                 </div>
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                function saveStep6(callback = null) {
+                                    const codeProjet = localStorage.getItem("code_projet_temp");
+                                    if (!codeProjet) return alert("Projet non trouvé.");
 
+                                    const typeFinancement = $("#typeFinancement").val();
+                                    const financements = [];
+
+                                    // Parcours des lignes du tableau
+                                    $("#tableFinancements tbody tr").each(function () {
+                                        const bailleur = $(this).find('input[name="bailleurs[]"]').val();
+                                        const montant = $(this).find('input[name="montants[]"]').val();
+                                        const devise = $(this).find('input[name="devises[]"]').val();
+                                        const local = $(this).find('input[name="locals[]"]').val();
+                                        const commentaire = $(this).find('input[name="commentaires[]"]').val();
+
+                                        financements.push({
+                                            bailleur: bailleur,
+                                            montant: montant,
+                                            devise: devise,
+                                            local: local,
+                                            commentaire: commentaire
+                                        });
+                                    });
+
+                                    if (financements.length === 0) {
+                                        alert("Aucun financement ajouté.");
+                                        return;
+                                    }
+
+                                    // Enregistre aussi le type dans localStorage si besoin
+                                    localStorage.setItem("type_financement", typeFinancement);
+
+                                    // Création d'un FormData
+                                    const formData = new FormData();
+                                    formData.append('_token', '{{ csrf_token() }}');
+                                    formData.append('code_projet', codeProjet);
+                                    formData.append('type_financement', typeFinancement);
+
+                                    financements.forEach((item, index) => {
+                                        formData.append(`financements[${index}][bailleur]`, item.bailleur);
+                                        formData.append(`financements[${index}][montant]`, item.montant);
+                                        formData.append(`financements[${index}][devise]`, item.devise);
+                                        formData.append(`financements[${index}][local]`, item.local);
+                                        formData.append(`financements[${index}][commentaire]`, item.commentaire);
+                                    });
+
+                                    $.ajax({
+                                        url: '{{ route("projets.temp.save.step6") }}',
+                                        method: 'POST',
+                                        data: formData,
+                                        processData: false,
+                                        contentType: false,
+                                        success: function (res) {
+                                            // Tu peux remplacer par SweetAlert ou autre ici si besoin
+                                            // alert(res.message);
+                                            nextStep(); // Passe à l’étape suivante
+                                            if (typeof callback === 'function') callback();
+                                        },
+                                        error: function (xhr) {
+                                            alert("Erreur lors de la sauvegarde des financements.");
+                                            console.error(xhr.responseText);
+                                        }
+                                    });
+                                }
+                            </script>
 
                             <!-- 🟢 Étape  : Informations Générales -->
                             <div class="step active" id="step-1">
@@ -1252,13 +1225,13 @@
 
                                 <div class="row">
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep1(nextStep)">Suivant</button>
                                     </div>
                                 </div>
                             </div>
                             <!--Sauvegarde temporaire -->
                             <script>
-                                function saveStep1() {
+                                function saveStep1(callback = null) {
                                     const data = {
                                         _token: '{{ csrf_token() }}',
                                         libelle_projet: $('input[placeholder="Nom du projet"]').val(),
@@ -1269,7 +1242,7 @@
                                         code_devise: $('#deviseCout').val(),
                                         commentaire: $('#commentaireProjet').val(),
                                         code_nature: $('#natureTraveaux').val(),
-                                        code_pays: '{{ $codePays ?? auth()->user()->code_pays }}', // ajustable selon ton contexte
+                                        code_pays: '{{ session('pays_selectionne') }}', // ajustable selon ton contexte
                                     };
 
                                     $.ajax({
@@ -1280,12 +1253,24 @@
                                             if (response.success) {
                                                 console.log("Step 1 sauvegardé temporairement.");
                                                 localStorage.setItem("code_projet_temp", response.code_projet);
-                                                if (typeof callback === 'function') callback();
+                                                //if (typeof callback === 'function') callback();
+                                                nextStep();
                                             }
                                         },
                                         error: function(xhr) {
-                                            console.warn("Erreur, mais on ne bloque pas l'utilisateur.");
-                                            if (typeof callback === 'function') callback(); // continue quand même
+                                            if (xhr.status === 422) {
+                                                const errors = xhr.responseJSON.errors;
+                                                let errorMsg = "Erreurs de validation:\n";
+                                                
+                                                for (const field in errors) {
+                                                    errorMsg += `- ${errors[field].join("\n- ")}\n`;
+                                                }
+                                                
+                                                alert(errorMsg);
+                                            } else {
+                                                alert("Erreur serveur. Veuillez réessayer.");
+                                                console.error(xhr.responseText);
+                                            }
                                         }
                                     });
                                 }
@@ -1360,65 +1345,76 @@
                                         </div>
                                     </div>
 
-                                    <!-- Infrastructures Tab -->
+                                    <!-- Infrastructure Form -->
                                     <div class="tab-pane fade" id="infrastructures" role="tabpanel">
                                         <h5 class="text-secondary">🏗️ Infrastructures</h5>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <label>Famille d'Infrastructure *</label>
-                                                <select class="form-control" id="infrastructureType" >
-                                                    <option value="">Sélectionnez </option>
-                                                   
-                                                </select>
+
+                                        <!-- Formulaire principal -->
+                                        <div id="infrastructureForm">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label>Famille d'Infrastructure *</label>
+                                                    <select class="form-control" id="FamilleInfrastruc">
+                                                        <option value="">Sélectionnez </option>
+                                                        <!-- dynamiquement rempli -->
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label>Nom de l'infrastructure *</label>
+                                                    <input type="text" class="form-control" id="infrastructureName">
+                                                </div>
                                             </div>
-                                            <div class="col-md-6">
-                                                <label>Infrastructure *</label>
-                                                <input type="text" class="form-control" name="typeCaracteristique" id="typeCaracteristique">
-                                                    
+
+                                            <!-- Ajout de caractéristiques -->
+                                            <div class="row mt-3">
+                                                <div class="col-md-3">
+                                                    <label>Type de caractéristique</label>
+                                                    <select class="form-control" id="tyCaract">
+                                                        <option value="">Sélectionner le type </option>
+                                                        <!-- Rempli dynamiquement -->
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label>Caractéristique</label>
+                                                    <select class="form-control" id="caract">
+                                                        <option value="">Sélectionner la caractéristique</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label>Unité</label>
+                                                    <select class="form-control" id="unitCaract" >
+                                                        <option value="">Sélectionner l'unité</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label>Valeur</label>
+                                                    <input type="text" class="form-control" id="caractValue">
+                                                </div>
                                             </div>
-                                            
+                                            <div class="text-end mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="addCaractToInfra">+ Ajouter caractéristique</button>
+                                            </div>
+
+                                            <!-- Liste temporaire des caractéristiques pour l'infrastructure en cours -->
+                                            <div class="mt-3">
+                                                <ul id="caractList" class="list-group"></ul>
+                                            </div>
+
+                                            <div class="text-end mt-3">
+                                                <button type="button" class="btn btn-secondary" id="addInfrastructureBtn">Ajouter l'infrastructure</button>
+                                            </div>
                                         </div>
-                                        <div class="row">
-                                            <div class="col-md-3">
-                                                <label>Type de caractéristique</label>
-                                                <select class="form-control" name="tyCaract" id="tyCaract">
-                                                    <option value="">Sélectionner le type </option>
-                                                    @foreach ($TypeCaracteristiques as $TypeCaracteristique)
-                                                        <option value="{{ $TypeCaracteristique->idTypeCaracteristique }}">{{ $TypeCaracteristique->libelleTypeCaracteristique }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label>Caractéristique</label>
-                                                <select class="form-control" name="caract" id="caract">
-                                                    <option value="">Sélectionner la caractéristique</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label>Unité</label>
-                                                <select class="form-control" name="unitCaract" id="unitCaract">
-                                                    <option value="">Sélectionner l'unité</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label>Valeur</label>
-                                                <input type="text" class="form-control" name="caractValues[]">
-                                            </div>
-                                        </div>
-                                        <br>
-                                        <div class="text-end">
-                                            <button type="button" class="btn btn-secondary" id="addInfrastructureBtn">Ajouter</button>
-                                        </div>
-                                        <br>
+
+                                        <hr>
+                                        <!-- Liste finale des infrastructures -->
                                         <div class="row">
                                             <div class="col">
                                                 <table class="table table-bordered">
                                                     <thead>
                                                         <tr>
-                                                            <th>Type</th>
                                                             <th>Nom</th>
-                                                            <th>Localisation</th>
-                                                            <th>Statut</th>
+                                                            <th>Famille</th>
+                                                            <th>Caractéristiques</th>
                                                             <th>Action</th>
                                                         </tr>
                                                     </thead>
@@ -1438,7 +1434,7 @@
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep2(nextStep)">Suivant</button>
                                     </div>
                                 </div>
                             </div>
@@ -1459,6 +1455,11 @@
                                                 niveau: cols.eq(2).text(),
                                                 decoupage: cols.eq(3).text()
                                             });
+                                            if (localites.length > 0) {
+                                                // stocke le premier ID de localisation (niveau 1) dans le localStorage
+                                                localStorage.setItem("code_localisation", localites[0].id);
+                                            }
+
                                         }
                                     });
 
@@ -1493,8 +1494,9 @@
                                             infrastructures: infrastructures
                                         },
                                         success: function (response) {
-                                            alert(response.message || "Étape 2 sauvegardée.");
-                                            if (typeof callback === "function") callback();
+                                            //alert(response.message || "Étape 2 sauvegardée.");
+                                            nextStep();
+                                            //if (typeof callback === "function") callback();
                                         },
                                         error: function (xhr) {
                                             alert("Erreur lors de la sauvegarde !");
@@ -1668,7 +1670,7 @@
                                         <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="nextStep()">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep3(nextStep)">Suivant</button>
                                     </div>
                                 </div>
                             </div>
@@ -1714,8 +1716,9 @@
                                             actions: actions
                                         },
                                         success: function (response) {
-                                            alert(response.message || "Étape 3 sauvegardée.");
-                                            if (typeof callback === "function") callback();
+                                            //alert(response.message || "Étape 3 sauvegardée.");
+                                            nextStep();
+                                            //if (typeof callback === "function") callback();
                                         },
                                         error: function (xhr) {
                                             alert("Erreur lors de la sauvegarde !");
@@ -1735,7 +1738,7 @@
                             </script>
 
                             <!-- 📜 Modal pour la liste des documents -->
-                            <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true" style="background: transparent;">
+                            <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true" style="background: transparent !important;">
                                 <div class="modal-dialog">
                                     <div class="modal-content" style="width: 100% !important; background: white;">
                                         <div class="modal-header">
@@ -1775,6 +1778,52 @@
                                     </div>
                                 </div>
                             </div>
+                            <!--Sauvegarde temporaire -->
+                            <script>
+                                document.getElementById('projectForm').addEventListener('submit', function(event) {
+                                    event.preventDefault();
+
+                                    if (uploadedFiles.length === 0) {
+                                        alert("Veuillez ajouter au moins un fichier avant de soumettre.");
+                                        return;
+                                    }
+
+                                    const codeProjet = localStorage.getItem("code_projet_temp");
+                                    if (!codeProjet) {
+                                        alert("Aucun projet trouvé. Veuillez compléter les étapes précédentes.");
+                                        return;
+                                    }
+
+                                    const formData = new FormData();
+                                    formData.append('code_projet', codeProjet);
+                                    formData.append('_token', '{{ csrf_token() }}');
+
+                                    uploadedFiles.forEach(file => {
+                                        formData.append('fichiers[]', file);
+                                    });
+
+                                    fetch('{{ route("projets.temp.save.step7") }}', {
+                                        method: 'POST',
+                                        body: formData
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            finaliserCodeProjet();
+                                            alert("Projet enregistré avec succès !");
+                                            localStorage.removeItem("code_projet_temp");
+                                            window.location.href = '{{ route("project.create") }}';
+                                        } else {
+                                            alert("Erreur lors de l’enregistrement.");
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error("Erreur d’envoi des fichiers :", error);
+                                        alert("Erreur lors de la soumission.");
+                                    });
+                                });
+
+                            </script>
                         </form>
                     </div>
                 </div>
@@ -1782,6 +1831,54 @@
         </div>
     </div>
 </section>
+<script>
+    function finaliserCodeProjet() {
+        const codeTemp = localStorage.getItem("code_projet_temp");
+        const codeLocalisation = localStorage.getItem("code_localisation");
+        const typeFinancement = localStorage.getItem("type_financement");// à stocker depuis step6
+
+        $.ajax({
+            url: '{{ route("projets.finaliser") }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                code_projet_temp: codeTemp,
+                code_localisation: codeLocalisation,
+                type_financement: typeFinancement
+            },
+            success: function (response) {
+                alert("Code projet final : " + response.code_projet_final);
+                localStorage.setItem("code_projet_temp", response.code_projet_final); // mise à jour
+            },
+            error: function () {
+                alert("Erreur lors de la finalisation du code projet.");
+            }
+        });
+    }
+
+    function annulerProjetTemporaire() {
+        const codeProjet = localStorage.getItem('code_projet_temp');
+
+        if (!codeProjet || !confirm("Confirmer l'annulation du projet ?")) return;
+
+        $.ajax({
+            url: '{{ route("projets.abort") }}',
+            method: 'DELETE',
+            data: {
+                _token: '{{ csrf_token() }}',
+                code_projet: codeProjet
+            },
+            success: function (res) {
+                alert(res.message);
+                localStorage.removeItem("code_projet_temp");
+                window.location.reload(); // ou redirection
+            },
+            error: function () {
+                alert("Erreur lors de l'annulation du projet.");
+            }
+        });
+    }
+</script>
 <script>
     //Séparateur de milliers
 function formatNumber(input) {
@@ -2007,8 +2104,9 @@ function formatNumber(input) {
             let fileItem = document.createElement('div');
             fileItem.classList.add('file-item');
             fileItem.innerHTML = `
+
                 <span><i class="fas fa-file"></i> ${file.name}</span>
-                <i class="fas fa-trash" onclick="removeFile(${index})"></i>
+                <i class="fas fa-trash " onclick="removeFile(${index})"></i>
             `;
             fileList.appendChild(fileItem);
         });
@@ -2018,18 +2116,7 @@ function formatNumber(input) {
         uploadedFiles.splice(index, 1);
         displayUploadedFiles();
     }
-    document.getElementById('projectForm').addEventListener('submit', function(event) {
-        event.preventDefault();
-
-        if (uploadedFiles.length === 0) {
-            alert("Veuillez ajouter au moins un fichier avant de soumettre.");
-            return;
-        }
-
-        alert("Formulaire soumis avec succès !");
-        console.log("Fichiers soumis:", uploadedFiles);
-    });
-
+    
 
     ////////////////ACTEURS
     document.addEventListener("DOMContentLoaded", function () {
@@ -2127,162 +2214,53 @@ function formatNumber(input) {
 
 
    //////////////////////////FINANCEMENT
-   document.addEventListener('DOMContentLoaded', function () {
-    const typeBailleur = document.getElementById('typeBailleur');
-    const bailleurMoraleFields = document.getElementById('bailleurMoraleFields');
-    const bailleurPhysiqueFields = document.getElementById('bailleurPhysiqueFields');
+    document.getElementById('addFinancementBtn').addEventListener('click', function () {
+        // Récupération du composant lookup-select
+        const bailleurLookup = document.getElementById('bailleur');
+        const selected = bailleurLookup?.getSelected?.();
+        const bailleurText = selected ? selected.text : '';
+        const bailleurValue = selected ? selected.value : '';
 
-    // Affichage dynamique du formulaire selon le type sélectionné
-    typeBailleur.addEventListener('change', function () {
-        bailleurMoraleFields.classList.toggle('d-none', typeBailleur.value !== 'morale');
-        bailleurPhysiqueFields.classList.toggle('d-none', typeBailleur.value !== 'physique');
-    });
+        const montant = document.getElementById('montant').value;
+        const devise = document.getElementById('deviseBailleur').value;
+        const commentaire = document.getElementById('commentaire').value;
 
-    const bailleurInput = document.getElementById('bailleur');
-    const bailleurList = document.getElementById('bailleurList');
-    const ajouterBailleurContainer = document.getElementById('ajouterBailleurContainer');
-    const ajouterBailleurBtn = document.getElementById('ajouterBailleurBtn');
-    const nouveauBailleurNom = document.getElementById('nouveauBailleurNom');
+        const local = document.querySelector('input[name="BaillOui"]:checked');
+        const localValue = local ? local.labels[0].innerText : '';
 
-    bailleurInput.addEventListener('input', function () {
-        const query = bailleurInput.value.trim();
-        if (query.length < 2) {
-            bailleurList.innerHTML = '';
-            ajouterBailleurContainer.classList.add('d-none');
+        if (!bailleurValue || !montant || !devise || !localValue) {
+            alert("Veuillez remplir tous les champs obligatoires.");
             return;
         }
 
-        fetch(`/api/bailleurs?search=${query}`)
-            .then(response => response.json())
-            .then(data => {
-                bailleurList.innerHTML = '';
-                if (data.length === 0) {
-                    nouveauBailleurNom.textContent = query;
-                    ajouterBailleurContainer.classList.remove('d-none');
-                    return;
-                }
+        const table = document.getElementById('tableFinancements');
+        const row = document.createElement('tr');
 
-                ajouterBailleurContainer.classList.add('d-none');
-                data.forEach(bailleur => {
-                    const li = document.createElement('li');
-                    li.classList.add('list-group-item', 'list-group-item-action');
-                    li.textContent = `${bailleur.libelle_long} (${bailleur.type_acteur})`;
-                    li.dataset.id = bailleur.code_acteur;
+        row.innerHTML = `
+            <td><input type="hidden" name="bailleurs[]" value="${bailleurValue}">${bailleurText}</td>
+            <td><input type="hidden" name="montants[]" value="${montant}">${montant}</td>
+            <td><input type="hidden" name="devises[]" value="${devise}">${devise}</td>
+            <td><input type="hidden" name="locals[]" value="${localValue}">${localValue}</td>
+            <td><input type="hidden" name="commentaires[]" value="${commentaire}">${commentaire}</td>
+            <td><button type="button" class="btn btn-danger btn-sm removeRow"><i class="fas fa-trash"></i></button></td>
+        `;
 
-                    li.addEventListener('click', function () {
-                        bailleurInput.value = bailleur.libelle_long;
-                        bailleurInput.dataset.id = bailleur.code_acteur;
-                        bailleurList.innerHTML = '';
-                    });
+        table.appendChild(row);
 
-                    bailleurList.appendChild(li);
-                });
-            });
+        // Réinitialisation (sauf devise)
+        document.getElementById('montant').value = '';
+        document.getElementById('commentaire').value = '';
+        if (document.getElementById('BailOui')) document.getElementById('BailOui').checked = false;
+        if (document.getElementById('BailNon')) document.getElementById('BailNon').checked = false;
+        bailleurLookup?.clear?.(); // si tu veux réinitialiser le lookup-select
     });
 
-    ajouterBailleurBtn.addEventListener('click', function () {
-        const modal = new bootstrap.Modal(document.getElementById('modalAjoutBailleur'));
-        modal.show();
-    });
-
-    document.getElementById('btnEnregistrerBailleur').addEventListener('click', function () {
-        alert('Bailleur enregistré avec succès !');
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAjoutBailleur'));
-        modal.hide();
-    });
-});
-
-
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const tableBody = document.getElementById('tableFinancements');
-        const addButton = document.getElementById('addFinancementBtn');
-        let partieSelection = null; // Pour suivre si "Oui" ou "Non" a été sélectionné.
-
-        // Fonction pour verrouiller les boutons radio
-        function verrouillerBoutons() {
-            document.getElementById('BailOui').disabled = (partieSelection === 'non');
-            document.getElementById('BailNon').disabled = (partieSelection === 'oui');
+    // Supprimer une ligne
+    document.getElementById('tableFinancements').addEventListener('click', function (e) {
+        if (e.target && e.target.classList.contains('removeRow')) {
+            e.target.closest('tr').remove();
         }
-
-        // Fonction pour réinitialiser les champs après ajout
-        function resetFields() {
-            document.getElementById('bailleur').value = '';
-            document.getElementById('montant').value = '';
-            document.getElementById('deviseBailleur').value = '';
-            document.getElementById('commentaire').value = '';
-            document.querySelectorAll('input[name="BaillOui"]').forEach((radio) => (radio.checked = false));
-        }
-
-        // Fonction pour supprimer une ligne et réinitialiser les boutons si nécessaire
-        tableBody.addEventListener('click', function (event) {
-            if (event.target.classList.contains('btn-danger')) {
-                const row = event.target.closest('tr');
-                row.remove();
-
-                // Vérifier si toutes les lignes ont été supprimées pour réactiver les radios
-                if (tableBody.querySelectorAll('tr').length === 0) {
-                    partieSelection = null;
-                    document.getElementById('BailOui').disabled = false;
-                    document.getElementById('BailNon').disabled = false;
-                }
-            }
-        });
-
-        // Fonction pour ajouter un financement
-        addButton.addEventListener('click', function () {
-            // Récupérer les valeurs des champs
-            const bailleur = document.getElementById('bailleur').value.trim();
-            const montant = document.getElementById('montant').value.trim();
-            const devise = document.getElementById('deviseBailleur').value.trim();
-            const partie = document.querySelector('input[name="BaillOui"]:checked')?.value || '';
-            const commentaire = document.getElementById('commentaire').value.trim();
-
-            // Vérifications des champs obligatoires
-            if (!bailleur || !montant || !devise) {
-                alert('Veuillez remplir tous les champs obligatoires : Bailleur, Montant et Devise.');
-                return;
-            }
-
-            if (!partie) {
-                alert('Veuillez sélectionner si la ressource est locale ou non.');
-                return;
-            }
-
-            // Vérifier si un seul financement "Non" peut être ajouté
-            if (partie === 'BaillNon' && tableBody.querySelectorAll('tr td:nth-child(4)').textContent.includes('Non')) {
-                alert('Vous ne pouvez ajouter qu\'un seul financement marqué comme "Non".');
-                return;
-            }
-
-            // Mettre à jour la sélection "Partie"
-            if (partieSelection === null) {
-                partieSelection = partie;
-                verrouillerBoutons();
-            } else if (partieSelection !== partie) {
-                alert(`Vous avez déjà sélectionné "${partieSelection}". Vous ne pouvez pas ajouter un financement avec "${partie}".`);
-                return;
-            }
-
-            // Ajouter une nouvelle ligne au tableau
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${bailleur}</td>
-                <td>${montant}</td>
-                <td>${devise}</td>
-                <td>${partie === 'BaillOui' ? 'Oui' : 'Non'}</td>
-                <td>${commentaire}</td>
-                <td><button class="btn btn-danger btn-sm">Supprimer</button></td>
-            `;
-            tableBody.appendChild(row);
-
-            // Réinitialiser les champs après ajout
-            resetFields();
-        });
     });
-
-
-
     ///////////////////////////LOCALLISATION
     
     let selectedLocalite = {
@@ -2392,7 +2370,7 @@ function formatNumber(input) {
         fetch('/get-familles/' + codeSousDomaine)
             .then(response => response.json())
             .then(data => {
-                let select = document.getElementById('infrastructureType');
+                let select = document.getElementById('FamilleInfrastruc');
                 select.innerHTML = '<option value="">Sélectionnez</option>';
 
                 data.forEach(function(famille) {
@@ -2448,64 +2426,69 @@ function formatNumber(input) {
             });
     });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const addBtn = document.getElementById('addInfrastructureBtn');
-        const tableBody = document.getElementById('tableInfrastructures');
+    let currentCaracts = [];
 
-        addBtn.addEventListener('click', function () {
-            // Récupère les champs
-            const typeCaract = document.getElementById('tyCaract');
-            const caract = document.getElementById('caract');
-            const unit = document.getElementById('unitCaract');
-            const valeur = document.querySelector('input[name="caractValues[]"]');
+    // Ajouter une caractéristique à l'infrastructure en cours
+    $('#addCaractToInfra').on('click', function () {
+        const type = $('#tyCaract').val();
+        const caract = $('#caract').val();
+        const unite = $('#unitCaract').val();
+        const valeur = $('#caractValue').val();
 
-            // Vérifie que tout est rempli
-            if (!typeCaract.value || !caract.value || !unit.value || !valeur.value) {
-                alert('Veuillez remplir tous les champs pour ajouter une caractéristique.');
-                return;
-            }
+        if (!caract || !unite || !valeur) {
+            alert('Veuillez remplir tous les champs de caractéristique.');
+            return;
+        }
 
-            // Crée une ligne
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <input type="hidden" name="typesCaracteristiques[]" value="${typeCaract.value}">
-                    ${typeCaract.options[typeCaract.selectedIndex].text}
-                </td>
-                <td>
-                    <input type="hidden" name="caracteristiques[]" value="${caract.value}">
-                    ${caract.options[caract.selectedIndex].text}
-                </td>
-                <td>
-                    <input type="hidden" name="unites[]" value="${unit.value}">
-                    ${unit.options[unit.selectedIndex].text}
-                </td>
-                <td>
-                    <input type="hidden" name="valeursCaracteristiques[]" value="${valeur.value}">
-                    ${valeur.value}
-                </td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-sm removeRow">Supprimer</button>
-                </td>
-            `;
+        const label = `${$('#caract option:selected').text()} : ${valeur} ${$('#unitCaract option:selected').text()}`;
 
-            tableBody.appendChild(row);
-
-            // Réinitialise les champs
-            caract.innerHTML = '<option value="">Sélectionner la caractéristique</option>';
-            unit.innerHTML = '<option value="">Sélectionner l\'unité</option>';
-            typeCaract.selectedIndex = 0;
-            valeur.value = '';
+        currentCaracts.push({
+            id: caract,
+            unite_id: unite,
+            valeur: valeur,
+            label: label
         });
 
-        // Délégué pour bouton supprimer
-        tableBody.addEventListener('click', function (e) {
-            if (e.target && e.target.classList.contains('removeRow')) {
-                e.target.closest('tr').remove();
-            }
-        });
+        const item = `<li class="list-group-item">${label}</li>`;
+        $('#caractList').append(item);
+
+        // Reset
+        $('#caractValue').val('');
     });
 
+    // Ajouter une infrastructure au tableau final
+    $('#addInfrastructureBtn').on('click', function () {
+        const name = $('#infrastructureName').val();
+        const famille = $('#FamilleInfrastruc').val();
+        const familleText = $('#FamilleInfrastruc option:selected').text();
+
+        if (!name || !famille || currentCaracts.length === 0) {
+            alert("Veuillez remplir tous les champs de l'infrastructure.");
+            return;
+        }
+
+        const row = `<tr>
+            <td>${name}<input type="hidden" name="infra_names[]" value="${name}"></td>
+            <td>${familleText}<input type="hidden" name="infra_familles[]" value="${famille}"></td>
+            <td>
+                ${currentCaracts.map(c => `<div>${c.label}<input type="hidden" name="caracts[${name}][]" value="${c.id}|${c.unite_id}|${c.valeur}"></div>`).join('')}
+            </td>
+            <td><button type="button" class="btn btn-danger btn-sm removeInfra">Supprimer</button></td>
+        </tr>`;
+
+        $('#tableInfrastructures').append(row);
+
+        // Reset form
+        $('#infrastructureName').val('');
+        $('#FamilleInfrastruc').val('');
+        $('#caractList').empty();
+        currentCaracts = [];
+    });
+
+    // Supprimer une infrastructure
+    $(document).on('click', '.removeInfra', function () {
+        $(this).closest('tr').remove();
+    });
   </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -2583,57 +2566,56 @@ function formatNumber(input) {
 
             return true;
         }
-
-        // ✅ Bouton Suivant avec validation
-        function nextStep() {
-            if (validateStep3()) {
-                currentStep++;
-                showStep(currentStep);
-            }
-        }
     });
 
-$("#addMoeuvreBtn").on("click", function () {
-    const selected = $("#acteurSelect option:selected");
+    // ➕ Ajouter un maître d’œuvre
+    $("#addMoeuvreBtn").on("click", function () {
+        const selected = $("#acteurSelect option:selected");
 
-    if (!selected.val()) {
-        alert("Veuillez sélectionner un acteur.");
-        return;
-    }
+        if (!selected.val()) {
+            alert("Veuillez sélectionner un acteur.");
+            return;
+        }
 
-    const codeActeur = selected.val();
-    const libelleCourt = selected.data("libelle-court") || selected.text().split(" ")[0];
-    const libelleLong = selected.data("libelle-long") || selected.text().split(" ").slice(1).join(" ");
-    const secteur = $("#sectActivEnt option:selected").text();
-    const secteurCode = $("#sectActivEnt").val();
-    const tableBody = $("#moeuvreTable tbody");
+        const codeActeur = selected.val();
+        const libelleCourt = selected.data("libelle-court") || selected.text().split(" ")[0];
+        const libelleLong = selected.data("libelle-long") || selected.text().split(" ").slice(1).join(" ");
+        const secteur = $("#sectActivEnt option:selected").text();
+        const secteurCode = $("#sectActivEnt").val();
+        const tableBody = $("#moeuvreTable tbody");
 
-    // On remplace l’existant pour ne garder qu’un seul maître d’œuvre
-    tableBody.empty();
-    const isMinistere = libelleCourt?.toLowerCase().includes("minist");
-        
-    const row = `
-        <tr>
-            <td>${libelleCourt}</td>
-            <td>${libelleLong}</td>
-            <td>${isMinistere ? secteur : "-"}</td>
-                 
-            <td hidden>${isMinistere ? secteurCode : ""}</td>
-            <td>
-                <button type="button" class="btn btn-danger btn-sm remove-moeuvre">
-                    <i class="fas fa-trash"></i>
-                </button>
-                <input type="hidden" name="code_acteur_moeuvre" value="${codeActeur}">
-            </td>
-        </tr>
-    `;
-    tableBody.append(row);
-});
+        // Vérifie si l'acteur est déjà dans la liste
+        if (tableBody.find(`input[value="${codeActeur}"]`).length > 0) {
+            alert("Ce maître d’œuvre est déjà ajouté.");
+            return;
+        }
 
-// Suppression
-$(document).on("click", ".remove-moeuvre", function () {
-    $(this).closest("tr").remove();
-});
+        const isMinistere = libelleCourt?.toLowerCase().includes("minist");
+
+        const row = `
+            <tr>
+                <td>${libelleCourt}</td>
+                <td>${libelleLong}</td>
+                <td>${isMinistere ? secteur : "-"}</td>
+                <td hidden>${isMinistere ? secteurCode : ""}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-moeuvre">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <input type="hidden" name="code_acteur_moeuvre[]" value="${codeActeur}">
+                    <input type="hidden" name="secteur_id[]" value="${isMinistere ? secteurCode : ''}">
+                </td>
+            </tr>
+        `;
+
+        tableBody.append(row);
+    });
+
+    // 🗑️ Supprimer un maître d’œuvre
+    $(document).on("click", ".remove-moeuvre", function () {
+        $(this).closest("tr").remove();
+    });
+
 
 </script>
 <script>

@@ -10,7 +10,7 @@ class projets_natureTravaux extends Model
     use HasFactory;
     protected $table = 'projets_natureTravaux';
     protected $primaryKey = 'id_PNT'; 
-
+    public $timestamps = false; 
     // Colonnes modifiables
     protected $fillable = [
         'code_projet',

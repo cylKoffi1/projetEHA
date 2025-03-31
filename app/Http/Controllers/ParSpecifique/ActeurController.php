@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 
 class ActeurController extends Controller
 {
@@ -91,27 +92,33 @@ class ActeurController extends Controller
 
     public function store(Request $request)
     {
+        DB::beginTransaction();
         try {
-
-            // 🔹 **Gestion des Personnes Physiques**
-            if ($request->type_personne == "physique") {
-                $acteur = new Acteur([
-                    'libelle_long' => $request->nom ,
-                    'libelle_court' => $request->prenom ,
-                    'type_acteur' => $request->type_acteur,
-                    'email' => $request->emailI,
-                    'telephone' => $request->telephoneBureauIndividu,
-                    'adresse' => $request->AdresseSiègeEntreprise,
-                    'code_pays' => $request->code_pays,
-                    'is_user' => false,
-                    'type_financement' => $request->type_financement,
-                ]);
+            $acteur = new Acteur();
+            $acteur->libelle_long = $request->libelle_long ?? $request->nom;
+            $acteur->libelle_court = $request->libelle_court ?? $request->prenom;
+            $acteur->type_acteur = $request->type_acteur;
+            $acteur->email = $request->emailI ?? $request->emailRL ?? null;
+            $acteur->telephone = $request->telephoneBureauIndividu ?? $request->telephone1RL ?? null;
+            $acteur->adresse = $request->adresseSiegeIndividu ?? $request->AdresseSiègeEntreprise ?? null;
+            $acteur->code_pays = $request->code_pays;
+            $acteur->is_user = false;
+            $acteur->type_financement = $request->type_financement;
+            $acteur->save();
+    
+            // 📷 Photo
+            if ($request->hasFile('photo')) {
+                $file = $request->file('photo');
+                $filename = 'acteur_' . time() . '.' . $file->getClientOriginalExtension();
+                $path = 'Data/acteur/';
+                $file->move(public_path($path), $filename);
+                $acteur->photo = $path . $filename;
                 $acteur->save();
-                if ($request->hasFile('photo')) {
-                    $acteur->photo = $request->file('photo')->store('Data/acteur', 'public');
-                }
-
-                $personne = PersonnePhysique::create([
+            }
+    
+            // 🧑🏻‍💼 Personne Physique
+            if ($request->type_personne == 'physique') {
+                $physique = new PersonnePhysique([
                     'code_acteur' => $acteur->code_acteur,
                     'nom' => $request->nom,
                     'prenom' => $request->prenom,
@@ -126,49 +133,35 @@ class ActeurController extends Controller
                     'num_fiscal' => $request->numeroFiscal,
                     'genre_id' => $request->genre,
                     'situation_matrimoniale_id' => $request->situationMatrimoniale,
-                    'is_active' => true,
+                    'is_active' => true
                 ]);
-
-                // 📌 **Enregistrement de la pièce d'identité**
+                $physique->save();
+    
+                // 💳 Pièce d'identité
                 if ($request->piece_identite && $request->numeroPiece) {
                     Possederpiece::create([
                         'idPieceIdent' => $request->piece_identite,
-                        'idPersonnePhysique' => $personne->id, // Correction ici
+                        'idPersonnePhysique' => $acteur->code_acteur,
                         'NumPieceIdent' => $request->numeroPiece,
                         'DateEtablissement' => $request->dateEtablissement,
                         'DateExpiration' => $request->dateExpiration,
-                        'DateEtablissement' => $request->dateEtablissement
                     ]);
                 }
-                if($request->SecteurActI){
-                    foreach($request->SecteurActI as $secteurs){
+    
+                // 🧩 Secteurs d'activité
+                if ($request->filled('SecteurActI')) {
+                    foreach ($request->SecteurActI as $secteur) {
                         SecteurActiviteActeur::create([
                             'code_acteur' => $acteur->code_acteur,
-                            'code_secteur' => $secteurs
+                            'code_secteur' => $secteur
                         ]);
                     }
                 }
             }
-
-            // 🔹 **Gestion des Personnes Morales**
-            elseif ($request->type_personne == "morale") {
-                $acteur = new Acteur([
-                    'libelle_long' => $request->libelle_long ,
-                    'libelle_court' => $request->libelle_court,
-                    'type_acteur' => $request->type_acteur,
-                    'email' =>  $request->emailRL,
-                    'telephone' =>  $request->telephone1RL,
-                    'adresse' => $request->adresseSiegeIndividu,
-                    'code_pays' => $request->code_pays,
-                    'is_user' => false,
-                    'type_financement' => $request->type_financement,
-                ]);
-                $acteur->save();
-                if ($request->hasFile('photo')) {
-                    $acteur->photo = $request->file('photo')->store('Data/acteur', 'public');
-                }
-
-                $entreprise = PersonneMorale::create([
+    
+            // 🏢 Personne Morale
+            if ($request->type_personne == 'morale') {
+                $morale = new PersonneMorale([
                     'code_acteur' => $acteur->code_acteur,
                     'raison_sociale' => $request->libelle_long,
                     'date_creation' => $request->date_creation,
@@ -182,30 +175,38 @@ class ActeurController extends Controller
                     'adresse_postale' => $request->AdressePostaleEntreprise,
                     'adresse_siege' => $request->AdresseSiègeEntreprise,
                 ]);
-
-                // 📌 **Enregistrement du représentant légal**
-                if ($request->nomRL) {
-                    foreach ($request->nomRL as $representantId) {
+                $morale->save();
+    
+                // 👨‍⚖️ Représentants Légaux
+                if ($request->filled('nomRL')) {
+                    $representants = is_array($request->nomRL) ? $request->nomRL : [$request->nomRL];
+                    foreach ($representants as $repId) {
                         Representants::create([
-                            'entreprise_id' => $entreprise->id,
-                            'representant_id' => $representantId,
+                            'entreprise_id' => $morale->code_acteur,
+                            'representant_id' => $repId,
                             'role' => 'Représentant Légal',
+                            'idPays' => $acteur->code_pays,
+                            'date_représentation' => Carbon::today()
                         ]);
                     }
                 }
-
-                // 📌 **Enregistrement des personnes de contact**
-                if ($request->nomPC) {
-                    foreach ($request->nomPC as $contactId) {
+    
+                // 📞 Personnes de Contact
+                if ($request->filled('nomPC')) {
+                    foreach ($request->nomPC as $pcId) {
                         Representants::create([
-                            'entreprise_id' => $entreprise->id,
-                            'representant_id' => $contactId,
+                            'entreprise_id' => $morale->code_acteur,
+                            'representant_id' => $pcId,
                             'role' => 'Personne de Contact',
+                            'idPays' => $acteur->code_pays,
+                            'date_représentation' => Carbon::today()
                         ]);
                     }
                 }
-                if($request->secteurActivite){
-                    foreach($request->secteurActivite as $secteur){
+    
+                // 🧩 Secteurs d'activité
+                if ($request->filled('secteurActivite')) {
+                    foreach ($request->secteurActivite as $secteur) {
                         SecteurActiviteActeur::create([
                             'code_acteur' => $acteur->code_acteur,
                             'code_secteur' => $secteur
@@ -213,68 +214,178 @@ class ActeurController extends Controller
                     }
                 }
             }
-
+    
+            DB::commit();
             Log::info("✅ Acteur ajouté avec succès : " . $acteur->libelle_long);
             return redirect()->back()->with('success', 'Acteur ajouté avec succès.');
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error("❌ Erreur lors de l'enregistrement d'un acteur : " . $e->getMessage());
-            return redirect()->back()->withErrors('Une erreur est survenue lors de l\'enregistrement de l\'acteur.');
+            return redirect()->back()->withErrors("Erreur lors de l'enregistrement : " . $e->getMessage());
         }
     }
+    
 
     public function update(Request $request, $id)
     {
         try {
-            // 🔍 **Validation des champs**
-            $request->validate([
-                'libelle_long' => 'required|string|max:255',
-                'libelle_court' => 'required|string|max:255',
-                'type_acteur' => 'string|max:5',
-                'code_pays' => 'required|exists:pays,alpha3',
-                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            ]);
-
-            // 🔹 **Récupération de l'acteur existant**
-            $acteur = Acteur::where('code_acteur', $id)->firstOrFail();
-
-            // 📌 **Suppression de l'ancienne photo si une nouvelle est téléchargée**
+            $acteur = Acteur::with(['personnePhysique', 'personneMorale'])->findOrFail($id);
+    
+            // 🔄 Mise à jour de la photo
             if ($request->hasFile('photo')) {
-                $oldPhotoPath = public_path($acteur->Photo); // Chemin absolu de l'ancienne photo
+                if ($acteur->photo && file_exists(public_path($acteur->photo))) {
+                    unlink(public_path($acteur->photo));
+                }
+                $file = $request->file('photo');
+                $filename = 'acteur_' . time() . '.' . $file->getClientOriginalExtension();
+                $path = 'Data/acteur/';
+                $file->move(public_path($path), $filename);
+                $acteur->photo = $path . $filename;
+            }
+    
+            // 🔁 Mise à jour des champs généraux
+            $acteur->libelle_long = $request->libelle_long ?? $acteur->libelle_long;
+            $acteur->libelle_court = $request->libelle_court ?? $acteur->libelle_court;
+            $acteur->type_acteur = $request->type_acteur;
+            $acteur->email = $request->email ?? $request->emailRL ?? $request->emailI;
+            $acteur->telephone = $request->telephone ?? $request->telephone1RL ?? $request->telephoneBureauIndividu;
+            $acteur->adresse = $request->adresse ?? $request->adresseSiegeIndividu ?? $request->AdresseSiègeEntreprise;
+            $acteur->code_pays = $request->code_pays;
+            $acteur->type_financement = $request->type_financement;
+            $acteur->save();
+    
+            // 🧑‍💼 Mise à jour Personne Physique
+            if ($request->type_personne == 'physique') {
+                if ($acteur->personnePhysique) {
+                    $acteur->personnePhysique->update([
+                        'nom' => $request->nom,
+                        'prenom' => $request->prenom,
+                        'date_naissance' => $request->date_naissance,
+                        'nationalite' => $request->nationnalite,
+                        'email' => $request->emailI,
+                        'code_postal' => $request->CodePostalI,
+                        'adresse_postale' => $request->AdressePostaleIndividu,
+                        'adresse_siege' => $request->adresseSiegeIndividu,
+                        'telephone_bureau' => $request->telephoneBureauIndividu,
+                        'telephone_mobile' => $request->telephoneMobileIndividu,
+                        'num_fiscal' => $request->numeroFiscal,
+                        'genre_id' => $request->genre,
+                        'situation_matrimoniale_id' => $request->situationMatrimoniale,
+                    ]);
+                }
+    
+                // 🔐 Mise à jour ou création de la pièce d'identité
+                $piece = $acteur->possederpiece->first();
 
-                if (file_exists($oldPhotoPath) && is_file($oldPhotoPath)) {
-                    unlink($oldPhotoPath); // Suppression de l'ancienne image
+                if ($request->piece_identite && $request->numeroPiece) {
+                    if ($piece) {
+                        $piece->update([
+                            'idPieceIdent' => $request->piece_identite,
+                            'NumPieceIdent' => $request->numeroPiece,
+                            'DateEtablissement' => $request->dateEtablissement,
+                            'DateExpiration' => $request->dateExpiration
+                        ]);
+                    } else {
+                        Possederpiece::create([
+                            'idPieceIdent' => $request->piece_identite,
+                            'idPersonnePhysique' => $acteur->personnePhysique->code_acteur,
+                            'NumPieceIdent' => $request->numeroPiece,
+                            'DateEtablissement' => $request->dateEtablissement,
+                            'DateExpiration' => $request->dateExpiration
+                        ]);
+                    }
                 }
 
-                // 📌 **Sauvegarde de la nouvelle photo**
-                $file = $request->file('photo');
-                $extension = $file->getClientOriginalExtension();
-                $filename = 'Acteur_' . time() . '.' . $extension;
-                $destinationPath = public_path('Data/acteur/'); // Dossier de destination
-                $file->move($destinationPath, $filename); // Déplacement du fichier
-
-                // Mettre à jour le chemin de la photo
-                $acteur->photo = 'Data/acteur/' . $filename;
+    
+                // 🧩 Mise à jour secteurs d’activité
+                SecteurActiviteActeur::where('code_acteur', $id)->delete();
+                if($request->SecteurActI){
+                    foreach($request->SecteurActI as $secteurs){
+                        SecteurActiviteActeur::create([
+                            'code_acteur' => $acteur->code_acteur,
+                            'code_secteur' => $secteurs
+                        ]);
+                    }
+                }
             }
+    
+            // 🏢 Mise à jour Personne Morale
+            if ($request->type_personne == 'morale') {
+                if ($acteur->personneMorale) {
+                    $acteur->personneMorale->update([
+                        'raison_sociale' => $request->libelle_long,
+                        'date_creation' => $request->date_creation,
+                        'forme_juridique' => $request->FormeJuridique,
+                        'num_immatriculation' => $request->NumeroImmatriculation,
+                        'nif' => $request->nif,
+                        'rccm' => $request->rccm,
+                        'capital' => $request->CapitalSocial,
+                        'numero_agrement' => $request->Numéroagrement,
+                        'code_postal' => $request->CodePostaleEntreprise,
+                        'adresse_postale' => $request->AdressePostaleEntreprise,
+                        'adresse_siege' => $request->AdresseSiègeEntreprise,
+                    ]);
+                }
+    
+               // 🔁 Mise à jour ou création des représentants légaux
+               if ($request->filled('nomRL')) {
+                $nomRLs = is_array($request->nomRL) ? $request->nomRL : [$request->nomRL];
+                
+                    foreach ($nomRLs as $representantId) {
+                        Representants::updateOrCreate(
+                            [
+                                'entreprise_id' => $acteur->personneMorale->code_acteur,
+                                'representant_id' => $representantId,
+                                'role' => 'Représentant Légal',
+                            ],
+                            [
+                                'idPays' => $acteur->code_pays,
+                                'date_représentation' => Carbon::today()
+                            ]
+                        );
+                    }
+                }
+            
 
-            // 📌 **Mise à jour des autres champs**
-            $acteur->update([
-                'libelle_long' => $request->libelle_long,
-                'libelle_court' => $request->libelle_court,
-                'type_acteur' => $request->type_acteur,
-                'email' => $request->email,
-                'telephone' => $request->telephone,
-                'adresse' => $request->adresse,
-                'code_pays' => $request->code_pays,
-            ]);
+                // 🔁 Mise à jour ou création des personnes de contact
+                if ($request->has('nomPC') && is_array($request->nomPC)) {
+                    foreach ($request->nomPC as $contactId) {
+                        Representants::updateOrCreate(
+                            [
+                                'entreprise_id' => $acteur->personneMorale->code_acteur,
+                                'representant_id' => $contactId,
+                                'role' => 'Personne de Contact',
+                            ],
+                            [
+                                'idPays' => $acteur->code_pays,
+                                'date_représentation' => Carbon::today()
+                            ]
+                        );
+                    }
+                }
 
+                 // 🧩 Mise à jour secteurs
+                SecteurActiviteActeur::where('code_acteur', $id)->delete();
+                if($request->secteurActivite){
+                    foreach($request->secteurActivite as $secteurs){
+                        SecteurActiviteActeur::create([
+                            'code_acteur' => $acteur->code_acteur,
+                            'code_secteur' => $secteurs
+                        ]);
+                    }
+                }
+               
+                            
+            }
+    
             Log::info("✅ Acteur mis à jour avec succès : " . $acteur->libelle_long);
             return redirect()->back()->with('success', 'Acteur mis à jour avec succès.');
-
         } catch (\Exception $e) {
             Log::error("❌ Erreur lors de la mise à jour d'un acteur : " . $e->getMessage());
-            return redirect()->back()->withErrors('Une erreur est survenue lors de la mise à jour de l\'acteur.');
+            return redirect()->back()->withErrors("Une erreur est survenue : " . $e->getMessage());
         }
     }
+    
 
     public function destroy($id)
     {
@@ -353,13 +464,75 @@ class ActeurController extends Controller
     {
         try {
             $acteur = Acteur::with([
-                'personnePhysique',
-                'secteurActiviteActeur',
-                'representants',
+                'personnePhysique', 
                 'personneMorale',
-                'possederpiece'
+                'secteurActiviteActeur',
+                'possederpiece',
+                'representants'
             ])->findOrFail($id);
-            return response()->json($acteur);
+    
+            // Préparer les données pour le formulaire
+            $data = [
+                'id' => $acteur->code_acteur,
+                'libelle_long' => $acteur->libelle_long,
+                'libelle_court' => $acteur->libelle_court,
+                'type_acteur' => $acteur->type_acteur,
+                'email' => $acteur->email,
+                'telephone' => $acteur->telephone,
+                'adresse' => $acteur->adresse,
+                'code_pays' => $acteur->code_pays,
+                'photo' => $acteur->photo ? asset($acteur->photo) : null,
+                'type_financement' => $acteur->type_financement,
+                'is_user' => $acteur->is_user,
+            ];
+    
+            // Ajouter les données spécifiques au type de personne
+            if ($acteur->personnePhysique) {
+                $data = array_merge($data, [
+                    'type_personne' => 'physique',
+                    'nom' => $acteur->personnePhysique->nom,
+                    'prenom' => $acteur->personnePhysique->prenom,
+                    'date_naissance' => $acteur->personnePhysique->date_naissance,
+                    'nationnalite' => $acteur->personnePhysique->nationalite,
+                    'CodePostalI' => $acteur->personnePhysique->code_postal,
+                    'AdressePostaleIndividu' => $acteur->personnePhysique->adresse_postale,
+                    'adresseSiegeIndividu' => $acteur->personnePhysique->adresse_siege,
+                    'telephoneBureauIndividu' => $acteur->personnePhysique->telephone_bureau,
+                    'telephoneMobileIndividu' => $acteur->personnePhysique->telephone_mobile,
+                    'numeroFiscal' => $acteur->personnePhysique->num_fiscal,
+                    'genre' => $acteur->personnePhysique->genre_id,
+                    'situationMatrimoniale' => $acteur->personnePhysique->situation_matrimoniale_id,
+                    'piece_identite' => $acteur->possederpiece->first() ? $acteur->possederpiece->first()->idPieceIdent : null,
+                    'numeroPiece' => $acteur->possederpiece->first() ? $acteur->possederpiece->first()->NumPieceIdent : null,
+                    'dateEtablissement' => $acteur->possederpiece->first() ? $acteur->possederpiece->first()->DateEtablissement : null,
+                    'dateExpiration' => $acteur->possederpiece->first() ? $acteur->possederpiece->first()->DateExpiration : null,
+                    'SecteurActI' => $acteur->secteurActiviteActeur->pluck('code_secteur')->toArray(),
+                ]);
+            } elseif ($acteur->personneMorale) {
+                $data = array_merge($data, [
+                    'type_personne' => 'morale',
+                    'libelle_long' => $acteur->personneMorale->raison_sociale,
+                    'libelle_court' => $acteur->libelle_court,
+                    'date_creation' => $acteur->personneMorale->date_creation,
+                    'FormeJuridique' => $acteur->personneMorale->forme_juridique,
+                    'NumeroImmatriculation' => $acteur->personneMorale->num_immatriculation,
+                    'nif' => $acteur->personneMorale->nif,
+                    'rccm' => $acteur->personneMorale->rccm,
+                    'CapitalSocial' => $acteur->personneMorale->capital,
+                    'Numéroagrement' => $acteur->personneMorale->numero_agrement,
+                    'CodePostaleEntreprise' => $acteur->personneMorale->code_postal,
+                    'AdressePostaleEntreprise' => $acteur->personneMorale->adresse_postale,
+                    'AdresseSiègeEntreprise' => $acteur->personneMorale->adresse_siege,
+                    'nomRL' => $acteur->representants->where('role', 'Représentant Légal')->pluck('representant_id')->toArray(),
+                    'emailRL' => $acteur->email,
+                    'telephone1RL' => $acteur->telephone,
+                    'telephone2RL' => $acteur->personneMorale->telephone_bureau ?? null,
+                    'nomPC' => $acteur->representants->where('role', 'Personne de Contact')->pluck('representant_id')->toArray(),
+                    'secteurActivite' => $acteur->secteurActiviteActeur->pluck('code_secteur')->toArray(),
+                ]);
+            }
+    
+            return response()->json($data);
         } catch (\Exception $e) {
             Log::error("Erreur lors de la récupération des données de l'acteur : " . $e->getMessage());
             return response()->json(['error' => 'Erreur lors de la récupération des données'], 500);

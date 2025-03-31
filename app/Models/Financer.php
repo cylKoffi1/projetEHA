@@ -19,6 +19,7 @@ class Financer extends Model
         'code_acteur',
         'montant_finance',
         'devise',
+        'financement_local',
         'date_engagement',
         'commentaire',
         'FinancementType',

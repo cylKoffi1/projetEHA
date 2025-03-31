@@ -14,6 +14,7 @@ class Projet extends Model
 
     // Colonnes modifiables
     protected $fillable = [
+        'code_projet',
         'code_alpha3_pays',
         'libelle_projet',
         'commentaire',

@@ -15,9 +15,9 @@ class ProjetLocalisation extends Model
     protected $fillable = [
         'code_projet',
         'pays_code',
-        'niveau1_id',
-        'niveau2_id',
-        'niveau3_id',
+        'code_localite',
+        'niveau',
+        'decoupage',
     ];
 
     // Exemple de relation (si Projet existe)

@@ -70,9 +70,9 @@ class Acteur extends Model
      */
     public function representants()
     {
-        return $this->belongsToMany(Acteur::class, 'representants', 'entreprise_id', 'representant_id')
-            ->withPivot('role');
+        return $this->hasMany(Representants::class, 'entreprise_id', 'code_acteur');
     }
+
 
     /**
      * Relation avec `possederpiece`

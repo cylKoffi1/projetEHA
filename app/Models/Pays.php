@@ -24,7 +24,9 @@ class Pays extends Model
         'codeTel',
         'armoirie',
         'flag',
-        'code_devise'
+        'code_devise',
+        'minZoom',
+        'maxZoom'
     ];
 
 

@@ -221,7 +221,7 @@
 
 <!-- ======= Barre de navigation ======= -->
 <nav class="navbar">
-    <a class="navbar-brand" href="{{ url('/')}} ">BTP-PROJECT</a>
+    <a class="navbar-brand" href="{{ url('/')}} ">BTP-PROJECT <span style="font-size:15px;">version.β</span> </a>
     <button type="button" class="navbar-toggle" id="navbar-toggle">
         ☰ <!-- Icône hamburger -->
     </button>
@@ -233,7 +233,69 @@
     </div>
 </nav>
 
+<style>
+    /* Style pour le modal de notification */
+    .modal-notification {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 50%;
+        top: 20px;
+        transform: translateX(-50%);
+        background-color: rgba(0,0,0,0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        max-width: 80%;
+        text-align: center;
+        animation: fadeIn 0.3s;
+    }
 
+    .modal-notification.success {
+        background-color: rgba(40, 167, 69, 0.9);
+    }
+
+    .modal-notification.error {
+        background-color: rgba(220, 53, 69, 0.9);
+    }
+
+    .modal-contents {
+        position: relative;
+    }
+
+
+
+    @keyframes fadeIn {
+        from {opacity: 0; top: 0;}
+        to {opacity: 1; top: 20px;}
+    }
+</style>
+<script>
+        // Fonctions pour gérer le modal de notification
+    function alert(message, type = 'success') {
+        const modal = document.getElementById('notificationModal');
+        const messageEl = document.getElementById('notificationMessage');
+        
+        modal.className = `modal-notification ${type}`;
+        messageEl.textContent = message;
+        modal.style.display = 'block';
+        
+        // Fermer automatiquement après 3 secondes
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 3000);
+    }
+    // Fermer le modal quand on clique sur la croix
+    document.querySelector('.close-notification').addEventListener('click', function() {
+        document.getElementById('notificationModal').style.display = 'none';
+    });
+</script>
+<!-- Modal de notification -->
+<div id="notificationModal" class="modal-notification">
+    <div class="modal-contents">
+        <p id="notificationMessage"></p>
+    </div>
+</div>
 <!-- ======= Modal pour l'enregistrement ======= -->
 <div id="modalAjouter" class="modal" >
     <div class="modal-content">

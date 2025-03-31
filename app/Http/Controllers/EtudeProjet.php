@@ -54,12 +54,19 @@ use App\Models\Jouir;
 use App\Models\Profiter;
 use App\Models\Beneficier;
 use App\Models\Executer;
+use App\Models\Financer;
+use App\Models\Posseder;
+use App\Models\ProjetDocument;
+use App\Models\projets_natureTravaux;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class EtudeProjet extends Controller
 {
@@ -114,7 +121,13 @@ class EtudeProjet extends Controller
             $acteurs = Acteur::where('type_acteur', '=', 'etp')
             ->where('code_pays', $paysSelectionne)
             ->get();
-            return view('etudes_projets.naissance', compact('infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            
+            $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];
+
+            $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
+
+            $Devises = Pays::where('alpha3', $paysSelectionne)->get();
+            return view('etudes_projets.naissance', compact('Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
         public function search(Request $request)
         {
@@ -294,42 +307,148 @@ class EtudeProjet extends Controller
             return response()->json($unites);
         }
 
+        private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
+        {
+            $paysAlpha3 = session('pays_selectionne');        // ex: CIV
+            $groupeProjet = session('projet_selectionne');    // ex: BAT
+
+            $date = Carbon::parse($dateDebut);
+            $annee = $date->format('Y');
+
+            // Extraire les 2 premiers caractères du code sous-domaine pour déterminer le domaine
+            $codeDomaine = strtoupper(substr($codeSousDomaine, 0, 2));
+
+            // Compter les projets déjà enregistrés avec la même configuration
+            $ordre = Projet::where('code_alpha3_pays', $paysAlpha3)
+                ->where('code_sous_domaine', 'like', $codeDomaine . '%')
+                ->whereYear('date_demarrage_prevue', $annee)
+                ->whereMonth('date_demarrage_prevue', $mois)
+                ->count() + 1;
+
+            return strtoupper("{$paysAlpha3}{$groupeProjet}{$typeFinancement}_{$codeLocalisation}_{$codeDomaine}_{$annee}_{$ordre}");
+        }
+
+        private function genererCodeEtude($codePays, $codeGroupeProjet)
+        {
+            $now = Carbon::now();
+            $annee = $now->format('Y');
+            $mois = $now->format('m');
+
+            // Compte les études existantes pour ce mois/pays/groupe
+            $ordre = EtudeProject::where('codeEtudeProjets', 'like', "{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_%")->count() + 1;
+
+            return strtoupper("{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_{$ordre}");
+        }
+
+        public function abortProjet(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|string|exists:projets,code_projet',
+            ]);
+
+            $code = $request->code_projet;
+
+            $tables = [
+                'projets_natureTravaux' => 'code_projet',
+                'projetinfrastructure' => 'code_projet',
+                'projet_action_a_mener' => 'code_projet',
+                'executer' => 'code_projet',
+                'posseder' => 'code_projet',
+                'financer' => 'code_projet',
+                'profiter' => 'code_projet',
+                'beneficier' => 'code_projet',
+                'jouir' => 'code_projet',
+                'projet_documents' => 'code_projet',
+                'etudeprojects' => 'code_projet',
+            ];
+
+            DB::beginTransaction();
+            try {
+                foreach ($tables as $table => $key) {
+                    DB::table($table)->where($key, $code)->delete();
+                }
+
+                // Supprimer projet principal
+                Projet::where('code_projet', $code)->delete();
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Le projet temporaire a été annulé et supprimé.",
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error("Échec du rollback : " . $e->getMessage());
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "Échec de l'annulation du projet.",
+                ], 500);
+            }
+        }
+
         public function saveStep1(Request $request)
         {
             $request->validate([
-                'libelle_projet' => 'required|string',
-                'code_sous_domaine' => 'required|string',
+                'libelle_projet' => 'required|string|max:255',
+                'code_sous_domaine' => 'required|string|max:10',
                 'date_demarrage_prevue' => 'required|date',
                 'date_fin_prevue' => 'required|date|after_or_equal:date_demarrage_prevue',
                 'cout_projet' => 'nullable|numeric',
-                'code_devise' => 'nullable|string',
-                'code_nature' => 'required|string',
-                'code_pays' => 'required|string',
+                'code_devise' => 'nullable|string|max:3',
+                'code_nature' => 'required|string|max:10',
+                'code_pays' => 'required|string|max:3',
             ]);
-        
-            // Enregistrement temporaire du projet
-            $projet = Projet::create([
-                'libelle_projet' => $request->libelle_projet,
-                'commentaire' => $request->commentaire,
-                'code_sous_domaine' => $request->code_sous_domaine,
-                'date_demarrage_prevue' => $request->date_demarrage_prevue,
-                'date_fin_prevue' => $request->date_fin_prevue,
-                'cout_projet' => $request->cout_projet,
-                'code_devise' => $request->code_devise,
-                'code_alpha3_pays' => $request->code_pays,
-            ]);
-        
-            // Lier la nature des travaux
-            projets_natureTravaux::create([
-                'code_projet' => $projet->code_projet,
-                'code_nature' => $request->code_nature,
-                'date' => now(),
-            ]);
-        
-            return response()->json([
-                'success' => true,
-                'code_projet' => $projet->code_projet
-            ]);
+
+            try {
+                // Générer un ID temporaire unique
+                $tempId = 'TEMP-' . Str::uuid();
+
+                if (empty($tempId)) {
+                    throw new \Exception("Failed to generate project code");
+                }
+
+                $projet = Projet::create([
+                    'code_projet' => $tempId,
+                    'libelle_projet' => $request->libelle_projet,
+                    'commentaire' => $request->commentaire,
+                    'code_sous_domaine' => $request->code_sous_domaine,
+                    'date_demarrage_prevue' => $request->date_demarrage_prevue,
+                    'date_fin_prevue' => $request->date_fin_prevue,
+                    'cout_projet' => $request->cout_projet,
+                    'code_devise' => $request->code_devise,
+                    'code_alpha3_pays' => $request->code_pays ?? session('pays_selectionne'),
+                ]);
+
+                projets_natureTravaux::create([
+                    'code_projet' => $tempId,
+                    'code_nature' => $request->code_nature,
+                    'date' => now(),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'code_projet' => $tempId
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('Project creation failed: ' . $e->getMessage());
+                DB::rollBack();
+                // 🔥 Log de l'erreur dans le log Laravel
+                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                    'code_projet' => $codeProjet,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                // Suppression des données partielles
+                $this->abortProjet(new Request(['code_projet' => $tempId]));
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create project: ' . $e->getMessage()
+                ], 500);
+            }
         }
 
         public function saveStep2(Request $request)
@@ -343,57 +462,87 @@ class EtudeProjet extends Controller
                 'infrastructures' => 'nullable|array',
             ]);
 
-            $codeProjet = $request->code_projet;
+            try{
 
-            // 🔁 1. Sauvegarder les localisations
-            if ($request->has('localites')) {
-                foreach ($request->localites as $loc) {
-                    ProjetLocalisation::updateOrCreate(
-                        [
-                            'code_projet' => $codeProjet,
-                            'niveau1_id' => $loc['id'],
-                        ],
-                        [
-                            'pays_code' => $request->pays_code ?? auth()->user()->code_pays,
-                            'niveau2_id' => $loc['niveau'] ?? null,
-                            'niveau3_id' => $loc['decoupage'] ?? null,
-                        ]
-                    );
-                }
-            }
+                $codeProjet = $request->code_projet;
 
-            // 🔁 2. Sauvegarder les infrastructures + caractéristiques
-            if ($request->has('infrastructures')) {
-                foreach ($request->infrastructures as $infra) {
-                    // Génération d’un code unique pour l’infrastructure
-                    $infraCode = 'INFRA-' . strtoupper(Str::random(8));
-
-                    // 2.1 Création dans la table projetinfrastructure
-                    $infraDB = ProjetInfrastructure::create([
-                        'idInfrastructure' => $infraCode,
-                        'code_projet' => $codeProjet,
-                        'localisation_id' => $infra['localisation_id'] ?? null,
-                        'statut' => $infra['statut'] ?? 'prévu',
-                    ]);
-
-                    // 2.2 Enregistrer les caractéristiques
-                    if (!empty($infra['caracteristiques'])) {
-                        foreach ($infra['caracteristiques'] as $carac) {
-                            ValeurCaracteristique::create([
-                                'idInfrastructure' => $infraCode,
-                                'idCaracteristique' => $carac['id'],
-                                'idUnite' => $carac['unite_id'],
-                                'valeur' => $carac['valeur'],
-                            ]);
-                        }
+                // 🔁 1. Sauvegarder les localisations
+                if ($request->has('localites')) {
+                    foreach ($request->localites as $loc) {
+                        ProjetLocalisation::updateOrCreate(
+                            [
+                                'code_projet' => $codeProjet,
+                                'code_localite' => $loc['id'],
+                            ],
+                            [
+                                'pays_code' => $request->pays_code ?? session('pays_selectionne'),
+                                'niveau' => $loc['niveau'] ?? null,
+                                'decoupage' => $loc['decoupage'] ?? null,
+                            ]
+                        );
+                    }
+    
+                    // Stocker le premier code_localisation pour génération future du code projet
+                    if (count($request->localites)) {
+                        session(['code_localisation' => $request->localites[0]['id']]);
                     }
                 }
-            }
+    
+                // 🔁 2. Sauvegarder les infrastructures + caractéristiques
+                if ($request->has('infrastructures')) {
+                    foreach ($request->infrastructures as $infra) {
+                        // 1. Créer l'infrastructure de base
+                        $infraDB = Infrastructure::create([
+                            'code' => 'INFRA-' . strtoupper(Str::random(4)), // ou autre logique de code
+                            'libelle' => $request->infrastructureName ?? 'Infrastructure sans nom',
+                            'code_famille_infrastructure' => $infra['famille_code'] ?? null,
+                        ]);
+                    
+                        // 2. Créer l’entrée dans projetinfrastructure
+                        $projetInfra = ProjetInfrastructure::create([
+                            'idInfrastructure' => $infraDB->id, // Lien par ID (entier)
+                            'code_projet' => $codeProjet,
+                            'localisation_id' => $infra['localisation_id'] ?? null,
+                            'statut' => $infra['statut'] ?? 'prévu',
+                        ]);
+                    
+                        // 3. Enregistrer les caractéristiques
+                        if (!empty($infra['caracteristiques'])) {
+                            foreach ($infra['caracteristiques'] as $carac) {
+                                ValeurCaracteristique::create([
+                                    'idInfrastructure' => $infraDB->id, // Utiliser le même ID
+                                    'idCaracteristique' => $carac['id'],
+                                    'idUnite' => $carac['unite_id'],
+                                    'valeur' => $carac['valeur'],
+                                ]);
+                            }
+                        }
+                    }
+                    
+                }
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Étape 2 enregistrée avec succès.',
+                ]);
+            }catch (\Exception $e) {
+                DB::rollBack();
+                // 🔥 Log de l'erreur dans le log Laravel
+                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                    'code_projet' => $codeProjet,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Étape 2 enregistrée avec succès.',
-            ]);
+                // Suppression des données partielles
+                $this->abortProjet(new Request(['code_projet' => $codeProjet]));
+            
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l’enregistrement. Toutes les données ont été annulées.',
+                ], 500);
+            }
+            
         }
 
         public function saveStep3(Request $request)
@@ -405,50 +554,70 @@ class EtudeProjet extends Controller
 
             $codeProjet = $request->code_projet;
 
-            foreach ($request->actions as $action) {
-                // 🔹 1. Enregistrement de l’action dans projet_action_a_mener
-                $actionModel = ProjetActionAMener::create([
-                    'code' => 'ACT-' . uniqid(),
-                    'code_projet' => $codeProjet,
-                    'Num_ordre' => $action['ordre'],
-                    'Action_mener' => $action['action_code'],
-                    'Quantite' => $action['quantite'],
-                    'Infrastrucrues_id' => $action['infrastructure_code'],
-                ]);
+            try{
 
-                // 🔹 2. Répartition par type de bénéficiaire
-                foreach ($action['beneficiaires'] as $beneficiaire) {
-                    switch ($beneficiaire['type']) {
-                        case 'localite':
-                            Profiter::create([
-                                'code_projet' => $codeProjet,
-                                'code_pays' => $beneficiaire['codePays'],
-                                'code_rattachement' => $beneficiaire['codeRattachement'],
-                            ]);
-                            break;
-
-                        case 'acteur':
-                            Beneficier::create([
-                                'code_projet' => $codeProjet,
-                                'code_acteur' => $beneficiaire['code'],
-                                'is_active' => true,
-                            ]);
-                            break;
-
-                        case 'infrastructure':
-                            Jouir::create([
-                                'code_projet' => $codeProjet,
-                                'code_Infrastructure' => $beneficiaire['code'],
-                            ]);
-                            break;
+                foreach ($request->actions as $action) {
+                    // 🔹 1. Enregistrement de l’action dans projet_action_a_mener
+                    $actionModel = ProjetActionAMener::create([
+                        
+                        'code_projet' => $codeProjet,
+                        'Num_ordre' => $action['ordre'],
+                        'Action_mener' => $action['action_code'],
+                        'Quantite' => $action['quantite'],
+                        'Infrastrucrues_id' => $action['infrastructure_code'],
+                    ]);
+    
+                    // 🔹 2. Répartition par type de bénéficiaire
+                    foreach ($action['beneficiaires'] as $beneficiaire) {
+                        switch ($beneficiaire['type']) {
+                            case 'localite':
+                                Profiter::create([
+                                    'code_projet' => $codeProjet,
+                                    'code_pays' => $beneficiaire['codePays'],
+                                    'code_rattachement' => $beneficiaire['codeRattachement'],
+                                ]);
+                                break;
+    
+                            case 'acteur':
+                                Beneficier::create([
+                                    'code_projet' => $codeProjet,
+                                    'code_acteur' => $beneficiaire['code'],
+                                    'is_active' => true,
+                                ]);
+                                break;
+    
+                            case 'infrastructure':
+                                Jouir::create([
+                                    'code_projet' => $codeProjet,
+                                    'code_Infrastructure' => $beneficiaire['code'],
+                                ]);
+                                break;
+                        }
                     }
                 }
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Étape 3 enregistrée avec succès.',
+                ]);
+            }catch (\Exception $e) {
+                DB::rollBack();
+                // 🔥 Log de l'erreur dans le log Laravel
+                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                    'code_projet' => $codeProjet,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                // Suppression des données partielles
+                $this->abortProjet(new Request(['code_projet' => $codeProjet]));
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l’enregistrement. Toutes les données ont été annulées.',
+                ], 500);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Étape 3 enregistrée avec succès.',
-            ]);
         }
 
         public function saveStep4(Request $request)
@@ -462,48 +631,291 @@ class EtudeProjet extends Controller
                 'descriptionMoe' => 'nullable|string',
             ]);
 
-            // On désactive les anciens maîtres d’ouvrage (si en mise à jour)
-            Posseder::where('code_projet', $request->code_projet)->update(['is_active' => false]);
+            try{
+                $codeProjet = $request->code_projet;
+                // On désactive les anciens maîtres d’ouvrage (si en mise à jour)
+                Posseder::where('code_projet', $request->code_projet)->update(['is_active' => false]);
 
-            // Nouveau maître d’ouvrage actif
-            Posseder::create([
-                'code_projet' => $request->code_projet,
-                'code_acteur' => $request->code_acteur_moe,
-                'secteur_id' => $request->sectActivEntMoe,
-                'date' => now(),
-                'is_active' => true,
-            ]);
+                // Nouveau maître d’ouvrage actif
+                Posseder::create([
+                    'code_projet' => $request->code_projet,
+                    'code_acteur' => $request->code_acteur_moe,
+                    'secteur_id' => $request->sectActivEntMoe,
+                    'date' => now(),
+                    'is_active' => true,
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Maître d’ouvrage enregistré avec succès.',
-            ]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Maître d’ouvrage enregistré avec succès.',
+                ]);
+            }catch (\Exception $e) {
+                DB::rollBack();
+                // 🔥 Log de l'erreur dans le log Laravel
+                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                    'code_projet' => $codeProjet,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                // Suppression des données partielles
+                $this->abortProjet(new Request(['code_projet' => $codeProjet]));
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l’enregistrement. Toutes les données ont été annulées.',
+                ], 500);
+            }
+
         }
 
         public function saveStep5(Request $request)
         {
             $request->validate([
                 'code_projet' => 'required|string|exists:projets,code_projet',
-                'code_acteur' => 'required|string|exists:acteur,code_acteur',
-                'secteur_id' => 'nullable|string|exists:secteur_activites,code', // ou autre nom de table
+                'acteurs' => 'required|array',
+                'acteurs.*.code_acteur' => 'required|string|exists:acteur,code_acteur',
+                'acteurs.*.secteur_id' => 'nullable|string',
+            ]);
+            try{
+                $codeProjet = $request->code_projet;
+                foreach ($request->acteurs as $acteur) {
+                    $exists = Executer::where('code_projet', $request->code_projet)
+                        ->where('code_acteur', $acteur['code_acteur'])
+                        ->exists();
+            
+                    if (!$exists) {
+                        Executer::create([
+                            'code_projet' => $request->code_projet,
+                            'code_acteur' => $acteur['code_acteur'],
+                            'secteur_id' => $acteur['secteur_id'] ?? null,
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+            
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Maîtres d’œuvre enregistrés avec succès.'
+                ]);
+            }catch (\Exception $e) {
+                DB::rollBack();
+                // 🔥 Log de l'erreur dans le log Laravel
+                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                    'code_projet' => $codeProjet,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                // Suppression des données partielles
+                $this->abortProjet(new Request(['code_projet' => $codeProjet]));
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l’enregistrement. Toutes les données ont été annulées.',
+                ], 500);
+            }
+
+        }
+        
+
+
+        public function saveStep6(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|string|exists:projets,code_projet',
+                'financements' => 'required|array',
+                'type_financement' => 'required|in:public,privé,mixte',
             ]);
 
-            Executer::updateOrCreate(
-                [
-                    'code_projet' => $request->code_projet,
-                ],
-                [
-                    'code_acteur' => $request->code_acteur,
-                    'secteur_id' => $request->secteur_id,
-                    'is_active' => true,
-                ]
+            try{
+
+                $codeProjet = $request->code_projet;
+
+                foreach ($request->financements as $item) {
+                    Financer::create([
+                        'code_projet' => $codeProjet,
+                        'code_acteur' => $item['bailleur'],
+                        'montant_finance' => $item['montant'],
+                        'devise' => $item['devise'],
+                        'financement_local' => $item['local'] === 'Oui',
+                        'commentaire' => $item['commentaire'],
+                        'FinancementType' => $request->type_financement,
+                        'is_active' => true,
+                    ]);
+                }
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Financements enregistrés avec succès.',
+                ]);
+            }catch (\Exception $e) {
+                DB::rollBack();
+                // 🔥 Log de l'erreur dans le log Laravel
+                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                    'code_projet' => $codeProjet,
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                // Suppression des données partielles
+                $this->abortProjet(new Request(['code_projet' => $codeProjet]));
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l’enregistrement. Toutes les données ont été annulées.',
+                ], 500);
+            }
+
+        }
+        public function saveStep7(Request $request)
+        {
+            $request->validate([
+                'code_projet' => 'required|string|exists:projets,code_projet',
+                'fichiers.*' => 'required|file|max:10240'
+            ]);
+        
+            try {
+                $codeProjet = $request->code_projet;
+        
+                if (!$request->hasFile('fichiers')) {
+                    throw new \Exception("Aucun fichier reçu.");
+                }
+        
+                $uploadPath = public_path('data/documentProjet/' . $codeProjet);
+                if (!file_exists($uploadPath)) {
+                    mkdir($uploadPath, 0755, true);
+                }
+        
+                foreach ($request->file('fichiers') as $file) {
+                    if (!$file->isValid()) {
+                        throw new \Exception("Fichier invalide : " . $file->getClientOriginalName());
+                    }
+        
+                    $originalName = $file->getClientOriginalName();
+                    $filename = time() . '_' . $originalName;
+                    $file->move($uploadPath, $filename);
+        
+                    ProjetDocument::create([
+                        'file_name' => $originalName,
+                        'file_path' => 'data/documentProjet/' . $codeProjet . '/' . $filename,
+                        'file_type' => $file->getClientMimeType(),
+                        'file_size' => $file->getSize(),
+                        'uploaded_at' => now(),
+                        'code_projet' => $codeProjet,
+                    ]);
+                }
+        
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Documents enregistrés avec succès.'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+        
+                \Log::error('Erreur lors de l\'enregistrement des fichiers (étape 7)', [
+                    'code_projet' => $request->code_projet ?? 'non défini',
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+        
+                $this->abortProjet(new Request(['code_projet' => $request->code_projet]));
+        
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l’enregistrement des fichiers. Toutes les données ont été annulées.',
+                ], 500);
+            }
+        }
+        
+        
+        
+        public function finaliserProjet(Request $request)
+        {
+            $request->validate([
+                'code_projet_temp' => 'required|string|exists:projets,code_projet',
+                'type_financement' => 'required|in:1,2',
+                'code_localisation' => 'required|string',
+            ]);
+
+            $tempCode = $request->code_projet_temp;
+
+            $projeyat = Projet::where('code_projet', $tempCode)->firstOrFail();
+
+            // ✅ Générer code projet final
+            $codeProjetFinal = $this->genererCodeProjetFinal(
+                $projet->code_sous_domaine,
+                $request->type_financement,
+                $request->code_localisation,
+                $projet->date_demarrage_prevue
             );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Maître d’œuvre enregistré avec succès.'
-            ]);
+            // Tables liées à mettre à jour
+            $tables = [
+                'projets_natureTravaux' => 'code_projet',
+                'projetinfrastructure' => 'code_projet',
+                'projet_action_a_mener' => 'code_projet',
+                'executer' => 'code_projet',
+                'posseder' => 'code_projet',
+                'financer' => 'code_projet',
+                'profiter' => 'code_projet',
+                'beneficier' => 'code_projet',
+                'jouir' => 'code_projet',
+                'projet_documents' => 'code_projet',
+            ];
+
+            DB::beginTransaction();
+            try {
+                // 🔁 Mise à jour du code projet principal
+                $projet->update(['code_projet' => $codeProjetFinal]);
+
+                // 🔁 Mise à jour des tables liées
+                foreach ($tables as $table => $key) {
+                    DB::table($table)
+                        ->where($key, $tempCode)
+                        ->update([$key => $codeProjetFinal]);
+                }
+
+                // ✅ Création du code étude
+                $codeEtude = $this->genererCodeEtude(
+                    session('pays_selectionne'),
+                    session('projet_selectionne')
+                );
+
+                EtudeProject::create([
+                    'codeEtudeProjets' => $codeEtude,
+                    'code_projet' => $codeProjetFinal,
+                    'valider' => false,
+                    'is_deleted' => false,
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'code_projet_final' => $codeProjetFinal,
+                    'code_etude' => $codeEtude,
+                    'message' => 'Code projet finalisé et code étude créé avec succès.'
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Finalisation projet échouée : ' . $e->getMessage());
+                \Log::error('Erreur lors de l\'enregistrement des fichiers (étape 7)', [
+                    'code_projet' => $request->code_projet ?? 'non défini',
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+        
+                $this->abortProjet(new Request(['code_projet' => $request->code_projet]));
+        
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de la finalisation du projet.',
+                ], 500);
+            }
         }
+        
 
         const MAX_FILE_SIZE_KB = 2048; // 2 Mo
         const MAX_FILE_SIZE_MB = 2;

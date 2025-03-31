@@ -105,7 +105,180 @@
         transform: matrix(1, 0, 0, 1, 170, 111) !important;
     }
 </style>
+<style>
+    /* Style pour le modal de notification */
+    .modal-notification {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 50%;
+        top: 20px;
+        transform: translateX(-50%);
+        background-color: rgba(0,0,0,0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        max-width: 80%;
+        text-align: center;
+        animation: fadeIn 0.3s;
+    }
 
+    .modal-notification.success {
+        background-color: rgba(40, 167, 69, 0.9);
+    }
+
+    .modal-notification.error {
+        background-color: rgba(220, 53, 69, 0.9);
+    }
+
+    .modal-contents {
+        position: relative;
+    }
+
+    .close-notification {
+        position: absolute;
+        right: -10px;
+        top: -10px;
+        color: white;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        background: rgba(0,0,0,0.5);
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0; top: 0;}
+        to {opacity: 1; top: 20px;}
+    }
+
+    /* Style pour le modal de confirmation */
+    .confirmationModals {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 20px;
+        border-radius: 5px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+    }
+
+    .confirmationModals .modal-contentss {
+        padding: 10px;
+    }
+
+    .confirmation-buttons {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+        gap: 10px;
+    }
+
+    #confirmAction {
+        min-width: 100px;
+    }
+
+    #cancelAction {
+        min-width: 100px;
+    }
+</style>
+
+<script>
+    // Fonction pour les notifications (avec timeout)
+    function alert(message, type = 'success') {
+        const modals = document.getElementById('notificationModal');
+        const messageEl = document.getElementById('notificationMessage');
+        
+        modals.className = `modal-notification ${type}`;
+        messageEl.textContent = message;
+        modals.style.display = 'block';
+        
+        // Fermer automatiquement après 3 secondes
+        setTimeout(() => {
+            modals.style.display = 'none';
+        }, 3000);
+    }
+
+      // Fonction de confirmation personnalisée
+    // confirm.js
+
+    window.confirm = async function(message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('confirmationModals');
+            const messageEl = document.getElementById('confirmationMessage');
+            const confirmBtn = document.getElementById('confirmAction');
+            const cancelBtn = document.getElementById('cancelAction');
+
+            // Afficher le message
+            messageEl.textContent = message;
+            modal.style.display = 'block';
+
+            // Nettoyer anciens événements
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+
+            // Si confirmé
+            confirmBtn.onclick = function () {
+                modal.style.display = 'none';
+                resolve(true);
+            };
+
+            // Si annulé
+            cancelBtn.onclick = function () {
+                modal.style.display = 'none';
+                resolve(false);
+            };
+
+            // Si clic à l'extérieur
+            modal.onclick = function (e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    resolve(false);
+                }
+            };
+        });
+    };
+
+    // Optionnel : Handler réutilisable pour tous les boutons de suppression
+    window.confirms = async function(event, message) {
+        event.preventDefault();
+        const confirmed = await confirm(message);
+        if (confirmed) {
+            event.target.closest('form').submit();
+        }
+    };
+
+</script>
+
+<!-- Modal de notification -->
+<div id="notificationModal" class="modal-notification">
+    <div class="modal-contents">
+        <span class="close-notification">&times;</span>
+        <p id="notificationMessage"></p>
+    </div>
+</div>
+
+<!-- Modal de Confirmation -->
+<div id="confirmationModals" class="confirmationModals">
+    <div class="modal-contentss">
+        <p id="confirmationMessage" style="color:white"></p>
+        <div class="confirmation-buttons">
+            <button id="confirmAction" class="btn btn-danger">Confirmer</button>
+            <button id="cancelAction" class="btn btn-secondary">Annuler</button>
+        </div>
+    </div>
+</div>
 <nav class="navbar navbar-expand-lg fixed-top navbar-light" style="z-index: 2000; width: 100%; height: 90px; background-color: #435ebe; padding: 10px 20px;">
     <div class="container-fluid d-flex align-items-center justify-content-between">
         <!-- Logo et nom du projet -->

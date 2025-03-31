@@ -69,21 +69,20 @@
 
 <section class="section">
     <div class="card">
-        @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        @elseif (session('success'))
-        <div class="alert alert-success">
-            <ul>
-                <li>{{ session('success') }}</li>
-            </ul>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        @endif
+    @endif
+
 
 
 
@@ -91,7 +90,7 @@
             <h5> Acteurs</h5>
         </div>
         <div class="card-body">
-            <form action="{{ route('acteurs.store') }}" method="POST" enctype="multipart/form-data">
+            <form id="paysForm"  action="{{ route('acteurs.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" id="method" name="_method" value="POST">
                 <input type="hidden" id="acteur-id" name="id">
@@ -128,7 +127,7 @@
                     </div>
                     <div class="form-group col-md-4">
                         <label>Status *</label>
-                        <select class="form-control" name="type_financement" required>
+                        <select class="form-control" name="type_financement" id="type_financement" required>
                             <option value="">Sélectionner le statut</option>
                             @foreach($typeFinancements as $typeFin)
                                 <option value="{{ $typeFin->code_type_financement }}"> {{ $typeFin->libelle }} </option>
@@ -243,7 +242,7 @@
                                         <hr>
                                         <div class="col-md-3">
                                             <label>Représentant Légal *</label>
-                                            <lookup-select name="nomRL" id="nomRL">
+                                            <lookup-select name="nomRL[]" id="nomRL">
                                                 @foreach ($acteurRepres as $acteurRepre)
                                                     <option value="{{ $acteurRepre->code_acteur }}">{{ $acteurRepre->libelle_court }} {{ $acteurRepre->libelle_long }}</option>
                                                 @endforeach
@@ -338,8 +337,7 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label>Pays d'origine *</label>
-                                            <lookup-select name="nationnalite" id="nationnalite">
-                                                <option value="">Sélectionnez...</option>
+                                            <lookup-select name="nationnalite" id="nationnalite-select">
                                                 @foreach ($tousPays as $tousPay)
                                                     <option value="{{ $tousPay->id }}">{{ $tousPay->nom_fr_fr }}</option>
                                                 @endforeach
@@ -358,7 +356,7 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label for="codePostal">Code postal</label>
-                                            <input type="text" name="CodePostalI" id="CodePostal" class="form-control">
+                                            <input type="text" name="CodePostalI" id="CodePostalI" class="form-control">
                                         </div>
                                         <div class="col-md-4">
                                             <label>Adresse postale</label>
@@ -447,13 +445,14 @@
             <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                 <thead>
                     <tr>
-                        <th>Photo</th>
-                        <th>Nom complet</th>
-                        <th>Nom court</th>
-                        <th>Type acteur</th>
-                        <th>Pays</th>
+                        
+                        <th>Pays</th>                        
+                        <th>Nom</th>
+                        <th>Prénoms</th>
                         <th>Email</th>
                         <th>Téléphone</th>
+                                                
+                        <th>Type acteur</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -461,7 +460,7 @@
                 <tbody>
                     @foreach ($acteurs as $acteur)
                     <tr>
-                        <td>
+                        {{--<td>
                             @if ($acteur->Photo)
                             <img src="{{ asset($acteur->Photo) }}"
                             alt="Photo de {{ $acteur->libelle_long }}"
@@ -470,13 +469,14 @@
                             @else
                                 <span>Pas de photo</span>
                             @endif
-                        </td>
-                        <td class="col-2">{{ $acteur->libelle_long }}</td>
-                        <td class="col-2">{{ $acteur->libelle_court }}</td>
-                        <td class="col-2">{{ $acteur->type ? $acteur->type->libelle_type_acteur : 'Type non défini' }}</td>
+                        </td>--}}
+                        
                         <td class="col-2">{{ $acteur->pays ? $acteur->pays->nom_fr_fr : 'Pays non défini' }}</td>
+                        <td class="col-2">{{ $acteur->libelle_court }}</td>
+                        <td class="col-2">{{ $acteur->libelle_long }}</td>
                         <td >{{ $acteur->email }}</td>
                         <td >{{ $acteur->telephone }}</td>
+                        <td class="col-2">{{ $acteur->type ? $acteur->type->libelle_type_acteur : 'Type non défini' }}</td>
                         <td>@if ($acteur->is_active)
                                 <span class="badge bg-success">Actif</span>
                             @else
@@ -535,38 +535,147 @@
     $(document).ready(function() {
         initDataTable('{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}', 'table1', 'Liste des acteurs')
     });
-    document.addEventListener('DOMContentLoaded', function () {
+    function waitAndSetSelectedValues(lookup, values, tries = 20) {
+        const attempt = () => {
+            if (!lookup || typeof lookup.setSelectedValues !== 'function') {
+                if (tries > 0) {
+                    setTimeout(() => attempt(--tries), 100);
+                } else {
+                    console.warn("❌ Lookup multiselect non initialisé ou non trouvé :", lookup);
+                }
+                return;
+            }
+
+            lookup.setSelectedValues(values);
+        };
+        attempt();
+    }
+
+    function setLookupValue(id, value) {
+        const lookup = document.getElementById(id);
+        if (lookup && lookup.setSelectedValue) {
+            lookup.setSelectedValue(value);
+        } else if (lookup && lookup.shadowRoot) {
+            const select = lookup.shadowRoot.querySelector('select');
+            if (select) select.value = value;
+        } else {
+            console.warn("❌ Composant lookup non prêt :", id);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded'); // Vérifiez que cet événement se déclenche
+
         // Gestion de la modification
         document.querySelectorAll('.edit-button').forEach(button => {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function(e) {
+                console.log('Edit button clicked, id:', this.getAttribute('data-id'));
+                e.preventDefault();
+                
                 const id = this.getAttribute('data-id');
                 fetch(`/acteurs/${id}/edit`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('les données', data);
-                        // Remplir le formulaire avec les données récupérées
-                        document.getElementById('acteur-id').value = data.id;
-                        document.getElementById('libelle_long').value = data.libelle_long;
-                        document.getElementById('libelle_court').value = data.libelle_court;
-                        document.getElementById('email').value = data.email;
-                        document.getElementById('telephone').value = data.telephone;
-                        document.getElementById('adresse').value = data.adresse;
-                        document.getElementById('type_acteur').value = data.type_acteur;
-                        document.getElementById('pays').value = data.pays.nom_fr_fr;
-
-                        // Mettre à jour l'action du formulaire pour modification
-                        const form = document.getElementById('acteur-form');
-                        form.action = `{{ url('/acteurs') }}/${id}`;
-                        document.getElementById('method').value = 'PUT';
-
-                  // Changer le texte du bouton
-                        document.getElementById('submit-button').textContent = 'Modifier';
+                    .then(response => {
+                        if (!response.ok) throw new Error('Erreur réseau');
+                        return response.json();
                     })
-                    .catch(error => console.error('Erreur:', error));
-            });
-        });
+                    .then(data => {
+                        console.log('Data received:', data);
+                       
+                        // Remplir les champs communs
+                        document.getElementById('acteur-id').value = data.id;
+                        document.getElementById('type_acteur').value = data.type_acteur;
+                        document.getElementById('code_pays').value = data.code_pays;
+                        document.querySelector('select[name="type_financement"]').value = data.type_financement;
+                        // Gestion de la photo
+                        if (data.photo) {
+                            const preview = document.getElementById('photo-preview');
+                            preview.src = `/${data.photo}`;
+                            preview.style.display = 'block';
+                        }
+                        
+                        // Déterminer le type de personne
+                        if (data.type_personne === 'physique') {
+                            document.getElementById('personnePhysique').checked = true;
+                            togglePersonneFields();
+                            
+                            // Remplir les champs personne physique
+                            document.querySelector('input[name="nom"]').value = data.nom || '';
+                            document.querySelector('input[name="prenom"]').value = data.prenom || '';
+                            document.querySelector('input[name="emailI"]').value = data.email || '';
+                            document.getElementById('date_naissance').value = data.date_naissance || '';
+                            const nationnaliteLookup = document.getElementById('nationnalite-select');
+                            if (nationnaliteLookup && data.nationnalite) {
+                                nationnaliteLookup.setSelectedValue(data.nationnalite);
+                            }
 
-        document.querySelectorAll('.restore-button').forEach(button => {
+                            document.getElementById('CodePostalI').value = data.CodePostalI || '';
+                            document.querySelector('input[name="AdressePostaleIndividu"]').value = data.AdressePostaleIndividu || '';
+                            document.querySelector('input[name="adresseSiegeIndividu"]').value = data.adresseSiegeIndividu || '';
+                            document.querySelector('input[name="telephoneBureauIndividu"]').value = data.telephoneBureauIndividu || '';
+                            document.querySelector('input[name="telephoneMobileIndividu"]').value = data.telephoneMobileIndividu || '';
+                            document.querySelector('input[name="numeroFiscal"]').value = data.numeroFiscal || '';
+                            document.getElementById('genre').value = data.genre || '';
+                            document.getElementById('situationMatrimoniale').value = data.situationMatrimoniale || '';
+                            document.getElementById('piece_identite').value = data.piece_identite || '';
+                            document.querySelector('input[name="numeroPiece"]').value = data.numeroPiece || '';
+                            document.querySelector('input[name="dateEtablissement"]').value = data.dateEtablissement || '';
+                            document.querySelector('input[name="dateExpiration"]').value = data.dateExpiration || '';
+                            
+                            waitAndSetSelectedValues(document.getElementById('SecteurActI'), data.SecteurActI);
+
+                            alert('✅ Modifications effectuées avec succes !');
+                        } else if (data.type_personne === 'morale') {
+                            document.getElementById('personneMorale').checked = true;
+                            togglePersonneFields();
+                            
+                            // Remplir les champs personne morale
+                            document.querySelector('input[name="libelle_long"]').value = data.libelle_long || '';
+                            document.querySelector('input[name="libelle_court"]').value = data.libelle_court || '';
+                            document.querySelector('input[name="date_creation"]').value = data.date_creation || '';
+                            document.getElementById('FormeJuridique').value = data.FormeJuridique || '';
+                            document.querySelector('input[name="NumeroImmatriculation"]').value = data.NumeroImmatriculation || '';
+                            document.querySelector('input[name="nif"]').value = data.nif || '';
+                            document.querySelector('input[name="rccm"]').value = data.rccm || '';
+                            document.querySelector('input[name="CapitalSocial"]').value = data.CapitalSocial || '';
+                            document.querySelector('input[name="Numéroagrement"]').value = data.Numéroagrement || '';
+                            document.querySelector('input[name="CodePostaleEntreprise"]').value = data.CodePostaleEntreprise || '';
+                            document.querySelector('input[name="AdressePostaleEntreprise"]').value = data.AdressePostaleEntreprise || '';
+                            document.querySelector('input[name="AdresseSiègeEntreprise"]').value = data.AdresseSiègeEntreprise || '';
+                            document.querySelector('input[name="emailRL"]').value = data.emailRL || '';
+                            document.querySelector('input[name="telephone1RL"]').value = data.telephone1RL || '';
+                            document.querySelector('input[name="telephone2RL"]').value = data.telephone2RL || '';
+                            
+                            waitAndSetSelectedValues(document.getElementById('secteurActivite'), data.secteurActivite);
+                            waitAndSetSelectedValues(document.getElementById('nomPC'), data.nomPC);
+                            setTimeout(() => setLookupValue('nomRL', data.nomRL[0]), 500);
+
+                            alert('✅ Modifications effectuées avec succes !');
+                        }
+                        
+                        // Mettre à jour l'action du formulaire pour modification
+                        const form = document.getElementById('paysForm');
+                        form.action = `/acteurs/${data.id}`;
+                        document.getElementById('method').value = 'PUT';
+                        
+                        // Changer le texte du bouton
+                        document.getElementById('submit-button').textContent = 'Modifier';
+                        
+                        // Afficher un message de succès
+                        alert('Données de l\'acteur chargées avec succès');
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors du chargement des données de l\'acteur');
+                    })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors du chargement des données');
+                });
+        });
+    });
+
+
+    document.querySelectorAll('.restore-button').forEach(button => {
             button.addEventListener('click', function () {
                 const id = this.getAttribute('data-id');
                 const ecranId = this.getAttribute('data-ecran-id');
@@ -599,14 +708,10 @@
 
 
 
-        // Réinitialisation du formulaire pour une nouvelle création
-        const form = document.getElementById('acteur-form');
-        form.addEventListener('submit', function () {
-            if (document.getElementById('method').value === 'POST') {
-                form.action = '{{ route("acteurs.store") }}';
-            }
-        });
-    });
+});
+
+
+      
 
 
 </script>
@@ -657,7 +762,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     document.addEventListener("DOMContentLoaded", function () {
-        function togglePersonneFields() {
+
+
+        document.getElementById("personnePhysique").addEventListener("change", togglePersonneFields);
+        document.getElementById("personneMorale").addEventListener("change", togglePersonneFields);
+    });
+    function togglePersonneFields() {
             const personnePhysique = document.getElementById("personnePhysique");
             const personneMorale = document.getElementById("personneMorale");
             const entrepriseFields = document.getElementById("entrepriseFields");
@@ -671,11 +781,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 individuFields.classList.add("d-none");
             }
         }
-
-        document.getElementById("personnePhysique").addEventListener("change", togglePersonneFields);
-        document.getElementById("personneMorale").addEventListener("change", togglePersonneFields);
-    });
-
 </script>
 
 <script>
@@ -695,7 +800,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             selectedValues.forEach(code => {
                 let acteur = acteurs.find(a => a.code_acteur == code);
-            // console.log('acteur :',acteur);
+                // console.log('acteur :',acteur);
                 if (acteur) {
                     let row = document.createElement("div");
                     row.classList.add("d-flex", "align-items-center", "me-3");
@@ -707,15 +812,15 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                         <div class="me-3">
                             <label>Email</label>
-                            <input type="email" class="form-control" name="emailPC" value="${acteur.email || ''}">
+                            <input type="email" class="form-control" name="emailPC" id="emailPC" value="${acteur.email || ''}">
                         </div>
                         <div class="me-3">
                             <label>Téléphone 1</label>
-                            <input type="text" class="form-control" name="Tel1Pc" value="${acteur.telephone_mobile || ''}">
+                            <input type="text" class="form-control" name="Tel1Pc" id="Tel1Pc" value="${acteur.telephone_mobile || ''}">
                         </div>
                         <div class="me-3">
                             <label>Téléphone 2</label>
-                            <input type="text" class="form-control" name="Tel2PC" value="${acteur.telephone_bureau || ''}">
+                            <input type="text" class="form-control" name="Tel2PC" id="Tel2PC" value="${acteur.telephone_bureau || ''}">
                         </div>
                     `;
 

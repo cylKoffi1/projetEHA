@@ -272,7 +272,18 @@
                 permissionsAsupprimer.push(checkbox.className);
             }
         });
-
+// Dans votre event listener de soumission du formulaire
+document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+    if (!checkbox.checked) {
+        // Pour les cases décochées, ajoutez-les à permissionsAsupprimer
+        if (checkbox.name.startsWith('ajouter_') || 
+            checkbox.name.startsWith('modifier_') || 
+            checkbox.name.startsWith('supprimer_')) {
+            permissionsAsupprimer.push(checkbox.name.replace('_rubrique_ecran', '_ecran')
+                                      .replace('_sous_menu_ecran', '_ecran') + '_' + checkbox.value);
+        }
+    }
+});
         // Ajouter les tableaux d'ID aux données du formulaire
         formData.append('consulterRubrique', JSON.stringify(consulterRubrique));
         formData.append('consulterRubriqueEcran', JSON.stringify(consulterRubriqueEcran));

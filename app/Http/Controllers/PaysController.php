@@ -6,6 +6,7 @@ use App\Models\Domaine;
 use App\Models\Ecran;
 use App\Models\SousDomaine;
 use Illuminate\Http\Request;
+use App\Models\Devise;
 use App\Models\Pays;
 use App\Models\District;
 use App\Models\Region;
@@ -22,7 +23,14 @@ class PaysController extends Controller
     {
         $ecran = Ecran::find($request->input('ecran_id'));
         $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
-        return view('parSpecifique.pays', ['pays' => $pays, 'ecran' => $ecran,]);
+        $code_devises = Devise::whereNotNull('libelle')
+            ->where('libelle', '!=', '')
+            ->whereNotNull('code_long')
+            ->where('code_long', '!=', '')
+            ->orderBy('libelle', 'asc')
+            ->get();
+
+        return view('parSpecifique.pays', ['code_devises' => $code_devises,'pays' => $pays, 'ecran' => $ecran,]);
     }
     public function checkPaysCode(Request $request)
     {
@@ -45,18 +53,25 @@ class PaysController extends Controller
         $pays->nom_en_gb = $request->input('nom_en_gb');
         $pays->nom_fr_fr = $request->input('nom_fr_fr');
         $pays->codeTel = $request->input('codeTel');
-
-
+        $pays->code_devise = $request->input('code_devise');
+        $pays->minZoom = $request->input('zoomMi');
+        $pays->maxZoom = $request->input('zoomMa');
+        // Gestion de l'armoirie
         if ($request->hasFile('armoirie')) {
-            $filename = 'armoirie_' . time() . '.' . $request->file('armoirie')->getClientOriginalExtension();
-            $path = $request->file('armoirie')->storeAs('public/armoiries', $filename);
-            $pays->armoirie = 'armoiries/' . $filename; // Enregistrer seulement le chemin relatif
+            $file = $request->file('armoirie');
+            $filename = 'armoirie_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = 'Data/armoiries/';
+            $file->move(public_path($path), $filename);
+            $pays->armoirie = $path . $filename;
         }
 
+        // Gestion du drapeau
         if ($request->hasFile('flag')) {
-            $filename = 'flag_' . time() . '.' . $request->file('flag')->getClientOriginalExtension();
-            $path = $request->file('flag')->storeAs('public/drapeaux', $filename);
-            $pays->flag = 'drapeaux/' . $filename; // Enregistrer seulement le chemin relatif
+            $file = $request->file('flag');
+            $filename = 'flag_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = 'Data/drapeaux/';
+            $file->move(public_path($path), $filename);
+            $pays->flag = $path . $filename;
         }
 
 
@@ -64,59 +79,73 @@ class PaysController extends Controller
         $pays->save();
         $ecran_id = $request->input('ecran_id');
     }
-    public function updatePays(Request $request, $id)
+    public function edit($id)
+    {
+        $pays = Pays::find($id);
+        if (!$pays) {
+            return response()->json(['error' => 'Pays non trouvé'], 404);
+        }
+        return response()->json($pays);
+    }
+    
+    public function update(Request $request, $id)
     {
         try {
-            // Trouver le pays
             $pays = Pays::findOrFail($id);
-
-            // Mettre à jour les champs texte
-            $pays->code = $request->input('code-update');
-            $pays->alpha2 = $request->input('alpha2-update');
-            $pays->alpha3 = $request->input('alpha3-update');
-            $pays->nom_en_gb = $request->input('nom_en_gb-update');
-            $pays->nom_fr_fr = $request->input('nom_fr_fr-update');
-            $pays->codeTel = $request->input('codeTel-update');
-
-
-            if ($request->hasFile('armoirie-update')) {
-                $filePath = public_path($pays->armoirie);
-                   if (file_exists($filePath)) {
-                       unlink($filePath); // Supprime le fichier du serveur
-                   }
-
-               $file = $request->file('armoirie-update');
-               $extension = $file->getClientOriginalExtension();
-               $filename= 'armoirie_'.time().'.'.$extension;
-               $path =  $file->storeAs('Data/armoiries/');
-               $file->move($path, $filename);
-               $pays->armoirie = $path.'/'  . $filename;
-           }
-              // Mettre à jour le drapeau
-
-           if ($request->hasFile('flag-update')) {
-                $filePath = public_path($pays->flag);
-                   if (file_exists($filePath)) {
-                       unlink($filePath); // Supprime le fichier du serveur
-                   }
-               $file = $request->file('flag-update');
-               $extension = $file->getClientOriginalExtension();
-               $filename= 'flag_'.time().'.'.$extension;
-               $path = $file->storeAs('Data/drapeaux/');
-               $file->move($path, $filename);
-               $pays->flag = $path.'/' . $filename;
-           }
-
-
-
-            // Enregistrement des modifications
+            
+            $data = $request->validate([
+                'code' => 'required|unique:pays,code,'.$id,
+                'alpha2' => 'required',
+                'alpha3' => 'required',
+                'nom_en_gb' => 'required',
+                'nom_fr_fr' => 'required',
+                'codeTel' => 'required',
+                'code_devise' => 'required',
+                'zoomMi' => 'nullable|numeric',
+                'zoomMa' => 'nullable|numeric'
+            ]);
+    
+            $pays->code = $data['code'];
+            $pays->alpha2 = $data['alpha2'];
+            $pays->alpha3 = $data['alpha3'];
+            $pays->nom_en_gb = $data['nom_en_gb'];
+            $pays->nom_fr_fr = $data['nom_fr_fr'];
+            $pays->codeTel = $data['codeTel'];
+            $pays->code_devise = $data['code_devise'];
+            $pays->minZoom = $request->input('zoomMi');
+            $pays->maxZoom = $request->input('zoomMa');
+    
+            // Gestion des fichiers
+            if ($request->hasFile('armoirie')) {
+                // Supprimer l'ancienne image si elle existe
+                if ($pays->armoirie && file_exists(public_path($pays->armoirie))) {
+                    unlink(public_path($pays->armoirie));
+                }
+    
+                $file = $request->file('armoirie');
+                $filename = 'armoirie_'.time().'.'.$file->getClientOriginalExtension();
+                $path = 'Data/armoiries/';
+                $file->move(public_path($path), $filename);
+                $pays->armoirie = $path.$filename;
+            }
+    
+            if ($request->hasFile('flag')) {
+                if ($pays->flag && file_exists(public_path($pays->flag))) {
+                    unlink(public_path($pays->flag));
+                }
+    
+                $file = $request->file('flag');
+                $filename = 'flag_'.time().'.'.$file->getClientOriginalExtension();
+                $path = 'Data/drapeaux/';
+                $file->move(public_path($path), $filename);
+                $pays->flag = $path.$filename;
+            }
+    
             $pays->save();
-
-            return redirect()->back()->with('success', 'Pays mis à jour avec succès.');
+    
+            return response()->json(['success' => 'Pays mis à jour avec succès']);
         } catch (\Exception $e) {
-            // Log de l'erreur pour le debug
-            Log::error("Erreur lors de la mise à jour du pays : " . $e->getMessage());
-            return redirect()->back()->withErrors('Erreur lors de la mise à jour.');
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

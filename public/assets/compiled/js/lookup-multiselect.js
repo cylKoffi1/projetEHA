@@ -110,15 +110,33 @@ class LookupMultiSelect extends HTMLElement {
     }
 
     connectedCallback() {
+        this.name = this.getAttribute("name") || "";
+        this.id = this.getAttribute("id") || "";
+    
         this.input = this.shadowRoot.querySelector(".form-control");
         this.dropdownList = this.shadowRoot.querySelector(".dropdown-list");
         this.selectedContainer = this.shadowRoot.querySelector(".selected-items");
         this.selectAllCheckbox = this.shadowRoot.querySelector("#select-all");
-
+        this.hiddenInputs = [];
+    
+        // 👇 Ajoute ça ici
+        this.hiddenInput = document.createElement("input");
+        this.hiddenInput.type = "hidden";
+        this.hiddenInput.name = this.name;
+        this.appendChild(this.hiddenInput);
+    
         this.loadInitialOptions();
         this.populateDropdown();
         this.addEventListeners();
+    
+        setTimeout(() => {
+            if (this.hiddenInputs.length > 0) {
+                const current = this.hiddenInputs.map(input => input.value);
+                this.setSelectedValues(current);
+            }
+        }, 200);
     }
+    
 
     loadInitialOptions() {
         this.options = Array.from(this.querySelectorAll("option")).map(option => ({
@@ -136,7 +154,24 @@ class LookupMultiSelect extends HTMLElement {
         this.populateDropdown();
         this.updateSelectedDisplay();
     }
-
+    setSelectedValues(values) {
+        // Vérifie que `values` est bien un tableau
+        if (!Array.isArray(values)) return;
+    
+        // Match même si string/number
+        this.selectedOptions = this.options.filter(opt =>
+            values.some(v => v == opt.value)
+        );
+    
+        this.updateSelectedDisplay();
+        this.populateDropdown();
+    
+        // Met à jour l'input hidden
+        const selectedValues = this.selectedOptions.map(opt => opt.value);
+        this.hiddenInput.value = selectedValues.join(',');
+    }
+    
+    
     getSelected() {
         return this.selectedOptions;
     }
@@ -252,6 +287,21 @@ class LookupMultiSelect extends HTMLElement {
         this.selectedContainer.appendChild(table);
         this.selectedContainer.appendChild(this.input);
         this.input.value = "";
+
+         // Supprimer les anciens champs
+        this.hiddenInputs.forEach(input => input.remove());
+        this.hiddenInputs = [];
+
+        // Ajouter un champ hidden par valeur sélectionnée (comme un vrai select multiple)
+        this.selectedOptions.forEach(opt => {
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = this.name + "[]"; // 👈 tableau attendu par Laravel
+            hidden.value = opt.value;
+            this.appendChild(hidden);
+            this.hiddenInputs.push(hidden);
+        });
+
     }
 
     showDropdown() {

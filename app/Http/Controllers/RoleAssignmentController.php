@@ -58,8 +58,55 @@ class RoleAssignmentController extends Controller
 
         // Supprimer les associations non cochées
         RoleHasRubrique::where('role_id', $role_id)
-            ->whereNotIn('rubrique_id', $consulterRubrique)
-            ->delete();
+        ->whereNotIn('rubrique_id', $consulterRubrique ?? [])
+        ->delete();
+        // Supprimer les permissions des rubriques non cochées
+        $rubriquesToRevoke = Rubriques::whereNotIn('code', $consulterRubrique ?? [])->get();
+        foreach ($rubriquesToRevoke as $rubrique) {
+            if ($rubrique->permission) {
+                try {
+                    $role->revokePermissionTo($rubrique->permission->name);
+                } catch (\Exception $e) {
+                    Log::error("Error revoking permission: " . $e->getMessage());
+                }
+            }
+        }
+        // 2. Gestion des sous-menus
+        $sousMenusToRevoke = SousMenu::whereNotIn('code', $consulterSousMenu)->get();
+        foreach ($sousMenusToRevoke as $sousMenu) {
+            if ($sousMenu->permission) {
+                $role->revokePermissionTo($sousMenu->permission->name);
+            }
+        }
+
+        // 3. Gestion des écrans
+        $allEcransIds = array_merge($consulterRubriqueEcran, $consulterSousMenuEcran);
+        $ecransToRevoke = Ecran::whereNotIn('id', $allEcransIds)->get();
+        foreach ($ecransToRevoke as $ecran) {
+            if ($ecran->permission) {
+                $role->revokePermissionTo($ecran->permission->name);
+            }
+        }
+
+        // 4. Gestion des permissions d'actions (ajouter/modifier/supprimer)
+        $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer', '[]'));
+        foreach ($permissionsAsupprimer as $permissionClass) {
+            // Convertir le nom de classe en nom de permission
+            // Ex: "ajouter_ecran_1" devient "ajouter_ecran_1"
+            $parts = explode('_', $permissionClass);
+            $action = $parts[0] ?? '';
+            $type = $parts[1] ?? '';
+            $id = $parts[2] ?? '';
+            
+            if ($action && $type && $id) {
+                $permissionName = "{$action}_{$type}_{$id}";
+                try {
+                    $role->revokePermissionTo($permissionName);
+                } catch (\Exception $e) {
+                    Log::error("Failed to revoke permission: {$permissionName}");
+                }
+            }
+        }
         // Parcourir et enregistrer chaque ID dans le tableau consulterRubrique
         foreach ($consulterRubrique as $id) {
             // Vérifier si une association existe déjà pour ce rôle et cette rubrique
@@ -216,18 +263,21 @@ class RoleAssignmentController extends Controller
             }
         }
 
+        // Gestion des permissions à supprimer
         foreach ($permissionsAsupprimer as $permis) {
             try {
-                if ($role->hasPermissionTo($permis)) {
-                    // Révoquer la permission
-                    $permission = Permission::findByName($permis);
-                    $role->revokePermissionTo($permission);
+                // Extraire le nom de la permission à partir du nom de classe
+                $permissionName = str_replace('_ecran_', ' ecran ', $permis);
+                $permissionName = str_replace('ajouter', 'ajouter_ecran_', $permissionName);
+                $permissionName = str_replace('modifier', 'modifier_ecran_', $permissionName);
+                $permissionName = str_replace('supprimer', 'supprimer_ecran_', $permissionName);
+                $permissionName = str_replace(' ', '', $permissionName);
+                
+                if ($role->hasPermissionTo($permissionName)) {
+                    $role->revokePermissionTo($permissionName);
                 }
-            } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist $e) {
-                // Gérer l'erreur si la permission n'existe pas
-                // Vous pouvez journaliser l'erreur ou effectuer toute autre action nécessaire
-                // Par exemple :
-                Log::error("Permission '{$permission->name}' does not exist: " . $e->getMessage());
+            } catch (\Exception $e) {
+                Log::error("Error revoking permission '{$permissionName}': " . $e->getMessage());
             }
         }
 
@@ -240,33 +290,29 @@ class RoleAssignmentController extends Controller
         ]);
     }
 
+    public function getRolePermissions($roleId)
+    {
+    // Récupérer le rôle
+    $role = GroupeUtilisateur::findOrFail($roleId);
 
 
+    // Récupérer les autorisations du rôle
+    $permissions = $role->permissions()->pluck('name');
+    $permissions_id = $role->permissions()->pluck('id');
+
+    $sous_menusAcocher = SousMenu::whereIn('permission_id', $permissions_id)->get();
+    $ecransAcocher = Ecran::whereIn('permission_id', $permissions_id)->get();
+    $rubriquesAcocher = Rubriques::whereIn('permission_id', $permissions_id)->get();
 
 
-public function getRolePermissions($roleId)
-{
-  // Récupérer le rôle
-  $role = GroupeUtilisateur::findOrFail($roleId);
-
-
-  // Récupérer les autorisations du rôle
-  $permissions = $role->permissions()->pluck('name');
-  $permissions_id = $role->permissions()->pluck('id');
-
-  $sous_menusAcocher = SousMenu::whereIn('permission_id', $permissions_id)->get();
-  $ecransAcocher = Ecran::whereIn('permission_id', $permissions_id)->get();
-  $rubriquesAcocher = Rubriques::whereIn('permission_id', $permissions_id)->get();
-
-
-  // Renvoyer les autorisations et les ID des rubriques à cocher au format JSON
-  return response()->json([
-      'permissions' => $permissions,
-      'rubriquesAcocher' =>  $rubriquesAcocher,
-      'sous_menusAcocher' => $sous_menusAcocher,
-      'ecransAcocher' => $ecransAcocher
-  ]);
-}
+    // Renvoyer les autorisations et les ID des rubriques à cocher au format JSON
+    return response()->json([
+        'permissions' => $permissions,
+        'rubriquesAcocher' =>  $rubriquesAcocher,
+        'sous_menusAcocher' => $sous_menusAcocher,
+        'ecransAcocher' => $ecransAcocher
+    ]);
+    }
 
 
 

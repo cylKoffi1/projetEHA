@@ -58,6 +58,12 @@ class LookupSelect extends HTMLElement {
         this.input = this.shadowRoot.querySelector("input");
         this.dropdownList = this.shadowRoot.querySelector(".dropdown-list");
 
+        // Créer le champ hidden pour le backend Laravel
+        this.hiddenInput = document.createElement("input");
+        this.hiddenInput.type = "hidden";
+        this.hiddenInput.name = this.name;
+        this.appendChild(this.hiddenInput);
+
         this.input.placeholder = this.getAttribute("placeholder") || "Sélectionner une option...";
 
         if (this.hasAttribute("disabled")) {
@@ -157,8 +163,16 @@ class LookupSelect extends HTMLElement {
         this.input.value = option.text;
         this._value = option.value;
         this.setAttribute("value", option.value);
+        this.hiddenInput.value = option.value; // 🔥 important pour Laravel
         this.dispatchChangeEvent();
         this.hideDropdown();
+    }
+
+    setSelectedValue(value) {
+        const option = this.options.find(opt => opt.value === value);
+        if (option) {
+            this.selectOption(option);
+        }
     }
 
     showDropdown() {

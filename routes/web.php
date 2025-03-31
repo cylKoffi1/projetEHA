@@ -81,9 +81,11 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('/admin/initSidebar', [AdminController::class, 'initSidebar']);
     // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
     Route::get('admin/pays', [PaysController::class, 'pays'])->name('pays');
-    Route::put('/pays/{id}/update', [PaysController::class, 'updatePays'])->name('pays.update');
+    // Route pour afficher le formulaire d'édition (GET)
+    Route::get('/pays/{id}/edit', [PaysController::class, 'edit']);
+    Route::put('/pays/{id}', [PaysController::class, 'update'])->name('pays.update');
+    Route::post('/pays', [PaysController::class, 'storePays'])->name('pays.store');
     Route::delete('/pays/{id}', [PaysController::class, 'deletePays'])->name('pays.destroy');
-    Route::post('admin/pays', [PaysController::class, 'storePays'])->name('pays.store');
     Route::get('admin/district', [PaysController::class, 'district'])->name('district');
     Route::get('admin/departement', [PaysController::class, 'departement'])->name('departement');
     Route::get('admin/sous_prefecture', [PaysController::class, 'sous_prefecture'])->name('sous_prefecture');
@@ -350,6 +352,10 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
             Route::post('/projets/temp/save-step3', [EtudeProjet::class, 'saveStep3'])->name('projets.temp.save.step3');
             Route::post('/projets/temp/save-step4', [EtudeProjet::class, 'saveStep4'])->name('projets.temp.save.step4');
             Route::post('/projets/temp/save-step5', [EtudeProjet::class, 'saveStep5'])->name('projets.temp.save.step5');
+            Route::post('/projets/temp/save-step6', [EtudeProjet::class, 'saveStep6'])->name('projets.temp.save.step6');
+            Route::post('/projets/temp/save-step7', [EtudeProjet::class, 'saveStep7'])->name('projets.temp.save.step7');
+            Route::post('/projets/finaliser', [EtudeProjet::class, 'finaliserProjet'])->name('projets.finaliser');
+            Route::delete('/projets/abort', [EtudeProjet::class, 'abortProjet'])->name('projets.abort');
 
         /***********************VALIDATION***************** */
 
@@ -624,7 +630,20 @@ Route::get('/map', function () {
     return view('map');
 });
 Route::get('/getBase64Image', function () {
-    $imagePath = public_path('betsa/assets/images/ehaImages/armoirie.png');
+    $user = Auth::user();
+    $pays = $user?->paysSelectionne();
+    $armoirie = $pays?->armoirie;
+
+    if (!$armoirie) {
+        return response()->json(['error' => 'Image non disponible.'], 404);
+    }
+
+    $imagePath = public_path($armoirie);
+
+    if (!file_exists($imagePath)) {
+        return response()->json(['error' => 'Fichier non trouvé.'], 404);
+    }
+
     $imageData = file_get_contents($imagePath);
     $base64Image = base64_encode($imageData);
 
