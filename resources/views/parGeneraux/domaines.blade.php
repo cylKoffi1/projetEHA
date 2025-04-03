@@ -245,7 +245,7 @@
 
 <script>
     $(document).ready(function() {
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Liste des domaines')
+        initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des domaines')
 
         $('#code').on('input', function() {
             // Get the input value

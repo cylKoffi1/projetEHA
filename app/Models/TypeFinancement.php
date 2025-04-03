@@ -12,5 +12,7 @@ class TypeFinancement extends Model
 
     protected $table = 'type_financement'; // Nom de la table
     protected $keyType = 'string';
-    protected $primaryKey = 'code';
+    protected $primaryKey = 'code_type_financement';
+
+    
 }

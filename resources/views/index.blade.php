@@ -41,6 +41,29 @@
             background: rgba(0, 0, 0, 0.5); /* Ajustez l'opacité selon vos besoins */
             z-index: 0;
         }
+        @media screen and (max-width: 1440px) {
+            .welcome-hero-txt {
+                padding: 395px 0px 110px;
+            }
+        }
+        @media screen and (max-width: 1024px) {
+            .welcome-hero-txt {
+                padding: 247px 0px 110px;
+            }
+        }
+        @media screen and (max-width: 426px) {
+            .welcome-hero-txt {
+                padding: 247px 0px 110px;
+            }
+            .welcome-hero-txt h2 {
+                    font-size: 22px;
+                }
+        }
+        @media screen and (max-width: 2000px) {
+            .welcome-hero-txt {
+                padding: 300px 0px 110px;
+            }
+        }
     </style>
 </head>
 

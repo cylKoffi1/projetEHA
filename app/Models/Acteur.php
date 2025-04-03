@@ -65,6 +65,11 @@ class Acteur extends Model
         return $this->hasMany(SecteurActiviteActeur::class, 'code_acteur', 'code_acteur');
     }
 
+        public function bailleurs()
+    {
+        return $this->hasMany(Financer::class, 'code_acteur', 'code_acteur');
+    }
+
     /**
      * Relation avec `representants`
      */

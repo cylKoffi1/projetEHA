@@ -6,6 +6,7 @@ use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\WorkflowValidationController;
 use App\Models\Acteur;
 use App\Models\PersonnePhysique;
+use App\Http\Controllers\sigAdminController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -61,4 +62,11 @@ Route::get('/get-representant-legal/{code_acteur}', function ($code_acteur) {
 
 
 
+// Route pour récupérer les projets filtrés
+Route::get('/projects', [sigAdminController::class, 'getProjects'])
+    ->name('api.projects');
 
+// Route pour le filtrage de la carte
+Route::get('/filter-map', [sigAdminController::class, 'filterMap'])
+    ->name('filter.map');
+Route::get('/projects/all', [sigAdminController::class, 'getAllProjects']);

@@ -34,7 +34,19 @@ class Financer extends Model
     {
         return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
     }
-
+    public function financements()
+    {
+        return $this->hasMany(Financer::class, 'code_projet', 'code_projet');
+    }
+    /**
+    * Relation avec les bailleurs via la table financer
+    */
+   public function bailleurs()
+   {
+       return $this->belongsToMany(Acteur::class, 'financer', 'code_projet', 'code_acteur')
+           ->using(Financer::class)
+           ->withPivot(['montant_finance', 'devise', 'date_engagement']);
+   }
     /**
      * Relation avec le modèle Acteur (Bailleur ou organisme financeur)
      * Un financement est accordé par un acteur

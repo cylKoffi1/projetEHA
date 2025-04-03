@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Projet extends Model
 {
@@ -11,7 +12,8 @@ class Projet extends Model
 
     protected $table = 'projets';
     protected $primaryKey = 'code_projet'; 
-
+    protected $keyType = 'string';
+    
     // Colonnes modifiables
     protected $fillable = [
         'code_projet',
@@ -36,4 +38,6 @@ class Projet extends Model
     {
         return $this->belongsTo(Pays::class, 'code_alpha3_pays', 'alpha3');
     }
+
+
 }

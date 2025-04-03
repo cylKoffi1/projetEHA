@@ -307,7 +307,7 @@ class EtudeProjet extends Controller
             return response()->json($unites);
         }
 
-        private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
+       /* private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
         {
             $paysAlpha3 = session('pays_selectionne');        // ex: CIV
             $groupeProjet = session('projet_selectionne');    // ex: BAT
@@ -325,9 +325,37 @@ class EtudeProjet extends Controller
                 ->whereMonth('date_demarrage_prevue', $mois)
                 ->count() + 1;
 
-            return strtoupper("{$paysAlpha3}{$groupeProjet}{$typeFinancement}_{$codeLocalisation}_{$codeDomaine}_{$annee}_{$ordre}");
+            return strtoupper("{$paysAlpha3}{$groupeProjet}{$typeFinancement}_{$codeLocalisation}_{$codeSousDomaine}_{$annee}_{$ordre}");
+        }*/
+        private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
+        {
+            $paysAlpha3 = session('pays_selectionne'); // ex: CIV
+            $groupeProjet = session('projet_selectionne'); // ex: BAT
+        
+            $date = Carbon::parse($dateDebut);
+            $annee = $date->format('Y');
+            $mois = $date->format('m');
+        
+            // Extraire les 2 premiers caractères du code sous-domaine
+            $codeDomaine = substr($codeSousDomaine, 0, 2);
+        
+            // Compter les projets existants
+            $ordre = Projet::where('code_alpha3_pays', $paysAlpha3)
+                ->where('code_sous_domaine', 'like', $codeDomaine . '%')
+                ->whereYear('date_demarrage_prevue', $annee)
+                ->whereMonth('date_demarrage_prevue', $mois)
+                ->count() + 1;
+        
+            return sprintf('%s%s%s_%s_%s_%s_%02d',
+                strtoupper($paysAlpha3),
+                strtoupper($groupeProjet),
+                $typeFinancement, // 1 ou 2
+                strtoupper($codeLocalisation),
+                strtoupper($codeDomaine),
+                $annee,
+                $ordre
+            );
         }
-
         private function genererCodeEtude($codePays, $codeGroupeProjet)
         {
             $now = Carbon::now();
@@ -840,10 +868,10 @@ class EtudeProjet extends Controller
 
             $tempCode = $request->code_projet_temp;
 
-            $projeyat = Projet::where('code_projet', $tempCode)->firstOrFail();
+            $projet = Projet::where('code_projet', $tempCode)->firstOrFail();
 
             // ✅ Générer code projet final
-            $codeProjetFinal = $this->genererCodeProjetFinal(
+            $codeProjetFinal = $this->genererCodeProjet(
                 $projet->code_sous_domaine,
                 $request->type_financement,
                 $request->code_localisation,

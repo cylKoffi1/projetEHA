@@ -573,7 +573,7 @@
                 e.preventDefault();
                 
                 const id = this.getAttribute('data-id');
-                fetch(`/acteurs/${id}/edit`)
+                fetch(`{{ url("/") }}acteurs/${id}/edit`)
                     .then(response => {
                         if (!response.ok) throw new Error('Erreur réseau');
                         return response.json();
@@ -654,7 +654,7 @@
                         
                         // Mettre à jour l'action du formulaire pour modification
                         const form = document.getElementById('paysForm');
-                        form.action = `/acteurs/${data.id}`;
+                        form.action = `{{ url("/") }}/acteurs/${data.id}`;
                         document.getElementById('method').value = 'PUT';
                         
                         // Changer le texte du bouton

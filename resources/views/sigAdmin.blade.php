@@ -112,6 +112,9 @@
         min-width: 100px;
     }
 
+    .leaflet-interactive:focus {
+        outline: none;
+    }
 
 
 
@@ -202,7 +205,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                                     <center>Bailleur</center>
                                                     <select class="form-control" id="bailleur">
                                                         <option value="">Select bailleur</option>
-
+                                                        @foreach ($Bailleurs as $Bailleur)
+                                                            <option value="{{ $bailleur->code_acteur }}">{{ $bailleur->libelle_court }} {{ $bailleur->libelle_long }}</option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                             </div>
@@ -211,7 +216,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                                     <center>Statut</center>
                                                     <select class="form-control" id="status">
                                                         <option value="">Select Status</option>
-
+                                                        @foreach ($statuts as $statut)
+                                                            <option value="{{ $statut->id }}">{{ $statut->libelle }}</option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                             </div>
@@ -268,6 +275,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
                         <div class="row" style="flex-wrap: nowrap">
                             <div class="col">
                                 <div id="countryMap" style="height: 590px; outline-style: none;"></div>
+                                <div id="africaMap" style="height: 600px;"></div>
+
                             </div>
                         </div>
                     </div>
@@ -431,7 +440,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
         var domainesAssocie = @json($domainesAssocie);
         var niveau = @json($niveau);
         var codeZoom = @json($codeZoom);
-        initCountryMap(countryAlpha3Code,codeZoom,  codeGroupeProjet, domainesAssocie, niveau);
+        // Soit tu appelles un seul selon la logique métier
+if (countryAlpha3Code === "AFQ") {
+    initAfricaMap(); // Pour l’Afrique entière
+} else {
+    initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesAssocie, niveau); // Pays individuels
+}
+
     });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>

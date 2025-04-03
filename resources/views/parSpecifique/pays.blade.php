@@ -247,7 +247,7 @@ let currentEditId = null;
 function loadPaysData(id) {
     currentEditId = id;
     
-    fetch(`/pays/${id}/edit`)
+    fetch(`{{ url("/") }}/pays/${id}/edit`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Erreur réseau');
@@ -296,7 +296,7 @@ document.getElementById('paysForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
-    const url = currentEditId ? `/pays/${currentEditId}` : '/pays';
+    const url =  currentEditId ? `/pays/${currentEditId}` : '/pays';
     const method = currentEditId ? 'PUT' : 'POST';
     
     // Ajouter la méthode HTTP correcte pour Laravel
@@ -355,7 +355,7 @@ function resetForm() {
             var code = $(this).val();
             
             $.ajax({
-                url: '/check-pays-code',
+                url: '{{ url("/") }}check-pays-code',
                 method: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',

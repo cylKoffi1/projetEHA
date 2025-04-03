@@ -13,7 +13,7 @@ function initDataTable(userNameReplace, table, title) {
 
     function loadImage() {
         $.ajax({
-            url: '/getBase64Image',
+            url: 'http://127.0.0.1:8000/getBase64Image',
             type: 'GET',
             async: false,
             success: function (response) {

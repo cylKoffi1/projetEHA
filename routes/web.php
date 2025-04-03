@@ -346,16 +346,16 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
 
-            /*******************SAUVEGARDE DE DEMANDE DE PROJET */
-            Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
-            Route::post('/projets/temp/save-step2', [EtudeProjet::class, 'saveStep2'])->name('projets.temp.save.step2');
-            Route::post('/projets/temp/save-step3', [EtudeProjet::class, 'saveStep3'])->name('projets.temp.save.step3');
-            Route::post('/projets/temp/save-step4', [EtudeProjet::class, 'saveStep4'])->name('projets.temp.save.step4');
-            Route::post('/projets/temp/save-step5', [EtudeProjet::class, 'saveStep5'])->name('projets.temp.save.step5');
-            Route::post('/projets/temp/save-step6', [EtudeProjet::class, 'saveStep6'])->name('projets.temp.save.step6');
-            Route::post('/projets/temp/save-step7', [EtudeProjet::class, 'saveStep7'])->name('projets.temp.save.step7');
-            Route::post('/projets/finaliser', [EtudeProjet::class, 'finaliserProjet'])->name('projets.finaliser');
-            Route::delete('/projets/abort', [EtudeProjet::class, 'abortProjet'])->name('projets.abort');
+                /*******************SAUVEGARDE DE DEMANDE DE PROJET */
+                Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
+                Route::post('/projets/temp/save-step2', [EtudeProjet::class, 'saveStep2'])->name('projets.temp.save.step2');
+                Route::post('/projets/temp/save-step3', [EtudeProjet::class, 'saveStep3'])->name('projets.temp.save.step3');
+                Route::post('/projets/temp/save-step4', [EtudeProjet::class, 'saveStep4'])->name('projets.temp.save.step4');
+                Route::post('/projets/temp/save-step5', [EtudeProjet::class, 'saveStep5'])->name('projets.temp.save.step5');
+                Route::post('/projets/temp/save-step6', [EtudeProjet::class, 'saveStep6'])->name('projets.temp.save.step6');
+                Route::post('/projets/temp/save-step7', [EtudeProjet::class, 'saveStep7'])->name('projets.temp.save.step7');
+                Route::post('/projets/finaliser', [EtudeProjet::class, 'finaliserProjet'])->name('projets.finaliser');
+                Route::delete('/projets/abort', [EtudeProjet::class, 'abortProjet'])->name('projets.abort');
 
         /***********************VALIDATION***************** */
 
