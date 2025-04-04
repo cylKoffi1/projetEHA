@@ -157,21 +157,7 @@
         const actorsData = @json($actorsCounts);
         const financementData = @json($financements);
         const anneeData = @json($projectsParAnnee);
-        const budgetData = @json($budgetsParMois);
-        const frenchMonths = {
-            1: 'Janvier',
-            2: 'Février',
-            3: 'Mars',
-            4: 'Avril',
-            5: 'Mai',
-            6: 'Juin',
-            7: 'Juillet',
-            8: 'Août',
-            9: 'Septembre',
-            10: 'Octobre',
-            11: 'Novembre',
-            12: 'Décembre'
-        };
+       
 
         // Projets par statut
         createChart('projectsStatus', document.getElementById('projectsStatusChart').getContext('2d'), {
@@ -211,16 +197,24 @@
         });
 
         // Financement
+        // Financement
         createChart('financementChart', document.getElementById('financementChart').getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: Object.keys(financementData).map(f => f == 1 ? 'Public' : f == 2 ? 'Privé' : 'Inconnu'),
+                labels: financementData.map(f => f.libelle),
                 datasets: [{
-                    data: Object.values(financementData),
-                    backgroundColor: ['#e67e22', '#16a085', '#bdc3c7']
+                    data: financementData.map(f => f.total_projets),
+                    backgroundColor: ['#e67e22', '#16a085', '#bdc3c7', '#8e44ad', '#2c3e50']
                 }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
             }
         });
+
 
         // Projets par année
         createChart('anneeChart', document.getElementById('anneeChart').getContext('2d'), {
@@ -237,18 +231,34 @@
             }
         });
 
-        // Budget mensuel
+        const budgetData = @json($budgetsParAnnee);
+
+        // Évolution du Budget Annuel
         createChart('budgetChart', document.getElementById('budgetChart').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: Object.keys(budgetData).map(m => frenchMonths[m]),
+                labels: Object.keys(budgetData), // ex: ['2019', '2020', ...]
                 datasets: [{
-                    label: 'Montant $',
+                    label: 'Montant total ($)',
                     data: Object.values(budgetData),
-                    backgroundColor: '#2ecc71'
+                    backgroundColor: '#8e44ad'
                 }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: value => new Intl.NumberFormat().format(value) + ' $'
+                        }
+                    }
+                }
             }
         });
+
     });
 </script>
 

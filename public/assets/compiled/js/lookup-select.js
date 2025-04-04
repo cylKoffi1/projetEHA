@@ -76,6 +76,7 @@ class LookupSelect extends HTMLElement {
         this.observer.observe(this, { childList: true });
 
         this.addEventListeners();
+        this.dispatchEvent(new CustomEvent("ready", { bubbles: true }));
     }
 
     // 🔥 Modification ici : extraction des data-* depuis les options
@@ -213,6 +214,13 @@ class LookupSelect extends HTMLElement {
     dispatchChangeEvent() {
         this.dispatchEvent(new Event("change", { bubbles: true }));
     }
+    clear() {
+        this.input.value = "";
+        this._value = null;
+        this.selectedOption = null;
+        this.hiddenInput.value = "";
+    }
+    
 }
 
 customElements.define("lookup-select", LookupSelect);

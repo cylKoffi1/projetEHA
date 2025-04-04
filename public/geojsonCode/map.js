@@ -13,6 +13,7 @@ const normalized = str => {
 };
 // Constantes pour les noms de propriétés dans les GeoJSON
 const PROPERTIES = {
+    
     COD: { // Structure pour la RDC
         1: { name: 'NAME_1', type: 'TYPE_1' }, // Provinces
         2: { name: 'NAME_2', type: 'TYPE_2' }, // Territoires
@@ -385,7 +386,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         console.log('projectCount', projectCount);
         let fillColor;
         if (projectCount === 0) {
-            fillColor = '#f5f5f5';
+            fillColor = '#c7bda3';
         } else {
             fillColor = colorScale(projectCount).hex();
         }
@@ -546,7 +547,7 @@ function initAfricaMap() {
         zoomControl: true
     });
 
-    const colorScale = chroma.scale(['#f5f5f5', '#c2e699', '#78c679', '#31a354', '#006837', '#004529', '#082c1f', '#02150b'])
+    const colorScale = chroma.scale(['#c7bda3', '#c2e699', '#78c679', '#31a354', '#006837', '#004529', '#082c1f', '#02150b'])
         .domain([0, 500, 1000, 1500, 2000, 2500, 3000, 3500])
         .mode('lab');
 
@@ -684,7 +685,7 @@ function initAfricaMap() {
                             weight: 1,
                             color: '#333',
                             fillOpacity: 0.7,
-                            fillColor: count > 0 ? colorScale(count).hex() : '#f5f5f5'
+                            fillColor: count > 0 ? colorScale(count).hex() : '#c7bda3'
                         };
                     },
                     onEachFeature: (feature, layer) => {

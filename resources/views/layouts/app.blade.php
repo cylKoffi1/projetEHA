@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {{-- CSS First --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ asset('assets/compiled/css/bootstrap.min.css')}}">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -21,9 +21,9 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
     {{-- JS Libraries (ordered) --}}
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="{{ asset('assets/compiled/js/jquery-3.5.1.min.js') }}"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js" integrity="sha384-+sLIOodYLS7CIrQpBjl+C7nPvqq+FbNUBDunl/OZv93DB7Ln/533i8e/mZXLi/P+" crossorigin="anonymous"></script>
+    <script src="{{ asset('assets/compiled/js/bootstrap.min.js') }}"></script>
 
     {{-- DataTables --}}
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
@@ -47,7 +47,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     {{-- ApexCharts --}}
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="{{ asset('assets/compiled/js/apexcharts')}}"></script>
     <script src="{{ asset('assets/extensions/apexcharts/apexcharts.min.js')}}"></script>
 
     {{-- jsPDF --}}
@@ -113,12 +113,12 @@
     <script src="{{ asset('assets/extensions/apexcharts/apexcharts.min.js')}}"></script>
     {{-- <script src="{{ asset('assets/static/js/pages/dashboard.js')}}"></script>
     <script src="{{ asset('assets/static/js/pages/ui-apexchart.js')}}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ asset('assets/compiled/js/chart.js')}}"></script>
     <script src="{{ asset('assets/static/js/pages/ui-chartjs.js')}}"></script>
     <script src="{{ asset('assets/static/js/pages/date-picker.js')}}"></script> --}}
     <script src="{{ asset('assets/extensions/choices.js/public/assets/scripts/choices.js') }}"></script>
     <!-- Bootstrap Bundle avec Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"  crossorigin="anonymous"></script>
+    <script src="{{ asset('assets/compiled/js/bootstrap.bundle.min.js') }}"  crossorigin="anonymous"></script>
 
     <script src="{{ asset('assets/static/js/pages/form-element-select.js') }}"></script>
 <!-- Include jsPDF and AutoTable -->

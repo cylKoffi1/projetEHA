@@ -58,6 +58,7 @@ use App\Models\Financer;
 use App\Models\Posseder;
 use App\Models\ProjetDocument;
 use App\Models\projets_natureTravaux;
+use App\Models\TypeFinancement;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
@@ -65,6 +66,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -93,10 +95,12 @@ class EtudeProjet extends Controller
             ->get()
             ->pluck('pays.nom_fr_fr', 'pays.alpha3') // Associe alpha3 avec le nom
             ->sort();
-            $deviseCouts = Devise::where('libelle', '!=', 'neutre')
-            ->whereNotNull('libelle')
-            ->where('libelle', '!=', '')
-            ->get();
+            $Dpays = Pays::where('alpha3', $paysSelectionne)->first();
+
+            $deviseCouts  = Devise::select('libelle', 'code_long')
+                            ->where('code_long', $Dpays->code_devise)
+                            ->first();
+            
             $actionMener = ActionMener::all();
 
             $tousPays = Pays::whereNotIn('id',  [0, 300, 301, 302, 303, 304])->get();
@@ -114,6 +118,8 @@ class EtudeProjet extends Controller
             ->where('a.code_pays', $paysSelectionne)
             ->get();
 
+            $typeFinancements = TypeFinancement::all();
+
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
             $TypeCaracteristiques = TypeCaracteristique::all();
@@ -127,7 +133,7 @@ class EtudeProjet extends Controller
             $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
 
             $Devises = Pays::where('alpha3', $paysSelectionne)->get();
-            return view('etudes_projets.naissance', compact('Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            return view('etudes_projets.naissance', compact('typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
         public function search(Request $request)
         {
@@ -752,8 +758,8 @@ class EtudeProjet extends Controller
         {
             $request->validate([
                 'code_projet' => 'required|string|exists:projets,code_projet',
-                'financements' => 'required|array',
-                'type_financement' => 'required|in:public,privé,mixte',
+                'financements' => 'required|array'
+                
             ]);
 
             try{
@@ -798,66 +804,98 @@ class EtudeProjet extends Controller
         }
         public function saveStep7(Request $request)
         {
-            $request->validate([
-                'code_projet' => 'required|string|exists:projets,code_projet',
-                'fichiers.*' => 'required|file|max:10240'
+            //  Log temporaire pour debug
+            \Log::info('Requête reçue dans saveStep7', [
+                'code_projet' => $request->input('code_projet'),
+                'fichiers_count' => count($request->file('fichiers') ?? []),
+                'nom_fichiers' => collect($request->file('fichiers'))->pluck('name'),
             ]);
-        
+
+            //  Validation allégée temporairement
+            $request->validate([
+                'code_projet' => 'required|string', // On retire "exists" pour tests
+                'fichiers.*' => [
+                    'required',
+                    'file',
+                    'max:102400', // 100MB
+                    'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar,dwg,dxf,ifc',
+                ]
+            ]);
+
+            DB::beginTransaction();
+
             try {
                 $codeProjet = $request->code_projet;
-        
-                if (!$request->hasFile('fichiers')) {
-                    throw new \Exception("Aucun fichier reçu.");
-                }
-        
                 $uploadPath = public_path('data/documentProjet/' . $codeProjet);
-                if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0755, true);
+
+                // Crée le dossier s'il n'existe pas
+                if (!File::exists($uploadPath)) {
+                    if (!File::makeDirectory($uploadPath, 0755, true)) {
+                        throw new \Exception("Impossible de créer le dossier de destination.");
+                    }
                 }
-        
+
+                $uploadedFiles = [];
+
                 foreach ($request->file('fichiers') as $file) {
                     if (!$file->isValid()) {
                         throw new \Exception("Fichier invalide : " . $file->getClientOriginalName());
                     }
-        
+
+                    $fileSize = $file->getSize();
+                    $mimeType = $file->getClientMimeType();
                     $originalName = $file->getClientOriginalName();
-                    $filename = time() . '_' . $originalName;
+
+                    $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME))
+                        . '_' . time()
+                        . '.' . $file->getClientOriginalExtension();
+
                     $file->move($uploadPath, $filename);
-        
-                    ProjetDocument::create([
+
+                    $relativePath = 'data/documentProjet/' . $codeProjet . '/' . $filename;
+
+                    $document = ProjetDocument::create([
                         'file_name' => $originalName,
-                        'file_path' => 'data/documentProjet/' . $codeProjet . '/' . $filename,
-                        'file_type' => $file->getClientMimeType(),
-                        'file_size' => $file->getSize(),
+                        'file_path' => $relativePath,
+                        'file_type' => $mimeType,
+                        'file_size' => $fileSize,
                         'uploaded_at' => now(),
                         'code_projet' => $codeProjet,
                     ]);
+
+                    $uploadedFiles[] = $document;
                 }
-        
+
+                DB::commit();
+
                 return response()->json([
                     'success' => true,
-                    'message' => 'Documents enregistrés avec succès.'
+                    'message' => count($uploadedFiles) . ' fichiers enregistrés avec succès.',
+                    'documents' => $uploadedFiles
                 ]);
+
             } catch (\Exception $e) {
                 DB::rollBack();
-        
-                \Log::error('Erreur lors de l\'enregistrement des fichiers (étape 7)', [
-                    'code_projet' => $request->code_projet ?? 'non défini',
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+
+                // 🔁 Nettoyage fichiers en cas d'erreur
+                foreach ($uploadedFiles ?? [] as $doc) {
+                    if (file_exists(public_path($doc->file_path))) {
+                        unlink(public_path($doc->file_path));
+                    }
+                }
+
+                \Log::error('Erreur upload documents : ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString()
                 ]);
-        
-                $this->abortProjet(new Request(['code_projet' => $request->code_projet]));
-        
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur lors de l’enregistrement des fichiers. Toutes les données ont été annulées.',
+                    'message' => "Erreur lors de l'upload : " . $e->getMessage()
                 ], 500);
             }
         }
-        
-        
-        
+
+    
         public function finaliserProjet(Request $request)
         {
             $request->validate([

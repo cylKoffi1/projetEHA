@@ -91,6 +91,85 @@
         .progress {
             height: 5px;
         }
+            .upload-dropzone {
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-dropzone:hover {
+            background-color: #e9f5ff;
+            border-color: #0056b3;
+        }
+        
+        .upload-dropzone i {
+            font-size: 48px;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        
+        .uploaded-files-list {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
+        }
+        
+        .files-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-icon {
+            margin-right: 10px;
+            color: #6c757d;
+        }
+        
+        .file-info {
+            flex-grow: 1;
+        }
+        
+        .file-name {
+            font-weight: 500;
+        }
+        
+        .file-size {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        
+        .file-remove {
+            color: #dc3545;
+            cursor: pointer;
+        }
+        
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
     </style>
 @section('content')
 
@@ -525,10 +604,10 @@
                                 <div class="row">
 
                                     <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary " onclick="saveStep4(nextStep)">Suivant</button>
+                                        <button type="button" class="btn btn-primary " onclick="saveStep4(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
 
@@ -929,10 +1008,10 @@
                                 <div class="row">
 
                                     <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary " onclick="saveStep5(nextStep)">Suivant</button>
+                                        <button type="button" class="btn btn-primary " onclick="saveStep5(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
 
@@ -991,23 +1070,23 @@
 
                                 <div class="col-2 mb-3">
                                     <label for="typeFinancement">Type de financement</label>
-                                    <select id="typeFinancement" class="form-control">
-                                        <option value="public">Public</option>
-                                        <option value="privé">Privé</option>
-                                        <option value="mixte">Mixte</option>
+                                    <select id="typeFinancement" name="type_financement" class="form-control">
+                                        <option value="">Slectionner le type</option>
+                                        @foreach ($typeFinancements as $typeFinancement)
+                                            <option value="{{ $typeFinancement->code_type_financement }}">{{ $typeFinancement->libelle }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
 
-                                <!-- Formulaire pour ajouter des détails financiers -->
                                 <div class="row">
                                     <div class="col-1">
-                                        <label>Local</label>
+                                        <label>Local</label><br>
                                         <div class="form-check form-check-inline">
-                                            <input type="radio" id="BailOui" name="BaillOui" value="BaillOui" class="form-check-input">
+                                            <input type="radio" id="BailOui" name="BaillOui" value="1" class="form-check-input">
                                             <label for="BailOui" class="form-check-label">Oui</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input type="radio" id="BailNon" name="BaillOui" value="BaillNon" class="form-check-input">
+                                            <input type="radio" id="BailNon" name="BaillOui" value="0" class="form-check-input">
                                             <label for="BailNon" class="form-check-label">Non</label>
                                         </div>
                                     </div>
@@ -1015,36 +1094,35 @@
                                     <div class="col">
                                         <label for="bailleur">Bailleur</label>
                                         <lookup-select name="bailleur" id="bailleur">
-                                            <option value="">Selectionner le bailleur </option>
+                                            <option value="">Sélectionner le bailleur</option>
                                             @foreach ($bailleurActeurs as $bailleurActeur)
-                                                <option value="{{ $bailleurActeur->code_acteur }}">{{ $bailleurActeur->libelle_court }} {{$bailleurActeur->libelle_long }}</option>
-                                            @endforeach 
+                                                <option value="{{ $bailleurActeur->code_acteur }}">{{ $bailleurActeur->libelle_court }} {{ $bailleurActeur->libelle_long }}</option>
+                                            @endforeach
                                         </lookup-select>
                                     </div>
+
                                     <div class="col-md-2">
                                         <label for="montant">Montant</label>
-                                        <input type="number" id="montant" name="MontantBailleur" class="form-control" placeholder="Montant">
+                                        <input type="number" id="montant" class="form-control" placeholder="Montant">
                                     </div>
+
                                     <div class="col-md-1">
                                         <label for="deviseBailleur">Devise</label>
-                                        @foreach ($Devises as $Devise)
-                                        <input type="text" name="deviseBailleur" id="deviseBailleur" value="{{ $Devise->code_devise }}" class="form-control"  readonly>
-                                            @endforeach
-                                        
+                                        <input type="text" id="deviseBailleur" class="form-control" value="{{ $Devises[0]->code_devise ?? 'XOF' }}" readonly>
                                     </div>
+
                                     <div class="col-md-3">
                                         <label for="commentaire">Commentaire</label>
-                                       
-                                        <input type="text" id="commentaire" name="CommentBailleur"  class="form-control" placeholder="Commentaire">
+                                        <input type="text" id="commentaire" class="form-control" placeholder="Commentaire">
                                     </div>
+
                                     <div class="col text-end">
                                         <button type="button" class="btn btn-secondary" id="addFinancementBtn">Ajouter</button>
                                     </div>
                                 </div>
 
-                                <!-- Tableau des ressources financières -->
                                 <div class="mt-4">
-                                    <table class="table table-bordered">
+                                    <table class="table table-bordered" id="tableFinancements">
                                         <thead>
                                             <tr>
                                                 <th>Bailleur</th>
@@ -1055,45 +1133,114 @@
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="tableFinancements">
-                                            <!-- Les lignes seront ajoutées ici dynamiquement -->
-                                        </tbody>
+                                        <tbody></tbody>
                                     </table>
                                 </div>
 
                                 <div class="row">
                                     <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="saveStep6(nextStep)">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep6(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
                             </div>
-                            <!--Sauvegarde temporaire -->
+
                             <script>
+                                let financementIndex = 0;
+
+                                document.getElementById('addFinancementBtn').addEventListener('click', function () {
+                                    const bailleurLookup = document.getElementById('bailleur');
+                                    const selected = bailleurLookup?.getSelected?.();
+
+                                    if (!selected || !selected.value) {
+                                        alert("Veuillez sélectionner un bailleur.");
+                                        return;
+                                    }
+
+                                    const bailleurText = selected.text;
+                                    const bailleurValue = selected.value;
+                                    const montant = document.getElementById('montant').value;
+                                    const devise = document.getElementById('deviseBailleur').value;
+                                    const commentaire = document.getElementById('commentaire').value;
+
+                                    const localRadio = document.querySelector('input[name="BaillOui"]:checked');
+                                    const localValue = localRadio ? localRadio.value : '';
+
+                                    if (!montant || !devise || localValue === '') {
+                                        alert("Veuillez remplir tous les champs obligatoires.");
+                                        return;
+                                    }
+
+                                    const newRow = `
+                                        <tr>
+                                            <td>
+                                                ${bailleurText}
+                                                <input type="hidden" name="financements[${financementIndex}][bailleur]" value="${bailleurValue}">
+                                            </td>
+                                            <td>
+                                                ${montant}
+                                                <input type="hidden" name="financements[${financementIndex}][montant]" value="${montant}">
+                                            </td>
+                                            <td>
+                                                ${devise}
+                                                <input type="hidden" name="financements[${financementIndex}][devise]" value="${devise}">
+                                            </td>
+                                            <td>
+                                                ${localValue == 1 ? 'Oui' : 'Non'}
+                                                <input type="hidden" name="financements[${financementIndex}][local]" value="${localValue}">
+                                            </td>
+                                            <td>
+                                                ${commentaire}
+                                                <input type="hidden" name="financements[${financementIndex}][commentaire]" value="${commentaire}">
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm removeRow"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `;
+
+                                    document.querySelector("#tableFinancements tbody").insertAdjacentHTML("beforeend", newRow);
+                                    financementIndex++;
+
+                                    // Reset
+                                    document.getElementById('montant').value = '';
+                                    document.getElementById('commentaire').value = '';
+                                    document.getElementById('BailOui').checked = false;
+                                    document.getElementById('BailNon').checked = false;
+
+                                    if (bailleurLookup && bailleurLookup.shadowRoot) {
+                                        bailleurLookup.value = null;
+                                        bailleurLookup.shadowRoot.querySelector("input").value = '';
+                                    }
+                                });
+
+                                // Suppression de ligne
+                                document.getElementById('tableFinancements').addEventListener('click', function (e) {
+                                    if (e.target.closest('.removeRow')) {
+                                        e.target.closest('tr').remove();
+                                    }
+                                });
+
+                                // Sauvegarde
                                 function saveStep6(callback = null) {
                                     const codeProjet = localStorage.getItem("code_projet_temp");
                                     if (!codeProjet) return alert("Projet non trouvé.");
 
-                                    const typeFinancement = $("#typeFinancement").val();
+                                    const typeFinancement = document.getElementById("typeFinancement").value;
+                                    localStorage.setItem("type_financement", typeFinancement);
+
                                     const financements = [];
 
-                                    // Parcours des lignes du tableau
-                                    $("#tableFinancements tbody tr").each(function () {
-                                        const bailleur = $(this).find('input[name="bailleurs[]"]').val();
-                                        const montant = $(this).find('input[name="montants[]"]').val();
-                                        const devise = $(this).find('input[name="devises[]"]').val();
-                                        const local = $(this).find('input[name="locals[]"]').val();
-                                        const commentaire = $(this).find('input[name="commentaires[]"]').val();
+                                    document.querySelectorAll("#tableFinancements tbody tr").forEach(row => {
+                                        const bailleur = row.querySelector('input[name$="[bailleur]"]').value;
+                                        const montant = row.querySelector('input[name$="[montant]"]').value;
+                                        const devise = row.querySelector('input[name$="[devise]"]').value;
+                                        const local = row.querySelector('input[name$="[local]"]').value;
+                                        const commentaire = row.querySelector('input[name$="[commentaire]"]').value;
 
-                                        financements.push({
-                                            bailleur: bailleur,
-                                            montant: montant,
-                                            devise: devise,
-                                            local: local,
-                                            commentaire: commentaire
-                                        });
+                                        financements.push({ bailleur, montant, devise, local, commentaire });
                                     });
 
                                     if (financements.length === 0) {
@@ -1101,33 +1248,17 @@
                                         return;
                                     }
 
-                                    // Enregistre aussi le type dans localStorage si besoin
-                                    localStorage.setItem("type_financement", typeFinancement);
-
-                                    // Création d'un FormData
-                                    const formData = new FormData();
-                                    formData.append('_token', '{{ csrf_token() }}');
-                                    formData.append('code_projet', codeProjet);
-                                    formData.append('type_financement', typeFinancement);
-
-                                    financements.forEach((item, index) => {
-                                        formData.append(`financements[${index}][bailleur]`, item.bailleur);
-                                        formData.append(`financements[${index}][montant]`, item.montant);
-                                        formData.append(`financements[${index}][devise]`, item.devise);
-                                        formData.append(`financements[${index}][local]`, item.local);
-                                        formData.append(`financements[${index}][commentaire]`, item.commentaire);
-                                    });
-
                                     $.ajax({
                                         url: '{{ route("projets.temp.save.step6") }}',
                                         method: 'POST',
-                                        data: formData,
-                                        processData: false,
-                                        contentType: false,
+                                        data: {
+                                            _token: '{{ csrf_token() }}',
+                                            code_projet: codeProjet,
+                                            type_financement: typeFinancement,
+                                            financements: financements
+                                        },
                                         success: function (res) {
-                                            // Tu peux remplacer par SweetAlert ou autre ici si besoin
-                                            // alert(res.message);
-                                            nextStep(); // Passe à l’étape suivante
+                                            nextStep();
                                             if (typeof callback === 'function') callback();
                                         },
                                         error: function (xhr) {
@@ -1137,6 +1268,8 @@
                                     });
                                 }
                             </script>
+
+        
 
                             <!-- 🟢 Étape  : Informations Générales -->
                             <div class="step active" id="step-1">
@@ -1207,11 +1340,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label>Devise du coût</label>
-                                        <select name="deviseCout" id="deviseCout" class="form-control">
-                                            @foreach ($deviseCouts as $deviseCout)
-                                                <option value="{{ $deviseCout?->code }}">{{ $deviseCout?->code_long }}: {{ $deviseCout?->libelle }}</option>
-                                            @endforeach
-                                        </select>
+                                        <input type="text" name="code_devise" id="deviseCout" class="form-control" value="{{ $deviseCouts->code_long }}" readonly>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -1225,7 +1354,7 @@
 
                                 <div class="row">
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="saveStep1(nextStep)">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep1(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
                             </div>
@@ -1261,7 +1390,7 @@
                                             if (xhr.status === 422) {
                                                 const errors = xhr.responseJSON.errors;
                                                 let errorMsg = "Erreurs de validation:\n";
-                                                
+                                                console.error('Validation failed:', response.errors);
                                                 for (const field in errors) {
                                                     errorMsg += `- ${errors[field].join("\n- ")}\n`;
                                                 }
@@ -1431,10 +1560,10 @@
 
                                 <div class="row mt-3">
                                     <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="saveStep2(nextStep)">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep2(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
                             </div>
@@ -1667,10 +1796,10 @@
 
                                 <div class="row mt-3">
                                     <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                        <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="button" class="btn btn-primary" onclick="saveStep3(nextStep)">Suivant</button>
+                                        <button type="button" class="btn btn-primary" onclick="saveStep3(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
                             </div>
@@ -1760,37 +1889,72 @@
                             </div>
                             <!-- 🟡 Étape  : Documents -->
                             <div class="step" id="step-7">
+                            <div class="document-upload-section">
                                 <h5 class="text-secondary">📎 Documents et Pièces Justificatives</h5>
-                                <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#documentModal">
-                                    📜 Liste des documents à fournir
-                                </button>
-                                <div class="upload-box" onclick="document.getElementById('fileUpload').click();">
-                                    <p><i class="fas fa-upload"></i> Cliquez ici pour importer vos fichiers</p>
-                                    <input type="file" id="fileUpload" class="d-none" multiple>
+                                
+                                <div class="upload-container">
+                                    <!-- Zone de dépôt -->
+                                    <div class="upload-dropzone" id="dropZone">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Glissez-déposez vos fichiers ici</p>
+                                        <p class="small">ou</p>
+                                        <button type="button" class="btn btn-outline-primary" id="browseFilesBtn">
+                                            Parcourir vos fichiers
+                                        </button>
+                                        <p class="file-limits">
+                                            Formats acceptés: .pdf, .dwg, .jpg, .docx, .xlsx<br>
+                                            Taille max: 100MB par fichier
+                                        </p>
+                                        <input type="file" id="fileUpload" multiple style="display: none;" 
+                                            accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.zip,.rar">
+                                    </div>
+                                    
+                                    <!-- Barre de progression -->
+                                    <div class="upload-progress mt-3" id="uploadProgressContainer" style="display: none;">
+                                        <div class="progress-info">
+                                            <span id="uploadStatus">Préparation de l'envoi...</span>
+                                            <span id="uploadPercent">0%</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                                id="uploadProgressBar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Fichiers sélectionnés -->
+                                    <div class="uploaded-files-list mt-3" id="uploadedFilesList">
+                                        <div class="list-header">
+                                            <span>Fichiers à uploader (<span id="fileCount">0</span>)</span>
+                                            <span id="totalSize">0 MB</span>
+                                        </div>
+                                        <div class="files-container" id="filesContainer">
+                                            <!-- Les fichiers apparaîtront ici -->
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="uploaded-files mt-2" id="uploadedFiles"></div>
-                                <div class="row">
+                                <br><br>
+                                <div class="row upload-actions">
                                     <div class="col">
-                                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Précédent</button>
+                                    <button type="button" class="btn btn-secondary" onclick="prevStep()">
+                                      <i class="fas fa-arrow-left"></i> Précédent
+                                    </button>
                                     </div>
                                     <div class="col text-end">
-                                        <button type="submit" class="btn btn-success">Soumettre</button>
+                                    <button type="button" class="btn btn-success" id="submitDocumentsBtn" disabled>
+                                        <i class="fas fa-check"></i> Valider les documents
+                                    </button>
                                     </div>
                                 </div>
                             </div>
+                            </div>
                             <!--Sauvegarde temporaire -->
                             <script>
-                                document.getElementById('projectForm').addEventListener('submit', function(event) {
+                                /*document.getElementById('projectForm').addEventListener('submit', function(event) {
                                     event.preventDefault();
-
-                                    if (uploadedFiles.length === 0) {
-                                        alert("Veuillez ajouter au moins un fichier avant de soumettre.");
-                                        return;
-                                    }
-
+                                    
                                     const codeProjet = localStorage.getItem("code_projet_temp");
                                     if (!codeProjet) {
-                                        alert("Aucun projet trouvé. Veuillez compléter les étapes précédentes.");
+                                        alert("Aucun projet trouvé. Veuillez compléter les étapes <i class="fas fa-arrow-left"></i> Précédentes.");
                                         return;
                                     }
 
@@ -1798,13 +1962,18 @@
                                     formData.append('code_projet', codeProjet);
                                     formData.append('_token', '{{ csrf_token() }}');
 
-                                    uploadedFiles.forEach(file => {
-                                        formData.append('fichiers[]', file);
-                                    });
+                                    // Ajouter chaque fichier individuellement
+                                    const fileInput = document.getElementById('fileUpload');
+                                    for (let i = 0; i < fileInput.files.length; i++) {
+                                        formData.append('fichiers[]', fileInput.files[i]);
+                                    }
 
                                     fetch('{{ route("projets.temp.save.step7") }}', {
                                         method: 'POST',
-                                        body: formData
+                                        body: formData,
+                                        headers: {
+                                            'Accept': 'application/json',
+                                        },
                                     })
                                     .then(response => response.json())
                                     .then(data => {
@@ -1814,14 +1983,14 @@
                                             localStorage.removeItem("code_projet_temp");
                                             window.location.href = '{{ route("project.create") }}';
                                         } else {
-                                            alert("Erreur lors de l’enregistrement.");
+                                            alert("Erreur : " + (data.message || "Erreur inconnue"));
                                         }
                                     })
                                     .catch(error => {
-                                        console.error("Erreur d’envoi des fichiers :", error);
-                                        alert("Erreur lors de la soumission.");
+                                        console.error("Erreur d'envoi des fichiers :", error);
+                                        alert("Erreur lors de la soumission. Voir la console pour plus de détails.");
                                     });
-                                });
+                                });*/
 
                             </script>
                         </form>
@@ -1832,7 +2001,7 @@
     </div>
 </section>
 <script>
-    function finaliserCodeProjet() {
+    /*function finaliserCodeProjet() {
         const codeTemp = localStorage.getItem("code_projet_temp");
         const codeLocalisation = localStorage.getItem("code_localisation");
         const typeFinancement = localStorage.getItem("type_financement");// à stocker depuis step6
@@ -1854,7 +2023,7 @@
                 alert("Erreur lors de la finalisation du code projet.");
             }
         });
-    }
+    }*/
 
     function annulerProjetTemporaire() {
         const codeProjet = localStorage.getItem('code_projet_temp');
@@ -2077,26 +2246,97 @@ function formatNumber(input) {
         const progressBar = document.getElementById('progressBar');
         const progressPercentage = (step / totalSteps) * 100;
         progressBar.style.width = progressPercentage + "%";
-    }
+    }/*
+// Configuration de l'upload
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500MB max total
+const ALLOWED_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+    'application/zip',
+    'application/x-rar-compressed',
+    'application/x-dwg', // AutoCAD
+    'application/x-dxf'  // AutoCAD DXF
+];
 
-    document.getElementById('fileUpload').addEventListener('change', function(event) {
-        let files = event.target.files;
-        let fileList = document.getElementById('uploadedFiles');
-
-        for (let i = 0; i < files.length; i++) {
-            let file = files[i];
-
-            // Vérification si le fichier existe déjà
-            if (uploadedFiles.some(f => f.name === file.name)) {
-                continue;
-            }
-
-            uploadedFiles.push(file);
-            displayUploadedFiles();
+document.getElementById('fileUpload').addEventListener('change', function(e) {
+    const files = e.target.files;
+    let totalSize = 0;
+    
+    for (let i = 0; i < files.length; i++) {
+        // Vérification taille fichier
+        if (files[i].size > MAX_FILE_SIZE) {
+            alert(`Le fichier ${files[i].name} dépasse la taille maximale de 100MB`);
+            e.target.value = '';
+            return;
         }
-    });
+        
+        // Vérification type de fichier
+        if (!ALLOWED_TYPES.includes(files[i].type)) {
+            alert(`Type de fichier non supporté: ${files[i].name}`);
+            e.target.value = '';
+            return;
+        }
+        
+        totalSize += files[i].size;
+    }
+    
+    // Vérification taille totale
+    if (totalSize > MAX_TOTAL_SIZE) {
+        alert(`La taille totale des fichiers (${(totalSize/1024/1024).toFixed(2)}MB) dépasse la limite de 500MB`);
+        e.target.value = '';
+    }
+});
 
-    function displayUploadedFiles() {
+// Upload progressif avec feedback
+async function uploadFiles(files) {
+    const progressBar = document.getElementById('uploadProgress');
+    const statusDiv = document.getElementById('uploadStatus');
+    const codeProjet = localStorage.getItem('code_projet_temp');
+    
+    let uploadedCount = 0;
+    const chunkSize = 10 * 1024 * 1024; // 10MB par chunk
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        statusDiv.textContent = `Traitement de ${file.name}...`;
+        
+        // Découpage en chunks pour les très gros fichiers
+        if (file.size > 50 * 1024 * 1024) {
+            await uploadInChunks(file, codeProjet, chunkSize, progressBar);
+        } else {
+            await uploadFile(file, codeProjet);
+        }
+        
+        uploadedCount++;
+        progressBar.value = (uploadedCount / files.length) * 100;
+    }
+    
+    return uploadedCount;
+}
+async function uploadFile(file, codeProjet) {
+    const formData = new FormData();
+    formData.append('fichiers[]', file);
+    formData.append('code_projet', codeProjet);
+    formData.append('_token', '{{ csrf_token() }}');
+    
+    const response = await fetch('{{ route("projets.temp.save.step7") }}', {
+        method: 'POST',
+        body: formData
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Échec upload ${file.name}`);
+    }
+    
+    return response.json();
+}*/
+    /*function displayUploadedFiles() {
         let fileList = document.getElementById('uploadedFiles');
         fileList.innerHTML = "";
 
@@ -2110,12 +2350,12 @@ function formatNumber(input) {
             `;
             fileList.appendChild(fileItem);
         });
-    }
+    }*/
 
-    function removeFile(index) {
+    /*function removeFile(index) {
         uploadedFiles.splice(index, 1);
         displayUploadedFiles();
-    }
+    }*/
     
 
     ////////////////ACTEURS
@@ -2129,7 +2369,7 @@ function formatNumber(input) {
             let searchValue = acteurInput.value.trim();
 
             if (searchValue.length > 1) {
-                fetch(`/api/acteurs?search=${searchValue}`)
+                fetch(`{{ url('/')}}/api/acteurs?search=${searchValue}`)
                     .then(response => response.json())
                     .then(data => {
                         acteurList.innerHTML = "";
@@ -2213,54 +2453,7 @@ function formatNumber(input) {
 
 
 
-   //////////////////////////FINANCEMENT
-    document.getElementById('addFinancementBtn').addEventListener('click', function () {
-        // Récupération du composant lookup-select
-        const bailleurLookup = document.getElementById('bailleur');
-        const selected = bailleurLookup?.getSelected?.();
-        const bailleurText = selected ? selected.text : '';
-        const bailleurValue = selected ? selected.value : '';
 
-        const montant = document.getElementById('montant').value;
-        const devise = document.getElementById('deviseBailleur').value;
-        const commentaire = document.getElementById('commentaire').value;
-
-        const local = document.querySelector('input[name="BaillOui"]:checked');
-        const localValue = local ? local.labels[0].innerText : '';
-
-        if (!bailleurValue || !montant || !devise || !localValue) {
-            alert("Veuillez remplir tous les champs obligatoires.");
-            return;
-        }
-
-        const table = document.getElementById('tableFinancements');
-        const row = document.createElement('tr');
-
-        row.innerHTML = `
-            <td><input type="hidden" name="bailleurs[]" value="${bailleurValue}">${bailleurText}</td>
-            <td><input type="hidden" name="montants[]" value="${montant}">${montant}</td>
-            <td><input type="hidden" name="devises[]" value="${devise}">${devise}</td>
-            <td><input type="hidden" name="locals[]" value="${localValue}">${localValue}</td>
-            <td><input type="hidden" name="commentaires[]" value="${commentaire}">${commentaire}</td>
-            <td><button type="button" class="btn btn-danger btn-sm removeRow"><i class="fas fa-trash"></i></button></td>
-        `;
-
-        table.appendChild(row);
-
-        // Réinitialisation (sauf devise)
-        document.getElementById('montant').value = '';
-        document.getElementById('commentaire').value = '';
-        if (document.getElementById('BailOui')) document.getElementById('BailOui').checked = false;
-        if (document.getElementById('BailNon')) document.getElementById('BailNon').checked = false;
-        bailleurLookup?.clear?.(); // si tu veux réinitialiser le lookup-select
-    });
-
-    // Supprimer une ligne
-    document.getElementById('tableFinancements').addEventListener('click', function (e) {
-        if (e.target && e.target.classList.contains('removeRow')) {
-            e.target.closest('tr').remove();
-        }
-    });
     ///////////////////////////LOCALLISATION
     
     let selectedLocalite = {
@@ -2278,7 +2471,7 @@ function formatNumber(input) {
         if (paysCode) {
             // Charger les localités du pays sélectionné
             $.ajax({
-                url: "/get-localites/" + paysCode,
+                url: '{{ url("/") }}/get-localites/' + paysCode,
                 type: "GET",
                 success: function (data) {
                     $("#niveau1Select").empty().append('<option value="">Sélectionnez une localité</option>');
@@ -2304,7 +2497,7 @@ function formatNumber(input) {
             if (localiteId) {
                 // Charger le niveau et découpage associés
                 $.ajax({
-                    url: "/get-decoupage-niveau/" + localiteId,
+                    url: '{{ url("/") }}/get-decoupage-niveau/' + localiteId,
                     type: "GET",
                     success: function (data) {
                         $("#niveau2Select").empty()
@@ -2367,7 +2560,7 @@ function formatNumber(input) {
     document.getElementById('sousDomaineSelect').addEventListener('change', function() {
         let codeSousDomaine = this.value;
 
-        fetch('/get-familles/' + codeSousDomaine)
+        fetch('{{ url("/") }}/get-familles/' + codeSousDomaine)
             .then(response => response.json())
             .then(data => {
                 let select = document.getElementById('FamilleInfrastruc');
@@ -2391,7 +2584,7 @@ function formatNumber(input) {
             return;
         }
 
-        fetch('/get-caracteristiques/' + idType)
+        fetch('{{ url("/") }}/get-caracteristiques/' + idType)
             .then(response => response.json())
             .then(data => {
                 let caractSelect = document.getElementById('caract');
@@ -2409,7 +2602,7 @@ function formatNumber(input) {
     document.getElementById('caract').addEventListener('change', function () {
         let idCaracteristique = this.value;
 
-        fetch('/get-unites/' + idCaracteristique)
+        fetch('{{ url("/") }}/get-unites/' + idCaracteristique)
             .then(response => response.json())
             .then(data => {
                 console.log('Unites reçues:', data);
@@ -2506,8 +2699,8 @@ function formatNumber(input) {
             sousDomaineSelect.innerHTML = '<option value="">Sélectionner sous domaine</option>';
 
             if (domaineCode) {
-                fetch(`/get-sous-domaines/${domaineCode}`)
-                    .then(response => response.json())
+                fetch(`{{ url('/') }}/get-sous-domaines/${domaineCode}`)
+                .then(response => response.json())
                     .then(data => {
                         data.forEach(sousDomaine => {
                             let option = document.createElement("option");
@@ -2539,7 +2732,7 @@ function formatNumber(input) {
             });
         });
 
-        // ✅ Vérification avant de passer à l'étape suivante
+        // ✅ Vérification avant de passer à l'étape Suivant <i class="fas fa-arrow-right"></i> e
         function validateStep3() {
             let typeSelected = false;
             typeMOs.forEach((checkbox) => {
@@ -2685,7 +2878,7 @@ function formatNumber(input) {
     // Fonction pour récupérer les acteurs via API
     function fetchActeurs(type_mo, priveType = null) {
         const acteurSelect = document.getElementById('acteurSelect'); // Select des acteurs
-        let url = `/get-acteurs?type_mo=${type_mo}`; // Construire l'URL API
+        let url = `{{ url("/") }}/get-acteurs?type_mo=${type_mo}`; // Construire l'URL API
 
         // Ajouter le sous-type (priveType) si présent
         if (priveType) {
@@ -2731,7 +2924,7 @@ function formatNumber(input) {
             input.addEventListener("change", function() {
                 const selectionType = this.value;
 
-                fetch(`/get-acteurs?type_selection=${selectionType}`)
+                fetch(`{{ url("/") }}/get-acteurs?type_selection=${selectionType}`)
                     .then(response => response.json())
                     .then(data => {
                         // Réinitialiser les options
@@ -2758,7 +2951,7 @@ function formatNumber(input) {
             input.addEventListener("change", function() {
                 const selectionType = this.value;
 
-                fetch(`/get-acteurs?type_selection=${selectionType}`)
+                fetch(`{{ url("/") }}/get-acteurs?type_selection=${selectionType}`)
                     .then(response => response.json())
                     .then(data => {
                         // Réinitialiser les options
@@ -2847,7 +3040,7 @@ function formatNumber(input) {
 
         function fetchMoeActeurs(typeOuvrage, priveType = null) {
             const acteurMoeSelect = document.getElementById('acteurMoeSelect');
-            let url = `/get-acteurs?type_ouvrage=${encodeURIComponent(typeOuvrage)}`;
+            let url = `{{ url("/") }}/get-acteurs?type_ouvrage=${encodeURIComponent(typeOuvrage)}`;
 
             if (priveType) {
                 url += `&priveMoeType=${encodeURIComponent(priveType)}`;
@@ -2923,7 +3116,7 @@ $(document).ready(function () {
 
     if (paysCode) {
         $.ajax({
-            url: "/get-localites/" + paysCode,
+            url: '{{ url("/") }}/get-localites/' + paysCode,
             type: "GET",
             success: function (data) {
                 const $localite = $("#localite");
@@ -3089,5 +3282,336 @@ $(document).on("click", ".delete-row", function () {
 });
 
 </script>
+<script>
+    // Configuration
+    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    const MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500MB
+    const ALLOWED_TYPES = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'image/jpeg',
+        'image/png',
+        'application/zip',
+        'application/x-rar-compressed',
+        'application/x-dwg',
+        'application/x-dxf'
+    ];
 
+    // Variables globales
+    let filesToUpload = [];
+
+    // Événements
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileUpload');
+        const browseBtn = document.getElementById('browseFilesBtn');
+        
+        // Gestion du clic sur le bouton "Parcourir"
+        browseBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // Gestion de la sélection de fichiers
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // Gestion du drag and drop
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect({ target: fileInput });
+            }
+        });
+        
+        // Gestion du bouton de soumission
+        document.getElementById('submitDocumentsBtn').addEventListener('click', uploadFiles);
+    });
+
+    function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        let totalSize = 0;
+        
+        // Vérification des fichiers
+        for (const file of files) {
+            // Vérification du type
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                alert(`Le type de fichier "${file.name}" n'est pas autorisé.`);
+                return;
+            }
+            
+            // Vérification de la taille
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`Le fichier "${file.name}" dépasse la taille maximale de 100MB.`);
+                return;
+            }
+            
+            totalSize += file.size;
+        }
+        
+        // Vérification de la taille totale
+        if (totalSize > MAX_TOTAL_SIZE) {
+            alert(`La taille totale des fichiers (${formatFileSize(totalSize)}) dépasse la limite de 500MB.`);
+            return;
+        }
+        
+        // Ajout des fichiers à la liste
+        filesToUpload = filesToUpload.concat(files);
+        updateFileList();
+    }
+
+    function updateFileList() {
+        const container = document.getElementById('filesContainer');
+        const fileCount = document.getElementById('fileCount');
+        const totalSize = document.getElementById('totalSize');
+        const submitBtn = document.getElementById('submitDocumentsBtn');
+        
+        // Calcul de la taille totale
+        let totalSizeBytes = 0;
+        
+        // Vide le conteneur
+        container.innerHTML = '';
+        
+        // Ajoute chaque fichier
+        filesToUpload.forEach((file, index) => {
+            totalSizeBytes += file.size;
+            
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div class="file-icon">
+                    <i class="fas ${getFileIcon(file.type)}"></i>
+                </div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${formatFileSize(file.size)}</div>
+                </div>
+                <div class="file-remove" onclick="removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </div>
+            `;
+            
+            container.appendChild(fileItem);
+        });
+        
+        // Met à jour les informations globales
+        fileCount.textContent = filesToUpload.length;
+        totalSize.textContent = formatFileSize(totalSizeBytes);
+        
+        // Active/désactive le bouton de soumission
+        submitBtn.disabled = filesToUpload.length === 0;
+    }
+
+    function removeFile(index) {
+        filesToUpload.splice(index, 1);
+        updateFileList();
+    }
+
+    function getFileIcon(fileType) {
+        const icons = {
+            'application/pdf': 'fa-file-pdf',
+            'image/': 'fa-file-image',
+            'application/msword': 'fa-file-word',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fa-file-word',
+            'application/vnd.ms-excel': 'fa-file-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fa-file-excel',
+            'application/zip': 'fa-file-archive',
+            'application/x-rar-compressed': 'fa-file-archive',
+            'application/x-dwg': 'fa-file-alt',
+            'application/x-dxf': 'fa-file-alt'
+        };
+        
+        for (const [key, icon] of Object.entries(icons)) {
+            if (fileType.includes(key.replace('*', ''))) {
+                return icon;
+            }
+        }
+        
+        return 'fa-file';
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    async function uploadFiles() {
+    if (filesToUpload.length === 0) {
+        showErrorAlert('Aucun fichier à uploader.');
+        return;
+    }
+
+    const progressStatus = document.getElementById('uploadStatus');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressPercent = document.getElementById('uploadPercent');
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const submitBtn = document.getElementById('submitDocumentsBtn');
+
+    // Init UI
+    progressContainer.style.display = 'block';
+    progressStatus.textContent = "Préparation de l'envoi...";
+    progressBar.style.width = '0%';
+    progressPercent.textContent = '0%';
+    progressBar.classList.remove('bg-danger', 'bg-success');
+    submitBtn.disabled = true;
+
+    try {
+        const codeProjet = localStorage.getItem('code_projet_temp');
+        if (!codeProjet) throw new Error("Aucun projet sélectionné. Veuillez revenir à l'étape 1.");
+
+        const formData = new FormData();
+        formData.append('code_projet', codeProjet);
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+        filesToUpload.forEach(file => formData.append('fichiers[]', file));
+
+        const response = await fetch('{{ route("projets.temp.save.step7") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json' // Important pour bien recevoir du JSON même en cas d’erreur Laravel
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            progressBar.classList.add('bg-success');
+            progressBar.style.width = '100%';
+            progressStatus.textContent = 'Upload terminé avec succès!';
+            progressPercent.textContent = '100%';
+
+            setTimeout(() => {
+                finaliserCodeProjet();
+                window.location.href = '{{ route("project.create") }}';
+            }, 1500);
+        } else {
+            throw new Error(data.message || 'Erreur serveur');
+        }
+
+    } catch (error) {
+        progressBar.classList.add('bg-danger');
+        progressStatus.textContent = 'Erreur: ' + error.message;
+        showErrorAlert(
+            "Échec de l'upload : " + error.message +
+            "\n\nVérifie :\n- Taille et type des fichiers\n- Ta connexion Internet\n- Que le projet est bien sélectionné"
+        );
+        submitBtn.disabled = false;
+    }
+}
+
+
+
+    function handleUploadError(error, progressStatus, progressBar, submitBtn) {
+        console.error("Erreur lors de l'upload:", error);
+        
+        // Mise à jour de l'UI
+        progressStatus.textContent = 'Erreur: ' + error.message;
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-danger');
+        submitBtn.disabled = false;
+        
+        // Affichage de l'erreur à l'utilisateur
+        showErrorAlert(
+            "Échec de l'upload: " + error.message + 
+            "\n\nVeuillez vérifier :" +
+            "\n- La taille des fichiers (max 100MB par fichier, 500MB total)" +
+            "\n- Le type des fichiers (PDF, Word, Excel, images, etc.)" +
+            "\n- Votre connexion internet"
+        );
+    }
+
+    function showErrorAlert(message) {
+        // Utilisation de SweetAlert si disponible, sinon alert() natif
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Erreur',
+                text: message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                customClass: {
+                    container: 'swal2-container-error'
+                }
+            });
+        } else {
+            alert(message);
+        }
+    }
+
+    function finaliserCodeProjet() {
+        const codeTemp = localStorage.getItem('code_projet_temp');
+        const codeLocalisation = localStorage.getItem('code_localisation');
+        const typeFinancement = localStorage.getItem('type_financement');
+
+        if (!codeTemp || !codeLocalisation || !typeFinancement) {
+            alert("Des informations manquent pour finaliser le projet.");
+            return;
+        }
+
+        fetch('{{ route("projets.finaliser") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json', // ✅ pour forcer JSON même en cas d'erreur Laravel
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                code_projet_temp: codeTemp,
+                code_localisation: codeLocalisation,
+                type_financement: typeFinancement
+            })
+        })
+        .then(async (response) => {
+            const text = await response.text();
+
+            try {
+                const data = JSON.parse(text);
+
+                if (response.ok) {
+                    // ✅ Réponse OK
+                    if (data.success) {
+                        localStorage.removeItem('code_projet_temp');
+                        localStorage.removeItem('type_financement');
+                        localStorage.removeItem('code_localisation');
+                        alert(data.message || "Projet finalisé avec succès !");
+                        console.log("Code projet final :", data.code_projet_final);
+                    } else {
+                        alert(data.message || "Finalisation échouée.");
+                    }
+                } else {
+                    // ❌ Laravel a répondu avec une erreur 422, 500, etc.
+                    console.error("Erreur Laravel :", data);
+                    alert(data.message || "Erreur serveur lors de la finalisation.");
+                }
+            } catch (e) {
+                // 💥 Laravel a peut-être renvoyé du HTML (vue Blade)
+                console.error("Réponse non JSON :", text);
+                alert("Erreur inattendue. Le serveur a retourné une réponse non valide.");
+            }
+        })
+        .catch(error => {
+            console.error('Erreur réseau ou serveur lors de la finalisation :', error);
+            alert("Une erreur est survenue lors de la finalisation du projet.");
+        });
+    }
+
+</script>
 @endsection

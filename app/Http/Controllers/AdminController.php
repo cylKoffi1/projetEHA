@@ -7,6 +7,7 @@ use App\Models\Ecran;
 use App\Models\ProjetEha2;
 use App\Models\ProjetStatutProjet;
 use App\Models\Rubriques;
+use App\Models\Projet;
 use App\Models\StatutProjet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,25 +21,33 @@ class AdminController extends Controller
     {
         $ecran = Ecran::find(29);
         $ecrans = Ecran::all();
-    
+        $groupeProjet = session('projet_selectionne'); // exemple "TRP"
+
         // Projets
-        $totalProjects = DB::table('projets')->count();
-    
+        $totalProjects = DB::table('projets')
+            ->whereNotNull('code_projet')
+            ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+            ->count();
+
         $projectStatusCounts = DB::table('projet_statut')
             ->join('type_statut', 'projet_statut.type_statut', '=', 'type_statut.id')
+            ->join('projets', 'projets.code_projet', '=', 'projet_statut.code_projet')
+            ->whereNotNull('projets.code_projet')
+            ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
             ->select('type_statut.libelle', DB::raw('count(*) as total'))
             ->groupBy('type_statut.libelle')
             ->pluck('total', 'libelle')
             ->toArray();
+        
     
         if (empty($projectStatusCounts)) {
             $projectStatusCounts = [
-                'Prévu' => 10,
-                'En cours' => 25,
-                'Clôturés' => 5,
-                'Suspendu' => 3,
-                'Annulé' => 2,
-                'Terminé' => 4,
+                'Prévu' => 0,
+                'En cours' => 0,
+                'Clôturés' => 0,
+                'Suspendu' => 0,
+                'Annulé' => 0,
+                'Terminé' => 0,
             ];
         }
     
@@ -62,26 +71,43 @@ class AdminController extends Controller
         }
     
         // Financement
-        $financements = DB::table('financer')
-            ->select('FinancementType', DB::raw('count(*) as total'))
-            ->groupBy('FinancementType')
-            ->pluck('total', 'FinancementType')
-            ->toArray();
-    
-        if (empty($financements)) {
-            $financements = [
-                1 => 12, // Public
-                2 => 7,  // Privé
-            ];
-        }
+        $results = DB::table('projets')
+            ->selectRaw('SUBSTRING(code_projet, 7, 1) AS type_financement')
+            ->whereNotNull('code_projet')
+            ->whereRaw('LENGTH(code_projet) >= 7')
+            ->get()
+            ->groupBy('type_financement')
+            ->map(function ($group) {
+                return count($group);
+            });
+
+        // Ensuite on joint avec la table type_financement
+        $financements = DB::table('type_financement')
+            ->select('type_financement.code_type_financement', 'type_financement.libelle', DB::raw('COUNT(p.code_projet) as total_projets'))
+            ->join(DB::raw("(
+                SELECT code_projet, SUBSTRING(code_projet, 7, 1) AS type_financement
+                FROM projets
+                WHERE code_projet IS NOT NULL
+                AND LENGTH(code_projet) >= 7
+                AND SUBSTRING(code_projet, 4, 3) = '{$groupeProjet}'
+            ) as p"), 'p.type_financement', '=', 'type_financement.code_type_financement')
+            ->groupBy('type_financement.code_type_financement', 'type_financement.libelle')
+            ->orderBy('type_financement.code_type_financement')
+            ->get();
+
     
         // Projets par année
         $projectsParAnnee = DB::table('projets')
-            ->select(DB::raw('YEAR(created_at) as annee'), DB::raw('count(*) as total'))
+            ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) as annee, COUNT(*) as total")
+            ->whereNotNull('code_projet')
+            ->where('code_projet', 'like', '%\_%\_%\_%\_%')
+            ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
             ->groupBy('annee')
             ->orderBy('annee')
             ->pluck('total', 'annee')
             ->toArray();
+
+    
     
         if (empty($projectsParAnnee)) {
             $projectsParAnnee = [
@@ -92,12 +118,18 @@ class AdminController extends Controller
         }
     
         // Budget mensuel
-        $budgetsParMois = DB::table('financer')
-            ->select(DB::raw('MONTH(created_at) as mois'), DB::raw('SUM(montant_finance) as total'))
-            ->groupBy('mois')
-            ->orderBy('mois')
-            ->pluck('total', 'mois')
-            ->toArray();
+        $budgetsParAnnee = DB::table('projets')
+                ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) as annee, SUM(cout_projet) as total")
+                ->whereNotNull('code_projet')
+                ->where('code_projet', 'like', '%\_%\_%\_%\_%')
+                ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+                ->groupBy('annee')
+                ->orderBy('annee')
+                ->pluck('total', 'annee')
+                ->toArray();
+    
+
+
     
         if (empty($budgetsParMois)) {
             $budgetsParMois = [
@@ -116,7 +148,7 @@ class AdminController extends Controller
             'actorsCounts',
             'financements',
             'projectsParAnnee',
-            'budgetsParMois'
+            'budgetsParAnnee'
         ));
     }
     

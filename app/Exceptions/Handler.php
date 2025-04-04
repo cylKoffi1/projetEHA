@@ -27,4 +27,36 @@ class Handler extends ExceptionHandler
             //
         });
     }
+
+    public function render($request, Throwable $exception)
+    {
+        // Pour toutes les requêtes API/AJAX, retourner du JSON
+        if ($request->expectsJson() || $request->is('api/*') || $request->ajax()) {
+            $status = $this->isHttpException($exception) ? $exception->getStatusCode() : 500;
+            
+            $response = [
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ];
+
+            if ($exception instanceof \Illuminate\Validation\ValidationException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur de validation',
+                    'errors' => $exception->errors()
+                ], 422);
+            }
+
+            if (config('app.debug')) {
+                $response['error'] = $exception->getTraceAsString();
+                $response['file'] = $exception->getFile();
+                $response['line'] = $exception->getLine();
+            }
+
+            return response()->json($response, $status);
+        }
+
+        return parent::render($request, $exception);
+    }
+
 }
