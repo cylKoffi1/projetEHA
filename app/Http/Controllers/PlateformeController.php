@@ -1073,7 +1073,8 @@ class PlateformeController extends Controller
        $groupeSelectionne = session('projet_selectionne');
        $domaine = Domaine::where('groupe_projet_code', '=', $groupeSelectionne)->get();
        $sous_domaines = SousDomaine::all();
-        $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')->get();
+       $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')
+        ->whereIn('code_groupe_projet', [session('projet_selectionne')])->get();
         
         return view('parGeneraux.familleinfrastructure', ['domaine' => $domaine,'sous_domaines'=>$sous_domaines,'familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, ]);
     }
@@ -1098,6 +1099,7 @@ class PlateformeController extends Controller
         $familleinfrastructure->code_sdomaine = $request->input('SDomaine');
         $familleinfrastructure->libelleFamille = $request->input('libelle');
         $familleinfrastructure->code_domaine = $request->input('domaine');
+        $familleinfrastructure->code_groupe_projet = session('projet_selectionne');
 
         $familleinfrastructure->save();
         $ecran_id = $request->input('ecran_id');
@@ -1130,6 +1132,7 @@ class PlateformeController extends Controller
         $famille->libelleFamille = $request->input('libelle');
         $famille->code_sdomaine = $request->input('SDomaine');
         $famille->domaine = $request->input('domaine');
+        $famille->code_groupe_projet = session('projet_selectionne');
         $famille->save();
     
         return redirect()->back()->with('success', 'Famille modifiée avec succès.');

@@ -132,7 +132,7 @@ class EtudeProjet extends Controller
             $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];
 
             $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
-
+            
             $Devises = Pays::where('alpha3', $paysSelectionne)->get();
             return view('etudes_projets.naissance', compact('typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
@@ -192,9 +192,10 @@ class EtudeProjet extends Controller
             ]);
         }
         
-        public function getFamilles($code_sous_domaine)
+        public function getFamilles($codeDomaine)
         {
-            $familles = FamilleInfrastructure::where('code_sdomaine', $code_sous_domaine)->get();
+            $familles = FamilleInfrastructure::whereIn('code_groupe_projet',  [session('projet_selectionne')])
+            ->where('code_domaine', $codeDomaine)->get();
 
             return response()->json($familles);
         }
@@ -375,53 +376,6 @@ class EtudeProjet extends Controller
             return strtoupper("{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_{$ordre}");
         }
 
-        public function abortProjet(Request $request)
-        {
-            $request->validate([
-                'code_projet' => 'required|string|exists:projets,code_projet',
-            ]);
-
-            $code = $request->code_projet;
-
-            $tables = [
-                'projets_natureTravaux' => 'code_projet',
-                'projetinfrastructure' => 'code_projet',
-                'projet_action_a_mener' => 'code_projet',
-                'executer' => 'code_projet',
-                'posseder' => 'code_projet',
-                'financer' => 'code_projet',
-                'profiter' => 'code_projet',
-                'beneficier' => 'code_projet',
-                'jouir' => 'code_projet',
-                'projet_documents' => 'code_projet',
-                'etudeprojects' => 'code_projet',
-            ];
-
-            DB::beginTransaction();
-            try {
-                foreach ($tables as $table => $key) {
-                    DB::table($table)->where($key, $code)->delete();
-                }
-
-                // Supprimer projet principal
-                Projet::where('code_projet', $code)->delete();
-
-                DB::commit();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => "Le projet temporaire a été annulé et supprimé.",
-                ]);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                \Log::error("Échec du rollback : " . $e->getMessage());
-
-                return response()->json([
-                    'success' => false,
-                    'message' => "Échec de l'annulation du projet.",
-                ], 500);
-            }
-        }
         public function saveStep1(Request $request)
         {
             try {
@@ -430,8 +384,8 @@ class EtudeProjet extends Controller
                     'code_sous_domaine' => 'required|string|max:10',
                     'date_demarrage_prevue' => 'required|date',
                     'date_fin_prevue' => 'required|date|after_or_equal:date_demarrage_prevue',
-                    'cout_projet' => 'nullable|numeric',
-                    'code_devise' => 'nullable|string|max:3',
+                    'cout_projet' => 'required|numeric',
+                    'code_devise' => 'required|string|max:3',
                     'code_nature' => 'required|string|max:10',
                     'code_pays' => 'required|string|max:3',
                     'commentaire' => 'nullable|string|max:500'
@@ -464,6 +418,7 @@ class EtudeProjet extends Controller
         
                 return response()->json([
                     'success' => false,
+                    'message' => $e->getMessage(),
                     'error' => 'Une erreur est survenue. Veuillez réessayer.'
                 ], 500);
             }
@@ -474,7 +429,7 @@ class EtudeProjet extends Controller
             try {
                 $request->validate([
                     'localites' => 'required|array|min:1',
-                    'localites.*.id' => 'required|string',
+                    'localites.*.code_rattachement' => 'required|string',
                     'localites.*.niveau' => 'nullable|string',
                     'localites.*.decoupage' => 'nullable|string',
                     'infrastructures' => 'nullable|array',
@@ -485,7 +440,7 @@ class EtudeProjet extends Controller
         
                 // Stocker aussi le premier code_localisation s’il existe
                 if (!empty($request->localites)) {
-                    session(['code_localisation' => $request->localites[0]['id']]);
+                    session(['code_localisation' => $request->localites[0]['code_rattachement']]);
                 }
         
                 // Vérification
@@ -509,12 +464,11 @@ class EtudeProjet extends Controller
         
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur lors de l’enregistrement de l’étape 2. Veuillez réessayer.',
+                    'message' => $e->getMessage(),
                 ], 500);
             }
         }
         
-
         public function saveStep3(Request $request)
         {
             try {
@@ -545,12 +499,11 @@ class EtudeProjet extends Controller
         
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur lors de l’enregistrement de l’étape 3. Veuillez réessayer.',
+                    'message' => $e->getMessage(),
                 ], 500);
             }
         }
         
-
         public function saveStep4(Request $request)
         {
             try {
@@ -589,7 +542,7 @@ class EtudeProjet extends Controller
         
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur lors de l’enregistrement de l’étape 4. Veuillez réessayer.',
+                    'message' => $e->getMessage(),
                 ], 500);
             }
         }
@@ -628,7 +581,7 @@ class EtudeProjet extends Controller
         
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur lors de l’enregistrement de l’étape 5.',
+                    'message' => $e->getMessage(),
                 ], 500);
             }
         }
@@ -671,7 +624,7 @@ class EtudeProjet extends Controller
         
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur lors de l’enregistrement de l’étape 6.',
+                    'message' => $e->getMessage(),
                 ], 500);
             }
         }
@@ -719,12 +672,11 @@ class EtudeProjet extends Controller
                 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Erreur technique'
+                    'message' => $e->getMessage(),
                 ], 500);
             }
         }
         
-
         public function finaliserProjet()
         {
             DB::beginTransaction();
@@ -737,7 +689,7 @@ class EtudeProjet extends Controller
                 $step6 = session('form_step6');
                 $step7 = session('form_step7');
         
-                $codeLocalisation = $step2['localites'][0]['decoupage'] ?? null;
+                $codeLocalisation = $step2['localites'][0]['code_rattachement'] ?? null;
 
         
                 // Générer le code projet
@@ -772,7 +724,7 @@ class EtudeProjet extends Controller
                 foreach ($step2['localites'] as $loc) {
                     ProjetLocalisation::create([
                         'code_projet' => $codeProjet,
-                        'code_localite' => $loc['id'],
+                        'code_localite' => $loc['code_rattachement'],
                         'niveau' => $loc['niveau'] ?? null,
                         'decoupage' => $loc['decoupage'] ?? null,
                         'pays_code' => $step1['code_pays'],
@@ -785,13 +737,14 @@ class EtudeProjet extends Controller
                         'code' => 'INFRA-' . strtoupper(Str::random(4)),
                         'libelle' => $infra['libelle'],
                         'code_famille_infrastructure' => $infra['famille_code'] ?? null,
+                        'code_groupe_projet' => session('projet_selectionne'),
+                        'code_pays' => session('pays_selectionne'),
                     ]);
         
                     $projetInfra = ProjetInfrastructure::create([
                         'idInfrastructure' => $infraDB->id,
                         'code_projet' => $codeProjet,
-                        'localisation_id' => $infra['localisation_id'] ?? null,
-                        'statut' => $infra['statut'] ?? 'prévu',
+                        'localisation_id' => $codeLocalisation ?? null,
                     ]);
         
                     foreach ($infra['caracteristiques'] ?? [] as $carac) {
@@ -916,6 +869,7 @@ class EtudeProjet extends Controller
         
                 \Log::error('Erreur lors de la finalisation du projet', [
                     'exception' => $e->getMessage(),
+                    
                     'trace' => $e->getTraceAsString()
                 ]);
         
@@ -972,118 +926,6 @@ class EtudeProjet extends Controller
 
     
         
-
-        const MAX_FILE_SIZE_KB = 2048; // 2 Mo
-        const MAX_FILE_SIZE_MB = 2;
-        
-        public function storeNaissance(Request $request)
-        {
-            DB::beginTransaction();
-            try {
-
-
-                $location = 'CI';  // Fixe pour le moment
-                $category = 'EHA'; // Fixe pour le moment
-
-                // Générer le code projet
-                $codeEtudeProjets = $request->input('codeProjet');
-
-                // Créer le projet
-                $project = EtudeProject::create([
-                    'codeEtudeProjets' => $codeEtudeProjets,
-                    'natureTravaux' => $request->input('nature_travaux'),
-                    'typeDemandeur' => $request->typeDemandeur,
-                    'public' =>  $request->has('maitreOuvrage') ? true : false,
-                    'collectivite_territoriale' => $request->input('collectivite'),
-                    'ministere' =>$request->input('ministere')
-                ]);
-
-                // Sauvegarder les informations en fonction du type de demandeur
-                $this->storeDemandeurInfo($request, $codeEtudeProjets);
-
-                // Traiter chaque fichier uploadé
-                if ($request->hasFile('files')) {
-                    $this->handleFileUploads($request, $project->codeEtudeProjets);
-                }
-
-                DB::commit();
-                return redirect()->back()->with('success', 'Projet enregistré avec succès');
-            } catch (PostTooLargeException $e) {
-                Log::error('Fichier trop volumineux : ' . $e->getMessage());
-                return redirect()->back()->withErrors(['files' => 'Le fichier dépasse la taille maximale autorisée de ' . self::MAX_FILE_SIZE_MB . ' Mo.']);
-            } catch (\Exception $e) {
-                DB::rollback();
-                Log::error('Erreur lors de l\'enregistrement du projet : ' . $e->getMessage(), [
-                    'request' => $request->all(),
-                    'stack_trace' => $e->getTraceAsString(),
-                ]);
-                return redirect()->back()->withErrors(['general' => 'Une erreur est survenue lors de l\'enregistrement du projet : ' . $e->getMessage()]);
-            }
-        }
-
-
-        private function storeDemandeurInfo($request, $codeEtudeProjets)
-        {
-            if ($request->typeDemandeur == 'entreprise') {
-                EntrepriseParticulier::create([
-                    'codeEtudeProjets' =>  $codeEtudeProjets,
-                    'nomEntreprise' => $request->input('companyName'),
-                    'raisonSociale' => $request->input('legalStatus'),
-                    'numeroImmatriculation' => $request->input('registrationNumber'),
-                    'adresseSiegeSocial' => $request->input('headOfficeAddress'),
-                    'numeroTelephone' => $request->input('phoneNumber'),
-                    'adresseEmail' => $request->input('emailAddress'),
-                    'siteWeb' => $request->input('website'),
-                    'nomResponsableProjet' => $request->input('projectManager'),
-                    'fonctionResponsable' => $request->input('managerRole'),
-                    'capitalSocial' => $request->input('capital'),
-                    'infoSupplementaire1' => $request->input('additionalInfo1'),
-                    'infoSupplementaire2' => $request->input('additionalInfo2'),
-                ]);
-            } elseif ($request->typeDemandeur == 'particulier') {
-                EntrepriseParticulier::create([
-                    'codeEtudeProjets' => $codeEtudeProjets,
-                    'nom' => $request->input('nom'),
-                    'prenom' => $request->input('prenom'),
-                    'statutProfessionnel' => $request->input('professionalStatus'),
-                    'numeroImmatriculationIndividuelle' => $request->input('individualRegistrationNumber'),
-                    'adresseEntreprise' => $request->input('individualAddress'),
-                    'numeroTelephone' => $request->input('individualPhone'),
-                    'adresseEmail' => $request->input('individualEmail'),
-                    'activitePrincipale' => $request->input('mainActivity'),
-                    'nomCommercial' => $request->input('tradeName'),
-                    'coordonneesBancaires' => $request->input('bankDetails'),
-                    'references' => $request->input('references'),
-                    'infoSupplementaire3' => $request->input('additionalInfo3'), // Fix typo: $request->inpu -> $request->input
-                ]);
-            }
-        }
-
-        private function handleFileUploads($request, $codeEtudeProjets)
-        {
-            $errorFiles = [];
-            foreach ($request->file('files') as $file) {
-                if ($file->getSize() > self::MAX_FILE_SIZE_KB * 1024) {
-                    $errorFiles[] = $file->getClientOriginalName();
-                    continue;
-                }
-
-                $fileName = $file->getClientOriginalName();
-                $filePath = $file->storeAs('uploads/projects', $fileName, 'public');
-
-                // Sauvegarder les informations du fichier dans la base de données
-                EtudeProjectFile::create([
-                    'codeEtudeProjets' => $codeEtudeProjets,
-                    'file_path' => $filePath,
-                    'file_name' => $fileName,
-                ]);
-            }
-
-            if (!empty($errorFiles)) {
-                $errorFileNames = implode(', ', $errorFiles);
-                throw new \Exception("Les fichiers suivants dépassent la taille maximale autorisée de " . self::MAX_FILE_SIZE_MB . " Mo : $errorFileNames");
-            }
-        }
 
 
         public function getLatestProjectNumber($location, $category, $typeFinancement)

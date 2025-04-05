@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProjetLocalisation extends Model
 {
-    protected $table = 'projetLocalisation';
+    protected $table = 'projetlocalisation';
     protected $primaryKey = 'id';
     public $timestamps = true;
 

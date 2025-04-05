@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Réinitialiser la liste des sous-domaines
         sousDomaineSelect.innerHTML = '<option value="">Chargement...</option>';
 
-        fetch(`/get-sous-domaines/${codeDomaine}`)
+        fetch(`{{ url('/')}}/get-sous-domaines/${codeDomaine}`)
             .then(response => response.json())
             .then(data => {
                 sousDomaineSelect.innerHTML = '<option value="">Sélectionner le sous-domaine</option>';

@@ -15,7 +15,6 @@ class ProjetInfrastructure extends Model
         'idInfrastructure',
         'code_projet',
         'localisation_id',
-        'statut',
     ];
 
     public function localisation()

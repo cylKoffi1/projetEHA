@@ -643,9 +643,21 @@
                                             nextStep();
                                             //if (typeof callback === "function") callback();
                                         },
-                                        error: function(xhr) {
-                                            alert("Erreur lors de la sauvegarde !");
-                                            console.error(xhr.responseText);
+                                        error: function (xhr) {
+                                            let message = "Une erreur est survenue.";
+
+                                            try {
+                                                const response = JSON.parse(xhr.responseText);
+                                                if (response.message) {
+                                                    message = response.message;
+                                                }
+                                            } catch (e) {
+                                                console.error("Erreur parsing JSON :", e);
+                                                console.warn("Réponse brute :", xhr.responseText);
+                                            }
+
+                                            alert(message);
+                                            console.error("Détail complet :", xhr.responseText);
                                         }
                                     });
                                 }
@@ -1056,8 +1068,20 @@
                                             //if (typeof callback === "function") callback();
                                         },
                                         error: function (xhr) {
-                                            console.error(xhr.responseText);
-                                            alert("Erreur lors de l’enregistrement des maîtres d’œuvre.");
+                                            let message = "Une erreur est survenue.";
+
+                                            try {
+                                                const response = JSON.parse(xhr.responseText);
+                                                if (response.message) {
+                                                    message = response.message;
+                                                }
+                                            } catch (e) {
+                                                console.error("Erreur parsing JSON :", e);
+                                                console.warn("Réponse brute :", xhr.responseText);
+                                            }
+
+                                            alert(message);
+                                            console.error("Détail complet :", xhr.responseText);
                                         }
                                     });
                                 }
@@ -1262,8 +1286,20 @@
                                             if (typeof callback === 'function') callback();
                                         },
                                         error: function (xhr) {
-                                            alert("Erreur lors de la sauvegarde des financements.");
-                                            console.error(xhr.responseText);
+                                            let message = "Une erreur est survenue.";
+
+                                            try {
+                                                const response = JSON.parse(xhr.responseText);
+                                                if (response.message) {
+                                                    message = response.message;
+                                                }
+                                            } catch (e) {
+                                                console.error("Erreur parsing JSON :", e);
+                                                console.warn("Réponse brute :", xhr.responseText);
+                                            }
+
+                                            alert(message);
+                                            console.error("Détail complet :", xhr.responseText);
                                         }
                                     });
                                 }
@@ -1386,21 +1422,23 @@
                                                 nextStep();
                                             }
                                         },
-                                        error: function(xhr) {
-                                            if (xhr.status === 422) {
-                                                const errors = xhr.responseJSON.errors;
-                                                let errorMsg = "Erreurs de validation:\n";
-                                                console.error('Validation failed:', response.errors);
-                                                for (const field in errors) {
-                                                    errorMsg += `- ${errors[field].join("\n- ")}\n`;
+                                        error: function (xhr) {
+                                            let message = "Une erreur est survenue.";
+
+                                            try {
+                                                const response = JSON.parse(xhr.responseText);
+                                                if (response.message) {
+                                                    message = response.message;
                                                 }
-                                                
-                                                alert(errorMsg);
-                                            } else {
-                                                alert("Erreur serveur. Veuillez réessayer.");
-                                                console.error(xhr.responseText);
+                                            } catch (e) {
+                                                console.error("Erreur parsing JSON :", e);
+                                                console.warn("Réponse brute :", xhr.responseText);
                                             }
+
+                                            alert(message);
+                                            console.error("Détail complet :", xhr.responseText);
                                         }
+
                                     });
                                 }
                             </script>
@@ -1500,7 +1538,9 @@
                                                     <label>Type de caractéristique</label>
                                                     <select class="form-control" id="tyCaract">
                                                         <option value="">Sélectionner le type </option>
-                                                        <!-- Rempli dynamiquement -->
+                                                        @foreach ($TypeCaracteristiques as $TypeCaracteristique)
+                                                            <option value="{{ $TypeCaracteristique->idTypeCaracteristique }}">{{ $TypeCaracteristique->libelleTypeCaracteristique }}</option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                                 <div class="col-md-3">
@@ -1579,40 +1619,44 @@
                                         const cols = $(this).find("td");
                                         if (cols.length > 0) {
                                             localites.push({
-                                                id: cols.eq(0).text(),
-                                                libelle: cols.eq(1).text(),
-                                                niveau: cols.eq(2).text(),
-                                                decoupage: cols.eq(3).text()
+                                                code_rattachement: cols.eq(0).text(),
+                                                libelle: cols.eq(2).text(),
+                                                niveau: cols.eq(3).text(),
+                                                decoupage: cols.eq(4).text()
                                             });
-                                            if (localites.length > 0) {
-                                                // stocke le premier ID de localisation (niveau 1) dans le localStorage
-                                                localStorage.setItem("code_localisation", localites[0].id);
-                                            }
-
                                         }
                                     });
+
+                                    if (localites.length > 0) {
+                                        localStorage.setItem("code_localisation", localites[0].id); // pour finalisation
+                                    }
 
                                     // 🔁 Lecture des infrastructures + caractéristiques
                                     const infrastructures = [];
                                     $("#tableInfrastructures tr").each(function () {
-                                        const type = $(this).find('input[name="typesCaracteristiques[]"]').val();
-                                        const caract = $(this).find('input[name="caracteristiques[]"]').val();
-                                        const unite = $(this).find('input[name="unites[]"]').val();
-                                        const valeur = $(this).find('input[name="valeursCaracteristiques[]"]').val();
+                                        const tds = $(this).find("td");
+                                        const name = $(tds[0]).find('input[type="hidden"]').val();
+                                        const famille = $(tds[1]).find('input[type="hidden"]').val();
+
+                                        const caracts = [];
+                                        $(tds[2]).find('input[type="hidden"]').each(function () {
+                                            const parts = $(this).val().split('|');
+                                            caracts.push({
+                                                id: parts[0],
+                                                unite_id: parts[1],
+                                                valeur: parts[2]
+                                            });
+                                        });
 
                                         infrastructures.push({
-                                            localisation_id: null, // à remplir si tu lies à une localité précise
-                                            statut: 'prévu',
-                                            caracteristiques: [
-                                                {
-                                                    id: caract,
-                                                    unite_id: unite,
-                                                    valeur: valeur,
-                                                }
-                                            ]
+                                            libelle: name,
+                                            famille_code: famille,
+                                            localisation_id: null,
+                                            caracteristiques: caracts
                                         });
                                     });
 
+                                    // 📨 Envoi AJAX
                                     $.ajax({
                                         url: '{{ route("projets.temp.save.step2") }}',
                                         method: 'POST',
@@ -1623,19 +1667,28 @@
                                             infrastructures: infrastructures
                                         },
                                         success: function (response) {
-                                            //alert(response.message || "Étape 2 sauvegardée.");
-                                            nextStep();
-                                            //if (typeof callback === "function") callback();
+                                            if (typeof callback === "function") callback();
+                                            else nextStep();
                                         },
                                         error: function (xhr) {
-                                            alert("Erreur lors de la sauvegarde !");
-                                            console.error(xhr.responseText);
+                                            let message = "Une erreur est survenue.";
+
+                                            try {
+                                                const response = JSON.parse(xhr.responseText);
+                                                if (response.message) {
+                                                    message = response.message;
+                                                }
+                                            } catch (e) {
+                                                console.error("Erreur parsing JSON :", e);
+                                                console.warn("Réponse brute :", xhr.responseText);
+                                            }
+
+                                            alert(message);
+                                            console.error("Détail complet :", xhr.responseText);
                                         }
                                     });
                                 }
-
                             </script>
-
                             <div class="step" id="step-3">
                                 <h5 class="text-secondary">🌍 Infrastructures</h5>
                                 <div class="row">
@@ -1850,8 +1903,20 @@
                                             //if (typeof callback === "function") callback();
                                         },
                                         error: function (xhr) {
-                                            alert("Erreur lors de la sauvegarde !");
-                                            console.error(xhr.responseText);
+                                            let message = "Une erreur est survenue.";
+
+                                            try {
+                                                const response = JSON.parse(xhr.responseText);
+                                                if (response.message) {
+                                                    message = response.message;
+                                                }
+                                            } catch (e) {
+                                                console.error("Erreur parsing JSON :", e);
+                                                console.warn("Réponse brute :", xhr.responseText);
+                                            }
+
+                                            alert(message);
+                                            console.error("Détail complet :", xhr.responseText);
                                         }
                                     });
                                 }
@@ -2458,6 +2523,7 @@ async function uploadFile(file, codeProjet) {
     
     let selectedLocalite = {
         id: null,
+        code_rattachement: null,
         libelle: null,
         niveau: null,
         code_decoupage: null,
@@ -2476,7 +2542,11 @@ async function uploadFile(file, codeProjet) {
                 success: function (data) {
                     $("#niveau1Select").empty().append('<option value="">Sélectionnez une localité</option>');
                     $.each(data, function (index, localite) {
-                        $("#niveau1Select").append('<option value="' + localite.id + '">' + localite.libelle + '</option>');
+                        $("#niveau1Select").append(
+                        `<option value="${localite.id}" data-code="${localite.code_rattachement}">
+                            ${localite.libelle}
+                         </option>`
+                    );
                     });
                 }
             });
@@ -2488,11 +2558,12 @@ async function uploadFile(file, codeProjet) {
             const localiteId = lookup.value;
             const selected = lookup.getSelected(); // méthode qu’on a ajoutée dans ton composant
             const localiteText = selected ? selected.text : "";
-
+            const codeRattachement = selected.code || null;;
 
             // Stocker le libellé sélectionné
             selectedLocalite.libelle = localiteText;
             selectedLocalite.id = localiteId;
+            selectedLocalite.code_rattachement = codeRattachement;
 
             if (localiteId) {
                 // Charger le niveau et découpage associés
@@ -2525,7 +2596,8 @@ async function uploadFile(file, codeProjet) {
 
             // Ajouter une ligne dans le tableau avec libellés + identifiants
             const newRow = `
-                <tr data-id="${selectedLocalite.id}">
+                <tr data-id="${selectedLocalite.id}" data-code_rattachement="${selectedLocalite.code_rattachement}">
+                    <td hidden>${selectedLocalite.code_rattachement}</td>
                     <td hidden>${selectedLocalite.id}</td>
                     <td>${selectedLocalite.libelle} </td>
                     <td>${selectedLocalite.niveau}</td>
@@ -2544,6 +2616,7 @@ async function uploadFile(file, codeProjet) {
             selectedLocalite = {
                 id: null,
                 libelle: null,
+                code_rattachement: null,
                 niveau: null,
                 code_decoupage: null,
                 libelle_decoupage: null
@@ -2557,7 +2630,7 @@ async function uploadFile(file, codeProjet) {
     });
     ///////////////////////////INFRASTRUCTURES
  
-    document.getElementById('sousDomaineSelect').addEventListener('change', function() {
+    document.getElementById('domaineSelect').addEventListener('change', function() {
         let codeSousDomaine = this.value;
 
         fetch('{{ url("/") }}/get-familles/' + codeSousDomaine)
@@ -2580,7 +2653,7 @@ async function uploadFile(file, codeProjet) {
 
         // Si rien n’est sélectionné, vide simplement l'autre select
         if (!idType) {
-            document.getElementById('caract').innerHTML = '<option value=""></option>';
+            document.getElementById('tyCaract').innerHTML = '<option value=""></option>';
             return;
         }
 

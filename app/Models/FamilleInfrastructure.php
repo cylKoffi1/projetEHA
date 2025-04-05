@@ -10,7 +10,7 @@ class FamilleInfrastructure extends Model
     use HasFactory;
     public $timestamps = false;
 
-    protected $table = 'FamilleInfrastructure'; 
+    protected $table = 'familleinfrastructure'; 
     protected $primaryKey = 'idFamille';
     protected $fillable = ['code_domaine', 'code_sdomaine', 'libelleFamille'];
     

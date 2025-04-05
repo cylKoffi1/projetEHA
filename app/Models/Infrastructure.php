@@ -17,6 +17,8 @@ class Infrastructure extends Model
         'code',
         'libelle',
         'code_famille_infrastructure',
+        'code_groupe_projet',
+        'code_pays'
     ];
 
     // Relation avec la famille d'infrastructure
