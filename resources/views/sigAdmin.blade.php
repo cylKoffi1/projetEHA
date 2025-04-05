@@ -206,7 +206,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                                     <select class="form-control" id="bailleur">
                                                         <option value="">Select bailleur</option>
                                                         @foreach ($Bailleurs as $Bailleur)
-                                                            <option value="{{ $bailleur->code_acteur }}">{{ $bailleur->libelle_court }} {{ $bailleur->libelle_long }}</option>
+                                                            <option value="{{ $Bailleur->code_acteur }}">{{ $Bailleur->libelle_court }} {{ $Bailleur->libelle_long }}</option>
                                                         @endforeach
                                                     </select>
                                                 </div>
