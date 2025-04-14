@@ -12,8 +12,11 @@ use App\Models\Pays;
 use App\Models\Projet;
 use App\Models\ProjetEha2;
 use App\Models\Acteur;
+use App\Models\Financer;
+use App\Models\LegendeCarte;
 use App\Models\ProjetStatutProjet;
 use App\Models\LocalitesPays;
+use App\Models\ProjetStatut;
 use App\Models\StatutProjet;
 use App\Models\TypeStatut;
 use App\Models\User;
@@ -30,7 +33,7 @@ class sigAdminController extends Controller
         
         $Bailleurs = Acteur::whereHas('bailleurs')->get();
 
-        $statuts = TypeStatut::all();
+        $TypesStatuts = TypeStatut::all();
         // Vérifiez si un pays est sélectionné dans la session
         $paysSelectionne = session('pays_selectionne');
         if (!$paysSelectionne) {
@@ -79,9 +82,46 @@ class sigAdminController extends Controller
                 'decoupage_administratif.libelle_decoupage'
             )
             ->get();
-        return view('sigAdmin', compact('ecran', 'codeZoom', 'niveau', 'codeAlpha3', 'codeGroupeProjet', 'domainesAssocie', 'Bailleurs', 'statuts'));
+        return view('sigAdmin', compact('ecran', 'codeZoom', 'niveau', 'codeAlpha3', 'codeGroupeProjet', 'domainesAssocie', 'Bailleurs', 'TypesStatuts'));
     }
+    public function getByGroupe($groupe)
+    {
+        $typeFin = request()->input('typeFin', 1);
+        $groupeLegende = $typeFin == 2 ? 'COMMUN' : session('projet_selectionne');
 
+        $legende = Legendecarte::where('groupe_projet', $groupeLegende)
+            ->where('typeFin', $typeFin)
+            ->with(['seuils' => function ($query) {
+                $query->orderBy('borneInf');
+            }])
+            ->first();
+            
+        if (!$legende) {
+            return response()->json([
+                'debug' => [
+                    'groupe' => $groupe,
+                    'typeFin' => $typeFin
+                ],
+                'groupe_projet' => $groupe,
+                'label' => 'Aucune légende trouvée',
+                'seuils' => []
+            ]);
+        }
+    
+        return response()->json([
+            'groupe_projet' => $legende->groupe_projet,
+            'label' => $legende->label,
+            'seuils' => $legende->seuils->map(function ($s) {
+                return [
+                    'borneInf' => $s->borneInf,
+                    'borneSup' => $s->borneSup,
+                    'couleur' => $s->couleur
+                ];
+            })->values()
+        ]);
+    }
+    
+    
     public function Autrecarte(Request $request){
         $ecran = Ecran::find($request->input('ecran_id'));
         $user = Auth::user();
@@ -156,11 +196,12 @@ class sigAdminController extends Controller
         ? \Carbon\Carbon::parse($project->date_demarrage_prevue)->format('Y')
         : '0000';
 
-    // Numérotation = à faire évoluer selon les doublons, pour l’instant fixe à "01"
-    $ordre = '01';
+        // Numérotation = à faire évoluer selon les doublons, pour l’instant fixe à "01"
+        $ordre = '01';
 
-    return "{$country}{$groupeEtType}_{$locCode}_{$sousDomaine}_{$annee}_{$ordre}";
-}
+        return "{$country}{$groupeEtType}_{$locCode}_{$sousDomaine}_{$annee}_{$ordre}";
+    }
+
     public function getGeoJsonWithProjectCounts(Request $request)
     {
         $groupeProjetId = session('projet_selectionne');
@@ -200,6 +241,7 @@ class sigAdminController extends Controller
     
         return response()->json($geoJson);
     }
+
     public function getProjects(Request $request)
     {
         $country = session('pays_selectionne');
@@ -226,6 +268,7 @@ class sigAdminController extends Controller
             $results = [];
     
             foreach ($projects as $project) {
+                $cost = $project->cout_projet ?? 0;
                 $codeProjet = $project->code_projet ?: $this->reconstruireCodeProjet($project);
                 $components = $this->decomposerCodeProjet($codeProjet);
                 $locCode = $components['code_localisation'];
@@ -247,7 +290,7 @@ class sigAdminController extends Controller
                 foreach ($levels as $level => $info) {
                     if (!$info['name']) continue;
                     $normName = $this->normalizeName($info['name']);
-    
+
                     if (!isset($results[$normName])) {
                         $results[$normName] = [
                             'name' => $info['name'],
@@ -256,22 +299,26 @@ class sigAdminController extends Controller
                             'count' => 0,
                             'public' => 0,
                             'private' => 0,
+                            'cost' => 0,
                             'byDomain' => []
                         ];
                     }
-    
+
                     $results[$normName]['count']++;
+                    $results[$normName]['cost'] += $cost;
                     $isPublic ? $results[$normName]['public']++ : $results[$normName]['private']++;
-    
+
                     if (!isset($results[$normName]['byDomain'][$domainCode])) {
                         $results[$normName]['byDomain'][$domainCode] = [
                             'count' => 0,
+                            'cost' => 0,
                             'public' => 0,
                             'private' => 0
                         ];
                     }
-    
+
                     $results[$normName]['byDomain'][$domainCode]['count']++;
+                    $results[$normName]['byDomain'][$domainCode]['cost'] += $cost;
                     $isPublic
                         ? $results[$normName]['byDomain'][$domainCode]['public']++
                         : $results[$normName]['byDomain'][$domainCode]['private']++;
@@ -319,7 +366,6 @@ class sigAdminController extends Controller
         }
     }
     
-    
     private function normalizeName($str)
     {
         if (!$str) return '';
@@ -329,8 +375,6 @@ class sigAdminController extends Controller
         return $str;
     }
 
-    
-    
     private function decomposerCodeProjet($codeProjet)
     {
         // Format: CIVTIC2_0101_0000_2024_01
@@ -339,7 +383,7 @@ class sigAdminController extends Controller
         return [
             'pays' => substr($codeProjet, 0, 3), // CIV
             'groupe_projet' => substr($codeProjet, 3, 3), // TIC
-            'type_financement' => substr($codeProjet, 6, 1), // 1 ou 2
+            'type_financement' => substr($codeProjet, 6, 1), // 1 (public) ou 2 (privé)
             'code_localisation' => $parts[1] ?? '0000', // 0101
             'code_domaine' => substr($parts[2] ?? '0000', 0, 2), // 00 (2 premiers caractères)
             'code_sous_domaine' => $parts[2] ?? '0000', // 0000
@@ -347,76 +391,122 @@ class sigAdminController extends Controller
             'ordre' => $parts[4] ?? '01'
         ];
     }
-
-    
-    public function filterMap(Request $request)
+    public function getFiltreOptions(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $status = $request->input('status');
-        $bailleur = $request->input('bailleur');
-        $dateType = $request->input('date_type');
-        
-        // Récupération du pays et groupe projet depuis la session
         $country = session('pays_selectionne');
         $group = session('projet_selectionne');
-        
-        if (!$country || !$group) {
-            return response()->json([
-                'error' => 'Pays ou groupe projet non défini en session'
-            ], 400);
-        }
+        $typeDate = $request->input('date_type');
+        $start = $request->input('start_date');
+        $end = $request->input('end_date');
     
-        // Construction de la requête de base
         $query = Projet::where('code_alpha3_pays', $country)
             ->where('code_projet', 'like', $country . $group . '%');
     
-        // Application des filtres
-        if ($dateType === 'prévisionnelles') {
-            if ($startDate) {
-                $query->where('date_demarrage_prevue', '>=', $startDate);
-            }
-            if ($endDate) {
-                $query->where('date_fin_prevue', '<=', $endDate);
-            }
-        } elseif ($dateType === 'effectives') {
-            if ($startDate) {
-                $query->where('date_demarrage_effective', '>=', $startDate);
-            }
-            if ($endDate) {
-                $query->where('date_fin_effective', '<=', $endDate);
-            }
+        // Appliquer le filtre de date
+        if ($typeDate === 'prévisionnelles') {
+            if ($start) $query->where('date_demarrage_prevue', '>=', $start);
+            if ($end) $query->where('date_fin_prevue', '<=', $end);
+        } else {
+            // Jointure avec les dates effectives
+            $query->whereHas('dateEffective', function ($q) use ($start, $end) {
+                if ($start) $q->where('date_debut_effective', '>=', $start);
+                if ($end) $q->where('date_fin_effective', '<=', $end);
+            });
         }
     
-        if ($bailleur) {
-            $query->whereHas('financements', function($q) use ($bailleur) {
+        $filteredProjects = $query->pluck('code_projet');
+    
+        // Statuts liés à ces projets
+        $statuts = ProjetStatut::whereIn('code_projet', $filteredProjects)->with('statut')->get()
+            ->map(fn($ps) => [
+                'id' => $ps->type_statut,
+                'libelle' => $ps->statut->libelle ?? 'Statut inconnu'
+            ])
+            ->unique('id')
+            ->values();
+    
+        // Bailleurs liés
+        $bailleurs = Financer::whereIn('code_projet', $filteredProjects)->with('acteur')->get()
+            ->map(fn($f) => [
+                'code_acteur' => $f->code_acteur,
+                'nom' => $f->acteur->libelle_court ?? 'Bailleur'
+            ])
+            ->unique('code_acteur')
+            ->values();
+    
+        return response()->json([
+            'bailleurs' => $bailleurs,
+            'statuts' => $statuts
+        ]);
+    }
+     
+    public function getFiltreOptionsEtProjets(Request $request)
+    {
+        $country = session('pays_selectionne');
+        $group = session('projet_selectionne');
+        $start = $request->input('start_date');
+        $end = $request->input('end_date');
+        $type = $request->input('date_type');
+        $bailleur = $request->input('bailleur');
+    
+        $query = Projet::where('code_alpha3_pays', $country)
+            ->where('code_projet', 'like', $country . $group . '%');
+    
+        if ($type === 'prévisionnelles') {
+            if ($start) $query->where('date_demarrage_prevue', '>=', $start);
+            if ($end) $query->where('date_fin_prevue', '<=', $end);
+        } elseif ($type === 'effectives') {
+            $query->whereHas('dateEffective', function ($q) use ($start, $end) {
+                if ($start) $q->where('date_debut_effective', '>=', $start);
+                if ($end) $q->where('date_fin_effective', '<=', $end);
+            });
+        }
+    
+        if ($request->filled('bailleur')) {
+            $query->whereHas('financements', function ($q) use ($request) {
                 $q->where('code_acteur', $bailleur);
             });
         }
-        try {
-            $projects = $query->get()
-                ->map(function($project) {
-                    $typeFinancement = substr($project->code_projet, 6, 1);
-                    $isPublic = $typeFinancement === '1';
-                    $locCode = substr($project->code_projet, 7, 4);
-                    
-                    return [
-                        'code_projet' => $project->code_projet,
-                        'code_sous_domaine' => $project->code_sous_domaine,
-                        'is_public' => $isPublic,
-                        'loc_code' => $locCode
-                    ];
-                });
     
-            return response()->json($projects);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Une erreur est survenue lors du filtrage des projets',
-                'message' => $e->getMessage()
-            ], 500);
+        if ($request->filled('status')) {
+            $query->whereHas('statuts', function ($q) use ($request) {
+                $q->where('type_statut', $request->status);
+            });
         }
+    
+        $filteredProjects = $query->get();
+    
+        $codes = $filteredProjects->pluck('code_projet');
+    
+        // BAILLEURS
+        $bailleurs = Financer::whereIn('code_projet', $codes)
+            ->with('acteur')
+            ->get()
+            ->map(fn($f) => [
+                'code_acteur' => $f->code_acteur,
+                'nom' => $f->acteur->libelle_court ?? 'Bailleur'
+            ])
+            ->unique('code_acteur')
+            ->values();
+    
+        // STATUTS
+        $statuts = ProjetStatut::whereIn('code_projet', $codes)
+            ->with('statut')
+            ->get()
+            ->map(fn($s) => [
+                'id' => $s->type_statut,
+                'libelle' => $s->statut->libelle ?? 'Statut inconnu'
+            ])
+            ->unique('id')
+            ->values();
+    
+        return response()->json([
+            'projets' => $filteredProjects,
+            'bailleurs' => $bailleurs,
+            'statuts' => $statuts
+        ]);
     }
+    
     public function getAllProjects()
     {
         $projects = Projet::with('pays')->get()->map(function ($project) {

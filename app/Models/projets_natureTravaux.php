@@ -17,4 +17,7 @@ class projets_natureTravaux extends Model
         'code_nature',
         'date'
     ];
+    public function natureTravaux(){
+        return $this->belongsTo(NatureTravaux::class, 'code', 'code_nature');
+    }
 }

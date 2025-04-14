@@ -21,12 +21,14 @@ class AdminController extends Controller
     {
         $ecran = Ecran::find(29);
         $ecrans = Ecran::all();
-        $groupeProjet = session('projet_selectionne'); // exemple "TRP"
+        $groupeProjet = session('projet_selectionne'); 
+        $CodePays = session('pays_selectionne');
 
         // Projets
         $totalProjects = DB::table('projets')
             ->whereNotNull('code_projet')
             ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+            ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
             ->count();
 
         $projectStatusCounts = DB::table('projet_statut')
@@ -34,6 +36,7 @@ class AdminController extends Controller
             ->join('projets', 'projets.code_projet', '=', 'projet_statut.code_projet')
             ->whereNotNull('projets.code_projet')
             ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
+            ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
             ->select('type_statut.libelle', DB::raw('count(*) as total'))
             ->groupBy('type_statut.libelle')
             ->pluck('total', 'libelle')
@@ -53,20 +56,45 @@ class AdminController extends Controller
     
         // Acteurs
         $actorsCounts = [
-            'Maîtres d’Ouvrage' => DB::table('posseder')->count(),
-            'Maîtres d’Œuvre' => DB::table('controler')->where('responsabilite', 'MOE')->count(),
-            'Bailleurs' => DB::table('financer')->count(),
-            'Chefs de Projet' => DB::table('controler')->where('responsabilite', 'CP')->count(),
-            'Bénéficiaires' => DB::table('beneficier')->count(),
+            'Maîtres d’Ouvrage' => DB::table('posseder')
+                ->join('projets', 'posseder.code_projet', '=', 'projets.code_projet')
+                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
+                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+                ->count(),
+        
+            'Maîtres d’Œuvre' => DB::table('executer') // ancienne table "controler" => tu peux adapter
+                ->join('projets', 'executer.code_projet', '=', 'projets.code_projet')
+                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
+                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+                ->count(),
+        
+            'Bailleurs' => DB::table('financer')
+                ->join('projets', 'financer.code_projet', '=', 'projets.code_projet')
+                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
+                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+                ->count(),
+        
+            'Chefs de Projet' => DB::table('controler') // si tu as une table spécifique
+                ->join('projets', 'controler.code_projet', '=', 'projets.code_projet')
+                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
+                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+                ->count(),
+        
+            'Bénéficiaires' => DB::table('beneficier')
+                ->join('projets', 'beneficier.code_projet', '=', 'projets.code_projet')
+                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
+                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+                ->count(),
         ];
+        
     
         if (array_sum($actorsCounts) === 0) {
             $actorsCounts = [
-                'Maîtres d’Ouvrage' => 8,
-                'Maîtres d’Œuvre' => 5,
-                'Bailleurs' => 3,
-                'Chefs de Projet' => 6,
-                'Bénéficiaires' => 10,
+                'Maîtres d’Ouvrage' => 0,
+                'Maîtres d’Œuvre' => 0,
+                'Bailleurs' => 0,
+                'Chefs de Projet' => 0,
+                'Bénéficiaires' => 0,
             ];
         }
     
@@ -90,6 +118,7 @@ class AdminController extends Controller
                 WHERE code_projet IS NOT NULL
                 AND LENGTH(code_projet) >= 7
                 AND SUBSTRING(code_projet, 4, 3) = '{$groupeProjet}'
+                AND SUBSTRING(code_projet, 1, 3) = '{$CodePays}'
             ) as p"), 'p.type_financement', '=', 'type_financement.code_type_financement')
             ->groupBy('type_financement.code_type_financement', 'type_financement.libelle')
             ->orderBy('type_financement.code_type_financement')
@@ -102,6 +131,7 @@ class AdminController extends Controller
             ->whereNotNull('code_projet')
             ->where('code_projet', 'like', '%\_%\_%\_%\_%')
             ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+            ->whereRaw("SUBSTRING(code_projet, 1, 3) = ?", [$CodePays])
             ->groupBy('annee')
             ->orderBy('annee')
             ->pluck('total', 'annee')
@@ -109,13 +139,7 @@ class AdminController extends Controller
 
     
     
-        if (empty($projectsParAnnee)) {
-            $projectsParAnnee = [
-                2021 => 12,
-                2022 => 18,
-                2023 => 23,
-            ];
-        }
+        
     
         // Budget mensuel
         $budgetsParAnnee = DB::table('projets')
@@ -123,6 +147,7 @@ class AdminController extends Controller
                 ->whereNotNull('code_projet')
                 ->where('code_projet', 'like', '%\_%\_%\_%\_%')
                 ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+                ->whereRaw("SUBSTRING(code_projet, 1, 3) = ?", [$CodePays])
                 ->groupBy('annee')
                 ->orderBy('annee')
                 ->pluck('total', 'annee')
@@ -131,15 +156,7 @@ class AdminController extends Controller
 
 
     
-        if (empty($budgetsParMois)) {
-            $budgetsParMois = [
-                1 => 1000000,
-                2 => 2000000,
-                3 => 3000000,
-                4 => 2500000,
-                5 => 1500000,
-            ];
-        }
+       
     
         return view('dash', compact(
             'ecran', 'ecrans',

@@ -12,6 +12,7 @@ use App\Models\Taches;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
 
 class GanttController extends Controller
@@ -20,7 +21,14 @@ class GanttController extends Controller
     public function index(Request $request)
     {
         $ecran = Ecran::find($request->input('ecran_id'));
-        $projects = Projet::all();  // Obtenez tous les projets
+        $pays = session('pays_selectionne');
+        $groupe = session('projet_selectionne');
+
+        $projects = Projet::where('code_projet', 'like', $pays . $groupe . '%')
+            ->whereHas('statuts', function ($query) {
+                $query->where('type_statut', 2); 
+            })
+            ->get();  // Obtenez tous les projets
         return view('etudes_projets.plan', compact('projects', 'ecran'));
     }
     // Récupération des tâches et des liens
@@ -28,20 +36,33 @@ class GanttController extends Controller
     {
         try {
             $codeProjet = $request->input('CodeProjet');
-
-            
-
-            // Récupérer les tâches filtrées par CodeProjet
+    
+            // Tâches avec formatage explicite
             $tasks = Taches::where('CodeProjet', $codeProjet)
+                ->whereNotNull('start_date')
                 ->where('is_deleted', 0)
                 ->orderBy('sortorder')
-                ->get();
-
-            // Récupérer les liens (s'il y en a)
+                ->get()
+                ->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'text' => $t->text,
+                        'start_date' => \Carbon\Carbon::parse($t->start_date)->format('Y-m-d H:i:s'),
+                        'duration' => (int) $t->duration,
+                        'progress' => (float) $t->progress,
+                        'parent' => (int) $t->parent,
+                        'sortorder' => (int) $t->sortorder,
+                        'CodeProjet' => $t->CodeProjet,
+                        'type' => $t->type ?? 'task' // Ajouter ici
+                    ];
+                });
+                
+    
+            // Liens inchangés
             $links = Links::where('CodeProjet', $codeProjet)
-                    ->where('is_deleted', 0)
-                    ->get();
-
+                ->where('is_deleted', 0)
+                ->get();
+    
             return response()->json([
                 "data" => $tasks,
                 "links" => $links
@@ -53,79 +74,101 @@ class GanttController extends Controller
             ], 500);
         }
     }
+    
 
+    public function show($id)
+    {
+        $task = Taches::find($id);
+        if (!$task) {
+            return response()->json([
+                "success" => false,
+                "message" => "Tâche introuvable avec l'ID $id"
+            ], 404);
+        }
 
+    }
     // Insertion d'une nouvelle tâche
     public function store(Request $request)
     {
         try {
-            DB::beginTransaction(); // Démarrage d'une transaction
-
+            $request->validate([
+                'text' => 'required|string|max:255',
+                'start_date' => 'required|date',
+                'duration' => 'nullable|integer|min:0',
+                'type' => 'in:task,project,milestone',
+            ]);
+    
+            DB::beginTransaction();
+    
             $task = new Taches();
             $task->text = $request->text;
             $task->start_date = $request->start_date;
-            $task->duration = $request->duration;
+            $task->type = $request->type ?? 'task';
+    
+            $task->duration = ($request->type === 'milestone') ? 0 : $request->duration;
             $task->progress = $request->has("progress") ? $request->progress : 0;
-            $task->parent = $request->parent;
+            $task->parent = $request->parent ?? 0;
             $task->sortorder = Taches::max("sortorder") + 1;
-            $task->CodeProjet = $request->CodeProjet; // Récupération du code projet
-
-
+            $task->CodeProjet = $request->codeProjet;
+    
             $task->save();
-
-            DB::commit(); // Valider la transaction
-
+            DB::commit();
+    
             return response()->json([
                 "action" => "inserted",
                 "tid" => $task->id
             ]);
         } catch (Exception $e) {
-            DB::rollBack(); // Annuler la transaction en cas d'erreur
+            DB::rollBack();
             return response()->json([
                 "error" => "Failed to insert task",
                 "message" => $e->getMessage()
             ], 500);
         }
     }
+    
     // Mise à jour d'une tâche existante
     public function update($id, Request $request)
     {
         try {
-            DB::beginTransaction(); // Démarrage d'une transaction
-
-            $task = Taches::findOrFail($id); // Récupérer la tâche, lancer une erreur si introuvable
-
+            $request->validate([
+                'text' => 'required|string|max:255',
+                'start_date' => 'required|date',
+                'duration' => 'nullable|integer|min:0',
+                'type' => 'in:task,project,milestone',
+            ]);
+    
+            DB::beginTransaction();
+    
+            $task = Taches::findOrFail($id);
             $task->text = $request->text;
             $task->start_date = $request->start_date;
-            $task->duration = $request->duration;
+            $task->type = $request->type ?? 'task';
+            $task->duration = ($request->type === 'milestone') ? 0 : $request->duration;
             $task->progress = $request->has("progress") ? $request->progress : 0;
-            $task->parent = $request->parent;
-
-            // Mettre à jour le CodeProjet
-            if ($request->has("projectSelect")) {
-                $task->CodeProjet = $request->CodeProjet; // Mise à jour du code projet
+            $task->parent = $request->parent ?? 0;
+    
+            if ($request->has("codeProjet")) {
+                $task->CodeProjet = $request->codeProjet;
             }
-
-            // Mise à jour de l'ordre des tâches si nécessaire
+    
             if ($request->has("target")) {
                 $this->updateOrder($id, $request->target);
             }
-
+    
             $task->save();
-
-            DB::commit(); // Valider la transaction
-
-            return response()->json([
-                "action" => "updated"
-            ]);
+            DB::commit();
+    
+            return response()->json(["action" => "updated"]);
         } catch (Exception $e) {
-            DB::rollBack(); // Annuler la transaction en cas d'erreur
+            DB::rollBack();
             return response()->json([
                 "error" => "Failed to update task",
                 "message" => $e->getMessage()
             ], 500);
         }
     }
+    
 
 
     // Suppression d'une tâche
@@ -192,7 +235,7 @@ class GanttController extends Controller
             $link->type = $request->type;
             $link->source = $request->source;
             $link->target = $request->target;
-            $link->CodeProjet = $request->CodeProjet;
+            $link->CodeProjet = $request->codeProjet;
 
             $link->save();
 
@@ -222,8 +265,8 @@ class GanttController extends Controller
             $link->source = $request->source;
             $link->target = $request->target;
             // Mettre à jour le CodeProjet
-            if ($request->has("projectSelect")) {
-                $link->CodeProjet = $request->CodeProjet; // Mise à jour du code projet
+            if ($request->has("codeProjet")) {
+                $link->CodeProjet = $request->codeProjet; // Mise à jour du code projet
             }
             $link->save();
 
@@ -269,13 +312,109 @@ class GanttController extends Controller
 
 
     /////////////////////CALENDRIRER
-    public function getSchedulerData()
+    public function getSchedulerData(Request $request)
     {
-        $events = Taches::select('id', 'text as title', 'start_date', 'duration', 'progress', 'parent')->get();
-
+        $codeProjet = $request->input('CodeProjet');
+    
+        $events = Taches::where('CodeProjet', $codeProjet)
+            ->whereNotNull('start_date')
+            ->where('is_deleted', 0)
+            ->get()
+            ->map(function ($task) {
+                return [
+                    "id" => $task->id,
+                    "text" => $task->text,
+                    "start_date" => Carbon::parse($task->start_date)->format('Y-m-d H:i:s'),
+                    "end_date" => Carbon::parse($task->start_date)->addDays($task->duration)->format('Y-m-d H:i:s'),
+                ];
+            });
+    
         return response()->json([
             "data" => $events
         ]);
     }
+    // Lister tous les événements
+public function indexscheduler(Request $request)
+{
+    $codeProjet = $request->input('CodeProjet');
+
+    $events = Taches::where('CodeProjet', $codeProjet)
+        ->where('is_deleted', 0)
+        ->get()
+        ->map(function ($task) {
+            return [
+                "id" => $task->id,
+                "text" => $task->text,
+                "start_date" => Carbon::parse($task->start_date)->format('Y-m-d H:i:s'),
+                "end_date" => Carbon::parse($task->start_date)->addDays($task->duration)->format('Y-m-d H:i:s'),
+            ];
+        });
+
+    return response()->json($events);
+}
+
+// Créer un événement
+public function storescheduler(Request $request)
+{
+    try {
+        $task = new Taches();
+        $task->text = $request->text;
+        $task->start_date = $request->start_date;
+        $task->type = $request->type ?? 'task';
+        $task->duration = Carbon::parse($request->start_date)->diffInDays(Carbon::parse($request->end_date));
+        $task->CodeProjet = $request->codeProjet ?? 'INCONNU';
+        $task->sortorder = Taches::max("sortorder") + 1;
+        $task->parent = 0;
+        $task->progress = 0;
+        $task->save();
+
+        return response()->json([
+            "action" => "inserted",
+            "tid" => $task->id
+        ]);
+    } catch (Exception $e) {
+        return response()->json(["error" => $e->getMessage()], 500);
+    }
+}
+
+// Lire un événement
+public function showscheduler($id)
+{
+    $task = Taches::find($id);
+    return $task
+        ? response()->json($task)
+        : response()->json(["error" => "Événement introuvable"], 404);
+}
+
+// Mettre à jour un événement
+public function updatescheduler(Request $request, $id)
+{
+    try {
+        $task = Taches::findOrFail($id);
+        $task->text = $request->text;
+        $task->start_date = $request->start_date;
+        $task->duration = Carbon::parse($request->start_date)->diffInDays(Carbon::parse($request->end_date));
+        $task->save();
+
+        return response()->json(["action" => "updated"]);
+    } catch (Exception $e) {
+        return response()->json(["error" => $e->getMessage()], 500);
+    }
+}
+
+// Supprimer un événement
+public function destroyscheduler($id)
+{
+    try {
+        $task = Taches::findOrFail($id);
+        $task->is_deleted = 1;
+        $task->save();
+
+        return response()->json(["action" => "deleted"]);
+    } catch (Exception $e) {
+        return response()->json(["error" => $e->getMessage()], 500);
+    }
+}
+
 
 }

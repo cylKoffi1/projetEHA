@@ -17,4 +17,9 @@ class Profiter extends Model
         'code_pays',
         'code_rattachement'
     ];
+    public function localite()
+{
+    return $this->belongsTo(Localite::class, 'code_rattachement', 'code');
+}
+
 }

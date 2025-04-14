@@ -25500,7 +25500,7 @@ var statesDataLevel1 ={
                 "GID_1": "CIV.11_1",
                 "GID_0": "CIV",
                 "COUNTRY": "Côted'Ivoire",
-                "NAME_1": "ValléeduBandama",
+                "NAME_1": "Vallée du Bandama",
                 "VARNAME_1": "NA",
                 "NL_NAME_1": "NA",
                 "TYPE_1": "District",

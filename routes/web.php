@@ -20,7 +20,6 @@ use App\Http\Controllers\GanttController;
 use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\SigController;
-use App\Http\Controllers\GeoJSONController;
 use App\Http\Controllers\Naissance;
 use App\Http\Controllers\ParGeneraux\FonctionTypeActeurController;
 use App\Http\Controllers\ParGeneraux\GroupProjectPermissionsController;
@@ -29,12 +28,12 @@ use App\Http\Controllers\ParGeneraux\TypeActeurController;
 use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\pibController;
 use App\Http\Controllers\ProjectStatusController;
+use App\Http\Controllers\ProjetValidationController;
 use App\Http\Controllers\RealiseProjetController;
 use App\Http\Controllers\representationGraphique;
 use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
-use App\Http\Controllers\WorkflowValidationController;
 use App\Models\Domaine;
 use App\Models\EtudeProject;
 use App\Models\Renforcement;
@@ -359,10 +358,15 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
 
         /***********************VALIDATION***************** */
 
-            Route::get('admin/validationProjet', [EtudeProjet::class, 'validation'])->name('projects.validate');
+            Route::get('admin/validationProjetss', [EtudeProjet::class, 'validation'])->name('projects.validate');
             Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
             Route::post('/planning/{id}/approve', [EtudeProjet::class, 'approve'])->name('projects.approve');
-
+           
+            Route::get('admin/validationProjet', [ProjetValidationController::class, 'index'])->name('projets.validation.index');
+            Route::get('/projets/validation/{codeProjet}', [ProjetValidationController::class, 'show'])->name('projets.validation.show');
+            
+            Route::post('/projets/validation/{codeProjet}/valider', [ProjetValidationController::class, 'valider'])->name('projets.validation.valider');
+            Route::post('/projets/validation/{codeProjet}/refuser', [ProjetValidationController::class, 'refuser'])->name('projets.validation.refuser');
         /************************SUIVRE APPROBATION************* */
             Route::get('admin/Svapprob', [EtudeProjet::class, 'suivreApp']);
         /************************Historique approbation ************* */
@@ -451,9 +455,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     //***************** GESTION SIG ************* */
     Route::get('admin/carte', [sigAdminController::class, 'carte']);
     Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
-
-    Route::get('/filter-map', [GeoJSONController::class, 'filter'])->name('filter.map');
-
+    Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
 
     Route::get('/get-projet-data', 'ProjetController@getProjetData');
 
@@ -540,8 +542,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
 
 
 
-
-    Route::get('/admin/validationProjet', [WorkflowValidationController::class, 'afficherValidation'])->name('workflow');
 
     Route::get('/notifications', function () {
         return view('notifications');
@@ -682,9 +682,6 @@ Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middl
 //Routes changer de mot de passe accueil
 
 //génération du code geojson
-Route::get('/sig', [GeoJSONController::class, 'showSIG'])->name('carte.sig');
-Route::get('/filter-maps', [GeoJSONController::class, 'filter'])->name('filter.maps');
-Route::get('/filtered-data', [GeoJSONController::class, 'showFilteredData'])->name('filtered.data');
 Route::get('/test', [AdminController::class, 'test']);
 
 // routes/web.php

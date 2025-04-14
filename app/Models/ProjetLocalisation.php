@@ -25,4 +25,11 @@ class ProjetLocalisation extends Model
     {
         return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
     }
+    public function localite()
+    {
+        return $this->hasOne(LocalitesPays::class, 'code_rattachement', 'code_localite')
+                    ->where('id_pays', session('pays_selectionne'));
+    }
+    
+
 }

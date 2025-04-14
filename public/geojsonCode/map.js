@@ -42,6 +42,8 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         dragging: true
     });
 
+    window.currentMapMode = 'count';
+    
     // Ajustement pour centrer la carte
     map.panBy([20, 0]);
 
@@ -53,7 +55,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     // Variables d'état
     var currentLayers = {}; // Couches GeoJSON par niveau
     var selectedLevels = {}; // Niveaux sélectionnés
-    var projectData = {}; // Données des projets organisées par localité
+    window.projectData = {}; // ✅ portée globale
     var maxLevels = 3; // Nombre maximal de niveaux à afficher
 
     // Initialisation pour le Mali
@@ -114,8 +116,8 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 if (!name) continue;
     
                 const key = normalized(name);
-                if (projectData[key]) {
-                    data[l] = projectData[key];
+                if (window.projectData[key]) {
+                    data[l] = window.projectData[key];
                 }
             }
             return data;
@@ -181,7 +183,8 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                     ${domainRows}
                     <tr>
                         <th style="border: 1px solid black; text-align: right;">Total</th>
-                        <td style="border: 1px solid black; text-align: center;">${totalProjects}</td>
+                        <td style="border: 1px solid black; text-align: center;">${formatWithSpaces(totalProjects)}</td>
+
                         ${Array.from({ length: maxLevels }, (_, i) => {
                             const levelData = localityDataByLevel[i + 1];
                             return `
@@ -198,8 +201,56 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
 
     info.addTo(map);
 
+    function createDynamicLegend(map, groupeCode) {
+        // La légende dépend uniquement du type de métrique (coût ou nombre)
+        const metric = window.currentMapMetric || 'count';
+    
+        let typeFin;
+        if (metric === 'cost') {
+            typeFin = 2; // 2 = légende pour le financement
+        } else {
+            typeFin = 1; // 1 = légende pour le nombre de projets
+        }
+    
+        fetch(`/api/legende/${groupeCode}?typeFin=${typeFin}`)
+            .then(response => response.json())
+            .then(data => {
+                window.customLegend = data.seuils;
+    
+                // Supprimer l'ancienne légende si elle existe
+                if (window.currentLegendControl) {
+                    map.removeControl(window.currentLegendControl);
+                }
+    
+                const legend = L.control({ position: 'bottomright' });
+    
+                legend.onAdd = function (map) {
+                    const div = L.DomUtil.create('div', 'info legend');
+                    const labels = [`<h4>LÉGENDE</h4><p>${data.label}</p>`];
+    
+                    data.seuils.forEach(({ borneInf, borneSup, couleur }) => {
+                        labels.push(
+                            `<i style="background:${couleur}; opacity: 0.7;"></i> ${borneInf}${borneSup ? `–${borneSup}` : '+'}`
+                        );
+                    });
+    
+                    div.innerHTML = labels.join('<br>');
+                    return div;
+                };
+    
+                legend.addTo(map);
+                window.currentLegendControl = legend;
+            })
+            .catch(err => {
+                console.error('Erreur chargement légende dynamique :', err);
+            });
+    }
+    
+    
+    
+    createDynamicLegend(map, codeGroupeProjet);
     // Légende
-    var legend = L.control({ position: 'bottomright' });
+    /*var legend = L.control({ position: 'bottomright' });
 
     legend.onAdd = function(map) {
         var div = L.DomUtil.create('div', 'info legend');
@@ -220,12 +271,12 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         return div;
     };
 
-    legend.addTo(map);
+    legend.addTo(map);*/
 
     // Chargement des données des projets
     loadProjectData(countryAlpha3Code, codeGroupeProjet)
         .then(data => {
-            projectData = processProjectData(data);
+            window.projectData = processProjectData(data);
             loadGeoJsonLevel(1); // Charger le premier niveau
         })
         .catch(error => console.error('Error loading project data:', error));
@@ -256,21 +307,26 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     // Traitement des données des projets
     function processProjectData(projects) {
         const data = {};
-
+    
         projects.forEach(project => {
             const key = normalized(project.name);
             data[key] = {
                 name: project.name,
                 code: project.code,
                 count: project.count,
+                cost: project.cost,
                 public: project.public,
                 private: project.private,
                 byDomain: project.byDomain
             };
         });
-
+    
+        window.projectData = data; // ✅ mise à jour directe
         return data;
     }
+    
+    window.processProjectData = processProjectData;
+
 
     
     
@@ -286,8 +342,8 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             if (!name) continue;
     
             const key = normalized(name);
-            if (projectData[key]) {
-                dataByLevel[l] = projectData[key];
+            if (window.projectData[key]) {
+                dataByLevel[l] = window.projectData[key];
             }
         }
         return dataByLevel;
@@ -379,18 +435,36 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     }
 
     // Style des features
+
     function getFeatureStyle(feature, level) {
         const regionName = feature.properties[countryProps[level]?.name];
-        const projectCount = findProjectCountByRegionName(regionName);
-        console.log('regionName', regionName);
-        console.log('projectCount', projectCount);
-        let fillColor;
-        if (projectCount === 0) {
-            fillColor = '#c7bda3';
-        } else {
-            fillColor = colorScale(projectCount).hex();
-        }
         
+        // Utilisation du double paramètre (métrique + filtre)
+        const metric = window.currentMapMetric || 'count';   // 'count' ou 'cost'
+        const filter = window.currentMapFilter || 'cumul';   // 'public', 'private', 'cumul'
+    
+        const value = findProjectStatByRegionName(regionName, metric, filter);
+    
+        let fillColor = '#c7bda3'; // Couleur par défaut si aucun match
+    
+        if (value > 0 && customLegend.length > 0) {
+            const found = customLegend.find(({ borneInf, borneSup }) => {
+                if (borneInf !== null && borneInf !== undefined &&
+                    (borneSup === null || borneSup === undefined)) {
+                    return value >= borneInf;
+                } else if (borneInf !== null && borneSup !== null) {
+                    return value >= borneInf && value <= borneSup;
+                }
+                return false;
+            });
+    
+            if (found) {
+                fillColor = found.couleur;
+            } else {
+                fillColor = '#ff0000'; // fallback rouge si aucun seuil trouvé
+            }
+        }
+    
         return {
             weight: 1,
             opacity: 1,
@@ -400,25 +474,68 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         };
     }
     
+    
+
+    
+    
     // Modifiez findProjectCountByRegionName pour plus de robustesse
-    function findProjectCountByRegionName(regionName) {
-        if (!projectData || !regionName) return 0;
-
+    function findProjectStatByRegionName(regionName, metric = 'count', filter = 'cumul') {
+        if (!window.projectData || !regionName) return 0;
+    
         const normName = normalized(regionName);
-
-        if (projectData[normName]) {
-            return projectData[normName].count;
-        }
-
-        // Fallback : match partiel si pas trouvé
-        for (const [key, value] of Object.entries(projectData)) {
-            if (normName.includes(key) || key.includes(normName)) {
-                return value.count;
-            }
-        }
-
+        const stats = window.projectData[normName];
+        if (!stats) return 0;
+    
+        const source = filter === 'public' ? stats.public :
+                      filter === 'private' ? stats.private :
+                      (stats.public || 0) + (stats.private || 0); // cumul
+    
+        if (metric === 'count') return source || 0;
+        if (metric === 'cost') return ((stats.cost || 0) * (source / stats.count || 1)) / 1_000_000_000;
+    
         return 0;
     }
+    
+    function formatWithSpaces(number) {
+        return Number(number).toLocaleString('fr-FR');
+    }
+        
+    
+    
+    
+    function reloadMapWithNewStyle() {
+        if (!window.projectData || Object.keys(window.projectData).length === 0) {
+            console.warn("❗ Aucun projet à afficher.");
+            return;
+        }
+        for (let l = 1; l <= maxLevels; l++) {
+            if (currentLayers[l]) {
+                currentLayers[l].eachLayer(layer => {
+                    const feature = layer.feature;
+                    const newStyle = getFeatureStyle(feature, l);
+                    layer.setStyle(newStyle);
+    
+                    const regionName = feature.properties[countryProps[l]?.name];
+                    const statValue =  findProjectStatByRegionName(regionName, window.currentMapMetric, window.currentMapFilter);
+
+                    const value = window.currentMapMode === 'cost'
+                        ? `${formatWithSpaces(statValue * 1_000_000_000)} `
+                        : statValue;
+
+                    layer.bindTooltip(`
+                        <b>${regionName}</b><br>
+                        ${window.currentMapMode === 'count' ? 'Projets' : 'Montant'} : ${value}
+                    `);         
+                });
+            }
+        }
+    
+        createDynamicLegend(map, window.codeGroupeProjet); // ✅ Ajout ici
+        info.update(domainesAssocie, niveau);
+    }
+    
+    window.reloadMapWithNewStyle = reloadMapWithNewStyle;
+    console.log(window.window.projectData)
 
     
 
@@ -426,7 +543,9 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     function onEachFeature(feature, layer, level) {
         feature.properties.level = level;
         const regionName = feature.properties[countryProps[level]?.name];
-        const projectCount = findProjectCountByRegionName(regionName);
+        const statValue = findProjectStatByRegionName(regionName, window.currentMapMetric, window.currentMapFilter);
+
+
     
         layer.on({
             click: e => {
@@ -438,13 +557,16 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             mouseout: resetHighlight
         });
         
-        
-        console.log("Nom brut:", regionName, "| Normalisé:", normalized(regionName), "| Projects:", projectCount);
+        const value = window.currentMapMode === 'cost'
+        ? `${formatWithSpaces(statValue * 1_000_000_000)}`
+        : statValue;
     
         layer.bindTooltip(`
             <b>${regionName}</b><br>
-            Projets: ${projectCount}
+            ${window.currentMapMode === 'count' ? 'Projets' : 'Montant'}: ${value}
         `);
+    
+        
     }
     
 

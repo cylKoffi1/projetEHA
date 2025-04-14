@@ -1,35 +1,5 @@
 @extends('layouts.app')
-<style>
-    .file-card {
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        margin-bottom: 15px;
-        position: relative;
-        width: 150px;
-        height: 150px;
-    }
-    .file-card img {
-        max-width: 100px;
-        max-height: 100px;
-    }
-    .file-card .file-name {
-        margin-top: 100px;
-        font-size: 12px;
-    }
-    .file-card .upload-icon {
-        position: absolute;
-        top: 10px;
-        right: 22px;
-        font-size: 24px;
-        cursor: pointer;
-    }
-    #file-display {
-        display: flex;
-        flex-wrap: wrap;
-    }
-</style>
+
 @section('content')
 
 @if (session('success'))
@@ -76,7 +46,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title">Historique des approbations </h5>
+                <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Historique des approbations</h5>
+            
             </div>
 
             @if (session('success'))
@@ -91,28 +62,60 @@
                 </div>
             @endif
             <div class="card-content">
-                <div class="col-12">
-                    <div class="container">
-                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
-                            <thead>
-                                <tr>
-                                    <th>Code Projet</th>
-                                    <th>Nature des Travaux</th>
-                                    <th>Approuvé par</th>
-                                    <th>Date d'Approbation</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($approvalHistory as $approval)
-                                    <tr>
-                                        <td>{{ $approval->codeEtudeProjets }}</td>
-                                        <td>{{ $approval->natureTravaux }}</td>
-                                        <td>{{ $approval->nom }} {{ $approval->prenom }}</td> <!-- Affichage de l'approbateur -->
-                                        <td>{{ $approval->approved_at }}</td> <!-- Date d'approbation -->
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                <div class="col-12 mt-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title">Liste des projets approuvés ou refusés</h5>
+                        </div>
+
+                        <div class="card-body">
+                            @if (session('success'))
+                                <div class="alert alert-success">{{ session('success') }}</div>
+                            @endif
+
+                            @if (session('error'))
+                                <div class="alert alert-danger">{{ session('error') }}</div>
+                            @endif
+
+                            <div class="table">
+                                <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
+                                    <thead >
+                                        <tr>
+                                            <th>Projet</th>
+                                            <th>Nature des travaux</th>
+                                            <th>Approbateur</th>
+                                            <th>Statut</th>
+                                            <th>Date d'action</th>
+                                            <th>Commentaire</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($approvalHistory as $approval)
+                                            <tr>
+                                                <td>{{ $approval->etude->projet->code_projet ?? '—' }}</td>
+                                                <td>{{ $approval->etude?->projet?->projetNaturesTravaux?->natureTravaux?->libelle ?? '—' }}</td>
+                                                <td>{{ $approval->approbateur->acteur->libelle_court ?? '—' }} {{ $approval->approbateur->acteur->libelle_long ?? '—' }}</td>
+                                                <td>
+                                                    <span class="badge 
+                                                        @if($approval->statut_validation_id == 2) bg-success
+                                                        @elseif($approval->statut_validation_id == 3) bg-danger
+                                                        @else bg-secondary @endif">
+                                                        {{ $approval->statutValidation->libelle ?? '—' }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ \Carbon\Carbon::parse($approval->approved_at)->format('d/m/Y H:i') }}</td>
+                                                <td class="text-muted">{{ $approval->commentaire_refus ?? '—' }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">Aucun historique trouvé.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,9 +123,10 @@
         </div>
     </div>
 </section>
+
 <script>
         $(document).ready(function() {
-            initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'table1', 'Suivit des projets approuvés');
+            initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Suivit des projets approuvés');
         });
 </script>
 @endsection

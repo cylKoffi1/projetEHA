@@ -8,14 +8,14 @@ class ProjetStatut extends Model
 {
     protected $table = 'projet_statut';
     public $timestamps = true;
+    protected $primaryKey = 'id'; 
     protected $fillable = [
         'code_projet',
         'type_statut',
         'date_statut',
     ];
-    protected $primaryKey = 'id'; // Specify the primary key column
     public function statut()
     {
-        return $this->hasOne(TypeStatut::class, 'id', 'id');
+        return $this->hasOne(TypeStatut::class, 'id', 'type_statut');
     }
 }

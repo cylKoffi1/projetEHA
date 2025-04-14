@@ -61,6 +61,13 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
     {
         return $this->hasMany(GroupeProjetPaysUser::class, 'user_id', 'acteur_id');
     }
+    /**
+     * Relation avec la table `approbateur`.
+     */
+    public function approbateur()
+    {
+        return $this->belongsTo(Approbateur::class, 'code_acteur', 'acteur_id');
+    }
 
     /**
      * Récupère les pays associés à l'utilisateur.

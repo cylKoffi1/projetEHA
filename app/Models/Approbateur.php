@@ -13,18 +13,11 @@ class Approbateur extends Model
 
     protected $table = 'approbateur';
     protected $primaryKey = 'codeAppro';
-    protected $fillable = ['code_personnel', 'numOrdre', 'codeStructure'];
+    protected $fillable = ['code_acteur', 'numOrdre'];
 
-    public function Personnel()
+    public function Acteur()
     {
-        return $this->belongsTo(Personnel::class, 'code_personnel', 'code_personnel');
+        return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
     }
-    public function structure(){
-        return $this->belongsTo(StructureRattachement::class, 'code_personnel','code_personnel');
-    }
-    public function projectApprovals()
-{
-    return $this->hasMany(ProjectApproval::class, 'codeAppro', 'codeAppro');
-}
-
+      
 }

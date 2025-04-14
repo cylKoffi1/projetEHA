@@ -22,6 +22,26 @@ class ProjetActionAMener extends Model
         'Infrastrucrues_id',
     ];
 
+    public function beneficiairesActeurs()
+    {
+        return $this->hasMany(Beneficier::class, 'code_projet', 'code_projet');
+    }
 
+    public function beneficiairesLocalites()
+    {
+        return $this->hasMany(Profiter::class, 'code_projet', 'code_projet');
+    }
+
+    public function beneficiairesInfrastructures()
+    {
+        return $this->hasMany(Jouir::class, 'code_projet', 'code_projet');
+    }
+    public function beneficiaires()
+    {
+        return collect()
+            ->merge($this->beneficiairesActeurs)
+            ->merge($this->beneficiairesLocalites)
+            ->merge($this->beneficiairesInfrastructures);
+    }
 
 }

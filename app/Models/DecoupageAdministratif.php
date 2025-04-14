@@ -12,7 +12,7 @@ class DecoupageAdministratif extends Model
     protected $table = 'decoupage_administratif';
     protected $fillable = ['code_decoupage', 'libelle_decoupage'];
 
-    public function localites()
+    public function localitesDecoup()
     {
         return $this->hasMany(LocalitesPays::class, 'code_decoupage', 'code_decoupage');
     }

@@ -56,6 +56,7 @@ use App\Models\Beneficier;
 use App\Models\Executer;
 use App\Models\Financer;
 use App\Models\Posseder;
+use App\Models\ProjetApprobation;
 use App\Models\ProjetDocument;
 use App\Models\projets_natureTravaux;
 use App\Models\ProjetStatut;
@@ -967,7 +968,7 @@ class EtudeProjet extends Controller
             }
 
             // Récupérer l'approbateur actuel
-            $approver = Approbateur::where('code_personnel', $user->approbateur->code_personnel)->first();
+            $approver = Approbateur::where('code_acteur', $user->approbateur->code_acteur)->first();
 
             // Vérifier que l'approbateur existe
             if (!$approver) {
@@ -975,19 +976,10 @@ class EtudeProjet extends Controller
             }
 
             // Récupérer les projets qui n'ont pas encore été approuvés par l'approbateur ou qui ont été approuvés par un approbateur précédent
-            $projects = EtudeProject::select('etudeprojects.*')
-            ->where('etudeprojects.is_deleted', 0)
-            ->whereNotExists(function($query) use ($approver) {
-                // Sous-requête pour vérifier si l'approbateur actuel a déjà approuvé le projet
-                $query->select(DB::raw(1))
-                    ->from('project_approbation as pa')
-                    ->whereColumn('pa.codeEtudeProjets', 'etudeprojects.codeEtudeProjets') // Assure que nous comparons les bonnes colonnes
-                    ->where('pa.codeAppro', $approver->codeAppro)
-                    ->where('pa.is_approved', true);
-            })
+            $projects = EtudeProject::where('valider', 0)
             ->get();
-
-            return view('etudes_projets.validation', compact('ecran',  'projects'));
+            
+            return view('etudes_projets.validations', compact('ecran',  'projects'));
         }
 
         public function suivreApp(Request $request){
@@ -1005,18 +997,25 @@ class EtudeProjet extends Controller
         }
         public function historiqueApp(Request $request)
         {
-            $ecran = Ecran::find($request->input('ecran_id'));
-            // Récupérer tous les projets approuvés avec les approbations
-            $approvalHistory = ProjectApproval::select('project_approbation.*', 'etudeprojects.natureTravaux', 'pers.nom', 'pers.prenom')
-                ->join('etudeprojects', 'project_approbation.codeEtudeProjets', '=', 'etudeprojects.codeEtudeProjets')
-                ->join('approbateur as app', 'project_approbation.codeAppro', '=', 'app.code_acteur')
-                ->join('personnel as pers', 'app.code_acteur', '=', 'pers.code_personnel')
-                ->where('project_approbation.is_approved', true) // Filtre pour les approbations
-                ->orderBy('project_approbation.approved_at', 'desc') // Trier par date d'approbation
+            try {
+                $approvalHistory = ProjetApprobation::with([
+                    'etude',
+                    'etude.projet',
+                    'approbateur.acteur',
+                    'statutValidation'
+                ])
+                ->whereIn('statut_validation_id', [2, 3]) // Validé ou refusé
+                ->orderByDesc('approved_at')
                 ->get();
-
-            return view('etudes_projets.historiqueApp', compact('ecran','approvalHistory'));
+        
+                return view('etudes_projets.historiqueApp', compact('approvalHistory'));
+        
+            } catch (Exception $e) {
+                Log::error("Erreur chargement historique approbation : " . $e->getMessage());
+                return back()->with('error', 'Impossible de charger l’historique des validations.');
+            }
         }
+        
         // Afficher les détails du projet
         public function show($codeEtudeProjets)
         {

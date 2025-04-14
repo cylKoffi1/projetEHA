@@ -10,5 +10,5 @@ class ValidationStatut extends Model
     use HasFactory;
 
     protected $table = 'validation_statuts';
-    protected $fillable = ['libelle'];
+    protected $fillable = ['id', 'libelle'];
 }

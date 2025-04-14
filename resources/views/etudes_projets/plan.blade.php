@@ -1,19 +1,52 @@
 @extends('layouts.app')
 
 <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
-<script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+
 <script src="https://docs.dhtmlx.com/gantt/codebase/dhtmlxgantt.js?v=9.0.3"></script>
     <!-- DHTMLX Scheduler -->
 <link rel="stylesheet" href="https://cdn.dhtmlx.com/scheduler/edge/dhtmlxscheduler.css">
 <script src="https://cdn.dhtmlx.com/scheduler/edge/dhtmlxscheduler.js"></script>
+<script src="https://cdn.dhtmlx.com/scheduler/edge/dataprocessor.js"></script>
 
 <!-- jQuery (nécessaire pour Bootstrap) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
+<script src="https://export.dhtmlx.com/gantt/api.js"></script>
 <!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<style>
+    .gantt_task_line.project {
+        background: linear-gradient(to right, #007bff, #339af0);
+        border: 1px solid #0056b3;
+    }
+
+    .gantt_task_line.task {
+        background: #28a745;
+        border: 1px solid #1e7e34;
+    }
+
+    .gantt_task_line.milestone {
+        background: #ffc107;
+        border: 1px solid #e0a800;
+    }
+
+    .gantt_task_progress {
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .zoom-controls {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .zoom-controls button {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+</style>
 
     <style>
 
@@ -28,16 +61,17 @@
             visibility: none !important;
 
         }
+        #gantt_here .gantt_task {
+            overflow-x: auto !important;
+        }
+        .gantt_layout_cell {
+            overflow-x: hidden !important;
+        }
         .active-view {
             display: block !important;
         }
         .gantt_grid_data .gantt_cell {
             border-right: 1px solid blue;
-        }
-        .gantt_grid_data .gantt_cell {
-            border-right: 1px dashed gray;
-        }
-        .gantt_grid_data .gantt_cell {
             height: 40px;
         }
         #ganttInfoModal .modal-header {
@@ -122,29 +156,13 @@
                             <select id="projectSelect" class="form-select" name="projectSelect">
                                 <option value="">-- Sélectionner un projet --</option>
                                 @foreach ($projects as $project)
-                                        <option value="{{ $project->CodeProjet }}">{{ $project->CodeProjet }}</option>
+                                        <option value="{{ $project->code_projet }}">{{ $project->code_projet }}</option>
                                     @endforeach
                                 </select>
 
                             <br>
                         </div>
-                        <div class="col-2">
-                            <div id="controls" style="display: block;">
-                                <label for="scale_select">Période :</label>
-                                <select id="scale_select" class="form-control">
-                                    <option value="day">Jour</option>
-                                    <option value="week">Semaine</option>
-                                    <option value="month">Mois</option>
-                                    <option value="quarter">Trimestre</option>
-                                    <option value="year">Année</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div id="controls" style="display: block;">
-                                <label for="scale_select">Echelle :</label>
-                            </div>
-                        </div>
+                        
                         <div class="col-3"></div>
                         <div class="col-2 d-flex flex-column">
                             <label class="text-start" for="viewSelect">Vue :</label>
@@ -162,6 +180,29 @@
 
                     <!-- Conteneur du Gantt -->
                     <div id="gantt_here" class="active-view"></div>
+                    <div class="zoom-controls">
+                        <button onclick="zoomIn()" class="btn btn-sm btn-outline-primary">🔍 Zoom +</button>
+                        <button onclick="zoomOut()" class="btn btn-sm btn-outline-secondary">🔎 Zoom -</button>
+                        <button onclick="zoomToFit()" class="btn btn-sm btn-outline-warning">🧭 Ajuster la vue</button>
+                        <button onclick="resetZoom()" class="btn btn-sm btn-outline-dark">↺ Réinitialiser</button>
+                  
+                    </div>
+                   
+                    <div id="task_table_view" class="mt-3" style="display: none;">
+                        <table class="table table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tâche</th>
+                                    <th>Début</th>
+                                    <th>Durée</th>
+                                    <th>Progression</th>
+                                </tr>
+                            </thead>
+                            <tbody id="task_table_body"></tbody>
+                        </table>
+                    </div>
+
                     <!-- Modal Explicatif -->
                     <div class="modal fade" id="ganttHelpModal" tabindex="-1" role="dialog" aria-labelledby="ganttHelpModalLabel" aria-hidden="true" style="background: transparent;">
                         <div class="modal-dialog modal-lg" role="document" >
@@ -285,6 +326,118 @@ $(document).ready(function() {
     }
 });
 
+
+function zoomToFit() {
+    var project = gantt.getSubtaskDates();
+    if (!project.start_date || !project.end_date) {
+        gantt.message({ type: "warning", text: "Aucune tâche trouvée à afficher." });
+        return;
+    }
+
+    var areaWidth = document.getElementById("gantt_here").offsetWidth;
+    var availableWidth = areaWidth - gantt.config.grid_width;
+
+    const scaleConfigs = [
+        {
+            name: "hour",
+            min_column_width: 80,
+            scales: [
+                { unit: "hour", step: 1, format: "%H:%i" },
+                { unit: "day", step: 1, format: "%d %M" }
+            ]
+        },
+        {
+            name: "day",
+            min_column_width: 40,
+            scales: [
+                { unit: "day", step: 1, format: "%d %M" }
+            ]
+        },
+        {
+            name: "week",
+            min_column_width: 50,
+            scales: [
+                { unit: "week", step: 1, format: "Semaine #%W" },
+                { unit: "day", step: 1, format: "%d %M" }
+            ]
+        },
+        {
+            name: "month",
+            min_column_width: 60,
+            scales: [
+                { unit: "month", step: 1, format: "%F %Y" },
+                { unit: "week", step: 1, format: "S%W" }
+            ]
+        },
+        {
+            name: "year",
+            min_column_width: 60,
+            scales: [
+                { unit: "year", step: 1, format: "%Y" },
+                { unit: "month", step: 1, format: "%M" }
+            ]
+        },
+        {
+            name: "decade", // Ajout custom
+            min_column_width: 80,
+            scales: [
+                {
+                    unit: "year", step: 10,
+                    format: function(date) {
+                        let start = Math.floor(date.getFullYear() / 10) * 10;
+                        return `Années ${start}s`;
+                    }
+                },
+                { unit: "year", step: 1, format: "%Y" }
+            ]
+        }
+    ];
+
+    // Durée du projet en jours
+    var totalDurationInDays = Math.ceil((project.end_date - project.start_date) / (1000 * 60 * 60 * 24));
+
+    for (let config of scaleConfigs) {
+        const columnsNeeded = Math.ceil(totalDurationInDays / (getDaysPerColumn(config.scales[0]) || 1));
+        const neededWidth = columnsNeeded * config.min_column_width;
+
+        if (neededWidth <= availableWidth || config.name === "decade") {
+            gantt.config.scales = config.scales;
+            gantt.render();
+            break;
+        }
+    }
+
+    function getDaysPerColumn(scale) {
+        if (scale.unit === "hour") return 1 / 24;
+        if (scale.unit === "day") return 1;
+        if (scale.unit === "week") return 7;
+        if (scale.unit === "month") return 30;
+        if (scale.unit === "year") return 365;
+        return 1;
+    }
+}
+
+
+
+
+function renderTaskTable() {
+    const tbody = document.getElementById("task_table_body");
+    tbody.innerHTML = "";
+
+    gantt.eachTask(function (task) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${task.id}</td>
+            <td>${task.text}</td>
+            <td>${gantt.templates.date_grid(task.start_date)}</td>
+            <td>${task.duration}</td>
+            <td>${Math.round((task.progress || 0) * 100)}%</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+
 </script>
     <script type="text/javascript">
         function initGantt(){
@@ -293,14 +446,22 @@ $(document).ready(function() {
             gantt.config.columns = [
                 {name: "text", label: "Tâche", tree: true, width: "*", min_width: 120, resize: true},
                 {name: "start_date", label: "Début", align: "center",  resize: true},
-                {name: "end_date", label: "Fin", align: "center", width: 100, resize: true , template: function(task) {
-                    var endDate = gantt.calculateEndDate(task.start_date, task.duration);
-                    return gantt.templates.date_grid(endDate);
-                }},
+                {name: "end_date", label: "Fin", align: "center", width: 100, resize: true ,
+                    template: function(task) {
+                        if (!(task.start_date instanceof Date) || isNaN(task.start_date.getTime())) {
+                            return "Date invalide";
+                        }
+                        var endDate = gantt.calculateEndDate(task.start_date, task.duration || 0);
+                        return gantt.templates.date_grid(endDate);
+                    }
+                },
                 {name: "duration", label: "Durée", align: "center", width: 70, resize: true},
                 {name: "add", label: "", width: 40}
             ];
             gantt.config.scale_height = 50;
+            gantt.eachTask(function(task){
+                    console.log("TASK DEBUG", task.id, task.text, task.start_date);
+                });
 
             gantt.config.types["customType"] = "type_id";
             gantt.locale.labels['type_' + "customType"] = "New Type";
@@ -357,6 +518,42 @@ $(document).ready(function() {
                 gantt.message("Start grid resizing");
                 return true;
             });
+            // Couleur par type de tâche
+            gantt.templates.task_class = function (start, end, task) {
+                if (task.type === "project") return "project";
+                if (task.type === "milestone") return "milestone";
+                return "task"; // valeur par défaut
+            };
+
+
+            // Infobulle
+            gantt.templates.tooltip_text = function (start, end, task) {
+                return `<b>${task.text}</b><br/>
+                        Début : ${gantt.templates.tooltip_date_format(start)}<br/>
+                        Fin : ${gantt.templates.tooltip_date_format(end)}<br/>
+                        Durée : ${task.duration} jours<br/>
+                        Progression : ${(task.progress || 0) * 100}%`;
+            };
+
+            // Zooms
+            window.zoomIn = function () {
+                if (window.zoomIndex > 0) {
+                    window.zoomIndex--;
+                    setScaleConfig(window.zoomIndex);
+                }
+            };
+
+            window.zoomOut = function () {
+                if (window.zoomIndex < 6) {
+                    window.zoomIndex++;
+                    setScaleConfig(window.zoomIndex);
+                }
+            };
+
+            window.resetZoom = function () {
+                window.zoomIndex = 6; // Reset à 'week'
+                setScaleConfig(window.zoomIndex);
+            };
 
             gantt.attachEvent("onGridResize", function (old_width, new_width) {
                 if (!message) {
@@ -451,82 +648,81 @@ $(document).ready(function() {
             // Ajuster dynamiquement la largeur du Gantt en fonction des tâches affichées
             function adjustGanttWidth() {
                 let taskArea = document.querySelector(".gantt_task");
-                if (taskArea) {
-                    let gridWidth = document.querySelector(".gantt_grid").offsetWidth; // Largeur de la grille
-                    let parentWidth = document.getElementById("gantt_here").offsetWidth; // Largeur du Gantt
+                if (!taskArea) return;
 
-                    // Ajuster la largeur pour que toutes les tâches soient visibles sans scroll horizontal
-                    let neededWidth = gantt.getState().max_date - gantt.getState().min_date;
-                    let dayWidth = gantt.date.add(gantt.getState().min_date, 1, "day") - gantt.getState().min_date;
-                    let newWidth = (neededWidth / dayWidth) * 40; // Ajuste selon la densité des jours
+                const project = gantt.getSubtaskDates();
+                if (!project.start_date || !project.end_date) return;
 
-                    taskArea.style.width = Math.max(newWidth, parentWidth - gridWidth) + "px"; // Ajuste la largeur
-                }
+                const totalDays = Math.ceil((project.end_date - project.start_date) / (1000 * 60 * 60 * 24));
+                const newWidth = totalDays * 40;
+
+                taskArea.style.width = newWidth + "px";
             }
 
             // Ajuster au chargement et en cas de redimensionnement
-            gantt.attachEvent("onDataRender", adjustGanttWidth);
-            window.addEventListener("resize", adjustGanttWidth);
+            gantt.attachEvent("onDataRender", zoomToFit);
+            
 
 
             // Configuration de l'échelle de temps
-            gantt.config.start_date = new Date(new Date().getFullYear() - 10, 0, 1);  // 25 ans dans le passé
-            gantt.config.end_date = new Date(new Date().getFullYear() + 35, 11, 31);  // 25 ans dans le futur
-
+            
             gantt.config.xml_date = "%Y-%m-%d %H:%i:%s";
             gantt.init("gantt_here");
 
             // Charge les données de l'API
-            gantt.load("/api/data");
+            gantt.load("/api/data", "json").then(() => {
+                gantt.eachTask(function(task) {
+                    if (!task.start_date || typeof task.start_date === "string") {
+                        try {
+                            task.start_date = gantt.date.parseDate(task.start_date, gantt.config.xml_date);
+                            if (!task.start_date || isNaN(task.start_date.getTime())) {
+                                throw new Error("Date invalide");
+                            }
+                        } catch (e) {
+                            console.warn("Tâche avec date invalide :", task);
+                            task.start_date = new Date();
+                        }
+                    }
+                });
+                gantt.render();
+            });
+
 
             // Ajoute un écouteur d'événement sur l'ajout d'une nouvelle tâche
 
 
             // Configure le dataProcessor pour synchroniser les actions (CRUD)
             var dp = new gantt.dataProcessor("/api/");
-
             dp.init(gantt);
-
-
+            dp.setUpdateMode("cell");
+            dp.setTransactionMode("REST"); 
 
             // Ajoute CodeProjet à la tâche avant l'envoi des données
             dp.attachEvent("onBeforeUpdate", function(id, state, data) {
                 // Récupère le CodeProjet sélectionné dans le menu déroulant
-                var codeProjet = document.getElementById('projectSelect').value;
-
-                // Ajoute le CodeProjet à l'objet de tâche
-                data.CodeProjet = codeProjet;
+                const selectedType = gantt.getTask(id)?.type || "task";
+                data.type = selectedType;
+                data.codeProjet = document.getElementById('projectSelect').value;
+              
                 //console.log("Enregistrement avec CodeProjet:", data);
 
                 // Renvoie true pour continuer le processus de mise à jour/enregistrement
                 return true;
             });
             gantt.attachEvent("onTaskCreated", function(task) {
-                // Récupère le CodeProjet sélectionné
-                var codeProjet = document.getElementById('projectSelect').value;
+                const codeProjet = document.getElementById('projectSelect').value; // récupère correctement ici
 
-                // Ajoute le CodeProjet à la tâche
-                task.CodeProjet = codeProjet;
+                task.codeProjet = codeProjet;
+                if (!task.type) {
+                    task.type = gantt.config.types.task;
+                }
 
-                // Ajoute les autres données de la tâche ici
-                dp.sendData();  // Envoie les données au serveur
+                dp.sendData();
                 return true;
             });
 
 
-            gantt.attachEvent("onTaskCreated", function(link) {
-                // Récupère le CodeProjet sélectionné
-                var codeProjet = document.getElementById('projectSelect').value;
 
-                // Ajoute le CodeProjet à la tâche
-                link.CodeProjet = codeProjet;
-
-                // Ajoute les autres données de la tâche ici
-                dp.sendData();  // Envoie les données au serveur
-                return true;
-            });
-
-            dp.setTransactionMode("REST");
 
             dp.attachEvent("onAfterUpdate", function(id, action, tid, response) {
                 /*if (action === "inserted") {
@@ -547,168 +743,244 @@ $(document).ready(function() {
 
 
             // Nouvelle méthode pour configurer les échelles
-            function setScaleConfig(scale) {
-                switch (scale) {
-                    case "day":
-                        gantt.config.scales = [
-                            {unit: "day", step: 1, format: "%d %M"},
-                        ];
-                        break;
-                    case "week":
-                        gantt.config.scales = [
-                            {unit: "week", step: 1, format: "Semaine #%W"},
-                            {unit: "day", step: 1, format: "%d %M"}
-                        ];
-                        break;
-                    case "month":
-                        gantt.config.scales = [
-                            {unit: "month", step: 1, format: "%F %Y"},
-                            {unit: "week", step: 1, format: "Semaine #%W"}
-                        ];
-                        break;
-                    case "quarter":
-                        gantt.config.scales = [
-                            {unit: "quarter", step: 1, format: function(date) {
-                                var month = date.getMonth();
-                                var q_num = Math.floor(month / 3) + 1;
-                                return "T" + q_num;  // Trimestre
-                            }},
-                            {unit: "month", step: 1, format: "%M"}
-                        ];
-                        break;
-                    case "year":
-                        gantt.config.scales = [
-                            {unit: "year", step: 1, format: "%Y"},
-                            {unit: "month", step: 1, format: "%M"}
-                        ];
-                        break;
-                }
-                gantt.render();  // Réinitialise l'échelle avec les nouvelles configurations
+            window.zoomIndex = 2; // 0 = ultra zoom, 5 = très large vue
+
+            function setScaleConfig(index) {
+                const configs = [
+                    {
+                        name: "hour",
+                        scales: [
+                            { unit: "hour", step: 1, format: "%H:%i" },
+                            { unit: "day", step: 1, format: "%d %M" }
+                        ]
+                    },
+                    {
+                        name: "day",
+                        scales: [
+                            { unit: "day", step: 1, format: "%d %M" },
+                            { unit: "month", step: 1, format: "%F %Y" }
+                        ]
+                    },
+                    {
+                        name: "week",
+                        scales: [
+                            { unit: "week", step: 1, format: "Semaine %W" },
+                            { unit: "month", step: 1, format: "%F" }
+                        ]
+                    },
+                    {
+                        name: "month",
+                        scales: [
+                            { unit: "month", step: 1, format: "%F %Y" },
+                            { unit: "year", step: 1, format: "%Y" }
+                        ]
+                    },
+                    {
+                        name: "quarter",
+                        scales: [
+                            {
+                                unit: "quarter",
+                                step: 1,
+                                format: function (date) {
+                                    const q = Math.floor(date.getMonth() / 3) + 1;
+                                    return "T" + q + " " + date.getFullYear();
+                                }
+                            },
+                            { unit: "year", step: 1, format: "%Y" }
+                        ]
+                    },
+                    {
+                        name: "year",
+                        scales: [
+                            { unit: "year", step: 1, format: "%Y" },
+                            { unit: "month", step: 1, format: "%M" }
+                        ]
+                    },
+                    {
+                        name: "decade",
+                        scales: [
+                            {
+                                unit: "year", step: 10,
+                                format: function(date) {
+                                    const start = Math.floor(date.getFullYear() / 10) * 10;
+                                    return `Années ${start}s`;
+                                }
+                            },
+                            { unit: "year", step: 1, format: "%Y" }
+                        ]
+                    }
+                ];
+
+                if (index < 0) index = 0;
+                if (index >= configs.length) index = configs.length - 1;
+
+                window.zoomIndex = index;
+
+                gantt.config.scales = configs[index].scales;
+                gantt.render();
             }
 
-            // Liste déroulante pour le changement d'échelle
-            document.getElementById("scale_select").addEventListener("change", function() {
-                var scale = this.value;
-                setScaleConfig(scale);
-            });
 
             // Définir l'échelle initiale
-            setScaleConfig("day");
+            setScaleConfig(1);
 
         }
 
 
     </script>
     <script>
-        document.getElementById("projectSelect").addEventListener("change", function() {
+        document.getElementById("projectSelect").addEventListener("change", function () {
             var codeProjet = this.value;
 
-            // Effacer les données précédentes
+            // Vider le Gantt avant de charger
             gantt.clearAll();
 
             if (codeProjet) {
-                // Charger les données associées au projet sélectionné
                 gantt.load(`/api/data?CodeProjet=${codeProjet}`, "json")
-                    .then(function() {
-                        //console.log("Données chargées avec succès.");
-                        //console.log(codeProjet)
+                    .then(function () {
+                        console.log("✅ Données chargées pour :", codeProjet);
+
+                        // 🔥 Forcer parsing correct de la date
+                        gantt.eachTask(function(task) {
+                            if (!task.start_date || typeof task.start_date === "string") {
+                                try {
+                                    task.start_date = gantt.date.parseDate(task.start_date, gantt.config.xml_date);
+                                    if (!task.start_date || isNaN(task.start_date.getTime())) {
+                                        throw new Error("Date invalide");
+                                    }
+                                } catch (e) {
+                                    console.warn("Tâche avec date invalide :", task);
+                                    task.start_date = new Date(); // valeur par défaut pour éviter le plantage
+                                }
+                            }
+                        });
+
+
+                        gantt.render();
+                        zoomToFit(); 
                     })
-                    .catch(function(error) {
-                        //console.error("Erreur lors du chargement des données:", error);
+                    .catch(function (error) {
+                        console.error("❌ Erreur de chargement :", error);
                         alert("Erreur lors du chargement des données pour ce projet.");
                     });
             }
         });
+
         var projectCode = document.getElementById("projectSelect").value;
 
 
 
     </script>
 <script>
-    function initScheduler() {
-        scheduler.config.header = [
-            "day",
-            "week",
-            "month",
-            "date",
-            "prev",
-            "today",
-            "next"
-        ];
-        //la structure du calendrier
-        scheduler.locale = {
-            date: {
-                month_full: ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-                    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
-                month_short: ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
-                    "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"],
-                day_full: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
-                day_short: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
-            },
-            labels: {
-                dhx_cal_today_button: "Aujourd'hui",
-                day_tab: "Jour",
-                week_tab: "Semaine",
-                month_tab: "Mois",
-                new_event: "Nouvel événement",
-                icon_save: "Enregistrer",
-                icon_cancel: "Annuler",
-                icon_details: "Détails",
-                icon_edit: "Modifier",
-                icon_delete: "Supprimer",
-                dhx_delete_btn: "Supprimer",
-                dhx_cancel_btn: "Annuler",
-                dhx_save_btn: "Enregistrer",
-                confirm_closing: "Vos modifications seront perdues, êtes-vous sûr ?",
-                confirm_deleting: "L'événement sera supprimé définitivement, êtes-vous sûr ?",
-                section_description: "Description",
-                section_time: "Période",
-                full_day: "Journée entière",
-                confirm_recurring: "Voulez-vous modifier toute la série d'événements récurrents ?",
-                repeating_event: "Événement récurrent",
-                cancel_recurring: "Annuler",
-                edit_series: "Modifier la série",
-                edit_occurrence: "Modifier l'occurrence",
-                agenda_tab: "Agenda",
-                year_tab: "Année",
-                week_agenda_tab: "Agenda semaine",
-                grid_tab: "Grille",
-                drag_to_create: "Glissez pour créer",
-                drag_to_move: "Glissez pour déplacer",
-                message_ok: "OK",
-                message_cancel: "Annuler"
+function initScheduler() {
+    scheduler.config.header = [
+        "day", "week", "month", "date", "prev", "today", "next"
+    ];
+
+    // Localisation FR
+    scheduler.locale = {
+        date: {
+            month_full: ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+            month_short: ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
+                "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"],
+            day_full: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
+            day_short: ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
+        },
+        labels: {
+            dhx_cal_today_button: "Aujourd'hui",
+            day_tab: "Jour",
+            week_tab: "Semaine",
+            month_tab: "Mois",
+            new_event: "Nouvel événement",
+            icon_save: "Enregistrer",
+            icon_cancel: "Annuler",
+            icon_details: "Détails",
+            icon_edit: "Modifier",
+            icon_delete: "Supprimer",
+            dhx_delete_btn: "Supprimer",
+            dhx_cancel_btn: "Annuler",
+            dhx_save_btn: "Enregistrer",
+            confirm_closing: "Vos modifications seront perdues, êtes-vous sûr ?",
+            confirm_deleting: "L'événement sera supprimé définitivement, êtes-vous sûr ?",
+            section_description: "Description",
+            section_time: "Période",
+            full_day: "Journée entière",
+            confirm_recurring: "Modifier toute la série ?",
+            repeating_event: "Événement récurrent",
+            cancel_recurring: "Annuler",
+            edit_series: "Modifier la série",
+            edit_occurrence: "Modifier l'occurrence",
+            drag_to_create: "Glissez pour créer",
+            drag_to_move: "Glissez pour déplacer",
+            message_ok: "OK",
+            message_cancel: "Annuler"
+        }
+    };
+
+    scheduler.config.xml_date = "%Y-%m-%d %H:%i:%s";
+
+    const codeProjet = document.getElementById("projectSelect").value;
+
+    scheduler.clearAll();
+    scheduler.init("scheduler_here", new Date(), "month");
+
+    if (codeProjet) {
+        scheduler.load(`/api/scheduler-data?CodeProjet=${codeProjet}`, "json", function () {
+            const events = scheduler.getEvents();
+
+            if (events.length > 0) {
+                // Date la plus ancienne
+                const minDate = events.reduce((earliest, ev) => {
+                    return ev.start_date < earliest ? ev.start_date : earliest;
+                }, events[0].start_date);
+
+                scheduler.setCurrentView(minDate, "month");
+
+                // 📅 Affichage de la date de projet
+                document.getElementById("date-now").textContent =
+                    `📅 Projet ${codeProjet} – Début : ${minDate.toLocaleDateString()}`;
+            } else {
+                scheduler.setCurrentView(new Date(), "month");
+                document.getElementById("date-now").textContent =
+                    `📅 Projet ${codeProjet} – Aucune tâche`;
             }
-        };
+        });
 
-        scheduler.config.xml_date = "%Y-%m-%d %H:%i:%s";
-        scheduler.init("scheduler_here", new Date(), "month");
+        const dpa = new scheduler.DataProcessor("/api/scheduler/");
+        dpa.init(scheduler);
+        dpa.setTransactionMode("REST");
 
-        scheduler.load("/api/scheduler-data", "json");
-
-        var dp = new dataProcessor("/api/scheduler/");
-        dp.init(scheduler);
-        dp.setTransactionMode("REST");
+    } else {
+        scheduler.setCurrentView(new Date(), "month");
+        document.getElementById("date-now").textContent =
+            `📅 Aucun projet sélectionné – ${new Date().toLocaleDateString()}`;
     }
+}
 
 
 
 </script>
 <script>
-    document.getElementById("viewSelect").addEventListener("change", function() {
-        var selectedView = this.value;
+document.getElementById("viewSelect").addEventListener("change", function () {
+    const selectedView = this.value;
+    const ganttContainer = document.getElementById("gantt_here");
+    const schedulerContainer = document.getElementById("scheduler_here");
+    const zoomControls = document.querySelector(".zoom-controls");
 
-        if (selectedView === "scheduler") {
-            document.getElementById("scheduler_here").classList.add("active-view");
-            document.getElementById("gantt_here").classList.remove("active-view");
-            document.getElementById("controls").style.display = "none";
-            initScheduler();
-        } else {
-            document.getElementById("gantt_here").classList.add("active-view");
-            document.getElementById("controls").style.display = "block";
-            document.getElementById("scheduler_here").classList.remove("active-view");
-            initGantt();
-        }
-    });
+    if (selectedView === "scheduler") {
+        schedulerContainer.classList.add("active-view");
+        ganttContainer.classList.remove("active-view");
+        if (zoomControls) zoomControls.style.display = "none";
+        initScheduler();
+    } else {
+        ganttContainer.classList.add("active-view");
+        schedulerContainer.classList.remove("active-view");
+        if (zoomControls) zoomControls.style.display = "flex";
+        initGantt();
+    }
+});
+
 
     // Chargement initial
     window.onload = function() {

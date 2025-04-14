@@ -129,22 +129,17 @@
                                 <label for="user" class="form-label">Utilisateur:</label>
                                 <select id="user" class="form-select" name="userapp">
                                     <option value="">Sélectionner les approbateurs</option>
-                                    @foreach($personne as $personnes)
-                                        <option value="{{ $personnes->code_personnel }}">{{ $personnes->nom }} {{ $personnes->prenom }}</option>
+                                    @foreach($acteurs as $acteur)
+                                        <option value="{{ $acteur?->code_acteur }}">{{ $acteur?->libelle_court }} {{ $acteur?->libelle_long }}</option>
                                     @endforeach
                                 </select>
-                            </div>
-                            <div class="col-4">
-                                <label for="structure">Structure:</label>
-                                <input type="text" id="structure" name="structure" class="form-control" readonly>
-                                <input type="hidden" id="CodeStructure" name="CodeStructure" class="form-control" readonly>
                             </div>
                             <div class="col-2 ms-auto">
                                 <label for="nordre" class="form-label">Niveau :</label>
                                 <input type="number" name="Nordre" id="nordre" value="{{ $nextOrder }}"  readonly class="form-control">
                             </div>
                             <div class="col-12 mt-3">
-                                @can("ajouter_ecran_" . $ecran->id)
+                                @can("ajouter_ecran_" . $ecran?->id)
                                 <button type="button" class="btn btn-primary" id="addAction">
                                     <i class="fa fa-plus"></i> Ajouter
                                 </button>
@@ -152,7 +147,7 @@
                                 <form id="approveForm" method="POST" action="{{ route('approbateur.store') }}">
                                     @csrf
                                     <input type="hidden" name="approbateurs" id="approbateursInput">
-                                    @can("ajouter_ecran_" . $ecran->id)
+                                    @can("ajouter_ecran_" . $ecran?->id)
                                     <button type="submit" class="btn btn-primary float-end">
                                         <i class="fa fa-save"></i> Enregistrer
                                     </button>
@@ -173,7 +168,6 @@
                                 <tr>
                                     <th>Niveau d'approbation</th>
                                     <th>Nom</th>
-                                    <th>Structure </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -188,11 +182,11 @@
         </div>
     </section>
 
-    <!-- Button to open the modal -->
+    <!--Button to open the modal -->
     <div class="row">
         </div>
 
-    <!-- Modal for the list of approvers -->
+     <!--Modal for the list of approvers -->
     <div class="modal fade" id="liste-approbateurs-modal" tabindex="-1" aria-labelledby="listeApprobatuerModalLabel" aria-hidden="true" style="background-color: #EAF2F8;">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -207,7 +201,6 @@
 
                                 <th>Nom </th>
                                 <th>Prénoms</th>
-                                <th>Structure</th>
                                 <th>Niveau approbation</th>
                                 <th>Action</th>
                             </tr>
@@ -216,45 +209,20 @@
                             @foreach($approbateurs as $approbateur)
                             <tr>
 
-                                <td>{{ $approbateur->personnel->nom }}</td>
-                                <td>{{ $approbateur->personnel->prenom }}</td>
-                                <td>
-                                    @if($approbateur->structure)
-                                        @if($approbateur->structure->type_structure == 'agence')
-                                            {{ $approbateur->structure->agence->nom_agence }}
-                                        @elseif($approbateur->structure->type_structure == 'ministere')
-                                            {{ $approbateur->structure->ministere->libelle }}
-                                        @elseif($approbateur->structure->type_structure == 'bailleur')
-                                            {{ $approbateur->structure->bailleur->libelle_long }}
-                                        @endif
-                                    @endif
-                                </td>
-                                <td>{{ $approbateur->numOrdre }}</td>
+                                <td>{{ $approbateur?->Acteur?->libelle_court }}</td>
+                                <td>{{ $approbateur?->Acteur?->libelle_long }}</td>
+                                
+                                <td>{{ $approbateur?->numOrdre }}</td>
                                 <td>
                                 <div class="dropdown">
                                     <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
                                         <span style="color: white">Options</span>
                                     </a>
                                     <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                        @can("modifier_ecran_" . $ecran->id)
+                                       
+                                        @can("supprimer_ecran_" . $ecran?->id)
                                         <li>
-                                            <a class="dropdown-item" href="#" onclick="editApprobateur(
-                                                '{{ $approbateur->numOrdre }}',
-                                                '{{ $approbateur->personnel->nom }} {{ $approbateur->personnel->prenom }}',
-                                                '{{ $approbateur->codeStructure }}',
-                                                '{{ $approbateur->structure ? $approbateur->structure->type_structure : '' }}',
-                                                '{{ $approbateur->structure && $approbateur->structure->type_structure == "agence" ? $approbateur->structure->agence->nom_agence : '' }}',
-                                                '{{ $approbateur->structure && $approbateur->structure->type_structure == "ministere" ? $approbateur->structure->ministere->libelle : '' }}',
-                                                '{{ $approbateur->structure && $approbateur->structure->type_structure == "bailleur" ? $approbateur->structure->bailleur->libelle_long : '' }}',
-                                                '{{ $approbateur->personnel->code_personnel }}'
-                                            )">
-                                                <i class="bi bi-pencil-fill me-3"></i> Modifier
-                                            </a>
-                                        </li>
-                                        @endcan
-                                        @can("supprimer_ecran_" . $ecran->id)
-                                        <li>
-                                            <a class="dropdown-item" href="#" onclick="deleteApprobateur('{{ $approbateur->codeAppro }}')">
+                                            <a class="dropdown-item" href="#" onclick="deleteApprobateur('{{ $approbateur?->codeAppro }}')">
                                                 <i class="bi bi-trash3-fill me-3"></i> Supprimer
                                             </a>
                                         </li>
@@ -298,19 +266,15 @@
                                     <label for="editUser" class="form-label">Utilisateur:</label>
                                     <select id="editUser" class="form-select" name="editUserapp">
                                         <option value="">Sélectionner l'utilisateur</option>
-                                        @foreach($personne as $personnes)
-                                        <option value="{{ $personnes->code_personnel }}">{{ $personnes->nom }} {{ $personnes->prenom }}</option>
+                                        @foreach($acteurs as $acteur)
+                                        <option value="{{ $acteur?->code_acteur }}">{{ $acteur?->libelle_court }} {{ $acteur?->libelle_long }}</option>
                                         @endforeach
                                     </select>
 
                                 </div>
-                                <div class="col-4">
-                                        <label for="structure">Structure:</label>
-                                        <input type="text" id="editStructure" name="editStructure" class="form-control" readonly>
-                                        <input type="hidden" id="editCodeStructure" name="editCodeStructure" class="form-control" readonly>
-                                </div>
+                              
                                 <div class="col-12 mt-3">
-                                    @can("modifier_ecran_" . $ecran->id)
+                                    @can("modifier_ecran_" . $ecran?->id)
                                     <button type="submit" class="btn btn-primary float-end">
                                         <i class="fa fa-save"></i> Enregistrer
                                     </button>
@@ -341,92 +305,108 @@
     </div>
 </section>
 <script>
-    $(document).ready(function() {
-        // Initialize DataTable if needed
-        initDataTable('{{ auth()->user()->personnel->nom }} {{ auth()->user()->personnel->prenom }}', 'liste-approbateur-table', 'Liste des approbateurs');
-        $('#addAction').on('click', function() {
-            // Récupérer les valeurs des champs
-            var nordre = parseInt($('#nordre').val());
-            var userCode = $('#user').val();
-            var userText = $('#user option:selected').text();
-            var structure = $('#structure').val();
-            var structureCode = $('#CodeStructure').val();
 
-            // Vérifier si toutes les données sont sélectionnées ou saisies
-            if (userCode) {
-                // Vérifier si les données existent déjà dans le tableau #tableActionMener
-                var existeDeja = false;
-                $('#tableActionMener tbody tr').each(function() {
-                    var existingUser = $(this).find('td:eq(1)').text();
-                    if (existingUser === userText) {
-                        existeDeja = true;
-                        return false; // Sortir de la boucle each
-                    }
-                });
+$(document).ready(function () {
+    // Initialiser la DataTable si nécessaire
+    initDataTable(
+        '{{ auth()?->user()?->acteur?->libelle_court }} {{ auth()?->user()?->acteur?->libelle_long }}',
+        'liste-approbateur-table',
+        'Liste des approbateurs'
+    );
 
-                if (!existeDeja) {
-                    // Ajouter les données récupérées au tableau #tableActionMener
-                    var tableActionMener = $('#tableActionMener tbody');
-                    tableActionMener.append(
-                        '<tr><td>' + nordre + '</td><td>' + userText + '</td><td hidden>' + structureCode + '</td><td>'+structure+'</td><td hidden>' + userCode + '</td><td><button type="button" class="btn btn-danger btn-sm delete-action">Supprimer</button></td></tr>'
-                    );
+    // Fonction utilitaire pour afficher une alerte dans le modal
+    function showAlert(message) {
+        $('#alertMessage').text(message);
+        $('#alertModal').modal('show');
+    }
 
-                    // Incrémenter le champ #nordre
-                    $('#nordre').val(nordre + 1);
+    // Ajout d'un approbateur
+    $('#addAction').on('click', function () {
+        var nordre = parseInt($('#nordre').val());
+        var userCode = $('#user').val();
+        var userText = $('#user option:selected').text();
 
-                    // Réinitialiser le champ #user après l'ajout
-                    $('#user').val('');
-                } else {
-                    $('#alertMessage').text("Cet utilisateur est déjà dans le tableau.");
-                    $('#alertModal').modal('show');
+        if (userCode) {
+            // Vérifier si l'utilisateur est déjà dans le tableau
+            var existeDeja = false;
+            $('#tableActionMener tbody tr').each(function () {
+                var existingUser = $(this).find('td:eq(1)').text();
+                if (existingUser === userText) {
+                    existeDeja = true;
+                    return false; // Sortir de la boucle
                 }
+            });
+
+            if (!existeDeja) {
+                var tableActionMener = $('#tableActionMener tbody');
+
+                // Ajouter la ligne au tableau avec un data-user-code
+                tableActionMener.append(
+                    '<tr data-user-code="' + userCode + '">' +
+                    '<td>' + nordre + '</td>' +
+                    '<td>' + userText + '</td>' +
+                    '<td><button type="button" class="btn btn-danger btn-sm delete-action">Supprimer</button></td>' +
+                    '</tr>'
+                );
+
+                // Incrémenter nordre et réinitialiser le champ user
+                $('#nordre').val(nordre + 1);
+                $('#user').val('');
             } else {
-                $('#alertMessage').text("Veuillez sélectionner un utilisateur avant d'ajouter.");
-                $('#alertModal').modal('show');
+                showAlert("Cet utilisateur est déjà dans le tableau.");
             }
-        });
-
-        // Submit form with approbateurs data
-        $('#approveForm').on('submit', function(e) {
-            e.preventDefault();
-            var approbateurs = [];
-            $('#tableActionMener tbody tr').each(function() {
-                var nordre = $(this).find('td:eq(0)').text();
-                var userText = $(this).find('td:eq(1)').text();
-                var CodeStructure = $(this).find('td:eq(2)').text();
-                var structure = $(this).find('td:eq(3)').text();
-                var userCode = $(this).find('td:eq(4)').text();
-                approbateurs.push({
-                    nordre: nordre,
-                    userText: userText,
-                    CodeStructure: CodeStructure,
-                    structure: structure,
-                    userCode: userCode
-                });
-            });
-            $('#approbateursInput').val(JSON.stringify(approbateurs));
-            console.log('Approbateurs:', approbateurs); // Debugging line
-            this.submit();
-        });
-
-
-        // Gérer le clic sur les boutons de suppression
-        $('#tableActionMener').on('click', '.delete-action', function() {
-            // Supprimer la ligne correspondante
-            $(this).closest('tr').remove();
-
-            // Recalculer les numéros d'ordre et mettre à jour le champ nordre
-            var currentOrder = {{ $nextOrder }};
-
-            $('#tableActionMener tbody tr').each(function(index) {
-                $(this).find('td:eq(0)').text(currentOrder + index);
-            });
-
-            // Mettre à jour le numéro d'ordre pour la prochaine entrée
-            $('#nordre').val(currentOrder + $('#tableActionMener tbody tr').length);
-        });
-
+        } else {
+            showAlert("Veuillez sélectionner un utilisateur avant d'ajouter.");
+        }
     });
+
+    // Soumission du formulaire avec la liste des approbateurs
+    $('#approveForm').on('submit', function (e) {
+        e.preventDefault();
+
+        var approbateurs = [];
+
+        $('#tableActionMener tbody tr').each(function () {
+            var nordre = $(this).find('td:eq(0)').text();
+            var userText = $(this).find('td:eq(1)').text();
+            var userCode = $(this).data('user-code');
+
+            approbateurs.push({
+                nordre: nordre,
+                userText: userText,
+                userCode: userCode
+            });
+        });
+
+        if (approbateurs.length === 0) {
+            showAlert("Veuillez ajouter au moins un approbateur.");
+            return;
+        }
+
+        // Injecter les données dans un champ caché
+        $('#approbateursInput').val(JSON.stringify(approbateurs));
+
+        console.log('Approbateurs:', approbateurs); // Debug
+
+        // Soumettre réellement le formulaire
+        e.currentTarget.submit();
+    });
+
+    // Suppression d’un approbateur
+    $('#tableActionMener').on('click', '.delete-action', function () {
+        $(this).closest('tr').remove();
+
+        // Recalcul des numéros d'ordre
+        var currentOrder = parseInt({{ $nextOrder ?? 1 }});
+        $('#tableActionMener tbody tr').each(function (index) {
+            $(this).find('td:eq(0)').text(currentOrder + index);
+        });
+
+        // Mettre à jour nordre
+        $('#nordre').val(currentOrder + $('#tableActionMener tbody tr').length);
+    });
+});
+
 
     function deleteApprobateur(id) {
         if (confirm("Êtes-vous sûr de vouloir supprimer cet approbateur ?")) {
@@ -448,24 +428,18 @@
             });
         }
     }
-    function editApprobateur(numOrdre, nomPrenom, codeStructure, typeStructure, agenceLibelle, ministereLibelle, bailleurLibelle, userCode) {
+    $(document).on('click', '.edit-approbateur', function() {
+        var nordre = $(this).data('nordre');
+        var name = $(this).data('name');
+        var code = $(this).data('code');
+        
+        editApprobateur(nordre, name, code);
+    });
+    function editApprobateur(numOrdre, nomPrenom, userCode) {
         // Remplir les champs du modal avec les données existantes
         $('#editNordre').val(numOrdre);
         $('#editUser').val(userCode);
         $('#numOrdreId').val(numOrdre);
-        $('#editCodeStructure').val(codeStructure);
-
-        // Vérifiez le type de structure et remplissez le champ `editStructure` avec le bon libellé
-        let structureLibelle = "Non défini";
-        if (typeStructure === 'agence') {
-            structureLibelle = agenceLibelle;
-        } else if (typeStructure === 'ministere') {
-            structureLibelle = ministereLibelle;
-        } else if (typeStructure === 'bailleur') {
-            structureLibelle = bailleurLibelle;
-        }
-
-        $('#editStructure').val(structureLibelle);
 
         // Ouvrir le modal
         $('#editApprobateurModal').modal('show');
@@ -481,48 +455,5 @@
     });
 
 </script>
-<script>
-    document.getElementById('user').addEventListener('change', function () {
-        var codePersonnel = this.value;
-        var structureInput = document.getElementById('structure');
-        var codeStructureInput = document.getElementById('CodeStructure');
-        if (codePersonnel) {
-            fetch(`/get-structure/${codePersonnel}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.libelle) {
-                        structureInput.value = data.libelle;
-                        codeStructureInput.value = data.code;
-                    } else {
-                        structureInput.value = 'Aucune structure trouvée.';
-                        codeStructureInput.value = 'Aucun code';
-                    }
-                })
-                .catch(error => console.error('Erreur:', error));
-        } else {
-            structureInput.value = '';
-        }
-    });
-    document.getElementById('editUser').addEventListener('change', function () {
-        var editCodePersonnel = this.value;
-        var editStructureInput = document.getElementById('editStructure');
-        var editCodeStructureInput = document.getElementById('editCodeStructure');
-        if (editCodePersonnel) {
-            fetch(`/get-structure/${editCodePersonnel}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.libelle) {
-                        editStructureInput.value = data.libelle;
-                        editCodeStructureInput.value = data.code;
-                    } else {
-                        editStructureInput.value = 'Aucune structure trouvée.';
-                        editCodeStructureInput.value = 'Aucun code';
-                    }
-                })
-                .catch(error => console.error('Erreur:', error));
-        } else {
-            editStructureInput.value =  "";
-        }
-    });
-</script>
+
 @endsection

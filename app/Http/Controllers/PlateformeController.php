@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Acquifere;
+use App\Models\Acteur;
 use App\Models\ActionMener;
 use App\Models\AgenceExecution;
 use App\Models\ApartenirGroupeUtilisateur;
@@ -836,13 +837,14 @@ class PlateformeController extends Controller
     //*****************Approbation***************/
     public function approbation(Request $request){
         $ecran = Ecran::find($request->input('ecran_id'));
-        $personne = Personnel::all();
+        $acteurs = Acteur::where('type_acteur', 'etp')
+        ->whereIn('code_pays', [session('pays_selectionne')])->get();
         // Récupérer le dernier numéro d'ordre enregistré
         $lastOrder = Approbateur::orderBy('numOrdre', 'desc')->first();
         $nextOrder = $lastOrder ? $lastOrder->numOrdre + 1 : 1;
 
-        $approbateurs = Approbateur::with('personnel', 'structure')->get();
-        return view('parGeneraux.approbateur', compact('nextOrder','ecran', 'personne', 'approbateurs'));
+        $approbateurs = Approbateur::with('acteur')->get();
+        return view('parGeneraux.approbateur', compact('nextOrder','ecran', 'acteurs', 'approbateurs'));
     }
     public function storeApprobation(Request $request)
     {
@@ -856,16 +858,16 @@ class PlateformeController extends Controller
                 Log::info('Processing Approver:', $approbateur);
 
                 // Recherche de l'utilisateur par code personnel
-                $user = Personnel::where('code_personnel', $approbateur['userCode'])->first();
+                $user = Acteur::where('code_acteur', $approbateur['userCode'])->first();
 
                 if ($user) {
                     Log::info('User Found:', $user->toArray());
 
                     // Vérification de l'existence de l'approbateur avec le même code personnel
-                    $existingApprobateur = Approbateur::where('code_personnel', $user->code_personnel)->first();
+                    $existingApprobateur = Approbateur::where('code_acteur', $user->code_acteur)->first();
                     if ($existingApprobateur) {
-                        $errors[] = "L'utilisateur {$user->nom} {$user->prenom} est déjà un approbateur.";
-                        Log::info("L'utilisateur {$user->nom} {$user->prenom} est déjà un approbateur.");
+                        $errors[] = "L'utilisateur {$user?->libelle_court} {$user?->libelle_long} est déjà un approbateur.";
+                        Log::info("L'utilisateur {$user?->libelle_court} {$user?->libelle_long} est déjà un approbateur.");
                         continue;
                     }
 
@@ -879,9 +881,8 @@ class PlateformeController extends Controller
 
                     // Enregistrement de l'approbateur
                     Approbateur::create([
-                        'code_personnel' => $user->code_personnel,
-                        'numOrdre' => $approbateur['nordre'],
-                        'codeStructure' => $approbateur['CodeStructure']
+                        'code_acteur' => $user->code_acteur,
+                        'numOrdre' => $approbateur['nordre']
                     ]);
                 } else {
                     Log::warning('User Not Found:', $approbateur);
@@ -915,8 +916,7 @@ class PlateformeController extends Controller
 
         // Mettre à jour les champs
         $approbateur->numOrdre = $request->input('editNordre'); // Assurez-vous de mettre à jour le numéro d'ordre si nécessaire
-        $approbateur->code_personnel = $request->input('editUserapp');
-        $approbateur->codeStructure = $request->input('editCodeStructure');
+        $approbateur->code_acteur = $request->input('editUserapp');
         // Sauvegarder les modifications
         $approbateur->save();
 
@@ -948,46 +948,7 @@ class PlateformeController extends Controller
         }
     }
 
-    public function getStructure($code_personnel)
-    {
-        // Récupérer la structure de rattachement
-        $structure = StructureRattachement::where('code_personnel', $code_personnel)->first();
-
-        if ($structure) {
-            // Selon le type de structure, faire la jointure appropriée
-            switch ($structure->type_structure) {
-                case 'ministere':
-                    $data = Ministere::where('code', $structure->code_structure)->first();
-                    $libelle = $data ? $data->libelle : 'Structure non trouvée';
-                    $code = $structure->code_structure;
-                    break;
-
-                case 'bailleurss':
-                    $data = Bailleur::where('code_bailleur', $structure->code_structure)->first();
-                    $libelle = $data ? $data->libelle_long : 'Structure non trouvée';
-                    $code = $structure->code_structure;
-                    break;
-
-                case 'agence_execution':
-                    $data = AgenceExecution::where('code_agence_execution', $structure->code_structure)->first();
-                    $libelle = $data ? $data->nom_agence : 'Structure non trouvée';
-                    $code = $structure->code_structure;
-                    break;
-
-                default:
-                    $libelle = 'Type de structure inconnu';
-                    $code = 'Code non trouvé';
-                    break;
-            }
-
-            return response()->json([
-                'libelle' => $libelle,
-                'code'=> $code
-            ]);
-        } else {
-            return response()->json(['message' => 'Aucune structure trouvée.'], 404);
-        }
-    }
+   
 
     //***************** COURS D'EAU ************* */
     public function courdeau(Request $request)

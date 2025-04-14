@@ -12,6 +12,10 @@ class Jouir extends Model
         'code_projet',
         'code_Infrastructure',
     ];
-
+    public function infrastructure()
+    {
+        return $this->belongsTo(Infrastructure::class, 'code_Infrastructure', 'code');
+    }
+    
     public $timestamps = true; // created_at & updated_at
 }

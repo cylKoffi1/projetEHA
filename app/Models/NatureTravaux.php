@@ -11,8 +11,7 @@ class NatureTravaux extends Model
 
     public $timestamps = false;
 
-    protected $table = 'nature_traveaux'; // Nom de la table
-    protected $keyType = 'string';
+    protected $table = 'nature_traveaux'; 
     protected $primaryKey = 'code';
     // Ajoutez cette méthode pour récupérer le libellé à partir du code
     public static function getLibelleByCode($code)

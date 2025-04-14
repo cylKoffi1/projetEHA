@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Projet extends Model
 {
@@ -34,10 +33,53 @@ class Projet extends Model
         return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code');
     }
 
+    public function projetNaturesTravaux() {
+       return $this->hasOne(projets_natureTravaux::class, 'code_projet', 'code_projet')->latest('date');
+    }
+    
+
     public function pays()
     {
         return $this->belongsTo(Pays::class, 'code_alpha3_pays', 'alpha3');
     }
 
-
+    public function financements()
+    {
+        return $this->hasMany(Financer::class, 'code_projet', 'code_projet');
+    }
+    
+    public function statuts()
+    {
+        return $this->hasOne(ProjetStatut::class, 'code_projet', 'code_projet')->latest('date_statut');
+    }
+    
+    public function dateEffective()
+    {
+        return $this->hasOne(DateEffectiveProjet::class, 'code_projet', 'code_projet');
+    }
+    public function localisations() {
+        return $this->hasMany(ProjetLocalisation::class, 'code_projet');
+    }
+    
+    public function infrastructures() {
+        return $this->hasMany(ProjetInfrastructure::class, 'code_projet');
+    }
+    
+    public function actions() {
+        return $this->hasMany(ProjetActionAMener::class, 'code_projet');
+    }
+    
+    public function maitresOeuvre() {
+        return $this->hasMany(Executer::class, 'code_projet', 'code_projet');
+    }
+    
+    public function maitreOuvrage() {
+        return $this->hasOne(Posseder::class, 'code_projet', 'code_projet')->where('is_active', true);
+    }
+    
+    
+    public function documents() {
+        return $this->hasMany(ProjetDocument::class, 'code_projet');
+    }
+    
 }

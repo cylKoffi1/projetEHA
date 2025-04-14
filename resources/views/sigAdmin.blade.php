@@ -201,9 +201,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                     <div class="row">
                                         <div class="row">
                                             <div class="col">
-                                            <div>
+                                                <div>
                                                     <center>Bailleur</center>
-                                                    <select class="form-control" id="bailleur">
+                                                    <select class="form-control" id="bailleur" name="bailleur">
                                                         <option value="">Select bailleur</option>
                                                         @foreach ($Bailleurs as $Bailleur)
                                                             <option value="{{ $Bailleur->code_acteur }}">{{ $Bailleur->libelle_court }} {{ $Bailleur->libelle_long }}</option>
@@ -216,7 +216,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                                                     <center>Statut</center>
                                                     <select class="form-control" id="status">
                                                         <option value="">Select Status</option>
-                                                        @foreach ($statuts as $statut)
+                                                        @foreach ($TypesStatuts as $statut)
                                                             <option value="{{ $statut->id }}">{{ $statut->libelle }}</option>
                                                         @endforeach
                                                     </select>
@@ -242,25 +242,25 @@ svg.leaflet-image-layer.leaflet-interactive path {
                         <div class="row">
                             <div class="col">
                                 <label for="finance" class="form-control-label">Finance</label>
-                                <input type="checkbox" id="financeLayer" onchange="handleCheckboxChange('financeLayer', 'Finance')">
+                                <input type="checkbox" id="financeLayer" onchange="handleCheckboxChange(this.id, 'Finance')">
                             </div>
                             <div class="col">
                                 <label for="nombreProjet" class="form-control-label">Nombre de projet</label>
-                                <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange(this.id, 'Nombre')">
                             </div>
                             <div class="col-5 border border-bg-gray-100">
                                 <div class="row">
                                     <div class="col">
                                         <label for="nombreProjet" class="form-control-label">Cumul</label>
-                                        <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                        <input type="checkbox" id="cumulLayer" onchange="handleCheckboxChange(this.id, 'Cumul')">
                                     </div>
                                     <div class="col">
                                         <label for="nombreProjet" class="form-control-label">Privé</label>
-                                        <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                        <input type="checkbox" id="priveLayer" onchange="handleCheckboxChange(this.id, 'Privé')">
                                     </div>
                                     <div class="col">
                                         <label for="nombreProjet" class="form-control-label">Public</label>
-                                        <input type="checkbox" id="nombreLayer" onchange="handleCheckboxChange('nombreLayer', 'Nombre')">
+                                        <input type="checkbox" id="publicLayer" onchange="handleCheckboxChange(this.id, 'Public')">
                                     </div>
                                 </div>
 
@@ -287,7 +287,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </section>
 
 <script>
-    // Récuprez les éléments d'entrée
+    // Récuprez les él7U%éments d'entrée
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
     var statusInput = document.getElementById('status');
@@ -298,58 +298,73 @@ svg.leaflet-image-layer.leaflet-interactive path {
     endDateInput.addEventListener('change', function() {
         // Assurez-vous que la date de fin ne peut pas être antérieure à la date de début
         if (endDateInput.value < startDateInput.value) {
-            $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
-            $('#alertModal').modal('show');
+            alert('La date de fin ne peut pas être antérieure à la date de début.');
+            
             endDateInput.value = startDateInput.value; // Réinitialisez la date de fin à la date de début
         }
     });
     // Écoutez les changements dans les champs de formulaire pour sauvegarder les données dans le stockage local
 
-    document.getElementById('filterButton').addEventListener('click', function() {
-        var startDate = startDateInput.value;
-        var endDate = endDateInput.value;
-        var status = statusInput.value;
-        var bailleur = bailleurInput.value;
-        var dateType = document.querySelector('input[name="radioButtons"]:checked');
+    document.getElementById('filterButton').addEventListener('click', function () {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const status = statusInput.value;
+        const bailleur = bailleurInput.value;
+        const dateTypeRadio = document.querySelector('input[name="radioButtons"]:checked');
 
-        if (!dateType) {
-            $('#alertMessage').text('Veuillez sélectionner une option de date (prévisionnelles ou effectives) ou le sans filtre.');
-            $('#alertModal').modal('show');
+        if (!dateTypeRadio) {
+            alert('Veuillez sélectionner une option de date.');
             return;
         }
 
-        dateType = dateType.value;
+        const dateType = dateTypeRadio.value;
 
-        var formData = {
-            startDate: startDate,
-            endDate: endDate,
+        if (dateType === 'Tous') {
+            // Si "Sans filtre", recharge tous les projets
+            fetch(`/api/projects?country={{ session('pays_selectionne') }}&group={{ session('projet_selectionne') }}`)
+                .then(res => res.json())
+                .then(projects => {
+                    updateMap({ projets: projects });
+                });
+            return;
+        }
+        const queryParams = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate,
             status: status,
             bailleur: bailleur,
-            dateType: dateType
-        };
-        localStorage.setItem('formData', JSON.stringify(formData));
+            date_type: dateType,
+            _: new Date().getTime()
+        }).toString();
 
-        // Append a random query string to the URL to bypass cache
-        var randomQueryString = `&_=${new Date().getTime()}`;
-
-        fetch(`{{ route('filter.map') }}?start_date=${startDate}&end_date=${endDate}&status=${status}&bailleur=${bailleur}&date_type=${dateType}${randomQueryString}`, {
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            updateMap(data);
-            // Vider le cache et recharger la page
-            clearCacheAndReload();
-        })
-        .catch(error => console.error('Error:', error));
+        fetch(`/api/filtrer-projets?${queryParams}`)
+            .then(res => res.json())
+            .then(data => {
+                updateMap(data.projets); // <-- Tes projets filtrés à afficher
+                updateBailleurOptions(data.bailleurs);
+                updateStatutOptions(data.statuts);
+            })
+            .catch(err => console.error('Erreur dans le filtre:', err));
     });
+
+    function updateBailleurOptions(bailleurs) {
+        const select = document.getElementById('bailleur');
+        select.innerHTML = '<option value="">Tous les bailleurs</option>';
+        bailleurs.forEach(b => {
+            select.innerHTML += `<option value="${b.code_acteur}">${b.nom}</option>`;
+        });
+    }
+
+    function updateStatutOptions(statuts) {
+        const select = document.getElementById('status');
+        select.innerHTML = '<option value="">Tous les statuts</option>';
+        statuts.forEach(s => {
+            select.innerHTML += `<option value="${s.id}">${s.libelle}</option>`;
+        });
+    }
+
+
+
 
     function clearCacheAndReload() {
         if ('caches' in window) {
@@ -364,7 +379,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
             window.location.reload(true);
         }
     }
-
         // Chargez les valeurs précédentes des champs de formulaire depuis le stockage local (s'il y en a)
         window.addEventListener('DOMContentLoaded', function() {
             // Vérifiez s'il y a des données sauvegardées dans le stockage local
@@ -393,33 +407,84 @@ svg.leaflet-image-layer.leaflet-interactive path {
         });
 
 
-
-
-
     function updateMap(data) {
-        // Implement the logic to update your map with the filtered data
-        console.log(data);
+        const filteredProjects = data.projets;
+
+        if (!filteredProjects || filteredProjects.length === 0) {
+            alert("Aucun projet trouvé pour ce filtre.");
+            return;
+        }
+
+        // Remplacer les données projets globales utilisées dans map.js
+        window.projectData = processProjectData(filteredProjects);
+
+        // Recharge les styles sur la carte avec les nouveaux projets
+        if (typeof window.reloadMapWithNewStyle === 'function') {
+            window.reloadMapWithNewStyle();
+        }
+
+        // Optionnel : mettre à jour l'info box (droite)
+        if (typeof info !== 'undefined') {
+            info.update(window.domainesAssocie, window.niveau);
+        }
+
+        console.log('✅ Carte mise à jour avec les projets filtrés');
     }
+
+
+
+     function changeMapLayerJS(layerType) {
+            // Détermine le type d'affichage
+        if (layerType === 'Finance') {
+            window.currentMapMetric = 'cost';
+        } else if (layerType === 'Nombre') {
+            window.currentMapMetric = 'count';
+        }
+
+        // Rien ici pour filtre (cumul/public/privé), il sera mis à jour ailleurs
+
+        window.reloadMapWithNewStyle?.();
+    }
+
 
 
     function handleCheckboxChange(checkboxId, layerType) {
-        var checkbox = document.getElementById(checkboxId);
+    const filterCheckboxes = {
+        'cumulLayer': 'cumul',
+        'priveLayer': 'private',
+        'publicLayer': 'public'
+    };
 
-        // Uncheck all other checkboxes
-        var checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(function (cb) {
-            if (cb.id !== checkboxId) {
-                cb.checked = false;
-            }
+    const metricCheckboxes = {
+        'financeLayer': 'Finance',
+        'nombreLayer': 'Nombre'
+    };
+
+    // Si c’est un filtre privé/public/cumul
+    if (filterCheckboxes[checkboxId]) {
+        // désactiver les autres
+        Object.keys(filterCheckboxes).forEach(id => {
+            if (id !== checkboxId) document.getElementById(id).checked = false;
         });
 
-        // Call the function to change the layer based on the user's selection
-        if (checkbox.checked) {
-            changeMapLayerJS(layerType);
-        } else {
-            // Handle the case where the checkbox is unchecked if necessary
+        window.currentMapFilter = filterCheckboxes[checkboxId];
+        window.reloadMapWithNewStyle?.();
+        return;
+    }
+
+    // Si c’est le type de métrique
+    if (metricCheckboxes[checkboxId]) {
+            // désactiver les autres
+            Object.keys(metricCheckboxes).forEach(id => {
+                if (id !== checkboxId) document.getElementById(id).checked = false;
+            });
+
+            changeMapLayerJS(metricCheckboxes[checkboxId]);
+            return;
         }
     }
+
+
 
 
 
@@ -437,6 +502,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     document.addEventListener('DOMContentLoaded', function () {
         var countryAlpha3Code = '{{ $codeAlpha3 }}';
         var codeGroupeProjet = '{{ $codeGroupeProjet }}';
+        window.codeGroupeProjet = '{{ $codeGroupeProjet }}';
+
+
         var domainesAssocie = @json($domainesAssocie);
         var niveau = @json($niveau);
         var codeZoom = @json($codeZoom);
