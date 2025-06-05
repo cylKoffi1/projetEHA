@@ -1370,11 +1370,11 @@
 
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-3">
                                         <label>Coût du projet</label>
                                         <input type="text" name="coutProjet" id="coutProjet" class="form-control text-end" oninput="formatNumber(this)">
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-2">
                                         <label>Devise du coût</label>
                                         <input type="text" name="code_devise" id="deviseCout" class="form-control" value="{{ $deviseCouts->code_long }}" readonly>
                                     </div>
@@ -1606,91 +1606,91 @@
                                         <button type="button" class="btn btn-primary" onclick="saveStep2(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
                                     </div>
                                 </div>
-                            </div>
-                            <!--Sauvegarde temporaire -->
-                            <script>
-                                function saveStep2(callback = null) {
-                                    const codeProjet = localStorage.getItem("code_projet_temp");
-                                    if (!codeProjet) return alert("Aucun projet n’a encore été créé.");
+                        </div>
+                        <!--Sauvegarde temporaire -->
+                        <script>
+                            function saveStep2(callback = null) {
+                                const codeProjet = localStorage.getItem("code_projet_temp");
+                                if (!codeProjet) return alert("Aucun projet n’a encore été créé.");
 
-                                    // 🔁 Lecture des lignes de localisation
-                                    const localites = [];
-                                    $("#tableLocalites tr").each(function () {
-                                        const cols = $(this).find("td");
-                                        if (cols.length > 0) {
-                                            localites.push({
-                                                code_rattachement: cols.eq(0).text(),
-                                                libelle: cols.eq(2).text(),
-                                                niveau: cols.eq(3).text(),
-                                                decoupage: cols.eq(4).text()
-                                            });
-                                        }
-                                    });
-
-                                    if (localites.length > 0) {
-                                        localStorage.setItem("code_localisation", localites[0].id); // pour finalisation
+                                // 🔁 Lecture des lignes de localisation
+                                const localites = [];
+                                $("#tableLocalites tr").each(function () {
+                                    const cols = $(this).find("td");
+                                    if (cols.length > 0) {
+                                        localites.push({
+                                            code_rattachement: cols.eq(0).text(),
+                                            libelle: cols.eq(2).text(),
+                                            niveau: cols.eq(3).text(),
+                                            decoupage: cols.eq(4).text()
+                                        });
                                     }
+                                });
 
-                                    // 🔁 Lecture des infrastructures + caractéristiques
-                                    const infrastructures = [];
-                                    $("#tableInfrastructures tr").each(function () {
-                                        const tds = $(this).find("td");
-                                        const name = $(tds[0]).find('input[type="hidden"]').val();
-                                        const famille = $(tds[1]).find('input[type="hidden"]').val();
-
-                                        const caracts = [];
-                                        $(tds[2]).find('input[type="hidden"]').each(function () {
-                                            const parts = $(this).val().split('|');
-                                            caracts.push({
-                                                id: parts[0],
-                                                unite_id: parts[1],
-                                                valeur: parts[2]
-                                            });
-                                        });
-
-                                        infrastructures.push({
-                                            libelle: name,
-                                            famille_code: famille,
-                                            localisation_id: null,
-                                            caracteristiques: caracts
-                                        });
-                                    });
-
-                                    // 📨 Envoi AJAX
-                                    $.ajax({
-                                        url: '{{ route("projets.temp.save.step2") }}',
-                                        method: 'POST',
-                                        data: {
-                                            _token: '{{ csrf_token() }}',
-                                            code_projet: codeProjet,
-                                            localites: localites,
-                                            infrastructures: infrastructures
-                                        },
-                                        success: function (response) {
-                                            if (typeof callback === "function") callback();
-                                            else nextStep();
-                                        },
-                                        error: function (xhr) {
-                                            let message = "Une erreur est survenue.";
-
-                                            try {
-                                                const response = JSON.parse(xhr.responseText);
-                                                if (response.message) {
-                                                    message = response.message;
-                                                }
-                                            } catch (e) {
-                                                console.error("Erreur parsing JSON :", e);
-                                                console.warn("Réponse brute :", xhr.responseText);
-                                            }
-
-                                            alert(message);
-                                            console.error("Détail complet :", xhr.responseText);
-                                        }
-                                    });
+                                if (localites.length > 0) {
+                                    localStorage.setItem("code_localisation", localites[0].id); // pour finalisation
                                 }
-                            </script>
-                            <div class="step" id="step-3">
-                                <h5 class="text-secondary">🌍 Infrastructures</h5>
+
+                                // 🔁 Lecture des infrastructures + caractéristiques
+                                const infrastructures = [];
+                                $("#tableInfrastructures tr").each(function () {
+                                    const tds = $(this).find("td");
+                                    const name = $(tds[0]).find('input[type="hidden"]').val();
+                                    const famille = $(tds[1]).find('input[type="hidden"]').val();
+
+                                    const caracts = [];
+                                    $(tds[2]).find('input[type="hidden"]').each(function () {
+                                        const parts = $(this).val().split('|');
+                                        caracts.push({
+                                            id: parts[0],
+                                            unite_id: parts[1],
+                                            valeur: parts[2]
+                                        });
+                                    });
+
+                                    infrastructures.push({
+                                        libelle: name,
+                                        famille_code: famille,
+                                        localisation_id: null,
+                                        caracteristiques: caracts
+                                    });
+                                });
+
+                                // 📨 Envoi AJAX
+                                $.ajax({
+                                    url: '{{ route("projets.temp.save.step2") }}',
+                                    method: 'POST',
+                                    data: {
+                                        _token: '{{ csrf_token() }}',
+                                        code_projet: codeProjet,
+                                        localites: localites,
+                                        infrastructures: infrastructures
+                                    },
+                                    success: function (response) {
+                                        if (typeof callback === "function") callback();
+                                        else nextStep();
+                                    },
+                                    error: function (xhr) {
+                                        let message = "Une erreur est survenue.";
+
+                                        try {
+                                            const response = JSON.parse(xhr.responseText);
+                                            if (response.message) {
+                                                message = response.message;
+                                            }
+                                        } catch (e) {
+                                            console.error("Erreur parsing JSON :", e);
+                                            console.warn("Réponse brute :", xhr.responseText);
+                                        }
+
+                                        alert(message);
+                                        console.error("Détail complet :", xhr.responseText);
+                                    }
+                                });
+                            }
+                        </script>
+                        <div class="step" id="step-3">
+                        <h5 class="text-secondary">🌍 Infrastructures</h5>
                                 <div class="row">
                                     <br>
                                     <div style="width: 100%;">

@@ -125,12 +125,14 @@ class EtudeProjet extends Controller
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
             $TypeCaracteristiques = TypeCaracteristique::all();
-            $infrastructures = Infrastructure::all();
+            $infrastructures = Infrastructure::where('code_pays', $paysSelectionne)
+            ->where('code_groupe_projet', $groupeSelectionne)
+            ->get();
             $acteurs = Acteur::where('type_acteur', '=', 'etp')
             ->where('code_pays', $paysSelectionne)
             ->get();
             
-            $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];
+            $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];   
 
             $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
             
@@ -473,10 +475,10 @@ class EtudeProjet extends Controller
         public function saveStep3(Request $request)
         {
             try {
-                $request->validate([
+                /*$request->validate([
                      'actions' => 'required|array',
                 ]);
-        
+                */
                 $data = $request->only(['actions']);
                 session(['form_step3' => $data]);
         
@@ -998,16 +1000,22 @@ class EtudeProjet extends Controller
         public function historiqueApp(Request $request)
         {
             try {
+                $country = session('pays_selectionne');
+                $group = session('projet_selectionne');
+
                 $approvalHistory = ProjetApprobation::with([
-                    'etude',
-                    'etude.projet',
-                    'approbateur.acteur',
-                    'statutValidation'
-                ])
-                ->whereIn('statut_validation_id', [2, 3]) // Validé ou refusé
-                ->orderByDesc('approved_at')
-                ->get();
-        
+                        'etude',
+                        'etude.projet',
+                        'approbateur.acteur',
+                        'statutValidation'
+                    ])
+                    ->whereIn('statut_validation_id', [2, 3]) // Validé ou refusé
+                    ->whereHas('etude.projet', function ($query) use ($country, $group) {
+                        $query->where('code_projet', 'like', $country . $group . '%');
+                    })
+                    ->orderByDesc('approved_at')
+                    ->get();
+
                 return view('etudes_projets.historiqueApp', compact('approvalHistory'));
         
             } catch (Exception $e) {
@@ -1157,94 +1165,105 @@ class EtudeProjet extends Controller
 
     public function renfo(Request $request)
     {
-        $renforcements = Renforcement::with(['beneficiaires', 'projets'])->get();
+        $country = session('pays_selectionne');
+        $group = session('projet_selectionne');
+        $renforcements = Renforcement::with(['beneficiaires', 'projets'])
+        ->where('code_renforcement', 'like', $country .'_'. $group . '%')
+        ->get();
 
         $ecran = Ecran::find($request->input('ecran_id'));
-        $projets = Projet::all();
-        $beneficiaires = User::all();
+        $projets = Projet::where('code_projet', 'like', $country . $group . '%')->get();
+        $beneficiaires = Acteur::where('code_pays', $country)->get();
         return view('etudes_projets.renforcement', compact('renforcements', 'projets', 'beneficiaires', 'ecran'));
     }
 
-    public function store(Request $request)
+    public function storerenfo(Request $request)
     {
+        $request->validate([
+            'titre' => 'required|string|max:255',
+            'date_renforcement' => 'required|date',
+            'date_fin' => 'required|date|after_or_equal:date_renforcement',
+            'beneficiaires' => 'required|array|min:1'
+        ]);
+
+        DB::beginTransaction();
         try {
-            // Valider les données d'entrée (les projets ne sont pas obligatoires)
-            $validatedData = $request->validate([
-                'titre' => 'required|string|max:255',
-                'description' => 'required|string',
-                'date_renforcement' => 'required|date',
-                'date_fin' => 'required|date',
-                'beneficiaires' => 'required|array|min:1',  // Au moins un bénéficiaire est requis
-                'beneficiaires.*' => 'exists:mot_de_passe_utilisateur,code_personnel', // Valider que chaque bénéficiaire existe
-                'projets' => 'nullable|array',  // Projets non obligatoires
-                'projets.*' => 'exists:projet_eha2,CodeProjet',  // Si des projets sont fournis, vérifier qu'ils existent
-            ]);
+            $country = session('pays_selectionne');
+            $group = session('projet_selectionne');
+            $code = Renforcement::generateCodeRenforcement($country, $group);
 
-            // Générer un code personnalisé pour le renforcement
-            $codeRenforcement = Renforcement::generateCodeRenforcement();
-
-            // Créer un renforcement
             $renforcement = Renforcement::create([
-                'code_renforcement' => $codeRenforcement,
-                'titre' => $validatedData['titre'],
-                'description' => $validatedData['description'],
-                'date_debut' => $validatedData['date_renforcement'],
-                'date_fin' => $validatedData['date_fin']
+                'code_renforcement' => $code,
+                'titre' => $request->titre,
+                'description' => $request->description,
+                'date_debut' => $request->date_renforcement,
+                'date_fin' => $request->date_fin,
             ]);
 
-            // Associer les bénéficiaires s'ils sont présents
-            if (isset($validatedData['beneficiaires'])) {
-                $renforcement->beneficiaires()->attach($validatedData['beneficiaires']);
-            }
+            $renforcement->beneficiaires()->sync($request->beneficiaires);
+            $renforcement->projets()->sync($request->projets ?? []);
 
-            // Associer les projets s'ils sont présents
-            if (isset($validatedData['projets'])) {
-                $renforcement->projets()->attach($validatedData['projets']);
-            }
-            $ecran_id = $request->input('ecran_id');
-            // Rediriger vers la liste des renforcements après la sauvegarde
-            return redirect()->route('renforcements.index', ['ecran_id' => $ecran_id])->with('success', 'Renforcement créé avec succès !');
-
+            DB::commit();
+            Log::info('Renforcement créé', [
+                'code' => $code,
+                'titre' => $request->titre,
+                'utilisateur' => auth()->user()?->name,
+            ]);
+            
+            return redirect()->back()->with('success', 'Renforcement ajouté avec succès.');
         } catch (\Exception $e) {
-            // Capture et gestion des erreurs
-            return redirect()->back()->withInput()->withErrors(['error' => 'Une erreur est survenue lors de la création du renforcement : ' . $e->getMessage()]);
+            DB::rollBack();
+            Log::error('Erreur lors de l\'ajout de renforcement', [
+                'exception' => $e->getMessage(),
+                'utilisateur' => auth()->user()?->name,
+            ]);
+            
+            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
         }
     }
 
-    public function update(Request $request, $id)
+    public function updaterenfo(Request $request, $code)
     {
-        try {
-            // Trouver le renforcement par son identifiant
-            $renforcement = Renforcement::where('code_renforcement', $id)->firstOrFail();
+        $request->validate([
+            'titre' => 'required|string|max:255',
+            'date_renforcement' => 'required|date',
+            'date_fin' => 'required|date|after_or_equal:date_renforcement',
+            'beneficiaires' => 'required|array|min:1'
+        ]);
 
-            // Mettre à jour les détails du renforcement
+        DB::beginTransaction();
+        try {
+            $renforcement = Renforcement::where('code_renforcement', $code)->firstOrFail();
+
             $renforcement->update([
                 'titre' => $request->titre,
                 'description' => $request->description,
                 'date_debut' => $request->date_renforcement,
-                'date_fin' => $request->date_fin
+                'date_fin' => $request->date_fin,
             ]);
 
-            // Mettre à jour les bénéficiaires associés
-            if ($request->has('beneficiaires')) {
-                $renforcement->beneficiaires()->sync($request->beneficiaires);
-            } else {
-                $renforcement->beneficiaires()->detach();
-            }
+            $renforcement->beneficiaires()->sync($request->beneficiaires);
+            $renforcement->projets()->sync($request->projets ?? []);
 
-            // Mettre à jour les projets associés
-            if ($request->has('projets')) {
-                $renforcement->projets()->sync($request->projets);
-            } else {
-                $renforcement->projets()->detach();
-            }
-
-            $ecran_id = $request->input('ecran_id');
-            // Rediriger avec succès
-            return redirect()->route('renforcements.index', ['ecran_id' => $ecran_id])->with('success', 'Renforcement modifié avec succès !');
+            DB::commit();
+            return redirect()->back()->with('success', 'Renforcement modifié avec succès.');
         } catch (\Exception $e) {
-            // En cas d'erreur, rediriger avec un message d'erreur
-            return back()->with('error', 'Une erreur s\'est produite lors de la modification : ' . $e->getMessage());
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
+        }
+    }
+
+    public function destroyrenfo($code)
+    {
+        DB::beginTransaction();
+        try {
+            $renforcement = Renforcement::where('code_renforcement', $code)->firstOrFail();
+            $renforcement->delete();
+            DB::commit();
+            return response()->json(['success' => 'Renforcement supprimé avec succès.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
         }
     }
 
@@ -1252,9 +1271,14 @@ class EtudeProjet extends Controller
     // Afficher la liste des travaux connexes
     public function activite(Request $request)
     {
+        $country = session('pays_selectionne');
+        $group = session('projet_selectionne');
+       
         $ecran = Ecran::find($request->input('ecran_id'));
-        $travaux = TravauxConnexes::with('typeTravaux', 'projet')->get();
-        $projets = Projet::all();
+        $travaux = TravauxConnexes::with('typeTravaux', 'projet')
+        ->where('codeActivite', 'like', $country .'_'. $group . '%')
+        ->get();
+        $projets = Projet::where('code_projet', 'like', $country . $group . '%')->get();
         $typesTravaux = TypeTravauxConnexes::orderBy('libelle', 'asc')->get();
 
         return view('etudes_projets.activite', compact('ecran','travaux', 'projets', 'typesTravaux'));
@@ -1277,12 +1301,14 @@ class EtudeProjet extends Controller
 
         try {
             // Générer un code personnalisé pour l'activité connexe
-            $codeActivite = TravauxConnexes::generateCodeTravauxConnexe();
+            $country = session('pays_selectionne');
+            $group = session('projet_selectionne');
+            $codeActivite = TravauxConnexes::generateCodeTravauxConnexe($country, $group);
 
             // Créer et enregistrer le travail connexe
             TravauxConnexes::create([
                 'codeActivite' => $codeActivite,
-                'CodeProjet' => $request->input('code_projet'), // Utiliser le code projet fourni
+                'code_projet' => $request->input('code_projet'), // Utiliser le code projet fourni
                 'type_travaux_id' => $request->input('type_travaux_id'),
                 'cout_projet' => $request->input('cout_projet'), // Enlever les espaces
                 'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
@@ -1291,7 +1317,11 @@ class EtudeProjet extends Controller
                 'date_fin_effective' => $request->input('date_fin_effective'),
                 'commentaire' => $request->input('commentaire'),
             ]);
-
+            Log::info('Activité connexe créée', [
+                'code' => $codeActivite,
+                'utilisateur' => auth()->user()?->name,
+            ]);
+            
             // Rediriger avec un message de succès
             return redirect()->route('activite.index', ['ecran_id' => $request->input('ecran_id')])
                 ->with('success', 'Travail connexe enregistré avec succès.');

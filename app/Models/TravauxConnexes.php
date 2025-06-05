@@ -15,7 +15,7 @@ class TravauxConnexes extends Model
 
     protected $fillable = [
         'codeActivite',
-        'CodeProjet',
+        'code_projet',
         'type_travaux_id',
         'cout_projet',
         'date_debut_previsionnelle',
@@ -34,15 +34,28 @@ class TravauxConnexes extends Model
     // Relation avec le projet
     public function projet()
     {
-        return $this->belongsTo(Projet::class, 'code_projet', 'CodeProjet');
+        return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
     }
-    public static function generateCodeTravauxConnexe()
+    public static function generateCodeTravauxConnexe($country, $group)
     {
-        $latest = self::latest()->first();
-        $orderNumber = $latest ? intval(substr($latest->codeActivite, -3)) + 1 : 1;
         $month = now()->format('m');
         $year = now()->format('Y');
-        return 'EHA_TC_' . $month . '_' . $year . '_' . str_pad($orderNumber, 3, '0', STR_PAD_LEFT);
+        $base = "{$country}_{$group}_TC_{$year}_{$month}_";
+    
+        // Recherche du dernier code avec ce préfixe
+        $last = self::where('codeActivite', 'like', $base . '%')
+                    ->orderByDesc('codeActivite')
+                    ->first();
+    
+        if ($last) {
+            $lastNumber = intval(substr($last->codeActivite, -3));
+            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        } else {
+            $newNumber = '001';
+        }
+    
+        return $base . $newNumber;
     }
+    
 
 }

@@ -43,5 +43,14 @@ class ProjetActionAMener extends Model
             ->merge($this->beneficiairesLocalites)
             ->merge($this->beneficiairesInfrastructures);
     }
-
+    public function infrastructure()
+    {
+        return $this->belongsTo(Infrastructure::class, 'Infrastrucrues_id', 'code');
+    }
+    
+    public function actionMener()
+    {
+        return $this->belongsTo(ActionMener::class, 'Action_mener', 'code'); 
+    }
+    
 }

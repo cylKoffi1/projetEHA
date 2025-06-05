@@ -6,6 +6,7 @@ namespace App\Http\Controllers\ParSpecifique;
 use App\Http\Controllers\Controller;
 use App\Models\Acteur;
 use App\Models\Ecran;
+use App\Models\FonctionUtilisateur;
 use App\Models\FormeJuridique;
 use App\Models\Genre;
 use App\Models\GroupeProjetPaysUser;
@@ -43,7 +44,7 @@ class ActeurController extends Controller
                     ->with('error', 'Veuillez contacter l\'administrateur pour vous attribuer un pays avant de continuer.');
             }
             $tousPays = Pays::whereNotIn('id',  [0, 300, 301, 302, 303, 304])->get();
-
+            $fonctionUtilisateurs = FonctionUtilisateur::all();
 
             $pays = Pays::where('alpha3', $paysSelectionne)->first();
             $ecran = Ecran::find($request->input('ecran_id'));
@@ -79,7 +80,7 @@ class ActeurController extends Controller
             ->where('a.code_pays',  $pays->alpha3)
             ->get();
           //  dd( $acteurRepres );
-            return view('parSpecifique.Acteur', compact('acteurRepres','tousPays','typeFinancements','formeJuridiques','Pieceidentite','genres','SituationMatrimoniales','SecteurActivites','ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
+            return view('parSpecifique.Acteur', compact('fonctionUtilisateurs', 'acteurRepres','tousPays','typeFinancements','formeJuridiques','Pieceidentite','genres','SituationMatrimoniales','SecteurActivites','ecran', 'TypeActeurs', 'acteurs', 'pays', 'filter'));
         } catch (\Exception $e) {
             Log::error("Erreur lors de la récupération des acteurs : " . $e->getMessage());
             return redirect()->back()->withErrors('Une erreur est survenue lors du chargement des acteurs.');
@@ -136,7 +137,8 @@ class ActeurController extends Controller
                     'is_active' => true
                 ]);
                 $physique->save();
-    
+                
+                
                 // 💳 Pièce d'identité
                 if ($request->piece_identite && $request->numeroPiece) {
                     Possederpiece::create([
@@ -156,6 +158,19 @@ class ActeurController extends Controller
                             'code_secteur' => $secteur
                         ]);
                     }
+                }
+
+                
+                $acteur = Acteur::with(['personnePhysique', 'personneMorale'])->findOrFail($acteur->code_acteur);
+
+                if ($acteur->personnePhysique) {
+                    $utilisateur = $acteur->utilisateurs()->first();
+                    if ($utilisateur) {
+                        $utilisateur->update([
+                            'fonction_utilisateur' => $request->fonctionUsern
+                        ]);
+                    }
+
                 }
             }
     
@@ -257,6 +272,9 @@ class ActeurController extends Controller
             // 🧑‍💼 Mise à jour Personne Physique
             if ($request->type_personne == 'physique') {
                 if ($acteur->personnePhysique) {
+                    $acteur->personnePhysique->acteur->utilisateurs->update([
+                        'fonction_utilisateur' => $request->fonctionUser
+                    ]);
                     $acteur->personnePhysique->update([
                         'nom' => $request->nom,
                         'prenom' => $request->prenom,
@@ -468,7 +486,8 @@ class ActeurController extends Controller
                 'personneMorale',
                 'secteurActiviteActeur',
                 'possederpiece',
-                'representants'
+                'representants',
+                'utilisateurs'
             ])->findOrFail($id);
     
             // Préparer les données pour le formulaire
@@ -507,6 +526,7 @@ class ActeurController extends Controller
                     'dateEtablissement' => $acteur->possederpiece->first() ? $acteur->possederpiece->first()->DateEtablissement : null,
                     'dateExpiration' => $acteur->possederpiece->first() ? $acteur->possederpiece->first()->DateExpiration : null,
                     'SecteurActI' => $acteur->secteurActiviteActeur->pluck('code_secteur')->toArray(),
+                    'fonctionUser' => $acteur->utilisateurs->fonction_utilisateur,
                 ]);
             } elseif ($acteur->personneMorale) {
                 $data = array_merge($data, [

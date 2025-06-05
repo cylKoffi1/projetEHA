@@ -207,11 +207,14 @@
                             <td>{{ $utilisateur->login }}</td>
                             <td>{{ $utilisateur?->groupeUtilisateur?->libelle_groupe }}</td>
                             <td>
-                                @if ($utilisateur->is_active)
-                                    <span class="badge bg-success">Actif</span>
-                                @else
-                                    <span class="badge bg-danger">Inactif</span>
-                                @endif
+                            @if ($utilisateur->is_blocked)
+                                <span class="badge bg-warning">Bloqué</span>
+                            @elseif ($utilisateur->is_active)
+                                <span class="badge bg-success">Actif</span>
+                            @else
+                                <span class="badge bg-danger">Inactif</span>
+                            @endif
+
                             </td>
                             <td>
                                  <!-- Modifier -->
@@ -236,6 +239,15 @@
                                         </button>
                                     </form>
                                 @endif
+                                @if ($utilisateur->is_blocked)
+                                    <form action="{{ route('utilisateurs.debloquer', $utilisateur->id) }}" method="POST" style="display:inline;">
+                                        @csrf
+                                        <button type="submit" class="btn btn-link" data-bs-toggle="tooltip" title="Débloquer">
+                                            <i class="bi bi-unlock" style="font-size: 1.2rem; color: orange;"></i>
+                                        </button>
+                                    </form>
+                                @endif
+
                             </td>
                         </tr>
                     @endforeach

@@ -18,8 +18,9 @@ class Profiter extends Model
         'code_rattachement'
     ];
     public function localite()
-{
-    return $this->belongsTo(Localite::class, 'code_rattachement', 'code');
-}
+    {
+        return $this->belongsTo(LocalitesPays::class, 'code_rattachement', 'code_rattachement');
+    }
+    
 
 }

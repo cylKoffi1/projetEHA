@@ -122,6 +122,7 @@ class ProjetValidationController extends Controller
             $approbation->update([
                 'statut_validation_id' => 2,
                 'approved_at' => now(),
+                'is_approved' => 1,
             ]);
     
             // Chercher l'approbateur suivant

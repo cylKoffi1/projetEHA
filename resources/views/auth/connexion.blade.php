@@ -260,7 +260,13 @@
                     populateCountries(response.data);
                     $('#step-login').addClass('hidden');
                     $('#step-country').removeClass('hidden');
-                } else if (response.step === 'finalize') {
+                }else if (response.step === 'choose_group') {
+                    console.log('Étape suivante : Sélection de groupe projet (direct depuis pays unique).');
+                    populateGroups(response.data);
+                    $('#step-login').addClass('hidden');
+                    $('#step-group').removeClass('hidden');
+                }
+                else if (response.step === 'finalize') {
                     console.log('Connexion finalisée. Redirection...');
                     window.location.href = "{{ route('projets.index') }}";
                 }
@@ -379,6 +385,14 @@
         }
 
     });
+    if (response.step === 'redirect_change_password') {
+        alert("Veuillez modifier votre mot de passe pour continuer.", "info");
+        window.location.href = response.url;
+    }
+    if (response.step === 'force_password_change') {
+        window.location.href = ' {{url("/")}}/admin/users/details-user/' + response.user_id;
+    }
+
 </script>
 </body>
 </html>

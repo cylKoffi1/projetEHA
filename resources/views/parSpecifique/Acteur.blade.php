@@ -2,7 +2,7 @@
 
 @section('content')
 <style>
-    .photo-preview {
+.photo-preview {
     width: 150px;
     height: 150px;
     border: 2px dashed #ccc;
@@ -399,22 +399,32 @@
                                             <label>Date de etablissement:</label>
                                             <input type="date" class="form-control" name="dateEtablissement" placeholder="Numéro de CNI">
                                         </div>
-
-                                        <div class="col-md-4">
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3">
                                             <label>Date de expiration:</label>
                                             <input type="date" class="form-control" name="dateExpiration" placeholder="Numéro de CNI">
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label>Numéro Fiscal </label>
                                             <input type="text" class="form-control" name="numeroFiscal" placeholder="Numéro fiscal">
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label >Secteur d'activité</label>
                                             <lookup-multiselect name="SecteurActI" id="SecteurActI">
                                                 @foreach ($SecteurActivites as $SecteurActivite)
                                                     <option value="{{ $SecteurActivite->code }}">{{ $SecteurActivite->libelle }}</option>
                                                 @endforeach
                                             </lookup-multiselect>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label >Fonction</label>
+                                            <select name="fonctionUser" id="fonctionUser" class="form-control">
+                                                <option value="">Sélectionner la fonction</option>
+                                                @foreach ($fonctionUtilisateurs as $fonctionUtilisateur)
+                                                    <option value="{{ $fonctionUtilisateur->code }}">{{ $fonctionUtilisateur->libelle_fonction }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -450,8 +460,8 @@
                         <th>Nom</th>
                         <th>Prénoms</th>
                         <th>Email</th>
-                        <th>Téléphone</th>
-                                                
+                        <th>Fonction</th>
+                        <th>Téléphone</th>                                                
                         <th>Type acteur</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -475,6 +485,7 @@
                         <td class="col-2">{{ $acteur->libelle_court }}</td>
                         <td class="col-2">{{ $acteur->libelle_long }}</td>
                         <td >{{ $acteur->email }}</td>
+                        <td>{{ $acteur?->utilisateurs?->fonctionUtilisateur?->libelle_fonction }} </td>
                         <td >{{ $acteur->telephone }}</td>
                         <td class="col-2">{{ $acteur->type ? $acteur->type->libelle_type_acteur : 'Type non défini' }}</td>
                         <td>@if ($acteur->is_active)
@@ -573,7 +584,7 @@
                 e.preventDefault();
                 
                 const id = this.getAttribute('data-id');
-                fetch(`{{ url("/") }}acteurs/${id}/edit`)
+                fetch(`{{ url("/") }}/acteurs/${id}/edit`)
                     .then(response => {
                         if (!response.ok) throw new Error('Erreur réseau');
                         return response.json();
@@ -589,7 +600,7 @@
                         // Gestion de la photo
                         if (data.photo) {
                             const preview = document.getElementById('photo-preview');
-                            preview.src = `/${data.photo}`;
+                            preview.src = `{{ url("/") }}/${data.photo}`;
                             preview.style.display = 'block';
                         }
                         
@@ -620,7 +631,8 @@
                             document.querySelector('input[name="numeroPiece"]').value = data.numeroPiece || '';
                             document.querySelector('input[name="dateEtablissement"]').value = data.dateEtablissement || '';
                             document.querySelector('input[name="dateExpiration"]').value = data.dateExpiration || '';
-                            
+                            document.getElementById('fonctionUser').value = data.fonctionUser || '';
+
                             waitAndSetSelectedValues(document.getElementById('SecteurActI'), data.SecteurActI);
 
                             alert('✅ Modifications effectuées avec succes !');
@@ -665,11 +677,11 @@
                     })
                     .catch(error => {
                         console.error('Erreur:', error);
-                        alert('Erreur lors du chargement des données de l\'acteur');
+                        alert('Erreur lors du chargement des données de l\'acteur','error');
                     })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert('Erreur lors du chargement des données');
+                    alert('Erreur lors du chargement des données','error');
                 });
         });
     });

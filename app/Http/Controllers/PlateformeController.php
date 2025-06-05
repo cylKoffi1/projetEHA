@@ -51,7 +51,11 @@ use App\Models\UniteTraitement;
 use App\Models\uniteVolume;
 use App\Models\TypeCaracteristique;
 use App\Models\Caracteristique;
+use App\Models\FamilleCaracteristique;
+use App\Models\Infrastructure;
+use App\Models\Projet;
 use App\Models\Unite;
+use App\Models\ValeurPossible;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -380,93 +384,156 @@ class PlateformeController extends Controller
     }
     public function storeDomaine(Request $request)
     {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $domaine = new Domaine;
-        $domaine->code = $request->input('code');
-        $domaine->libelle = $request->input('libelle');
-
-        $domaine->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.domaines', ['ecran_id' => $ecran_id])->with('success', 'Domaine enregistré avec succès.');
+        try {
+            $request->validate([
+                'code' => 'required|string|max:20|unique:domaine_intervention,code',
+                'libelle' => 'required|string|max:255',
+                'ecran_id' => 'required'
+            ]);
+    
+            $domaine = new Domaine;
+            $domaine->code = $request->input('code');
+            $domaine->libelle = $request->input('libelle');
+            $domaine->groupe_projet_code = session('projet_selectionne');
+            $domaine->save();
+    
+            return response()->json(['success' => 'Domaine enregistré avec succès.']);
+        } catch (\Throwable $e) {
+            Log::error($e);
+            return response()->json(['error' => 'Erreur lors de l\'enregistrement du domaine.'], 500);
+        }
     }
-
-    public function storeSousDomaine(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $s_domaine = new SousDomaine;
-        $s_domaine->code = $request->input('code');
-        $s_domaine->libelle = $request->input('libelle');
-        $s_domaine->code_domaine = $request->input('domaine');
-
-        $s_domaine->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.sous_domaines', ['ecran_id' => $ecran_id])->with('success', 'Sous-domaine enregistré avec succès.');
-    }
-
+        
     public function updateDomaine(Request $request)
     {
-        $domaine = Domaine::find($request->input('code_edit'));
-
-        if (!$domaine) {
-            return response()->json(['error' => 'Domaine non trouvé'], 404);
+        try {
+            $request->validate([
+                'code' => 'required|string',
+                'libelle' => 'required|string|max:255'
+            ]);
+    
+            $domaine = Domaine::where('code', $request->input('code'))
+            ->where('groupe_projet_code', session('projet_selectionne'))
+            ->first();
+    
+            if (!$domaine) {
+                return response()->json(['error' => 'Domaine non trouvé.'], 404);
+            }
+    
+            $domaine->libelle = $request->input('libelle');
+            $domaine->save();
+    
+            return response()->json(['success' => 'Domaine mis à jour avec succès.']);
+        } catch (\Throwable $e) {
+            Log::error($e);
+            return response()->json(['error' => 'Erreur lors de la mise à jour du domaine.'], 500);
         }
-
-        $domaine->libelle = $request->input('libelle_edit');
-
-
-        $domaine->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.domaines', ['ecran_id' => $ecran_id])->with('success', 'Domaine mis à jour avec succès.');
     }
-
+    
+    public function storeSousDomaine(Request $request)
+    {
+        try {
+            $request->validate([
+                'code' => [
+                    'required',
+                    'string',
+                    'max:20',
+                    Rule::unique('sous_domaine', 'code_sous_domaine')
+                        ->where(function ($query) {
+                            return $query->where('code_groupe_projet', session('projet_selectionne'));
+                        }),
+                ],
+                'libelle' => 'required|string|max:255',
+                'domaine' => 'required|string|exists:domaine_intervention,code'
+            ]);
+    
+            $sousDomaine = new SousDomaine;
+            $sousDomaine->code_sous_domaine = $request->input('code');
+            $sousDomaine->lib_sous_domaine = $request->input('libelle');
+            $sousDomaine->code_domaine = $request->input('domaine');
+            $sousDomaine->code_groupe_projet = session('projet_selectionne');
+            $sousDomaine->save();
+    
+            return response()->json(['success' => 'Sous-domaine enregistré avec succès.']);
+        } catch (\Throwable $e) {
+            Log::error($e);
+            return response()->json(['error' => 'Erreur lors de l\'enregistrement du sous-domaine.'], 500);
+        }
+    }
+    
     public function updateSousDomaine(Request $request)
     {
-        $s_domaine = SousDomaine::find($request->input('code_edit'));
-
-        if (!$s_domaine) {
-            return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
+        try {
+            $request->validate([
+                'libelle_edit' => 'required|string|max:255',
+                'domaine_edit' => 'required|string|exists:domaine_intervention,code'
+            ]);
+    
+            $sousDomaine = SousDomaine::where('code_sous_domaine', $request->input('code'))
+                ->where('code_groupe_projet', session('projet_selectionne'))
+                ->first();
+    
+            if (!$sousDomaine) {
+                return response()->json(['error' => 'Sous-domaine non trouvé.'], 404);
+            }
+    
+            $sousDomaine->lib_sous_domaine = $request->input('libelle');
+            $sousDomaine->save();
+    
+            return response()->json(['success' => 'Sous-domaine mis à jour avec succès.']);
+        } catch (\Throwable $e) {
+            Log::error($e);
+            return response()->json(['error' => 'Erreur lors de la mise à jour du sous-domaine.'], 500);
         }
-        $s_domaine->code_domaine = $request->input('domaine_edit');
-        $s_domaine->libelle = $request->input('libelle_edit');
-        $s_domaine->code = $request->input('code_edit');
-
-        $s_domaine->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.sous_domaines', ['ecran_id' => $ecran_id])->with('success', 'Sous-domaine mis à jour avec succès.');
     }
     public function domaines(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
-        $domaines = Domaine::orderBy('libelle', 'asc')->get();
+        $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))
+        ->orderBy('libelle', 'asc')->get();
         return view('parGeneraux.domaines', ['domaines' => $domaines,'ecran' => $ecran, ]);
     }
 
+
     public function sousDomaines(Request $request)
     {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $sous_domaines = SousDomaine::orderBy('libelle', 'asc')->get();
-        $domaines = Domaine::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.sous_domaines', ['sous_domaines' => $sous_domaines,'ecran' => $ecran,  'domaines' => $domaines]);
-    }
+        $ecran = Ecran::find($request->ecran_id); // ou autre logique
+        $sous_domaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
+        ->orderBy('lib_sous_domaine', 'asc')->get();
+        $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))
+        ->orderBy('libelle', 'asc')->get();
 
+        return view('parGeneraux.sous_domaines', [
+            'ecran' => $ecran,
+            'domaines' => $domaines,
+            'sous_domaines' => $sous_domaines,
+        ]);
+    }
+    
     public function deleteDomaine($code)
     {
-        $domaine = Domaine::find($code);
+        $domaine = Domaine::where('code',$code)
+        ->where('groupe_projet_code', session('projet_selectionne'))
+        ->first();
 
         if (!$domaine) {
             return response()->json(['error' => 'Domaine non trouvé'], 404);
         }
-        $projet = ProjetEha2::where('code_domaine', $code)->first();
+       
+        $groupeProjet = session('projet_selectionne');
+
+        // Vérifie si des sous-domaines sont liés à ce domaine
+        $hasSousDomaines = SousDomaine::where('code_domaine', $code)->exists();
+        if ($hasSousDomaines) {
+            return response()->json([
+                'error' => 'Suppression interdite : Des sous-domaines sont rattachés à ce domaine.'
+            ], 403);
+        }
+
+        $projet = Projet::whereRaw("SUBSTRING(code_sous_domaine, 1, 2) = ?", [$code])
+        ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+        ->first();
+    
 
         if ($projet) {
             return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
@@ -477,12 +544,16 @@ class PlateformeController extends Controller
     }
     public function deleteSousDomaine($code)
     {
-        $s_domaine = SousDomaine::find($code);
+        $s_domaine = SousDomaine::where('code_sous_domaine',$code)
+        ->where('code_groupe_projet', session('projet_selectionne'))->first();
 
         if (!$s_domaine) {
             return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
         }
-        $projet = ProjetEha2::where('code_sous_domaine', $code)->first();
+        $projet = Projet::where('code_sous_domaine', $code)
+        ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [session('projet_selectionne')])
+        ->first();
+
 
         if ($projet) {
             return response()->json(['error' => "Suppression interdite : Le Sous-domaine est utilisé dans d'autres tables"], 404);
@@ -495,7 +566,9 @@ class PlateformeController extends Controller
 
     public function getDomaine($code)
     {
-        $domaine = Domaine::find($code);
+        $domaine = Domaine::where('code', $code)
+        ->where('groupe_projet_code', session('projet_selectionne'))
+        ->first();
 
         if (!$domaine) {
             return response()->json(['error' => 'Domaine non trouvé'], 404);
@@ -506,7 +579,9 @@ class PlateformeController extends Controller
 
     public function getSousDomaine($code)
     {
-        $s_domaine = SousDomaine::find($code);
+        $s_domaine = SousDomaine::where('code_sous_domaine', $code)
+        ->where('code_groupe_projet', session('projet_selectionne'))
+        ->first();
 
         if (!$s_domaine) {
             return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
@@ -1036,8 +1111,10 @@ class PlateformeController extends Controller
        $sous_domaines = SousDomaine::all();
        $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')
         ->whereIn('code_groupe_projet', [session('projet_selectionne')])->get();
+        $caracteristiques = Caracteristique::with('type')->get();
+        $typesCaracteristique = TypeCaracteristique::all();
         
-        return view('parGeneraux.familleinfrastructure', ['domaine' => $domaine,'sous_domaines'=>$sous_domaines,'familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, ]);
+        return view('parGeneraux.familleinfrastructure', ['domaine' => $domaine,'sous_domaines'=>$sous_domaines,'familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, 'caracteristiques' =>$caracteristiques, 'typesCaracteristique'=>$typesCaracteristique ]);
     }
 
     public function getFamilleinfrastructure($code)
@@ -1051,23 +1128,7 @@ class PlateformeController extends Controller
         return response()->json($familleinfrastructure);
     }
 
-    public function storeFamilleinfrastructure(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
 
-        // Créez un nouveau district dans la base de données.
-        $familleinfrastructure = new FamilleInfrastructure;
-        $familleinfrastructure->code_sdomaine = $request->input('SDomaine');
-        $familleinfrastructure->libelleFamille = $request->input('libelle');
-        $familleinfrastructure->code_domaine = $request->input('domaine');
-        $familleinfrastructure->code_groupe_projet = session('projet_selectionne');
-
-        $familleinfrastructure->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.familleinfrastructure', ['ecran_id' => $ecran_id])->with('success', 'Famille Infrastructure enregistré avec succès.');
-    }
     public function deleteFamilleInfrastructure($id)
     {
         $famille = FamilleInfrastructure::find($id);
@@ -1080,27 +1141,228 @@ class PlateformeController extends Controller
     
         return redirect()->back()->with('success', 'Famille supprimée avec succès.');
     }
+
+    public function storeFamilleinfrastructure(Request $request)
+    {
+        try {
+            $id = $request->input('id');
+    
+            if ($id) {
+                $familleinfrastructure = FamilleInfrastructure::find($id);
+                if (!$familleinfrastructure) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Famille introuvable pour mise à jour.'
+                    ]);
+                }
+            } else {
+                $familleinfrastructure = new FamilleInfrastructure;
+            }
+    
+            $familleinfrastructure->code_famille = $request->input('code');
+            $familleinfrastructure->code_sdomaine = $request->input('SDomaine');
+            $familleinfrastructure->libelleFamille = $request->input('libelle');
+            $familleinfrastructure->code_domaine = $request->input('domaine');
+            $familleinfrastructure->code_groupe_projet = session('projet_selectionne');
+    
+            $familleinfrastructure->save();
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => $id ? 'Famille modifiée avec succès.' : 'Famille créée avec succès.',
+                'idFamille' => $familleinfrastructure->idFamille
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur lors de l’enregistrement : ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function storeCaracteristiquesFamille(Request $request)
+    {
+        try {
+            $request->validate([
+                'idFamille' => 'required|exists:familleinfrastructure,idFamille',
+                'caracteristiques_json' => 'required'
+            ]);
+    
+            $caracs = json_decode($request->caracteristiques_json, true);
+    
+            foreach ($caracs as $carac) {
+                // Vérifier si la caractéristique existe déjà
+                $existing = Caracteristique::where('libelleCaracteristique', $carac['libelle'])
+                    ->where('idTypeCaracteristique', $carac['type_id'])
+                    ->first();
+    
+                if (!$existing) {
+                    // Créer la caractéristique
+                    $existing = Caracteristique::create([
+                        'libelleCaracteristique' => $carac['libelle'],
+                        'idTypeCaracteristique' => $carac['type_id'],
+                    ]);
+    
+                    // Si c'est un type "liste" : créer les valeurs possibles
+                    if (
+                        strtolower($carac['type_label']) === 'liste' &&
+                        !empty($carac['valeurs_possibles'])
+                    ) {
+                        $valeurs = array_map('trim', explode(',', $carac['valeurs_possibles']));
+                        foreach ($valeurs as $valeur) {
+                            ValeurPossible::create([
+                                'idCaracteristique' => $existing->idCaracteristique,
+                                'valeur' => $valeur
+                            ]);
+                        }
+                    }
+    
+                    // Si c'est un type "nombre" : créer l'unité
+                    if (
+                        strtolower($carac['type_label']) === 'nombre' &&
+                        !empty($carac['unite_libelle']) &&
+                        !empty($carac['unite_symbole'])
+                    ) {
+                        Unite::create([
+                            'libelleUnite' => $carac['unite_libelle'],
+                            'symbole' => $carac['unite_symbole'],
+                            'idCaracteristique' => $existing->idCaracteristique
+                        ]);
+                    }
+                }
+    
+                // Associer à la famille si ce n'est pas déjà fait
+                FamilleCaracteristique::firstOrCreate([
+                    'idFamille' => $request->idFamille,
+                    'idCaracteristique' => $existing->idCaracteristique
+                ]);
+            }
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Caractéristiques enregistrées avec succès.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur : ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function supprimerCaracteristiqueFamille($famille_id, $caracteristique_id)
+    {
+        $association = FamilleCaracteristique::where('idFamille', $famille_id)
+            ->where('idCaracteristique', $caracteristique_id)
+            ->first();
+    
+        if ($association) {
+            $association->delete();
+            return response()->json(['status' => 'success', 'message' => 'Caractéristique supprimée.']);
+        }
+    
+        return response()->json(['status' => 'error', 'message' => 'Association introuvable.'], 404);
+    }
+    
+    public function getCaracteristiquesFamille($id)
+    {
+        $caracs = FamilleCaracteristique::with(['caracteristique.type', 'caracteristique.valeursPossibles', 'caracteristique.unite'])
+            ->where('idFamille', $id)
+            ->get()
+            ->map(function ($fc) {
+                return [
+                    'id' => $fc->caracteristique->idCaracteristique,
+                    'libelle' => $fc->caracteristique->libelleCaracteristique,
+                    'type_id' => $fc->caracteristique->type->idTypeCaracteristique,
+                    'type_label' => $fc->caracteristique->type->libelleTypeCaracteristique,
+                    'valeurs_possibles' => $fc->caracteristique->valeursPossibles->pluck('valeur')->toArray(),
+                    'unite_libelle' => $fc->caracteristique->unite?->libelleUnite,
+                    'unite_symbole' => $fc->caracteristique->unite?->symbole,
+                ];
+            });
+
+        return response()->json($caracs);
+    }
+
+    
     
     public function updateFamilleInfrastructure(Request $request)
     {
-        $request->validate([
-            'id' => 'required|exists:famille_infrastructures,id',
-            'libelle' => 'required|string|max:255',
-            'SDomaine' => 'required|exists:sous_domaines,code_sous_domaine',
-        ]);
+        try {
+            $request->validate([
+                'id' => 'required|exists:famille_infrastructures,id',
+                'libelle' => 'required|string|max:255',
+                'SDomaine' => 'required|exists:sous_domaines,code_sous_domaine',
+            ]);
     
-        $famille = FamilleInfrastructure::find($request->input('id'));
-        $famille->libelleFamille = $request->input('libelle');
-        $famille->code_sdomaine = $request->input('SDomaine');
-        $famille->domaine = $request->input('domaine');
-        $famille->code_groupe_projet = session('projet_selectionne');
-        $famille->save();
+            $famille = FamilleInfrastructure::find($request->input('id'));
+            $famille->libelleFamille = $request->input('libelle');
+            $famille->code_sdomaine = $request->input('SDomaine');
+            $famille->code_famille = $request->input('code');
+            $famille->code_domaine = $request->input('domaine');
+            $famille->code_groupe_projet = session('projet_selectionne');
     
-        return redirect()->back()->with('success', 'Famille modifiée avec succès.');
+            $famille->save();
+    
+            return redirect()->back()->with('success', 'Famille modifiée avec succès.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur lors de la modification : ' . $e->getMessage());
+        }
     }
     
+    
+    public function indexInfrastructure(){
+        $infrastructures = Infrastructure::with(['familleInfrastructure', 'localisation'])
+            ->where('code_groupe_projet', session('projet_selectionne'))
+            ->where('code_pays', session('pays_selectionne'))
+            ->get();
+            
+        return view('Infrastructures.index', compact('infrastructures'));
+    }
+    public function create()
+    {
+        $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
+        $localites = Localite::all(); // Assuming you have a Localite model
+        
+        return view('infrastructures.create', compact('familles', 'localites'));
+    }
 
+    public function storeInfrastructure(Request $request)
+    {
+        $request->validate([
+            'libelle' => 'required|string|max:255',
+            'code_famille_infrastructure' => 'required|exists:familleinfrastructure,idFamille',
+            'code_commune' => 'required|exists:localites,code_commune',
+            'date_operation' => 'required|date',
+            'nature_travaux' => 'required|string|max:255',
+            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric',
+        ]);
+        
+        $infrastructure = new Infrastructure();
+        $infrastructure->libelle = $request->libelle;
+        $infrastructure->code_famille_infrastructure = $request->code_famille_infrastructure;
+        $infrastructure->code_groupe_projet = session('projet_selectionne');
+        $infrastructure->code_commune = $request->code_commune;
+        $infrastructure->date_operation = $request->date_operation;
+        $infrastructure->nature_travaux = $request->nature_travaux;
+        $infrastructure->longitude = $request->longitude;
+        $infrastructure->latitude = $request->latitude;
+        $infrastructure->save();
 
+        return redirect()->route('infrastructures.index')
+            ->with('success', 'Infrastructure créée avec succès.');
+    }
+
+    public function editInfrastructure($id)
+    {
+        $infrastructure = Infrastructure::findOrFail($id);
+        $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
+        $localites = Localite::all();
+        
+        return view('infrastructures.edit', compact('infrastructure', 'familles', 'localites'));
+    }
 
     //***************** FONCTION UTILISATEUR  ************* */
     public function fonctionUtilisateur(Request $request)

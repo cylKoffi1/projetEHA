@@ -90,7 +90,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($approvalHistory as $approval)
+                                        @foreach($approvalHistory as $approval)
                                             <tr>
                                                 <td>{{ $approval->etude->projet->code_projet ?? '—' }}</td>
                                                 <td>{{ $approval->etude?->projet?->projetNaturesTravaux?->natureTravaux?->libelle ?? '—' }}</td>
@@ -106,11 +106,7 @@
                                                 <td>{{ \Carbon\Carbon::parse($approval->approved_at)->format('d/m/Y H:i') }}</td>
                                                 <td class="text-muted">{{ $approval->commentaire_refus ?? '—' }}</td>
                                             </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" class="text-center text-muted">Aucun historique trouvé.</td>
-                                            </tr>
-                                        @endforelse
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>

@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Acteur;
 use App\Models\ActionBeneficiairesProjet;
 use App\Models\CouvrirRegion;
-use App\Models\DateFinEffective;
+use App\Models\DateEffectiveProjet;
 use App\Models\Departement;
 use App\Models\District;
 use App\Models\Ecran;
 use App\Models\Etablissement;
+use App\Models\Infrastructure;
 use App\Models\Localite;
+use App\Models\LocalitesPays;
 use App\Models\NiveauAccesDonnees;
 use App\Models\NiveauAvancement;
 use App\Models\Pays;
-use App\Models\ProjetEha2;
-use App\Models\ProjetStatutProjet;
+use App\Models\Projet;
+use App\Models\ProjetStatut;
 use App\Models\Region;
 use App\Models\Sous_prefecture;
 use App\Models\User;
@@ -24,97 +27,54 @@ use Illuminate\Support\Facades\DB;
 class cloturerProjetController extends Controller
 {
    public function cloturer(Request $request){
+    $country = session('pays_selectionne');
+    $group = session('projet_selectionne');
     // Récupérer l'utilisateur actuellement connecté
     $user = auth()->user();
     // Récupérer les données de l'utilisateur à partir de son code_personnel
-    $userData = User::with('personnel')->where('code_personnel', $user->code_personnel)->first();
+    $userData = User::with('acteur')->where('acteur_id', $user->acteur_id)->first();
     // Vérifier si l'utilisateur existe
     if (!$userData) {
         // Gérer le cas où l'utilisateur n'est pas trouvé
         return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
     }
-    // Récupérer le niveau d'accès de l'utilisateur
-    $niveauAcces = NiveauAccesDonnees::find($userData->niveau_acces_id);
-    // Initialiser les variables pour les régions et les districts
-    $regions = [];
-    $districts = [];
-    // Récupérer les données des régions, des districts, etc. en fonction du niveau d'accès
-    if ($niveauAcces->id == 'na') {
-        // Cas où le niveau d'accès est 'NA', donc afficher tous les districts et toutes les régions
-        $districts = District::all();
-        $regions = Region::all();
-    } elseif ($niveauAcces->id == 'di') {
-        // Cas où le niveau d'accès est 'DI', donc récupérer le district de l'utilisateur
-        $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
-            ->latest('date', 'DESC')
-            ->first();
-
-        if ($lastCouvrirRegion) {
-            $codeDistrict = $lastCouvrirRegion->code_district;
-            // Récupérer les régions associées à ce district
-            $regions = Region::where('code_district', $codeDistrict)->get();
-            $districts = District::where('code', $codeDistrict)->get();
-        } else {
-            // Gérer le cas où aucune entrée correspondante n'est trouvée
-        }
-    } elseif ($niveauAcces->id == 're') {
-        $lastCouvrirRegion = CouvrirRegion::where('code_personnel', $user->code_personnel)
-            ->latest('date', 'DESC')
-            ->first();
-        if ($lastCouvrirRegion) {
-            $codeRegions = $lastCouvrirRegion->code_region;
-            // Récupérer le district associé à cette région
-            $codeDistrict = Region::where('code', $codeRegions)->value('code_district');
-            // Récupérer la région et le district
-            $regions = Region::where('code', $codeRegions)->get();
-            $districts = District::where('code', $codeDistrict)->get();
-        }
-
-    } elseif ($niveauAcces->id == 'de') {
-
-        // Cas où le niveau d'accès est 'DE', donc récupérer le département de l'utilisateur
-        $codeDepartement = CouvrirRegion::where('code_personnel', $user->code_personnel)
-            ->latest('date', 'DESC')
-            ->first();
-
-        // Récupérer la région et le district associés à ce département
-        $codeRegion = Departement::where('code', $codeDepartement->code_departement)->first();
-
-        $codeDistrict = Region::where('code', $codeRegion->code_region)->first();
-        // Récupérer la région et le district
-        $regions = Region::where('code', $codeRegion->code_region)->get();
-        $districts = District::where('code', $codeDistrict->code_district)->get();
-    }
+    
     $statutProjetStatut = DB::table('projet_action_a_mener as paam')
-        ->join('projet_statut_projet as psp', 'psp.code_projet', '=', 'paam.CodeProjet')
-        ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'psp.code_projet')
-        ->where('psp.code_statut_projet', 2)
-        ->whereIn('projet_eha2.code_district', $districts->pluck('code')->toArray())
-        ->whereIn('projet_eha2.code_region', $regions->pluck('code')->toArray())
-        ->select('paam.CodeProjet')
-        ->distinct()
+        ->join('projet_statut as psp', 'psp.code_projet', '=', 'paam.code_projet')
+        ->join('projets', 'projets.code_projet', '=', 'psp.code_projet')
+        ->where('psp.type_statut', 2)
+        ->select('paam.code_projet')
+        ->where('projets.code_projet', 'like', $country . $group . '%')
+        ->get();
+    $projets = Projet::where('code_projet', 'like', $country . $group . '%')
         ->get();
 
-    $projets = ProjetEha2::whereIn('code_district', $districts->pluck('code')->toArray())
-        ->whereIn('code_region', $regions->pluck('code')->toArray())
+        $statuts = DB::table('projet_statut')
+        ->join('type_statut', 'type_statut.id', '=', 'projet_statut.type_statut')
+        ->join('projets', 'projets.code_projet', '=', 'projet_statut.code_projet')
+        ->where('projets.code_projet', 'like', $country . $group . '%') // FILTRAGE
+        ->select('projet_statut.id', 'projets.code_projet', 'projet_statut.type_statut as codeSStatu', 'projet_statut.date_statut', 'type_statut.libelle as statut_libelle')
         ->get();
 
-        $statuts = DB::table('projet_statut_projet')
-        ->join('statut_projet', 'statut_projet.code', '=', 'projet_statut_projet.code_statut_projet')
-        ->join('projet_eha2', 'projet_eha2.CodeProjet', '=', 'projet_statut_projet.code_projet')
-        ->select('projet_statut_projet.code', 'projet_eha2.CodeProjet', 'projet_statut_projet.code_statut_projet as codeSStatu', 'projet_statut_projet.date', 'statut_projet.libelle as statut_libelle')
-        ->get();
-        $localite = Localite::all();
-        $etablissements = Etablissement::all();
-        $codeProjet = $request->input('code_projet');
-        $districts = District::all();
-        $departements = Departement::all();
-        $sous_prefecture = Sous_prefecture::all();
-        $regions = Region::all();
-        $beneficiairesActions = ActionBeneficiairesProjet::where('CodeProjet', $codeProjet)->get();
+        
+        $acteurs = Acteur::all();
+        $localites = LocalitesPays::all();
+        $infras = Infrastructure::all();
+        $code_projet = $request->input('code_projet');
+        $beneficiairesActions =  Projet::join('profiter', 'profiter.code_projet', '=', 'projets.code_projet')
+        ->join('jouir', 'jouir.code_projet', '=', 'projets.code_projet')
+        ->join('beneficier', 'beneficier.code_projet', '=', 'projets.code_projet')
+        ->where('projets.code_projet', $code_projet)
+        ->where('projets.code_projet', 'like', $country . $group . '%')->get();
+
        $ecran = Ecran::find($request->input('ecran_id'));
 
-        return view('clotureProjet', ['ecran'=>$ecran,'sous_prefecture'=>$sous_prefecture,'regions'=>$regions,'departements'=>$departements,'etablissements'=>$etablissements,'districts'=>$districts, 'localite'=>$localite,'beneficiairesActions'=>$beneficiairesActions,'statutProjetStatut' => $statutProjetStatut, 'projets'=>$projets,'statuts' => $statuts]);
+        return view('clotureProjet', ['ecran'=>$ecran,         
+        'acteurs' => $acteurs,
+        'localites'=> $localites,
+        'infras' => $infras,
+        'beneficiairesActions'=>$beneficiairesActions,
+        'statutProjetStatut' => $statutProjetStatut, 'projets'=>$projets,'statuts' => $statuts]);
     }
     public function checkCodeProjet(Request $request)
     {
@@ -171,7 +131,7 @@ class cloturerProjetController extends Controller
             return redirect()->back()->with('error', 'Une erreur s\'est produite lors de l\'enregistrement du niveau d\'avancement...');
         }
     }
-    public function enregistrerDateFinEffective(Request $request)
+    public function enregistrerDateEffectiveProjet(Request $request)
     {
         try {
             // Validation des données du formulaire (vous pouvez personnaliser selon vos besoins)
@@ -183,25 +143,25 @@ class cloturerProjetController extends Controller
                 'commentaire_Modal' => 'nullable',
             ]);
 
-            // Recherche ou création d'une instance du modèle DateFinEffective
-            $dateFinEffective = DateFinEffective::firstOrNew([
+            // Recherche ou création d'une instance du modèle DateEffectiveProjet
+            $DateEffectiveProjet = DateEffectiveProjet::firstOrNew([
                 'code_projet' => $request->input('code_projetModal'),
                 'date' => $request->input('date_fin_Modal'),
             ]);
 
             // Mise à jour des valeurs
-            $dateFinEffective->commentaire = $request->input('commentaire_Modal');
+            $DateEffectiveProjet->commentaire = $request->input('commentaire_Modal');
 
             // Supprimer les séparateurs d'espaces dans la valeur du coût
             $cout_effectif = str_replace(' ', '', $request->input('coutEffective_Modal'));
 
             // Assurez-vous que le coût est un nombre décimal
-            $dateFinEffective->cout_effectif = is_numeric($cout_effectif) ? $cout_effectif : 0;
+            $DateEffectiveProjet->cout_effectif = is_numeric($cout_effectif) ? $cout_effectif : 0;
 
-            $dateFinEffective->devise = $request->input('devise_Modal');
+            $DateEffectiveProjet->devise = $request->input('devise_Modal');
 
             // Sauvegarde du modèle
-            $dateFinEffective->save();
+            $DateEffectiveProjet->save();
 
             // Redirection avec un message de succès
             return redirect()->back()->with('success', 'Date Fin Effective enregistrée avec succès');
@@ -279,15 +239,16 @@ class cloturerProjetController extends Controller
                 ]);
 
                 // Enregistrement de la date de clôture dans la table
-                DateFinEffective::create([
+                DateEffectiveProjet::create([
                     'code_projet' => $request->code_projet,
-                    'date' => $request->date_cloture,
+                    'date_fin_effective' => $request->date_cloture,
+                    'description' =>$request->descriptionCloture,
                 ]);
 
-                // Mise à jour du statut du projet dans la table projet_statut_projet
+                // Mise à jour du statut du projet dans la table projet_statut
                 // Assurez-vous de définir le bon code de statut pour la clôture du projet
-                $projetStatut = ProjetStatutProjet::where('code_projet', $request->code_projet)->first();
-                $projetStatut->update(['code_statut_projet' => '04']);
+                $projetStatut = ProjetStatut::where('code_projet', $request->code_projet)->first();
+                $projetStatut->update(['type_statut' => '04']);
 
                 return redirect()->back()->with('success', 'Projet clôturé. ');
 

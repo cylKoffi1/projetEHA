@@ -11,31 +11,44 @@ class Renforcement extends Model
     protected $table = 'renforcement_capacites';
 
     protected $primaryKey = 'code_renforcement';
-    public $incrementing = false;
     protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = ['code_renforcement', 'titre', 'description', 'date_debut', 'date_fin'];
 
-    // Relation avec les bénéficiaires
+    // ✅ Bénéficiaires via table pivot
     public function beneficiaires()
     {
         return $this->belongsToMany(Acteur::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_acteur');
     }
 
-    // Relation avec les projets
+    // ✅ Projets via table pivot
     public function projets()
     {
         return $this->belongsToMany(Projet::class, 'renforcement_projet', 'renforcement_capacite', 'code_projet');
     }
-
-    public static function generateCodeRenforcement()
+    
+    public static function generateCodeRenforcement($country, $group)
     {
-        $latest = self::latest()->first();
-        $orderNumber = $latest ? intval(substr($latest->code_renforcement, -3)) + 1 : 1;
         $month = now()->format('m');
         $year = now()->format('Y');
-        return 'EHA_RF_' . $month . '_' . $year . '_' . str_pad($orderNumber, 3, '0', STR_PAD_LEFT);
+        $base = "{$country}_{$group}_RF_{$year}_{$month}_";
+    
+        // Cherche le dernier code avec cette racine
+        $last = self::where('code_renforcement', 'like', $base . '%')
+                    ->orderByDesc('code_renforcement')
+                    ->first();
+    
+        if ($last) {
+            $lastNumber = intval(substr($last->code_renforcement, -3));
+            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        } else {
+            $newNumber = '001';
+        }
+    
+        return $base . $newNumber;
     }
+    
     // Cette méthode est appelée lorsque l'événement 'deleting' est déclenché
     public static function boot()
     {

@@ -144,8 +144,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 
 
-
-
+.leaflet-right .leaflet-control {
+    margin-right: -10px !important;
+}
+.leaflet-top .leaflet-control {
+    margin-top: -10px !important;
+}
 
 </style>
 <!-- Inclure le CSS de Toastify -->
@@ -275,8 +279,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                         <div class="row" style="flex-wrap: nowrap">
                             <div class="col">
                                 <div id="countryMap" style="height: 590px; outline-style: none;"></div>
-                                <div id="africaMap" style="height: 600px;"></div>
-
+                                <div id="africaMap" style="height: auto;"></div>
                             </div>
                         </div>
                     </div>
@@ -287,6 +290,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </section>
 
 <script>
+    
+    // Coche cumul et nombre par défaut
+    document.getElementById('cumulLayer').checked = true;
+    document.getElementById('nombreLayer').checked = true;
+    window.currentMapFilter = 'cumul'; // cumul, public ou private
+    window.currentMapMetric = 'count'; // count ou cost
+
     // Récuprez les él7U%éments d'entrée
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
@@ -321,7 +331,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         if (dateType === 'Tous') {
             // Si "Sans filtre", recharge tous les projets
-            fetch(`/api/projects?country={{ session('pays_selectionne') }}&group={{ session('projet_selectionne') }}`)
+            fetch(`'{{ url("/")}}/api/projects?country={{ session('pays_selectionne') }}&group={{ session('projet_selectionne') }}`)
                 .then(res => res.json())
                 .then(projects => {
                     updateMap({ projets: projects });
@@ -337,7 +347,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             _: new Date().getTime()
         }).toString();
 
-        fetch(`/api/filtrer-projets?${queryParams}`)
+        fetch(`'{{ url("/")}}/api/filtrer-projets?${queryParams}`)
             .then(res => res.json())
             .then(data => {
                 updateMap(data.projets); // <-- Tes projets filtrés à afficher
@@ -449,42 +459,57 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 
     function handleCheckboxChange(checkboxId, layerType) {
-    const filterCheckboxes = {
-        'cumulLayer': 'cumul',
-        'priveLayer': 'private',
-        'publicLayer': 'public'
-    };
+        const filterCheckboxes = {
+            'cumulLayer': 'cumul',
+            'priveLayer': 'private',
+            'publicLayer': 'public'
+        };
 
-    const metricCheckboxes = {
-        'financeLayer': 'Finance',
-        'nombreLayer': 'Nombre'
-    };
+        const metricCheckboxes = {
+            'financeLayer': 'Finance',
+            'nombreLayer': 'Nombre'
+        };
 
-    // Si c’est un filtre privé/public/cumul
-    if (filterCheckboxes[checkboxId]) {
-        // désactiver les autres
-        Object.keys(filterCheckboxes).forEach(id => {
-            if (id !== checkboxId) document.getElementById(id).checked = false;
-        });
+        // Gestion des cases à cocher de filtre (privé/public/cumul)
+        if (filterCheckboxes[checkboxId]) {
+            // Désactiver les autres cases de filtre
+            Object.keys(filterCheckboxes).forEach(id => {
+                if (id !== checkboxId) document.getElementById(id).checked = false;
+            });
 
-        window.currentMapFilter = filterCheckboxes[checkboxId];
-        window.reloadMapWithNewStyle?.();
-        return;
-    }
+            // Activer/désactiver le filtre
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox.checked) {
+                window.currentMapFilter = filterCheckboxes[checkboxId];
+            } else {
+                window.currentMapFilter = 'cumul'; // Retour au cumul par défaut
+                document.getElementById('cumulLayer').checked = true;
+            }
+            
+            window.reloadMapWithNewStyle?.();
+            return;
+        }
 
-    // Si c’est le type de métrique
-    if (metricCheckboxes[checkboxId]) {
-            // désactiver les autres
+        // Gestion des cases à cocher de métrique (finance/nombre)
+        if (metricCheckboxes[checkboxId]) {
+            // Désactiver les autres cases de métrique
             Object.keys(metricCheckboxes).forEach(id => {
                 if (id !== checkboxId) document.getElementById(id).checked = false;
             });
 
-            changeMapLayerJS(metricCheckboxes[checkboxId]);
+            // Activer/désactiver la métrique
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox.checked) {
+                changeMapLayerJS(metricCheckboxes[checkboxId]);
+            } else {
+                // Si on désactive les deux, revenir au mode nombre par défaut
+                window.currentMapMetric = 'count';
+                document.getElementById('nombreLayer').checked = true;
+                window.reloadMapWithNewStyle?.();
+            }
             return;
         }
     }
-
-
 
 
 
@@ -510,7 +535,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         var codeZoom = @json($codeZoom);
         // Soit tu appelles un seul selon la logique métier
 if (countryAlpha3Code === "AFQ") {
-    initAfricaMap(); // Pour l’Afrique entière
+    initAfricaMap(codeZoom); // Pour l’Afrique entière
 } else {
     initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesAssocie, niveau); // Pays individuels
 }

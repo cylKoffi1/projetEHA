@@ -130,10 +130,6 @@
                             <!-- Étape 1: Informations Générales -->
                             <div class="form-step active">
                                 <h2>Informations Générales</h2>
-
-
-
-
                                 <div class="row">
                                     <div class="col">
                                         <div class="col">

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -30,9 +31,13 @@ class Projet extends Model
 
     public function sousDomaine()
     {
-        return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code');
+        return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code_sous_domaine')
+        ->where('code_groupe_projet', session('projet_selectionne'));
     }
 
+    public function etude(){
+        return $this->belongsTo(EtudeProject::class, 'code_projet', 'code_projet');
+    }
     public function projetNaturesTravaux() {
        return $this->hasOne(projets_natureTravaux::class, 'code_projet', 'code_projet')->latest('date');
     }
@@ -77,9 +82,21 @@ class Projet extends Model
         return $this->hasOne(Posseder::class, 'code_projet', 'code_projet')->where('is_active', true);
     }
     
+    public function ChefProjet(){
+        return $this->belongsTo(Controler::class, 'code_projet', 'code_projet');
+    }
     
     public function documents() {
         return $this->hasMany(ProjetDocument::class, 'code_projet');
     }
-    
+
+    public function devise(){
+        return $this->belongsTo(Devise::class, 'code_devise', 'code_long');
+    }
+    public function dernierStatut()
+    {
+        return $this->hasOne(ProjetStatut::class, 'code_projet', 'code_projet')
+                    ->latest('date_statut');
+    }
+
 }

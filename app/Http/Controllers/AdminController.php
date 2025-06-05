@@ -143,7 +143,7 @@ class AdminController extends Controller
     
         // Budget mensuel
         $budgetsParAnnee = DB::table('projets')
-                ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) as annee, SUM(cout_projet) as total")
+                ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) as annee, SUM(cout_projet)/1000000000 as total")
                 ->whereNotNull('code_projet')
                 ->where('code_projet', 'like', '%\_%\_%\_%\_%')
                 ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])

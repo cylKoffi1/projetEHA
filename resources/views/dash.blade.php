@@ -124,7 +124,7 @@
     </div>
     <div class="col-md-6">
         <div class="card shadow-sm p-3">
-            <h6 class="text-center mb-2">Projets par Année</h6>
+            <h6 class="text-center mb-2">Nombre de projet par Année</h6>
             <canvas id="anneeChart" style="max-height: 200px;"></canvas>
         </div>
     </div>
@@ -133,18 +133,49 @@
 <div class="row mt-4">
     <div class="col-md-12">
         <div class="card shadow-sm p-3">
-            <h6 class="text-center mb-2">Évolution du Budget Mensuel</h6>
+            <h6 class="text-center mb-2">Évalution du Budget Mensuel en milliard de dollar américain</h6>
             <canvas id="budgetChart" style="max-height: 200px;"></canvas>
         </div>
     </div>
 </div>
-
+@if(session('force_password_change'))
+<script>
+    Swal.fire({
+        title: 'Bienvenue ! 👋',
+        html: `
+            <p>Pour sécuriser votre compte, veuillez modifier votre mot de passe :</p>
+            <ol style="text-align: left;">
+                <li>Cliquez sur votre photo de profil en haut à droite.</li>
+                <li>Choisissez <b>“Mon compte”</b>.</li>
+                <li>Allez dans l’onglet <b>“Mot de passe”</b>.</li>
+                <li>Choisissez un mot de passe avec :
+                    <ul>
+                        <li>Une majuscule</li>
+                        <li>Une minuscule</li>
+                        <li>Un chiffre</li>
+                        <li>Un caractère spécial (@$!%*#?&)</li>
+                    </ul>
+                </li>
+            </ol>
+            <p><strong>⚠️ Sans cela, votre compte sera bloqué à la prochaine connexion.</strong></p>
+        `,
+        icon: 'info',
+        confirmButtonText: 'OK',
+        width: '600px'
+    });
+</script>
+@endif
 
        
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    setTimeout(() => {
+    const alert = document.getElementById('popup-first-login');
+    if (alert) alert.remove();
+}, 10000); // disparaît après 10 secondes
+
     document.addEventListener('DOMContentLoaded', function () {
         window.charts = {}; // Pour éviter les doublons
 

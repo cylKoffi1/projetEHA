@@ -16,6 +16,10 @@ class ProjetInfrastructure extends Model
         'code_projet',
         'localisation_id',
     ];
+    public function infra()
+    {
+        return $this->belongsTo(Infrastructure::class, 'idInfrastructure', 'id');
+    }
 
     public function localisation()
     {
@@ -31,4 +35,9 @@ class ProjetInfrastructure extends Model
     {
         return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
     }
+    public function statuts()
+{
+    return $this->hasMany(ProjetStatut::class, 'code_projet', 'code_projet');
+}
+
 }

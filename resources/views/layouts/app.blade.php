@@ -78,6 +78,17 @@
         @include('layouts.header')
         @include('layouts.sidebar')
 
+        <script>
+            @if (session('success'))
+                alert(@json(session('success')), 'success');
+            @elseif (session('error'))
+                alert(@json(session('error')), 'error');
+            @elseif (session('warning'))
+                alert(@json(session('warning')), 'warning');
+            @elseif (session('info'))
+                alert(@json(session('info')), 'info');
+            @endif
+        </script>
 
         <div id="main" style="margin-top: 93px;">
             @yield('content')

@@ -38,8 +38,9 @@ class Acteur extends Model
     }
     public function utilisateurs()
     {
-        return $this->hasMany(User::class, 'code_acteur', 'acteur_id');
+        return $this->belongsTo(User::class, 'code_acteur', 'acteur_id');
     }
+
 
      /**
      * Relation avec `personne_physique`
@@ -48,6 +49,7 @@ class Acteur extends Model
     {
         return $this->hasOne(PersonnePhysique::class, 'code_acteur', 'code_acteur');
     }
+
 
     /**
      * Relation avec `personne_morale`
@@ -102,5 +104,29 @@ class Acteur extends Model
         return $query->withoutGlobalScope('active'); // Désactive la portée par défaut pour inclure les désactivés
     }
 
-
+    public function projetsChef()
+    {
+        return $this->hasMany(Controler::class, 'code_acteur', 'code_acteur')->with('projet');
+    }
+    
+    public function projetsOuvrage()
+    {
+        return $this->hasMany(Posseder::class, 'code_acteur', 'code_acteur')->with('projet');
+    }
+    
+    public function projetsOeuvre()
+    {
+        return $this->hasMany(Executer::class, 'code_acteur', 'code_acteur')->with('projet');
+    }
+    
+    public function projetsFinances()
+    {
+        return $this->hasMany(Financer::class, 'code_acteur', 'code_acteur')->with('projet');
+    }
+    
+    public function projetsApprouves()
+    {
+        return $this->hasMany(ProjetApprobation::class, 'code_acteur', 'code_acteur')->with('etude.projet');
+    }
+    
 }

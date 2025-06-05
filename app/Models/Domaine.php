@@ -15,7 +15,13 @@ class Domaine extends Model
     protected $keyType = 'string';
     protected $primaryKey = 'id';
     protected $fillable = ['code', 'libelle', 'groupe_projet_code'];
-    public function groupeProjet(){
+    public function groupeProjet()
+    {
         return $this->belongsTo(GroupeProjet::class, 'groupe_projet_code', 'code');
+    }
+    public function sousdomaine()
+    {
+        return $this->belongsTo(SousDomaine::class, 'code', 'code_domaine')
+                    ->where('code_groupe_projet', session('projet_selectionne'));
     }
 }

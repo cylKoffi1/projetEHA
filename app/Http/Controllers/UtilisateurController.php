@@ -8,8 +8,10 @@ use App\Models\Utilisateur;
 use App\Models\Acteur;
 use App\Models\DecoupageAdministratif;
 use App\Models\DecoupageAdminPays;
+use App\Models\Domaine;
 use App\Models\Ecran;
 use App\Models\FonctionTypeActeur;
+use App\Models\FonctionUtilisateur;
 use App\Models\GroupeProjet;
 use App\Models\GroupeUtilisateur;
 use App\Models\GroupeProjetPaysUser;
@@ -18,6 +20,7 @@ use App\Models\LocalitesPays;
 use App\Models\Pays;
 use App\Models\PaysUser;
 use App\Models\RolePermission;
+use App\Models\SousDomaine;
 use App\Models\User;
 use App\Models\Users;
 use App\Models\UtilisateurChampExercice;
@@ -27,6 +30,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Spatie\Permission\Models\Role;
 
 class UtilisateurController extends Controller
 {
@@ -254,7 +258,79 @@ class UtilisateurController extends Controller
             return redirect()->back()->withErrors("Une erreur est survenue lors de l'enregistrement de l'utilisateur.");
         }
     }
+    
+    public function detailsUser(Request $request, $userId)
+    {
+       $user = User::with('acteur')->find($userId);
 
+        if (!$user) {
+            // Gérer le cas où l'utilisateur n'est pas trouvé
+            return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
+        }
+        $niveauxAcces = LocalitesPays::all();
+        $groupe_utilisateur = Role::all();
+        $fonctions = FonctionUtilisateur::all();
+        $domaines = Domaine::all();
+        $sous_domaines = SousDomaine::all();
+        $groupe_projet = GroupeProjet::all();
+        $personnes = Acteur::orderBy('libelle_long', 'asc')->get();
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $groupeProjetSelectionne = auth()->user()->groupeProjetSelectionne();
+        $domainesSelectionnes = auth()->user()->domainesSelectionnes();
+
+        return view('users.user-profile', compact('ecran','domainesSelectionnes','groupeProjetSelectionne','groupe_projet','fonctions','niveauxAcces', 'domaines',  'sous_domaines', 'user', 'groupe_utilisateur'));
+    }
+    
+    public function debloquer($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+    
+            $user->update([
+                'is_blocked' => false,
+                'default_password_attempts' => 0,
+                'must_change_password' => true,
+                'password' => Hash::make('123456789'), // Réinitialisation
+            ]);
+    
+            return redirect()->back()->with('success', 'Utilisateur débloqué et réinitialisé avec succès.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
+        }
+    }
+    
+    public function changePassword(Request $request)
+    {
+        try {
+          
+
+            $user = auth()->user();
+
+            if (!Hash::check($request->old, $user->password)) {
+                
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => ['L\'ancien mot de passe est incorrect.']
+                ], 401);
+            }
+
+            $user->update([
+                'password' => Hash::make($request->new),
+                'must_change_password' => false
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Mot de passe modifié avec succès.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => ['Une erreur est survenue : ' . $e->getMessage()]
+            ], 500);
+        }
+    }
     /**
      * afficher un utilisateur
      */

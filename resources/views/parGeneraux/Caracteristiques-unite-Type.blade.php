@@ -116,12 +116,12 @@
                                     <tbody>
                                         @foreach ($typesCaracteristiques as $type)
                                         <tr>
-                                            <td>{{ $type->libelleTypeCaracteristique }}</td>
+                                            <td>{{ $type?->libelleTypeCaracteristique }}</td>
                                             <td>
                                                 <i class="bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;" 
-                                                    onclick="editType('{{ $type->idTypeCaracteristique }}', '{{ $type->libelleTypeCaracteristique }}')" 
+                                                    onclick="editType('{{ $type->idTypeCaracteristique }}', '{{ $type?->libelleTypeCaracteristique }}')" 
                                                     title="Modifier"></i>
-                                                <form method="POST" action="{{ route('type-caracteristique.delete', $type->idTypeCaracteristique) }}" style="display: inline;" onsubmit="return confirm('Confirmer la suppression ?')">
+                                                <form method="POST" action="{{ route('type-caracteristique.delete', $type?->idTypeCaracteristique) }}" style="display: inline;" onsubmit="return confirm('Confirmer la suppression ?')">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" style="border: none; background: none; padding: 0; margin-left: 8px;">
@@ -146,7 +146,7 @@
                                                 <select class="form-control" id="typeCaracteristique" name="typeCaracteristique" required>
                                                     <option value="">Sélectionner un type</option>
                                                     @foreach ($typesCaracteristiques as $type)
-                                                        <option value="{{ $type->idTypeCaracteristique }}">{{ $type->libelleTypeCaracteristique }}</option>
+                                                        <option value="{{ $type->idTypeCaracteristique }}">{{ $type?->libelleTypeCaracteristique }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -162,7 +162,7 @@
                                         <input type="submit" class="btn btn-primary" value="Enregistrer">
                                     </div>
                                 </form>
-
+                                <br><br>
                                 <!-- Tableau des Caractéristiques -->
                                 <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%"  id="tableCaracteristique">
                                     <thead>
@@ -175,7 +175,7 @@
                                     <tbody>
                                         @foreach ($caracteristiques as $caracteristique)
                                         <tr>
-                                            <td>{{ $caracteristique->typeCaracteristique->libelleTypeCaracteristique }}</td>
+                                            <td>{{ $caracteristique->typeCaracteristique?->libelleTypeCaracteristique }}</td>
                                             <td>{{ $caracteristique->libelleCaracteristique }}</td>
                                             <td>
                                                 <i class="bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;" 

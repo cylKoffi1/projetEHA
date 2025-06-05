@@ -7,32 +7,34 @@ use Illuminate\Database\Eloquent\Model;
 
 class Caracteristique extends Model
 {
-    use HasFactory;
-
     protected $table = 'caracteristiques';
     protected $primaryKey = 'idCaracteristique';
     public $timestamps = false;
 
-    protected $fillable = [
-        'libelleCaracteristique',
-        'idTypeCaracteristique',
-    ];
+    protected $fillable = ['libelleCaracteristique', 'idTypeCaracteristique'];
 
-    // Relation avec le type de caractéristique
-    public function typeCaracteristique()
+    public function type()
     {
         return $this->belongsTo(TypeCaracteristique::class, 'idTypeCaracteristique');
     }
 
-    // Relation avec les unités
-    public function unites()
+    public function valeursPossibles()
     {
-        return $this->hasMany(Unite::class, 'idCaracteristique');
+        return $this->hasMany(ValeurPossible::class, 'idCaracteristique');
     }
 
-    // Relation avec les valeurs de caractéristiques
-    public function valeursCaracteristiques()
+    public function familles()
+    {
+        return $this->belongsToMany(FamilleInfrastructure::class, 'famille_caracteristique', 'idCaracteristique', 'idFamille');
+    }
+
+    public function valeurs()
     {
         return $this->hasMany(ValeurCaracteristique::class, 'idCaracteristique');
     }
+    public function unite()
+    {
+        return $this->hasOne(Unite::class, 'idCaracteristique');
+    }
 }
+

@@ -9,7 +9,7 @@ var statesDataLevel1 = {
         GID_1: "BFA.1_1",
         GID_0: "BFA",
         COUNTRY: "BurkinaFaso",
-        NAME_1: "BoucleduMouhoun",
+        NAME_1: "Boucle du Mouhoun",
         VARNAME_1: "NA",
         NL_NAME_1: "NA",
         TYPE_1: "Région",

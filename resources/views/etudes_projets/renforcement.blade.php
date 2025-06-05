@@ -51,12 +51,7 @@
 
 @section('content')
 
-@if (session('success'))
-<script>
-    $('#alertMessage').text("{{ session('success') }}");
-    $('#alertModal').modal('show');
-</script>
-@endif
+
 <section id="multiple-column-form">
     <div class="page-heading">
         <div class="page-title">
@@ -98,20 +93,10 @@
                 <div class="card-header">
                     <h5 class="card-title">Renforcement des capacités</h5>
 
-                    @if (session('success'))
-                        <div class="alert alert-success text-center">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-
-                    @if (session('error'))
-                        <div class="alert alert-danger text-center">
-                            {{ session('error') }}
-                        </div>
-                    @endif
+                
                 </div>
                 <div class="card-body">
-                    <form id="addForm" action="{{ route('renforcements.store') }}" method="POST">
+                    <form id="addForm" action="{{ url('/renforcementProjet/store') }}" method="POST">
                         @csrf
                         <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
 
@@ -158,20 +143,18 @@
                                 <label for="projets" class="form-label">Sélectionnez les projets :</label><br>
                                 <select name="projets[]" multiple class="form-select" style="width: 50px !important">
                                     @foreach($projets as $projet)
-                                        <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
+                                        <option value="{{ $projet->code_projet }}">{{ $projet->code_projet }}</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-6">
                                 <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label><br>
                                 <select name="beneficiaires[]" multiple class="form-select" style="width: 100%;">
-                                   {{-- @foreach($beneficiaires as $beneficiaire)
-                                        @if ($beneficiaire->personnel)
-                                            <option value="{{ $beneficiaire->code_personnel }}">
-                                                {{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}
+                                   @foreach($beneficiaires as $beneficiaire)
+                                            <option value="{{ $beneficiaire->code_acteur }}">
+                                                {{ $beneficiaire->libelle_court }} {{ $beneficiaire->libelle_long }}
                                             </option>
-                                        @endif
-                                    @endforeach--}}
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -193,7 +176,8 @@
                             @method('PUT')
                             <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
 
-                            <input type="hidden" id="code" name="code">
+                            <input type="hidden" id="code" name="code_renforcement">
+
 
                             <div class="row mb-3">
                                 <div class="col-md-5">
@@ -223,7 +207,7 @@
                                     <label for="projets" class="form-label">Sélectionnez les projets :</label><br>
                                     <select id="projets" name="projets[]" multiple class="form-select" style="width: 50px !important">
                                         @foreach($projets as $projet)
-                                            <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
+                                            <option value="{{ $projet->code_projet }}">{{ $projet->code_projet }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -231,11 +215,9 @@
                                     <label for="beneficiaires" class="form-label">Sélectionnez les bénéficiaires :</label><br>
                                     <select id="beneficiaires" name="beneficiaires[]" multiple class="form-select" >
                                         @foreach($beneficiaires as $beneficiaire)
-                                            @if ($beneficiaire->personnel)
-                                                <option value="{{ $beneficiaire->code_personnel }}">
-                                                    {{ $beneficiaire->personnel->nom }} {{ $beneficiaire->personnel->prenom }}
+                                                <option value="{{ $beneficiaire->code_acteur }}">
+                                                    {{ $beneficiaire->libelle_court }} {{ $beneficiaire->libelle_long }}
                                                 </option>
-                                            @endif
                                         @endforeach
                                     </select>
                                 </div>
@@ -282,12 +264,12 @@
                         <tr>
                             <td>{{ $renforcement->code_renforcement }}</td>
 
-                            <!-- Affichage des codes de projets -->
+                            <!-- Projets associés -->
                             <td>
-                                @if($renforcement->projets->isNotEmpty())
+                                @if($renforcement->projets && $renforcement->projets->isNotEmpty())
                                     <ul>
                                         @foreach($renforcement->projets as $projet)
-                                            <li>{{ $projet->CodeProjet }}</li>
+                                            <li>{{ $projet->code_projet }} - {{ $projet->libelle_projet }}</li>
                                         @endforeach
                                     </ul>
                                 @else
@@ -299,13 +281,12 @@
                             <td>{{ $renforcement->date_debut }}</td>
                             <td>{{ $renforcement->date_fin }}</td>
 
+                            <!-- Bénéficiaires associés -->
                             <td>
                                 @if($renforcement->beneficiaires->isNotEmpty())
                                     <ul>
                                         @foreach($renforcement->beneficiaires as $beneficiaire)
-                                            @if ($beneficiaire && $beneficiaire) <!-- Vérification de l'existence du bénéficiaire et de personnel -->
-                                                <li>{{ $beneficiaire->nom }} {{ $beneficiaire->prenom }}</li>
-                                            @endif
+                                            <li>{{ $beneficiaire->libelle_court }} {{ $beneficiaire->libelle_long }}</li>
                                         @endforeach
                                     </ul>
                                 @else
@@ -313,6 +294,7 @@
                                 @endif
                             </td>
 
+                            <!-- Actions -->
                             <td>
                                 <div class="dropdown">
                                     <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
@@ -322,14 +304,14 @@
                                         @can("modifier_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#"
-                                               onclick="editRenforcement('{{ $renforcement->code_renforcement }}',
-                                               '{{ $renforcement->titre }}',
-                                               '{{ $renforcement->description }}',
-                                               '{{ $renforcement->date_debut }}',
-                                               '{{ $renforcement->date_fin }}',
-                                               {{ json_encode($renforcement->beneficiaires->pluck('code_personnel')->toArray()) }},
-                                               {{ json_encode($renforcement->projets->pluck('CodeProjet')->toArray()) }})">
-                                               <i class="bi bi-pencil-fill me-3"></i> Modifier
+                                            onclick="editRenforcement('{{ $renforcement->code_renforcement }}',
+                                            '{{ $renforcement->titre }}',
+                                            '{{ $renforcement->description }}',
+                                            '{{ $renforcement->date_debut }}',
+                                            '{{ $renforcement->date_fin }}',
+                                            {{ json_encode($renforcement->beneficiaires->pluck('code_acteur')->toArray()) }},
+                                            {{ json_encode($renforcement->projets->pluck('code_projet')->toArray()) }})">
+                                            <i class="bi bi-pencil-fill me-3"></i> Modifier
                                             </a>
                                         </li>
                                         @endcan
@@ -346,6 +328,7 @@
                         </tr>
                         @endforeach
                     </tbody>
+
                 </table>
 
             </div>
@@ -354,6 +337,20 @@
 
 
 </section>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        @if(session('success'))
+            alert("✅ Succès : {{ session('success') }}");
+            console.log("✅ Succès : {{ session('success') }}");
+        @endif
+
+        @if(session('error'))
+            alert("❌ Erreur : {{ session('error') }}");
+            console.error("❌ Erreur : {{ session('error') }}");
+        @endif
+    });
+</script>
+
 <script>
     $(document).ready(function() {
         $('.form-select').select2();
@@ -394,7 +391,7 @@
     function deleteRenforcement(id) {
         if (confirm("Êtes-vous sûr de vouloir supprimer ?")) {
             $.ajax({
-                url: '/renforcementDelete/' + id,
+                url: '{{ url("/")}}/renforcementProjet/delete/' + id,
                 type: 'DELETE',
                 data: {
                     _token: '{{ csrf_token() }}'
@@ -412,39 +409,33 @@
         }
     }
 
-    function editRenforcement(code, titre, description, date,date_fin, beneficiaires, projets) {
-        // Cacher le formulaire d'enregistrement
+    function editRenforcement(code, titre, description, date, date_fin, beneficiaires, projets) {
         document.getElementById('addForm').style.display = 'none';
 
-        // Renseigner les champs du formulaire avec les données
         document.getElementById('code').value = code;
         document.getElementById('titre').value = titre;
         document.getElementById('description').value = description;
         document.getElementById('date_renforcement').value = date;
         document.getElementById('date_fin').value = date_fin;
 
-        // Sélectionner les bénéficiaires
-    let beneficiairesSelect = document.getElementById('beneficiaires');
-    for (let option of beneficiairesSelect.options) {
-        option.selected = beneficiaires.includes(option.value);
-    }
+        // Forcer la comparaison en string
+        let beneficiairesSelect = document.getElementById('beneficiaires');
+        for (let option of beneficiairesSelect.options) {
+            option.selected = beneficiaires.map(String).includes(String(option.value));
+        }
 
-    // Sélectionner les projets
-    let projetsSelect = document.getElementById('projets');
-    for (let option of projetsSelect.options) {
-        option.selected = projets.includes(option.value);
-    }
+        let projetsSelect = document.getElementById('projets');
+        for (let option of projetsSelect.options) {
+            option.selected = projets.map(String).includes(String(option.value));
+        }
 
-    // Rafraîchir les sélections avec select2
-    $('#beneficiaires').trigger('change');
-    $('#projets').trigger('change');
+        $('#beneficiaires').trigger('change');
+        $('#projets').trigger('change');
 
-        // Modifier l'action du formulaire pour inclure l'ID (code_renforcement)
-        document.getElementById('formAction').action = '/renforcements/' + code;
-
-        // Afficher le formulaire de modification
+        document.getElementById('formAction').action = "{{ url('/renforcementProjet/update') }}/" + code;
         document.getElementById('editFormContainer').style.display = 'block';
     }
+
 
 
 </script>

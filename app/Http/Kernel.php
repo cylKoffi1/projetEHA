@@ -28,6 +28,8 @@ class Kernel extends HttpKernel
         'ensure.step' => \App\Http\Middleware\EnsureStepCompleted::class,
         'check.projet' => \App\Http\Middleware\CheckProjetSelection::class,
         'force.password.change' => \App\Http\Middleware\ForcePasswordChange::class,
+        'prevent.multiple.sessions' => \App\Http\Middleware\PreventMultipleSessions::class,
+
     ];
 
     /**

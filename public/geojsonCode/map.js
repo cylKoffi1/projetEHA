@@ -124,8 +124,25 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         })();
     
         // 🧮 Total global = niveau le plus bas sélectionné
-        const totalProjects = Object.values(localityDataByLevel).pop()?.count || 0;
-    
+        const totalProjects = (() => {
+            const last = Object.values(localityDataByLevel).pop();
+            if (!last) return 0;
+        
+            if (window.currentMapMetric === 'cost') {
+                const total = (last.public || 0) + (last.private || 0);
+                if (window.currentMapFilter === 'private') return (last.cost * ((last.private || 0) / (total || 1))) / 1_000_000_000;
+                else if (window.currentMapFilter === 'public') return (last.cost * ((last.public || 0) / (total || 1))) / 1_000_000_000;
+                else return last.cost / 1_000_000_000;
+            }
+        
+            if (window.currentMapFilter === 'private') return last.private || 0;
+            if (window.currentMapFilter === 'public') return last.public || 0;
+            return last.count || 0;
+        })();
+        const totalCostPublic = Object.values(localityDataByLevel).reduce((sum, d) => sum + (d?.public_cost || 0), 0);
+        const totalCostPrivate = Object.values(localityDataByLevel).reduce((sum, d) => sum + (d?.private_cost || 0), 0);
+        const totalCost = totalCostPublic + totalCostPrivate;
+        
         const domainRows = domaines.map(domaine => {
             const domainCode = domaine.code.substring(0, 2);
     
@@ -133,15 +150,55 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 <tr>
                     <th style="border: 1px solid black; text-align: right;">${domaine.libelle}</th>
                     <td style="border: 1px solid black; text-align: center;">
-                        ${Object.values(localityDataByLevel).pop()?.byDomain?.[domainCode]?.count || 0}
+                        ${
+                            (() => {
+                                let sum = 0;
+                                for (const level of Object.values(localityDataByLevel)) {
+                                    const stats = level?.byDomain?.[domainCode];
+                                    if (!stats) continue;
+
+                                    if (window.currentMapMetric === 'cost') {
+                                        if (window.currentMapFilter === 'private') sum += stats.cost * (stats.private / (stats.public + stats.private || 1));
+                                        else if (window.currentMapFilter === 'public') sum += stats.cost * (stats.public / (stats.public + stats.private || 1));
+                                        else sum += stats.cost;
+                                    } else {
+                                        if (window.currentMapFilter === 'private') sum += stats.private || 0;
+                                        else if (window.currentMapFilter === 'public') sum += stats.public || 0;
+                                        else sum += stats.public + stats.private;
+                                    }
+                                }
+
+                                return window.currentMapMetric === 'cost' ? (sum / 1_000_000_000).toFixed(2) + '' : sum;
+                            })()
+                        }
                     </td>
                     ${Array.from({ length: maxLevels }, (_, i) => {
                         const levelData = localityDataByLevel[i + 1];
                         const stats = levelData?.byDomain?.[domainCode] || {};
-                        return `
-                            <td style="border: 1px solid black; text-align: center;">${stats.public || 0}</td>
-                            <td style="border: 1px solid black; text-align: center;">${stats.private || 0}</td>
-                        `;
+
+                        if (window.currentMapMetric === 'cost') {
+                            const total = (stats.public || 0) + (stats.private || 0);
+                            const pubCost = stats.cost && total ? stats.cost * (stats.public / total) : 0;
+                            const privCost = stats.cost && total ? stats.cost * (stats.private / total) : 0;
+
+                            return `
+                                <td style="border: 1px solid black; text-align: center;">
+                                    ${window.currentMapFilter === 'private' ? '-' : (pubCost / 1_000_000_000).toFixed(2) + ''}
+                                </td>
+                                <td style="border: 1px solid black; text-align: center;">
+                                    ${window.currentMapFilter === 'public' ? '-' : (privCost / 1_000_000_000).toFixed(2) + ''}
+                                </td>
+                            `;
+                        } else {
+                            return `
+                                <td style="border: 1px solid black; text-align: center;">
+                                    ${window.currentMapFilter === 'private' ? '-' : (stats.public ?? 0)}
+                                </td>
+                                <td style="border: 1px solid black; text-align: center;">
+                                    ${window.currentMapFilter === 'public' ? '-' : (stats.private ?? 0)}
+                                </td>
+                            `;
+                        }
                     }).join('')}
                 </tr>
             `;
@@ -183,16 +240,43 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                     ${domainRows}
                     <tr>
                         <th style="border: 1px solid black; text-align: right;">Total</th>
-                        <td style="border: 1px solid black; text-align: center;">${formatWithSpaces(totalProjects)}</td>
+                        <td style="border: 1px solid black; text-align: center;">
+                            ${
+                                window.currentMapMetric === 'cost'
+                                    ? totalProjects.toFixed(2) + ''
+                                    : formatWithSpaces(totalProjects)
+                            }
+                        </td>
+
 
                         ${Array.from({ length: maxLevels }, (_, i) => {
                             const levelData = localityDataByLevel[i + 1];
-                            return `
-                                <td style="border: 1px solid black; text-align: center;">${levelData?.public || 0}</td>
-                                <td style="border: 1px solid black; text-align: center;">${levelData?.private || 0}</td>
-                            `;
+                            if (window.currentMapMetric === 'cost') {
+                                const total = (levelData?.public || 0) + (levelData?.private || 0);
+                                const pubCosts = levelData?.cost && total ? levelData.cost * (levelData.public / total) : 0;
+                                const privCosts = levelData?.cost && total ? levelData.cost * (levelData.private / total) : 0;
+                                const pubCost = pubCosts / 1000000000;
+                                const privCost = privCosts / 1000000000;
+                                return `
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        ${window.currentMapFilter === 'private' ? '-' : pubCost.toFixed(2) + ' '}
+                                    </td>
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        ${window.currentMapFilter === 'public' ? '-' : privCost.toFixed(2) + ' '}
+                                    </td>
+                                `;
+                            } else {
+                                return `
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        ${window.currentMapFilter === 'private' ? '-' : (levelData?.public ?? 0)}
+                                    </td>
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        ${window.currentMapFilter === 'public' ? '-' : (levelData?.private ?? 0)}
+                                    </td>
+                                `;
+                            }
                         }).join('')}
-                    </tr>
+                        
                 </tbody>
             </table>
         `;

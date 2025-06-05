@@ -17,6 +17,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\EtatController;
 use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
+use App\Http\Controllers\InfrastructureController;
+use App\Http\Controllers\InfrastructureMapController;
 use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\SigController;
@@ -27,6 +29,7 @@ use App\Http\Controllers\ParGeneraux\RolePermissionsController;
 use App\Http\Controllers\ParGeneraux\TypeActeurController;
 use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\pibController;
+use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\ProjectStatusController;
 use App\Http\Controllers\ProjetValidationController;
 use App\Http\Controllers\RealiseProjetController;
@@ -36,8 +39,10 @@ use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
 use App\Models\Domaine;
 use App\Models\EtudeProject;
+use App\Models\LocalitesPays;
 use App\Models\Renforcement;
 use App\Models\SousDomaine;
+use App\Models\Utilisateur;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ui\Presets\React;
@@ -74,10 +79,16 @@ Route::get('/admin/modele', function () {
 });
 
 // Exemple de route protégée (accessible uniquement aux utilisateurs authentifiés)
-Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
+Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.sessions'*/])->group(function () {
     Route::get('admin', [AdminController::class, 'index'])->name('projets.index');
     Route::get('/projets-data', [AdminController::class, 'getProjetData']);
     Route::get('/admin/initSidebar', [AdminController::class, 'initSidebar']);
+    
+    /**************************** PROFIL UTILISATEUR **********************************/
+    Route::get('/profil', [ProfilController::class, 'index'])->name('profil.index');
+    Route::post('/profil', [ProfilController::class, 'update'])->name('profil.update');
+
+    
     // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
     Route::get('admin/pays', [PaysController::class, 'pays'])->name('pays');
     // Route pour afficher le formulaire d'édition (GET)
@@ -207,6 +218,9 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::post('/familleinfrastructure/update', [PlateformeController::class, 'updateFamilleInfrastructure'])->name('familleinfrastructure.update');
     Route::delete('/familleinfrastructure/delete/{id}', [PlateformeController::class, 'deleteFamilleInfrastructure'])->name('familleinfrastructure.delete');
     Route::post('/check-familleinfrastructure-code', [PlateformeController::class, 'checkFamilleinfrastructureCode']);
+    Route::post('/familleinfrastructure/caracteristiques', [PlateformeController::class, 'storeCaracteristiquesFamille'])->name('familleinfrastructure.caracteristiques.store');
+    Route::get('/famille/{id}/caracteristiques', [PlateformeController::class, 'getCaracteristiquesFamille']);
+    Route::delete('/famille/caracteristique/{famille_id}/{caracteristique_id}', [PlateformeController::class, 'supprimerCaracteristiqueFamille']);
 
     //***************** Cour d'eau ************* */
     Route::get('admin/courdeau', [PlateformeController::class, 'courdeau'])->name('courdeau');
@@ -259,7 +273,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('admin/domaines', [PlateformeController::class, 'domaines'])->name('domaines');
     Route::get('admin/domaine/{code}', [PlateformeController::class, 'getDomaine'])->name('domaine.show');
     Route::post('admin/domaines', [PlateformeController::class, 'storeDomaine'])->name('domaine.store');
-    Route::post('admin/domaines/update', [PlateformeController::class, 'updateDomaine'])->name('domaine.update');
+    Route::put('admin/domaines/update', [PlateformeController::class, 'updateDomaine'])->name('domaine.update');
     Route::delete('admin/domaine/delete/{code}', [PlateformeController::class, 'deleteDomaine'])->name('domaine.delete');
     Route::post('/check-domaine-code', [PlateformeController::class, 'checkDomaineCode']);
 
@@ -300,7 +314,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::post('admin/etablissement', [PlateformeController::class, 'storeEtablissement'])->name('etablissement.store');
     Route::post('admin/etablissement/update', [PlateformeController::class, 'updateEtablissement'])->name('etablissement.update');
     Route::get('admin/get-niveaux/{typeId}', [PlateformeController::class, 'getNiveaux']);
-
+ 
     //***************** BENEFICIAIRES ************* */
     Route::get('admin/beneficiaires', [PlateformeController::class, 'beneficiaires'])->name('beneficiaires');
     Route::get('admin/etablissements', [PlateformeController::class, 'etablissements'])->name('etablissements');
@@ -326,7 +340,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
 
     //***************** PROJETS ************* */
     Route::get('admin/projet', [ProjetController::class, 'projet'])->name('projet');
-    Route::get('/get-regions/{districtCode}', [ProjetController::class, 'getRegions']);
     Route::get('admin/projets/liste', [ProjetController::class, 'Projets'])->name('projet.liste');
     Route::get('/get-sous-domaines/{domaineCode}', [ProjetController::class, 'getSousDomaines']);
     Route::get('admin/get-cours_eau/{eauId}', [ProjetController::class, 'getCours_eau']);
@@ -334,16 +347,23 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('/getBeneficiaires/{type}/{code}', 'ProjetController@getBeneficiaires')->name('getBeneficiaires');
     Route::get('/verifier_code_projet', [ProjetController::class, 'verifierCodeProjet']);
     Route::post('/recup', [ProjetController::class, 'votreFonction'])->name('maRoute');
-    Route::post('/enregistrer-formulaire', [ProjetController::class, 'store'])->name('enregistrer.formulaire');
+    //Route::post('/enregistrer-formulaire', [ProjetController::class, 'store'])->name('enregistrer.formulaire');
     Route::get('/projet/getTable', [ProjetController::class, 'getTable']);
     Route::get('admin/editionProjet', [ProjetController::class, 'editionProjet']);
 
+    Route::post('/contrats/store', [ProjetController::class, 'store'])->name('contrats.store');
+    Route::get('/contrats/{id}/fiche', [ProjetController::class, 'fiche'])->name('contrats.fiche');
+    Route::get('/contrats/{id}/pdf', [ProjetController::class, 'pdf'])->name('contrats.pdf');
+    Route::put('/contrats/{id}', [ProjetController::class, 'update'])->name('contrats.update');
+    Route::delete('/contrats/{id}', [ProjetController::class, 'destroy'])->name('contrats.destroy');
+    Route::get('admin/projet/changementChefProjet', [ProjetController::class, 'changerChef']);
         /*****************ETUDE DE PROJET**************** */
         Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
         Route::get('/pays/{alpha3}/niveaux', [EtudeProjet::class, 'getNiveauxAdministratifs']);
         Route::get('/pays/{alpha3}/niveau/{niveau}/localites', [EtudeProjet::class, 'getLocalitesByNiveau']);
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
+        Route::post('/contrats/chef/update', [ProjetController::class, 'changerChefUpdate'])->name('contrats.chef.update');
 
                 /*******************SAUVEGARDE DE DEMANDE DE PROJET */
                 Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
@@ -377,10 +397,9 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
             Route::get('/data', [GanttController::class ,'get']);
         /********************RENFORCEMENT***************** */
             Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
-            Route::delete('/renforcementDelete/{id}', [EtudeProjet::class, 'deleteRenforcement']);
-            Route::put('/renforcements/{code}', [EtudeProjet::class, 'update'])->name('renforcements.update');
-            Route::post('admin/renforcementProjet', [EtudeProjet::class, 'store'])->name('renforcements.store');
-
+            Route::post('/renforcementProjet/store', [EtudeProjet::class, 'storerenfo'])->name('renforcements.store');
+            Route::put('/renforcementProjet/update/{code}', [EtudeProjet::class, 'updaterenfo'])->name('renforcements.update');
+            Route::delete('/renforcementProjet/delete/{code}', [EtudeProjet::class, 'destroyrenfo'])->name('renforcements.destroy');
         /****************************ACTIVITE CONNEXE******************** */
             Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
             Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
@@ -388,34 +407,39 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
             Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('tavaux_connexes.update');
 
         /**************************** REATTRIBUTION DE PROJET ******************************/
-    Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('reattribution.index');
-    Route::put('/reattribution', [ProjetController::class, 'storereat'])->name('reattribution.store');
-    Route::put('/reattribution/{id}', [ProjetController::class, 'updatereat'])->name('reattribution.update');
-    Route::delete('/reattribution/{id}', [ProjetController::class, 'destroyreat'])->name('reattribution.destroy');
-    Route::get('/getProjectDetails/{codeProjet}', [ProjetController::class, 'getProjectDetails']);
+            Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('maitre_ouvrage.index');
+            Route::get('/get-execution-by-projet/{code_projet}', [ProjetController::class, 'getExecutionByProjet']);
+            Route::prefix('reatributionProjet')->group(function () {
+               Route::post('/', [ProjetController::class, 'storeReatt'])->name('maitre_ouvrage.store');
+                Route::put('/{id}', [ProjetController::class, 'updateReatt'])->name('maitre_ouvrage.update');
+                Route::delete('/{id}', [ProjetController::class, 'destroyReatt'])->name('maitre_ouvrage.destroy');
+            });
+        
+        /**************************** ANNULER DE PROJET ******************************/
+        Route::get('admin/annulProjet', [ProjetController::class, 'formAnnulation'])->name('projets.annulation.form');
+        Route::post('/projets/annulation', [ProjetController::class, 'annulerProjet'])->name('projets.annulation.store');
+        Route::post('/projets/redemarrer', [ProjetController::class, 'redemarrerProjet'])->name('projets.redemarrer');
+
+        /*******************************SUSPENDRE PROJET ***************************** */
+        Route::get('admin/attenteProjet', [ProjetController::class, 'formSuspension'])->name('projets.suspension.form');
+        Route::post('/projets/suspendre', [ProjetController::class, 'suspendreProjet'])->name('projets.suspension.store');
+
 
 
     /**************************** GESTION DES EDITIONS **********************************/
-        /**************************** GESTION DES ANNEXE 1 ******************************/
-        Route::get('admin/projet/edition/InfosPrincip', [AnnexeController::class, 'InfosPrincip'])->name('projet.InfosPrincip');
-        Route::get('admin/projet/edition/InfosSecond', [AnnexeController::class, 'InfosSecond'])->name('projet.InfosSecond');
-        Route::get('admin/projet/edition/InfosTert', [AnnexeController::class, 'InfosTert'])->name('projet.InfosTert');
-
-        /**************************** GESTION DES ANNEXE 2 ******************************/
-        Route::get('admin/projet/edition/ficheCollecte', [AnnexeController::class, 'FicheCollecte'])->name('projet.InfosTert');
-        Route::get('admin/projet/edition/ficheImprimer/{code}',[AnnexeController::class, 'FicheCollecteImprimer'])->name('Annexe2.FicheCollecte');
-        Route::get('/getProjectDetails', [AnnexeController::class, 'getProjectDetails']);
-
-         /**************************** GESTION DES ANNEXE 3 ******************************/
-        // Route basique pour accéder à la page annexe3
-        Route::get('admin/annexe3', [AnnexeController::class, 'annexe3'])->name('annexe.page');
-        Route::post('/filter-annexe', [AnnexeController::class, 'filterAnnexe'])->name('filterAnnexe');
-        Route::get('admin/get-familles', [AnnexeController::class, 'getFamilles'])->name('get.familles');
-        Route::get('admin/get-sous-domaines', [AnnexeController::class, 'getSousDomaines']);
-        Route::get('/caracteristique', [AnnexeController::class, 'getCaracteristiqueData']);
-        Route::get('/beneficiaire', [AnnexeController::class, 'getBeneficiaire']);
-
-
+    
+    Route::get('admin/editionProjet', [AnnexeController::class, 'index'])->name('admin.edition.projet');
+    // Routes pour les exports PDF
+        Route::get('/pdf/projet/{code}', [AnnexeController::class, 'exportProjet'])->name('pdf.projet');
+        Route::get('/pdf/acteur/{code}', [AnnexeController::class, 'exportActeur'])->name('pdf.acteur');
+        Route::get('/pdf/contrat/{code}', [AnnexeController::class, 'exportContrat'])->name('pdf.contrat');
+        Route::get('/pdf/infrastructure/{code}', [AnnexeController::class, 'exportInfrastructure'])->name('pdf.infrastructure');
+        
+        // Route pour l'export multiple
+        Route::post('/pdf/export-multiple', [AnnexeController::class, 'exportMultiple'])->name('pdf.export.multiple');
+   
+    Route::get('/projets/{projet}', [AnnexeController::class, 'show'])
+    ->name('projets.show');
     //***************** REALISATION ************* */
     Route::get('admin/realise/PramatreRealise', [RealiseProjetController::class, 'PramatreRealise']);
     Route::get('admin/realise', [RealiseProjetController::class, 'realise']);
@@ -427,19 +451,27 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('/getBeneficiaires', [RealiseProjetController::class, 'getBeneficiaires']);
     Route::get('/getNumeroOrdre', [RealiseProjetController::class, 'getNumeroOrdre']);
     Route::get('/getFamilleInfrastructure', [RealiseProjetController::class, 'getFamilleInfrastructure']);
-    Route::post('/enregistrer-caracteristiques', [RealiseProjetController::class, 'storeCaracteristiques'])->name('enregistrer.Caracteristiques');
-    Route::post('/enregistrer-datesEffectives', [RealiseProjetController::class, 'enregistrerDatesEffectives'])->name('enregistrer-dates-effectives');
+    Route::get('/getInfrastructuresByProjet', [RealiseProjetController::class, 'getInfrastructuresByProjet']);
+    Route::get('/get-familles-by-projet', [RealiseProjetController::class, 'getFamillesByProjet']);
+
     //Route::get('/getDataDateEffective', [RealiseProjetController::class, 'obtenirDonneesProjet'])->name('obtenir-donnees-projet');
     Route::get('admin/etatAvancement', [RealiseProjetController::class, 'etatAvancement']);
-    Route::post('/admin/etatAvancement', [RealiseProjetController::class,'enregistrerBeneficiaires'])->name('enregistrer.beneficiaires');
+    Route::post('/admin/realise', [RealiseProjetController::class,'enregistrerBeneficiaires'])->name('enregistrer.beneficiaires');
     Route::get('/recuperer-beneficiaires', [RealiseProjetController::class, 'recupererBeneficiaires'])->name('recuperer-beneficiaires');
-
+    Route::post('/enregistrer-dates-effectives', [RealiseProjetController::class, 'enregistrerDatesEffectives'])->name('enregistrer-dates-effectives');
     Route::get('/check-code-projet', [RealiseProjetController::class, 'checkCodeProjet']);
     Route::post('/enregistrer-niveau-avancement', [RealiseProjetController::class, 'enregistrerNiveauAvancement'])->name('enregistrer.niveauAvancement');
     Route::post('/enregistrer-dateseffectives', [RealiseProjetController::class, 'enregistrerDateFinEffective'])->name('enregistrer.dateFinEffective');
-    Route::get('/get-donnees-formulaire', [RealiseProjetController::class, 'getDonneesPourFormulaire'])->name('get.donnees.formulaire');
-
-
+    Route::get('/get-historique-avancement', [RealiseProjetController::class, 'getHistorique'])->name('get.historique.avancement');
+    Route::post('/save-avancement', [RealiseProjetController::class, 'saveAvancement'])->name('save.avancement');
+    Route::delete('/delete-suivi/{id}', [RealiseProjetController::class, 'deleteSuivi'])->name('delete.suivi');
+    Route::post('/caracteristiques/store', [RealiseProjetController::class, 'storeCaracteristiques'])->name('caracteristique.store');
+    Route::get('/get-donnees-suivi', [RealiseProjetController::class, 'getDonneesFormulaireSimplifie'])->name('get.donnees.suivi');
+    // Finalisation partielle d'une infrastru
+    Route::post('/projet/finaliser-partiel', [RealiseProjetController::class, 'finaliserPartiel'])->name('finaliser.partiel');
+    // Finalisation totale d'un projet
+    Route::post('/projet/finaliser', [RealiseProjetController::class, 'finaliserProjet'])->name('finaliser.projet');
+    Route::get('/verifier-projet-finalisable', [RealiseProjetController::class, 'verifierProjetFinalisable'])->name('verifier.projet.finalisable');
 
     Route::get('/get-project-status/{id}', [ProjectStatusController::class, 'getProjectStatus']);    //***************** GESTION FINANCIERE ************* */
     Route::get('admin/graphique', [representationGraphique::class, 'graphique']);
@@ -454,7 +486,11 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::post('/cloturer-projet', [cloturerProjetController::class, 'cloturerProjet'])->name('cloturer_projet');
     //***************** GESTION SIG ************* */
     Route::get('admin/carte', [sigAdminController::class, 'carte']);
-    Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
+    Route::get('admin/autresRequetes', [InfrastructureMapController::class, 'showMap'])->name('infrastructures.map');
+    Route::get('/api/infrastructures/geojson', [InfrastructureMapController::class, 'getInfrastructuresGeoJson']);
+    Route::get('/api/infrastructures/familles-colors', [InfrastructureMapController::class, 'getFamillesColors']);
+    
+    //Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
     Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
 
     Route::get('/get-projet-data', 'ProjetController@getProjetData');
@@ -475,13 +511,16 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('admin/personnel/create', [UserController::class, 'createPersonnel'])->name('personnel.create');
     Route::post('admin/personnel/store', [UserController::class, 'storePersonnel'])->name('personnel.store');
     Route::delete('/admin/personnel/{code_personnel}', [UserController::class, 'destroy'])->name('utilisateurs.destroy');
-
+    Route::get('/domaines/{groupeProjet}', [UserController::class, 'getDomainesByGroupeProjet']);
+    Route::get('/sous-domaines/{domaine}/{groupeProjet}', [UserController::class, 'getSousDomaines']);
+    
     Route::get('admin/personnel/details-personne/{personneId}', [UserController::class, 'detailsPersonne'])->name('personnel.details');
     Route::get('admin/personnel/get-personne/{personneId}', [UserController::class, 'getPersonne'])->name('personne.updateForm');
     Route::post('admin/personnel/update/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
     Route::get('/check-email-personne', [UserController::class, 'checkEmail_personne']);
     Route::get('admin/get-personne-email/{personnelId}', [UserController::class, 'getPersonneInfos'])->name('personne.get');
     Route::post('/SousDomaine_Domaine-ajax', [UserController::class, 'getDomaines']);
+    Route::post('/changer-mot-de-passe', [UtilisateurController::class, 'changePassword'])->name('password.change');
 
     Route::get('admin/users', [UserController::class, 'users'])->name('users.users');
     Route::get('admin/users/create', [UserController::class, 'create'])->name('users.create');
@@ -490,14 +529,79 @@ Route::middleware(['auth', 'auth.session', 'check.projet'])->group(function () {
     Route::get('/check-username', [UserController::class, 'checkUsername']);
     Route::get('/check-email', [UserController::class, 'checkEmail']);
     Route::get('admin/users/get-user/{userId}', [UserController::class, 'getUser'])->name('users.get');
-    Route::get('/admin/users/details-user/{userId}', [UserController::class, 'detailsUser'])->name('users.details');
+    Route::get('/admin/users/details-user/{userId}', [UtilisateurController::class, 'detailsUser'])->name('users.details');
     Route::post('/admin/users/update/{userId}', [UserController::class, 'update'])->name('users.update');
     Route::post('/admin/users/details-user/{userId}', [UserController::class, 'update_auth'])->name('users.update_auth');
     Route::post('/change-password', [UserController::class, 'changePassword'])->name('password.change');
     Route::delete('/admin/delete-user/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
     Route::get('/getIndicatif/{paysId}', [UserController::class, 'getIndicatif'])->name('getIndicatif');
+    Route::post('/admin/utilisateurs/debloquer/{id}', [UtilisateurController::class, 'debloquer'])->name('utilisateurs.debloquer');
 
     Route::get('RecupererDonneesUser/{userId}', [ProjetController::class, 'getDonneUser'])->name('GetDonneeUser');
+    // Routes principales pour les infrastructures
+    Route::get('/familles/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
+    Route::get('/familles-by-domaine/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
+
+    Route::prefix('admin/infrastructures')->group(function () {
+    Route::get('/{id}/impression', [InfrastructureController::class, 'print'])->name('infrastructures.print');
+    Route::get('/infrastructures/print', [InfrastructureController::class, 'imprimer'])->name('infrastructures.imprimer');
+    // Historique
+    Route::get('/{id}/historique', [InfrastructureController::class, 'historique'])
+    ->name('infrastructures.historique');
+    
+    // Liste des infrastructures
+    Route::get('/', [InfrastructureController::class, 'index'])
+        ->name('infrastructures.index');
+    
+    // Formulaire de création
+    Route::get('/create', [InfrastructureController::class, 'create'])
+        ->name('infrastructures.create');
+    
+    // Enregistrement
+    Route::post('/', [InfrastructureController::class, 'store'])
+        ->name('infrastructures.store');
+    
+    // Détails d'une infrastructure
+    Route::get('/{id}', [InfrastructureController::class, 'show'])
+        ->name('infrastructures.show');
+    
+    // Formulaire d'édition
+    Route::get('/{id}/edit', [InfrastructureController::class, 'edit'])
+        ->name('infrastructures.edit');
+    
+    // Mise à jour
+    Route::put('/{id}', [InfrastructureController::class, 'update'])
+        ->name('infrastructures.update');
+    
+    // Suppression
+    Route::delete('/{id}', [InfrastructureController::class, 'destroy'])
+        ->name('infrastructures.destroy');
+    
+    // Gestion des caractéristiques
+    Route::post('/{id}/caracteristiques', [InfrastructureController::class, 'storeCaracteristique'])
+        ->name('infrastructures.caracteristiques.store');
+    
+    Route::delete('/caracteristiques/{id}', [InfrastructureController::class, 'destroyCaracteristique'])
+        ->name('infrastructures.caracteristiques.destroy');
+    Route::get('/localites/by-pays', [InfrastructureController::class, 'getByPays'])
+    ->name('localites.byPays');
+
+    Route::get('/localites/niveaux', [InfrastructureController::class, 'getNiveaux'])
+        ->name('localites.niveaux');
+        Route::get('/localites/by-pays/{paysCode}', function ($paysCode) {
+            return response()->json(
+                LocalitesPays::getByPaysCode($paysCode)
+            );
+        });
+        
+        Route::get('/localites/{codeLocalite}/details', function ($codeLocalite) {
+            return response()->json(
+                LocalitesPays::getFullLocaliteData($codeLocalite)
+            );
+        });
+    
+});
+
     /**************************** GESTION DES HABILITATIONS **********************************/
      Route::get('/admin/habilitations', [RoleAssignmentController::class, 'habilitations'])->name('habilitations.index');
      Route::get('/admin/role-assignment', [RoleAssignmentController::class, 'index'])->name('role-assignment.index');

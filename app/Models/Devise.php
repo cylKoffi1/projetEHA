@@ -14,4 +14,5 @@ class Devise extends Model
     protected $table = 'devise'; // Nom de la table   
     protected $keyType = 'string';
     protected $primaryKey = 'code';
+    protected $fillable = ['code', 'libelle', 'monnaie', 'code_long', 'code_court'];
 }

@@ -47,7 +47,15 @@
 
     <!-- DevExtreme CSS -->
     <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/22.2.3/css/dx.light.css" />
+    <script src="{{ asset('assets/compiled/js/sweetalert2@11.js') }}"></script>
+    <link rel="stylesheet" href="{{asset('assets/compiled/css/sweetalert2.min.css') }}">
+<style>
+    
+    .swal2-container {
+        z-index: 3000 !important; /* plus haut que ta navbar */
+    }
 
+</style>
     <!-- DevExtreme JS -->
     <script src="https://cdn3.devexpress.com/jslib/22.2.3/js/dx.all.js"></script>
 
@@ -55,11 +63,20 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
         <script>
-            toastr.options = {
-                "closeButton": true,
-                "progressBar": true,
-                "positionClass": "toast-top-right",
-                "timeOut": "3000"
-            };
+           function alert(message, type = 'success') {
+                    Swal.fire({
+                        text: message,
+                        icon: type, // Par défaut : 'success'
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 6000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.addEventListener('mouseenter', Swal.stopTimer);
+                            toast.addEventListener('mouseleave', Swal.resumeTimer);
+                        }
+                    });
+                }
 
         </script>

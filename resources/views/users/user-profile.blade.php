@@ -131,10 +131,10 @@
                                                 <div class="card-body position-relative">
                                                     <div class="text-center mt-3">
                                                         <div class="chat-avtar d-inline-flex mx-auto">
-                                                            @if ($user->personnel->photo)
-                                                            <img class="rounded-circle img-fluid wid-70" style="width: 50px; height: 50px; border-radius: 50px;" src="{{ asset("users/".$user->personnel->photo) }}" alt="User image">
+                                                            @if (auth()->user()->acteur?->Photo )
+                                                            <img class="rounded-circle img-fluid wid-70" style="width: 50px; height: 50px; border-radius: 50px;" src="{{ asset(auth()->user()->acteur?->Photo ) }}" alt="User image">
                                                             @else
-                                                            <img class="rounded-circle img-fluid wid-70" style="width: 50px; height: 50px; border-radius: 50px;" src="{{ asset("users/user.png") }}" alt="Photo">
+                                                            <img class="rounded-circle img-fluid wid-70" style="width: 50px; height: 50px; border-radius: 50px;" src="{{ asset('users/user.png') }}" alt="Photo">
                                                             @endif
 
                                                         </div>
@@ -158,15 +158,15 @@
                                                         <hr class="my-3">
                                                         <div class="d-inline-flex align-items-center justify-content-between w-100 mb-3">
                                                             <i class="bi bi-envelope-at"></i>
-                                                            <p class="mb-0">{{ $user->personnel->email }}</p>
+                                                            <p class="mb-0">{{ $user->acteur?->personnePhysique?->email }}</p>
                                                         </div>
                                                         <div class="d-inline-flex align-items-center justify-content-between w-100 mb-3">
                                                             <i class="bi bi-phone"></i>
-                                                            <p class="mb-0">(+225) {{ $user->personnel->telephone }}</p>
+                                                            <p class="mb-0">{{ $user->acteur?->personnePhysique?->telephone_mobile ?? '--' }} / {{ $user->acteur?->personnePhysique?->telephone_bureau ?? '--' }}</p>
                                                         </div>
                                                         <div class="d-inline-flex align-items-center justify-content-between w-100 mb-3">
                                                             <i class="bi bi-house"></i>
-                                                            <p class="mb-0">{{ $user->personnel->addresse }}</p>
+                                                            <p class="mb-0">{{ $user->acteur?->adresse }}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -183,11 +183,11 @@
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <p class="mb-0 text-muted">Nom</p>
-                                                                    <p class="mb-0">{{ $user->personnel->nom }}</p>
+                                                                    <p class="mb-0">{{ $user->acteur?->libelle_court }}</p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Prénom</p>
-                                                                    <p class="mb-0">{{ $user->personnel->prenom }}</p>
+                                                                    <p class="mb-0">{{ $user->acteur?->libelle_long }}</p>
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -195,68 +195,67 @@
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Téléphone</p>
-                                                                    <p class="mb-0"> {{ $user->personnel->telephone }}</p>
+                                                                    <p class="mb-0"> {{ $user->acteur?->telephone }}</p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Email</p>
-                                                                    <p class="mb-0">{{ $user->personnel->email }}</p>
+                                                                    <p class="mb-0">{{ $user->acteur?->email }}</p>
                                                                 </div>
                                                             </div>
                                                         </li>
                                                         <li class="list-group-item px-0 pt-0">
                                                             <div class="row">
                                                                 <div class="col-md-6">
-                                                                    <p class="mb-1 text-muted">Groupe</p>
-                                                                    <p class="mb-0">{{ $user->roles->first()->name ?? ""}}</p>
+                                                                    <p class="mb-1 text-muted">Adresse</p>
+                                                                    <p class="mb-0">{{ $user->acteur?->adresse }}</p>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <p class="mb-1 text-muted">Fonction</p>
-                                                                    <p class="mb-0">{{ $user->latestFonction->fonctionUtilisateur->libelle_fonction ?? ""}}</p>
+                                                                    <p class="mb-0">{{ $user->fonctionUtilisateur?->libelle_fonction ?? '--' }}</p>
                                                                 </div>
                                                             </div>
                                                         </li>
                                                         <li class="list-group-item px-0 pt-0">
                                                             <div class="row">
                                                                 <div class="col-md-6">
-                                                                    <p class="mb-1 text-muted">Niveaux Accès</p>
+                                                                    <p class="mb-1 text-muted">Groupe utilisateur</p>
                                                                     <p class="mb-0">
                                                                         @if($user)
-                                                                            @if ($user->latestRegion)
-                                                                                @if ($user->latestRegion->region)
-                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->region->libelle }}
-                                                                                @elseif ($user->latestRegion->departement)
-                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->departement->libelle }}
-                                                                                @elseif ($user->latestRegion->district)
-                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->district->libelle }}
-                                                                                @elseif ($user->latestRegion->pays)
-                                                                                    {{ $user->niveauAcces->libelle }} : {{ $user->latestRegion->pays->nom_fr_fr }}
-                                                                                @else
-                                                                                @endif
-                                                                            @endif
+                                                                                {{ $user->groupeUtilisateur?->libelle_groupe ?? 'Aucun groupe utilisateur'}}
                                                                         @endif</p>
                                                                 </div>
                                                                 <div class="col-md-6">
-                                                                    <p class="mb-1 text-muted">Structure de rattachement</p>
+                                                                    <p class="mb-1 text-muted">Type acteur</p>
                                                                     <p class="mb-0">
                                                                         @if ($user)
-                                                                            @if($user->structureRattachement)
-                                                                                @if ($user->structureRattachement->agence)
-                                                                                    Agence : {{ $user->structureRattachement->agence->nom_agence }}
-                                                                                @elseif ($user->structureRattachement->ministere)
-                                                                                    Ministère : {{ $user->structureRattachement->ministere->libelle }}
-                                                                                @elseif ($user->structureRattachement->bailleur)
-                                                                                    Bailleur : {{ $user->structureRattachement->bailleur->libelle_long }}
-                                                                                @endif
+                                                                            @if($user->acteur?->type_acteur)
+                                                                                {{ $user->acteur?->type?->libelle_type_acteur}}                                                                                
                                                                             @endif
                                                                         @else
-                                                                            Aucune Structure de rattachement
+                                                                            Aucune Type acteur
                                                                         @endif</p>
                                                                 </div>
                                                             </div>
                                                         </li>
-                                                        <li class="list-group-item px-0 pb-0">
-                                                            <p class="mb-1 text-muted">Adresse</p>
-                                                            <p class="mb-0">{{ $user->personnel->addresse }}</p>
+                                                        <li class="list-group-item px-0 pt-0">
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <p class="mb-1 text-muted">Groupe projet</p>
+                                                                    <p class="mb-0">
+                                                                        {{ $groupeProjetSelectionne->libelle ?? 'Aucun groupe projet sélectionné' }}
+                                                                    </p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <p class="mb-1 text-muted">Domaines</p>
+                                                                    <p class="mb-0">
+                                                                        @if($domainesSelectionnes->isNotEmpty())
+                                                                            {{ $domainesSelectionnes->pluck('libelle')->implode(', ') }}
+                                                                        @else
+                                                                            Aucun domaine
+                                                                        @endif
+                                                                    </p>
+                                                                </div>
+                                                            </div>
                                                         </li>
                                                     </ul>
                                                 </div>
@@ -268,7 +267,7 @@
                                     <div class="row">
                                         <form class="row" style="align-items: center;" id="update-user" action="{{ route('users.update_auth', ['userId' => $user->id]) }}" method="post" enctype="multipart/form-data">
                                             @csrf
-                                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
+                                            <input type="hidden" class="form-control" id="ecran_id" {{--value="{{ $ecran->id }}"--}} name="ecran_id" required>
                                             <div class="col-lg-12">
                                                 <div class="card">
                                                     <div class="card-header">
@@ -277,41 +276,6 @@
                                                     <div class="card-body">
                                                         <div class="row">
 
-                                                            <div class="col-3 ">
-                                                            @if($structureRattachement)
-                                                                <div class="form-group">
-                                                                    <label for="structure_ratache">Structure :</label>
-                                                                    <label for="bai">B :</label>
-                                                                    <input type="radio" value="bai" name="structure" id="bai" selected="true" onclick="showSelect('bailleur')" {{ $structureRattachement->type_structure == 'bailleurss' ? 'checked' : '' }} style="margin-right: 5px;">
-                                                                    <label for="age">A :</label>
-                                                                    <input type="radio" name="structure" value="age" id="age" onclick="showSelect('agence')" {{ $structureRattachement->type_structure == 'agence_execution' ? 'checked' : '' }} style="margin-right: 5px;">
-                                                                    <label for="min">M :</label>
-                                                                    <input type="radio" name="structure" value="min" id="min" onclick="showSelect('ministere')" {{ $structureRattachement->type_structure == 'ministere' ? 'checked' : '' }}>
-
-                                                                    <select name="bailleur" id="bailleur" class="form-select" style="display: none;" onclick="filterOptions('bailleurss')">
-                                                                        <option value="">Selectionner le bailleur</option>
-                                                                        @foreach($bailleurs as $bailleur)
-                                                                        <option value="{{ $bailleur->code_bailleur }}" {{ $structureRattachement->code_structure == $bailleur->code_bailleur ? 'selected' : '' }}>{{ $bailleur->libelle_long }}</option>
-                                                                        @endforeach
-                                                                    </select>
-
-                                                                    <select name="agence" id="agence" class="form-select" style="display: none;"   onclick="filterOptions('agence_execution')">
-                                                                        <option value="">Selectionner l'agence</option>
-                                                                        @foreach($agences as $agence)
-                                                                        <option value="{{ $agence->code_agence_execution }}" {{ $structureRattachement->code_structure == $agence->code_agence_execution ? 'selected' : '' }}>{{ $agence->nom_agence }}</option>
-                                                                        @endforeach
-                                                                    </select>
-
-                                                                    <select name="ministere" id="ministere" class="form-select" style="display: none;" onclick="filterOptions('ministere')">
-                                                                        <option value="">Selectionner le ministère</option>
-                                                                        @foreach($ministeres as $ministere)
-                                                                        <option value="{{ $ministere->code }}" {{ $structureRattachement->code_structure == $ministere->code ? 'selected' : '' }}>{{ $ministere->libelle }}</option>
-                                                                        @endforeach
-                                                                    </select>
-
-                                                                </div>
-                                                            @endif
-                                                            </div>
                                                             <div class="col-3">
                                                                 <div class="form-group">
                                                                     <label for="fonction">Fonction :</label>
@@ -341,45 +305,7 @@
                                                             </div>
                                                             @endrole
 
-                                                            <div class="col-3">
-                                                                <div class="form-group">
-                                                                    <label for="niveau_acces_id">Niveau d'accès :</label>
-                                                                    <select name="niveau_acces_id" class="form-select">
-                                                                        <option value="">Selectionner un niveau</option>
-                                                                        @foreach($niveauxAcces as $niveauAcces)
-                                                                        <option value="{{ $niveauAcces->id }}" {{ $user->niveau_acces_id == $niveauAcces->id ? 'selected' : '' }}>
-                                                                            {{ $niveauAcces->libelle }}
-                                                                        </option>
-                                                                        @endforeach
-
-                                                                    </select>
-                                                                </div>
-                                                            </div>
                                                         </div>
-                                                        <div class="row">
-                                                            <div class="col">
-                                                                <div class="form-group">
-                                                                    <label for="sous_domaine">Sous-domaines séléctionnés:</label>
-                                                                    <select id="sous_domaine" name="sous_domaine" multiple required>
-                                                                        @foreach ($sous_domaines as $sd)
-                                                                        <option value="{{ $sd->code }}">{{ $sd->libelle }}</option>
-                                                                        @endforeach
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            <div class="col-sm-4">
-                                                                <div class="form-group">
-                                                                    <label for="domaine">Domaine:</label>
-                                                                    <select id="domaine" class="form-control" name="domaine" multiple>
-
-                                                                        @foreach ($domaines as $domaine)
-                                                                        <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
-                                                                        @endforeach
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
                                                         <div class="row">
                                                             <div class="col-4">
                                                                 <div class="form-group">
@@ -390,13 +316,13 @@
                                                             <div class="col-sm-4">
                                                                 <div class="form-group">
                                                                     <label class="form-label">Nom</label>
-                                                                    <input type="text" class="form-control" name="nom" value="{{ $user->personnel->nom }}">
+                                                                    <input type="text" class="form-control" name="nom" value="{{ $user->acteur->libelle_court }}">
                                                                 </div>
                                                             </div>
                                                             <div class="col-sm-4">
                                                                 <div class="form-group">
                                                                     <label class="form-label">Prénom</label>
-                                                                    <input type="text" class="form-control" name="prenom" value="{{ $user->personnel->prenom }}">
+                                                                    <input type="text" class="form-control" name="prenom" value="{{ $user->acteur->libelle_long }}">
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -404,19 +330,19 @@
                                                             <div class="col-sm-4">
                                                                 <div class="form-group">
                                                                     <label class="form-label">Email <span class="text-danger">*</span></label>
-                                                                    <input type="text" class="form-control" name="email" value="{{ $user->personnel->email }}">
+                                                                    <input type="text" class="form-control" name="email" value="{{ $user->acteur->email }}">
                                                                 </div>
                                                             </div>
                                                             <div class="col-sm-4">
                                                                 <div class="form-group">
                                                                     <label class="form-label">Téléphone</label>
-                                                                    <input type="text" class="form-control" name="tel" value="{{ $user->personnel->telephone }}">
+                                                                    <input type="text" class="form-control" name="tel" value="{{ $user->acteur->telephone }}">
                                                                 </div>
                                                             </div>
                                                             <div class="col-sm-4">
                                                                 <div class="form-group">
                                                                     <label class="form-label">Adresse</label>
-                                                                    <input type="text" class="form-control" name="adresse" value="{{ $user->personnel->addresse }}">
+                                                                    <input type="text" class="form-control" name="adresse" value="{{ $user->acteur->adresse }}">
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -436,10 +362,11 @@
                                                             <div class="col-sm-4">
                                                                 <label for="photo" class="form-label">Photo actuelle</label>
                                                                 <div class="form-group">
-                                                                    @if ($user->personnel->photo)
-                                                                    <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/".$user->personnel->photo) }}" alt="Photo">
+                                                                   
+                                                                    @if (auth()->user()->acteur?->Photo )
+                                                                    <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset(auth()->user()->acteur?->Photo ) }}" alt="Photo">
                                                                     @else
-                                                                    <img style="width: 40px; height: 40px; border-radius: 50px;" src="{{ asset("users/user.png") }}" alt="Photo">
+                                                                    <img style="width: 40px; height: 40px; border-radius: 50px;"  src="{{ asset('users/user.png') }}" alt="Photo">
                                                                     @endif
                                                                 </div>
                                                             </div>
@@ -456,7 +383,7 @@
                                 </div>
                                 <div class="tab-pane" id="profile-4" role="tabpanel" aria-labelledby="profile-tab-4">
                                     <div class="card">
-                                        <form action="{{ route('password.change') }}" method="post">
+                                        <form id="change-password-form" action="{{ route('password.change') }}" method="post">
                                             <div class="card-header">
                                                 <h5>Modifier mot de passe</h5>
                                             </div>
@@ -465,19 +392,25 @@
                                                     <div class="col-sm-6">
 
                                                         @csrf
-                                                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
-                                                        <div class="form-group">
+                                                        <input type="hidden" class="form-control" id="ecran_id" {{--value="{{ $ecran->id }}"--}} name="ecran_id" required>
+                                                        <div class="form-group position-relative">
                                                             <label class="form-label">Ancien mot de passe</label>
-                                                            <input type="password" class="form-control" name="old">
+                                                            <input type="password" id="old" name="old" class="form-control">
+                                                            <i class="bi bi-eye-fill toggle-password" data-target="old" style="position: absolute; right: 10px; top: 38px; cursor: pointer;"></i>
                                                         </div>
-                                                        <div class="form-group">
-                                                            <label class="form-label">Nouveaux mot de passe</label>
-                                                            <input type="password" name="new" class="form-control">
+
+                                                        <div class="form-group position-relative">
+                                                            <label class="form-label">Nouveau mot de passe</label>
+                                                            <input type="password" id="new" name="new" class="form-control">
+                                                            <i class="bi bi-eye-fill toggle-password" data-target="new" style="position: absolute; right: 10px; top: 38px; cursor: pointer;"></i>
                                                         </div>
-                                                        <div class="form-group">
+
+                                                        <div class="form-group position-relative">
                                                             <label class="form-label">Confirmer nouveau</label>
-                                                            <input type="password" name="confirm_new" class="form-control">
+                                                            <input type="password" id="confirm_new" name="confirm_new" class="form-control">
+                                                            <i class="bi bi-eye-fill toggle-password" data-target="confirm_new" style="position: absolute; right: 10px; top: 38px; cursor: pointer;"></i>
                                                         </div>
+
 
                                                     </div>
                                                     <div class="col-sm-6">
@@ -511,8 +444,136 @@
         </div>
     </div>
 </section>
+<script>
+    document.querySelectorAll('.toggle-password').forEach(eye => {
+        eye.addEventListener('click', function () {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+
+            // Toggle l’icône
+            this.classList.toggle('bi-eye-fill');
+            this.classList.toggle('bi-eye-slash-fill');
+        });
+    });
+    
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const updateForm = document.getElementById("update-user");
+
+        updateForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(updateForm);
+
+            fetch(updateForm.action, {
+                method: "POST",
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert(data.message);
+                } else if (data.status === "error") {
+                    alert(data.errors.join("\n"));
+                }
+            })
+            .catch(error => {
+                alert("Une erreur est survenue.");
+                console.error("Erreur:", error);
+            });
+        });
+    });
+</script>
 
 <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("change-password-form");
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault(); // Empêche le rechargement
+
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: "POST",
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert(data.message,"success"); // ✅ Succès
+                    form.reset();
+                } else if (data.status === "error") {
+                    alert(data.errors.join("\n"),"error"); // ⚠️ Erreurs
+                }
+            })
+            .catch(error => {
+                alert("Une erreur est survenue.","error");
+                console.error("Erreur:", error);
+            });
+        });
+    });
+</script>
+
+<script>
+
+const groupeProjetSelect = document.querySelector("lookup-multiselect[name='groupe_projet']"); // le vrai nom du champ groupe projet
+const domaineSelect = document.querySelector("lookup-multiselect[name='domaine']");
+const sousDomaineSelect = document.querySelector("lookup-multiselect[name='sous_domaine']");
+
+// Met à jour les domaines quand un groupe projet est sélectionné
+groupeProjetSelect.addEventListener("change", () => {
+    const selected = groupeProjetSelect.value;
+    if (!selected.length) return;
+
+    fetch(`{{url("/")}}/domaines/${selected[0]}`)
+        .then(res => res.json())
+        .then(data => {
+            const options = data.map(d => ({
+                value: d.code,
+                text: d.libelle
+            }));
+            domaineSelect.setOptions(options);
+            sousDomaineSelect.setOptions([]); // reset sous-domaines
+        });
+});
+
+// Met à jour les sous-domaines quand un domaine est sélectionné
+domaineSelect.addEventListener("change", () => {
+    const groupeProjet = groupeProjetSelect.value[0];
+    const domaines = domaineSelect.value;
+
+    if (!groupeProjet || !domaines.length) return;
+
+    const promises = domaines.map(d =>
+        fetch(`{{url("/")}}/sous-domaines/${d}/${groupeProjet}`).then(res => res.json())
+    );
+
+    Promise.all(promises).then(results => {
+        const merged = results.flat();
+        const unique = Array.from(
+            new Map(merged.map(item => [item.code_sous_domaine, item])).values()
+        );
+
+        sousDomaineSelect.setOptions(
+            unique.map(s => ({
+                value: s.code_sous_domaine,
+                text: s.lib_sous_domaine
+            }))
+        );
+    });
+});
+
+
     function filterOptions(structure) {
         var select = document.getElementById('fonction');
         var options = select.options;
@@ -531,192 +592,12 @@
     }
 </script>
 <script>
-    $('#table1').DataTable({
-        language: {
-            processing: "Traitement en cours..."
-            , search: ""
-            , searchPlaceholder: "Rechercher"
-            , lengthMenu: "Afficher _MENU_ lignes"
-            , info: "Affichage de _START_ &agrave; _END_ sur _TOTAL_ &eacute;l&eacute;ments"
-            , infoEmpty: "Affichage de l'&eacute;lement 0 &agrave; 0 sur 0 &eacute;l&eacute;ments"
-            , infoFiltered: "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)"
-            , infoPostFix: ""
-            , loadingRecords: "Chargement en cours..."
-            , zeroRecords: "Aucun &eacute;l&eacute;ment &agrave; afficher"
-            , emptyTable: "Aucune donnée disponible dans le tableau"
-            , paginate: {
-                first: "Premier"
-                , previous: "Pr&eacute;c&eacute;dent"
-                , next: "Suivant"
-                , last: "Dernier"
-            }
-            , aria: {
-                sortAscending: ": activer pour trier la colonne par ordre croissant"
-                , sortDescending: ": activer pour trier la colonne par ordre décroissant"
-            }
-        }
-        , "scrollX": true
-    , });
-
-
-
-
-
-    $(document).ready(function() {
-        var uid = '{{ $user->id }}';
-        var userSD = @json($sous_dom);
-        var userD = @json($dom);
-        if ('{{ $user -> personnel -> bailleur ? "true" : "false"}}') {
-            $("#bai").prop("checked", true);
-            showSelect('bailleur');
-        }
-
-        if ('{{ $user -> personnel -> agence ? "true" : "false"}}') {
-            $("#age").prop("checked", true);
-            showSelect('agence');
-        }
-
-        if ('{{ $user -> personnel -> ministere ? "true" : "false"}}') {
-            $("#min").prop("checked", true);
-            showSelect('ministere');
-        }
-        $('#fonction').on('change', function() {
-            getGroupeUserByFonctionId($(this));
-        })
-
-        var domaines = $('#domaine').filterMultiSelect({
-
-            // displayed when no options are selected
-            placeholderText: "0 sélection",
-
-            // placeholder for search field
-            filterText: "Filtrer",
-
-            // Select All text
-            selectAllText: "Tout sélectionner",
-
-            // Label text
-            labelText: "",
-
-            // the number of items able to be selected
-            // 0 means no limit
-            selectionLimit: 0,
-
-            // determine if is case sensitive
-            caseSensitive: false,
-
-            // allows the user to disable and enable options programmatically
-            allowEnablingAndDisabling: true,
-
-        });
-
-        var sous_dom = $('#sous_domaine').filterMultiSelect({
-
-            // displayed when no options are selected
-            placeholderText: "0 sélection",
-
-            // placeholder for search field
-            filterText: "Filtrer",
-
-            // Select All text
-            selectAllText: "Tout sélectionner",
-
-            // Label text
-            labelText: "",
-
-            // the number of items able to be selected
-            // 0 means no limit
-            selectionLimit: 0,
-
-            // determine if is case sensitive
-            caseSensitive: false,
-
-            // allows the user to disable and enable options programmatically
-            allowEnablingAndDisabling: true,
-
-        });
-        console.log(userD);
-        // Pour parcourir les éléments
-        userSD.forEach(function(item) {
-            sous_dom.selectOption(item.sous_domaine);
-        });
-        userD.forEach(function(item) {
-            domaines.selectOption(item.code_domaine)
-        })
-
-        $('#update-user').on('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
-
-            // Create FormData object from the form
-            var formData = new FormData(this);
-
-            // Add additional data to FormData if needed
-            formData.append("sd", sous_dom.getSelectedOptionsAsJson());
-            formData.append("domS", domaines.getSelectedOptionsAsJson());
-            // Assume that you have a variable userId containing the user ID
-            var userId = uid; // Change this to your dynamic user ID
-            // Build the correct URL for the AJAX request
-            var url = '/admin/users/details-user/' + userId;
-
-            $.ajax({
-                url: url
-                , type: 'POST'
-                , data: formData
-                , contentType: false, // Don't set content type (let jQuery handle it)
-                processData: false, // Don't process data (let jQuery handle it)
-                success: function(response) {
-                    showPopup(response.success);
-
-                    // Rediriger l'utilisateur après une requête réussie
-                    window.location.href = "/admin/users/details-user/" + userId+"?ecran_id="+response.ecran;
-                }
-                , error: function(xhr, status, error) {
-                    var err = JSON.parse(xhr.responseText);
-                    console.log(err); // Affichez les détails de l'erreur côté serveur dans la console
-                    showPopup('Une erreur est survenue !');
-                }
-            });
-        });
-
-    });
-
-
-    function getGroupeUserByFonctionId(selectElement) {
-        var selectedFonction = selectElement.val();
-
-        // Effectuez une requête AJAX pour obtenir les sous-domaines
-        $.ajax({
-            type: "GET"
-            , url: "/admin/get-groupes/" + selectedFonction
-            , success: function(data) {
-                console.log(data);
-                var groupess = $("#group_user"); // Correction: Utilisation de l'ID directement
-
-                groupess.empty(); // Effacez les options précédentes
-
-                // Ajoutez les options des sous-domaines récupérés
-                $.each(data.groupes, function(key, value) {
-                    groupess.append(
-                        $("<option>", {
-                            value: key
-                            , text: value
-                        , })
-                    );
-                });
-
-                groupess.trigger("change");
-            }
-        , });
-    }
-
-
-
     document.getElementById('username').addEventListener('keyup', function() {
         var username = this.value;
 
         // Effectuer la requête AJAX
         $.ajax({
-            url: '/check-username'
+            url: '{{url("/")}}/check-username'
             , method: 'GET'
             , data: {
                 username: username
@@ -738,7 +619,7 @@
 
         // Effectuer la requête AJAX
         $.ajax({
-            url: '/check-email'
+            url: '{{url("/")}}/check-email'
             , method: 'get'
             , data: {
                 email: email

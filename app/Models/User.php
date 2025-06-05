@@ -31,12 +31,15 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
         'reset_password_token',
         'reset_password_expires_at',
         'remember_token',
+        'last_session_id',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
         'is_active',
         'email',
-        'must_change_password'
+        'must_change_password',
+        'default_password_attempts',
+        'is_blocked',
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $guard_name = 'web';
@@ -68,7 +71,12 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
     {
         return $this->belongsTo(Approbateur::class, 'code_acteur', 'acteur_id');
     }
-
+    public function domainesSelectionnes()
+    {
+        $projet = $this->groupeProjetSelectionne();
+        return $projet ? $projet->domaine : collect();
+    }
+    
     /**
      * Récupère les pays associés à l'utilisateur.
      */

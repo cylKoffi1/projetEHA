@@ -16,8 +16,9 @@ class Beneficier extends Model
 
     public $timestamps = true;
     public function acteur()
-{
-    return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
-}
+    {
+        return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
+    }
+    
 
 }

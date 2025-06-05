@@ -77,6 +77,11 @@ class LookupSelect extends HTMLElement {
 
         this.addEventListeners();
         this.dispatchEvent(new CustomEvent("ready", { bubbles: true }));
+        // 🔥 Si une valeur est déjà définie dans l'attribut, on la sélectionne
+        const initialValue = this.getAttribute("value");
+        if (initialValue) {
+            this.setSelectedValue(initialValue);
+        }
     }
 
     // 🔥 Modification ici : extraction des data-* depuis les options
@@ -173,8 +178,11 @@ class LookupSelect extends HTMLElement {
         const option = this.options.find(opt => opt.value === value);
         if (option) {
             this.selectOption(option);
+        } else {
+            // ⚠️ Si la valeur n'existe pas dans les options, on nettoie
+            this.clear();
         }
-    }
+    }    
 
     showDropdown() {
         this.dropdownList.style.display = "block";
@@ -189,12 +197,9 @@ class LookupSelect extends HTMLElement {
     }
 
     set value(newValue) {
+        
         this._value = newValue;
-        const option = this.options.find(opt => opt.value === newValue);
-        if (option) {
-            this.input.value = option.text;
-            this.selectedOption = option;
-        }
+        this.setSelectedValue(newValue); 
     }
 
     // ✅ Donne accès à tous les attributs : value, text, codePays, codeRattachement, etc.

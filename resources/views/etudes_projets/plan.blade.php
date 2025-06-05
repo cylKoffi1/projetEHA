@@ -544,14 +544,14 @@ function renderTaskTable() {
             };
 
             window.zoomOut = function () {
-                if (window.zoomIndex < 6) {
+                if (window.zoomIndex < 7) {
                     window.zoomIndex++;
                     setScaleConfig(window.zoomIndex);
                 }
             };
 
             window.resetZoom = function () {
-                window.zoomIndex = 6; // Reset à 'week'
+                window.zoomIndex = 7; // Reset à 'week'
                 setScaleConfig(window.zoomIndex);
             };
 
@@ -670,7 +670,7 @@ function renderTaskTable() {
             gantt.init("gantt_here");
 
             // Charge les données de l'API
-            gantt.load("/api/data", "json").then(() => {
+            gantt.load("{{ url('/')}}/api/data", "json").then(() => {
                 gantt.eachTask(function(task) {
                     if (!task.start_date || typeof task.start_date === "string") {
                         try {
@@ -692,7 +692,7 @@ function renderTaskTable() {
 
 
             // Configure le dataProcessor pour synchroniser les actions (CRUD)
-            var dp = new gantt.dataProcessor("/api/");
+            var dp = new gantt.dataProcessor("{{ url('/')}}/api/");
             dp.init(gantt);
             dp.setUpdateMode("cell");
             dp.setTransactionMode("REST"); 
@@ -720,8 +720,6 @@ function renderTaskTable() {
                 dp.sendData();
                 return true;
             });
-
-
 
 
             dp.attachEvent("onAfterUpdate", function(id, action, tid, response) {
@@ -822,7 +820,7 @@ function renderTaskTable() {
 
 
             // Définir l'échelle initiale
-            setScaleConfig(1);
+            setScaleConfig(6);
 
         }
 
@@ -836,7 +834,7 @@ function renderTaskTable() {
             gantt.clearAll();
 
             if (codeProjet) {
-                gantt.load(`/api/data?CodeProjet=${codeProjet}`, "json")
+                gantt.load(`{{ url('/')}}/api/data?CodeProjet=${codeProjet}`, "json")
                     .then(function () {
                         console.log("✅ Données chargées pour :", codeProjet);
 
@@ -926,7 +924,7 @@ function initScheduler() {
     scheduler.init("scheduler_here", new Date(), "month");
 
     if (codeProjet) {
-        scheduler.load(`/api/scheduler-data?CodeProjet=${codeProjet}`, "json", function () {
+        scheduler.load(`{{ url('/')}}/api/scheduler-data?CodeProjet=${codeProjet}`, "json", function () {
             const events = scheduler.getEvents();
 
             if (events.length > 0) {
@@ -947,7 +945,7 @@ function initScheduler() {
             }
         });
 
-        const dpa = new scheduler.DataProcessor("/api/scheduler/");
+        const dpa = new scheduler.DataProcessor("{{ url('/')}}/api/scheduler/");
         dpa.init(scheduler);
         dpa.setTransactionMode("REST");
 

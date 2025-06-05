@@ -9,7 +9,7 @@ class ValeurCaracteristique extends Model
 {
     use HasFactory;
 
-    protected $table = 'valeurCaracteristique';
+    protected $table = 'valeurcaracteristique';
     protected $primaryKey = 'idValeurCaracteristique';
     public $timestamps = false;
 

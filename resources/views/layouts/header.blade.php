@@ -11,6 +11,8 @@
     <!-- Bootstrap JS (avec Popper.js inclus) -->
     <script src="{{ asset('assets/compiled/js/bootstrap.bundle.min.js') }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="{{ asset('assets/compiled/js/sweetalert2@11.js') }}"></script>
+    <link rel="stylesheet" href="{{asset('assets/compiled/css/sweetalert2.min.css') }}">
 </head>
 
 <style>
@@ -104,6 +106,10 @@
     .modal.show .modal-dialog {
         transform: matrix(1, 0, 0, 1, 170, 111) !important;
     }
+    .swal2-container {
+        z-index: 3000 !important; /* plus haut que ta navbar */
+    }
+
 </style>
 <style>
     /* Style pour le modal de notification */
@@ -195,72 +201,77 @@
 </style>
 
 <script>
-    // Fonction pour les notifications (avec timeout)
-    function alert(message, type = 'success') {
-        const modals = document.getElementById('notificationModal');
-        const messageEl = document.getElementById('notificationMessage');
-        
-        modals.className = `modal-notification ${type}`;
-        messageEl.textContent = message;
-        modals.style.display = 'block';
-        
-        // Fermer automatiquement après 3 secondes
-        setTimeout(() => {
-            modals.style.display = 'none';
-        }, 3000);
-    }
-
-      // Fonction de confirmation personnalisée
-    // confirm.js
-
-    window.confirm = async function(message) {
-        return new Promise((resolve) => {
-            const modal = document.getElementById('confirmationModals');
-            const messageEl = document.getElementById('confirmationMessage');
-            const confirmBtn = document.getElementById('confirmAction');
-            const cancelBtn = document.getElementById('cancelAction');
-
-            // Afficher le message
-            messageEl.textContent = message;
-            modal.style.display = 'block';
-
-            // Nettoyer anciens événements
-            confirmBtn.onclick = null;
-            cancelBtn.onclick = null;
-
-            // Si confirmé
-            confirmBtn.onclick = function () {
-                modal.style.display = 'none';
-                resolve(true);
-            };
-
-            // Si annulé
-            cancelBtn.onclick = function () {
-                modal.style.display = 'none';
-                resolve(false);
-            };
-
-            // Si clic à l'extérieur
-            modal.onclick = function (e) {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                    resolve(false);
-                }
-            };
-        });
-    };
-
-    // Optionnel : Handler réutilisable pour tous les boutons de suppression
-    window.confirms = async function(event, message) {
-        event.preventDefault();
-        const confirmed = await confirm(message);
-        if (confirmed) {
-            event.target.closest('form').submit();
+function alert(message, type = 'success') {
+    Swal.fire({
+        text: message,
+        icon: type, // 'success', 'error', 'warning', 'info', or 'question'
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 6000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
         }
-    };
+    });
+}
 
 </script>
 
+<script>
+/**
+ * Fonction générique de suppression avec confirmation via SweetAlert2
+ * @param {string} url - URL de suppression (ex: "/admin/sous-domaines/delete/123")
+ * @param {function} onSuccess - Fonction callback à exécuter en cas de succès (ex: recharger la page)
+ * @param {object} messages - (optionnel) Personnalisation des textes affichés
+ */
+function confirmDelete(url, onSuccess, messages = {}) {
+    Swal.fire({
+        title: messages.title || 'Êtes-vous sûr ?',
+        text: messages.text || 'Cette action est irréversible.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: messages.confirmButtonText || 'Oui, supprimer',
+        cancelButtonText: messages.cancelButtonText || 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: url,
+                method: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}' // Laravel CSRF token
+                },
+                success: function(response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Supprimé !',
+                        text: messages.successMessage || 'Suppression effectuée avec succès.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+                    // Callback de succès : rechargement ou autre
+                    if (typeof onSuccess === 'function') {
+                        setTimeout(() => onSuccess(), 2000);
+                    }
+                },
+                error: function(response) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur',
+                        text: response.responseJSON?.error || messages.errorMessage || "Erreur lors de la suppression."
+                    });
+                }
+            });
+        }
+    });
+}
+
+
+</script>
 <!-- Modal de notification -->
 <div id="notificationModal" class="modal-notification">
     <div class="modal-contents">
@@ -296,7 +307,7 @@
         <div class="user-info d-none d-md-block text-center">
             <span class="user-role">{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}</span>
             @if(auth()->user()?->fonctionUtilisateur)
-                <span class="user-function">{{ auth()->user()->fonctionUtilisateur->libelle_fonction ?? '' }}: {{ $personnelAffiche }}</span>
+                <span class="user-function">{{ auth()->user()->fonctionUtilisateur->libelle_fonction ?? '' }} {{ $personnelAffiche }}</span>
             @endif
         </div>
 
@@ -424,7 +435,7 @@
                             <label for="country-select">Sélectionnez un Pays :</label>
                             <select id="country-select" class="form-control" required>
                                 <option value="">Veuillez sélectionner un pays</option>
-                                @foreach($payss as $pay)
+                                @foreach($payss->sortBy('nom_fr_fr')  as $pay)
                                     <option value="{{ $pay->alpha3 }}">{{ $pay->nom_fr_fr }}</option>
                                 @endforeach
                             </select>
@@ -538,10 +549,21 @@
                 { pays_code: paysCode, _token: '{{ csrf_token() }}' },
                 function (response) {
                     let options = '<option value="">Veuillez sélectionner un groupe projet</option>';
+
+                    // Trier le tableau par libellé (ordre alphabétique)
+                    response.sort((a, b) => {
+                        let libA = a.groupe_projet.libelle.toUpperCase();
+                        let libB = b.groupe_projet.libelle.toUpperCase();
+                        return libA.localeCompare(libB);
+                    });
+
+                    // Générer les options après le tri
                     response.forEach(group => {
                         options += `<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`;
                     });
+
                     $('#group-select').html(options);
+
 
                     // Revenir à la sélection du groupe projet si on est sur l'étape du pays
                     if ($('#step-country').is(':visible')) {

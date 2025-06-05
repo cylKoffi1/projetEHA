@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -20,61 +21,6 @@ class LoginController extends Controller
     {
         Log::info('Affichage du formulaire de connexion.');
         return view('auth.connexion');
-    }
-
-    /**
-     * Vérifie les informations d'identification (email et mot de passe).
-     */
-    public function checkUserAssociations(Request $request)
-    {
-        Log::info('Début de la vérification des identifiants.', ['email' => $request->email]);
-
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
-
-        $credentials = $request->only('email', 'password');
-
-        if (!Auth::attempt($credentials)) {
-            Log::error('Échec de la connexion.', ['email' => $request->email]);
-            return response()->json(['error' => 'Identifiants incorrects.'], 401);
-        }
-
-        $user = Auth::user();
-        Log::info('Connexion réussie.', ['user_id' => $user->acteur_id]);
-
-        if (!$user->is_active) {
-            Log::warning('Compte désactivé.', ['user_id' => $user->acteur_id]);
-            Auth::logout();
-            return response()->json(['error' => 'Votre compte est désactivé.'], 403);
-        }
-
-        // Récupérer les pays associés à l'utilisateur
-        $pays = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
-            ->join('pays', 'groupe_projet_pays_user.pays_code', '=', 'pays.alpha3')
-            ->distinct()
-            ->get(['pays.alpha3', 'pays.nom_fr_fr']);
-
-        if ($pays->isEmpty()) {
-            Log::error('Aucun pays associé à l\'utilisateur.', ['user_id' => $user->acteur_id]);
-            Auth::logout();
-            return response()->json(['error' => 'Vous n\'êtes associé à aucun pays.'], 403);
-        }
-
-        // Si l'utilisateur a un seul pays
-        if ($pays->count() === 1) {
-            $paysSelectionne = $pays->first();
-            session(['pays_selectionne' => $paysSelectionne->alpha3]);
-            Log::info('Utilisateur associé à un seul pays.', ['pays_code' => $paysSelectionne->alpha3]);
-
-            return $this->handleGroupSelection($user, $paysSelectionne->alpha3);
-        }
-
-        // Si l'utilisateur a plusieurs pays, il doit en choisir un
-        Log::info('Utilisateur associé à plusieurs pays.', ['user_id' => $user->acteur_id]);
-        session(['step' => 'choose_country']);
-        return response()->json(['step' => 'choose_country', 'data' => $pays]);
     }
 
     /**
@@ -106,6 +52,115 @@ class LoginController extends Controller
         session(['step' => 'choose_group']);
         return response()->json(['step' => 'choose_group', 'data' => $groupes]);
     }
+    /**
+     * Vérifie les informations d'identification (email et mot de passe).
+     */
+    public function checkUserAssociations(Request $request)
+    {
+        Log::info('Début de la vérification des identifiants.', ['email' => $request->email]);
+    
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+    
+        $credentials = $request->only('email', 'password');
+    
+        if (!Auth::attempt($credentials)) {
+            Log::error('Échec de la connexion.', ['email' => $request->email]);
+            return response()->json(['error' => 'Identifiants incorrects.'], 401);
+        }
+    
+        $user = Auth::user();
+        
+        if (!$user->is_active) {
+            Auth::logout();
+            return response()->json(['error' => 'Votre compte est désactivé.'], 403);
+        }
+    
+        if ($user->is_blocked) {
+            Auth::logout();
+            return response()->json(['error' => 'Votre compte est bloqué. Veuillez contacter l\'administrateur.'], 403);
+        }
+    
+        if (Hash::check('123456789', $user->password)) {
+            $user->increment('default_password_attempts');
+    
+            if ($user->default_password_attempts > 1) {
+                $user->update(['is_blocked' => true]);
+                Auth::logout();
+                return response()->json(['error' => 'Votre compte a été bloqué. Contactez l\'administrateur.'], 403);
+            }
+    
+            session(['force_password_change' => true]);
+        }
+    
+        Log::info('Connexion réussie.', ['user_id' => $user->acteur_id]);
+    
+        // Récupérer les pays associés à l'utilisateur
+        $pays = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
+            ->join('pays', 'groupe_projet_pays_user.pays_code', '=', 'pays.alpha3')
+            ->distinct()
+            ->get(['pays.alpha3', 'pays.nom_fr_fr']);
+    
+        if ($pays->isEmpty()) {
+            Log::error('Aucun pays associé à l\'utilisateur.', ['user_id' => $user->acteur_id]);
+            Auth::logout();
+            return response()->json(['error' => 'Vous n\'êtes associé à aucun pays.'], 403);
+        }
+    
+        // Si l'utilisateur a un seul pays
+        if ($pays->count() === 1) {
+            $paysSelectionne = $pays->first();
+            Log::info('Utilisateur associé à un seul pays.', ['pays_code' => $paysSelectionne->alpha3]);
+        
+            session(['pays_selectionne' => $paysSelectionne->alpha3]);
+        
+            // Récupérer les groupes projets associés à ce pays
+            $groupes = GroupeProjetPaysUser::where('user_id', $user->acteur_id)
+                ->where('pays_code', $paysSelectionne->alpha3)
+                ->with('groupeProjet')
+                ->get();
+        
+            if ($groupes->isEmpty()) {
+                Log::warning('Aucun groupe projet disponible pour l\'utilisateur.', ['user_id' => $user->acteur_id]);
+                Auth::logout();
+                return response()->json(['error' => 'Aucun groupe projet trouvé pour ce pays.'], 403);
+            }
+            
+            // Si l'utilisateur n'a qu'un seul groupe projet dans ce pays
+            if ($groupes->count() === 1) {
+                $groupeSelectionne = $groupes->first();
+                session(['projet_selectionne' => $groupeSelectionne->groupe_projet_id]);
+                session(['step' => 'finalize']);
+                
+                Log::info('Utilisateur associé à un seul groupe projet dans le pays.', [
+                    'pays_code' => $paysSelectionne->alpha3,
+                    'projet_id' => $groupeSelectionne->groupe_projet_id
+                ]);
+                
+                return response()->json([
+                    'step' => 'finalize',
+                    'force_password_change' => session('force_password_change', false),
+                ]);
+            }
+            
+            // Si plusieurs groupes, passer à l'étape de choix
+            session(['step' => 'choose_group']);
+            return response()->json([
+                'step' => 'choose_group',
+                'data' => $groupes,
+                'pays_code' => $paysSelectionne->alpha3,
+                'force_password_change' => session('force_password_change', false),
+            ]);
+        }
+        
+        // Si l'utilisateur a plusieurs pays, il doit en choisir un
+        Log::info('Utilisateur associé à plusieurs pays.', ['user_id' => $user->acteur_id]);
+        session(['step' => 'choose_country']);
+        return response()->json(['step' => 'choose_country', 'data' => $pays]);
+    }
+
 
     /**
      * Enregistre le choix du pays.

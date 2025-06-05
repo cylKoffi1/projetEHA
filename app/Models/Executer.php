@@ -19,6 +19,7 @@ class Executer extends Model
         'code_projet', 
         'code_acteur', 
         'secteur_id',
+        'motif',
         'is_active',
         'created_at',
         'updated_at'

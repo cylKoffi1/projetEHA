@@ -36,25 +36,28 @@
 @section('content')
 
 <section id="multiple-column-form">
+ 
     <div class="page-heading">
         <div class="page-title">
             <div class="row">
-                <div class="col-12 col-md-4 order-md-1 order-last">
+                <div class="col-sm-12">
+                    <li class="breadcrumb-item" style="list-style: none; text-align: right; padding: 5px; font-family: Arial, Helvetica, sans-serif;"><span id="date-now" style="color: #34495E; font-family: Verdana, Geneva, Tahoma, sans-serif; margin-left: 15px;"></span></li>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
                     <h3><i class="bi bi-arrow-return-left return" onclick="goBack()"></i>Projet </h3>
                 </div>
-                <div class="col-12 col-md-4 order-md-2">
-                    <li class="breadcrumb-item" style="list-style: none; text-align: right; padding: 5px; font-family: Arial, Helvetica, sans-serif;">
-                        <span id="date-now" style="color: #34495E; font-family: Verdana, Geneva, Tahoma, sans-serif; margin-left: 15px;"></span>
-                    </li>
-                </div>
-                <div class="col-12 col-md-4 order-md-3 order-first">
+                <div class="col-12 col-md-6 order-md-2 order-first">
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="">Réalisation de projet</a></li>
+                            <li class="breadcrumb-item"><a href="#">Réalisation de projet</a></li>
+
                             <li class="breadcrumb-item active" aria-current="page">Paramètre de réalisation</li>
 
                         </ol>
                     </nav>
+
                     <div class="row">
                         <script>
                             setInterval(function() {
@@ -101,483 +104,141 @@
                             </li>
                         </ul>
                         <div class="tab-content mt-2">
-                            <div class="tab-pane fade show active" id="caracteristiques" style="background-color:transparent;">
-                                <form class="form" id="personnelForm" method="POST" enctype="multipart/form-data" action="{{ route('enregistrer.Caracteristiques') }}">
+                            <div class="tab-pane fade show active" id="caracteristiques">
+                                <form method="POST" action="{{ route('caracteristique.store') }}" enctype="multipart/form-data">
                                     @csrf
-                                    <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                                    <div  class="form-step">
-                                        <div class="row">
-                                            <div class="col">
-                                                <div class="form-group">
-                                                    <div class="row">
-                                                        <!-- Ajoutez ces champs cachés dans votre formulaire -->
-                                                        <input type="hidden" id="code_projet" name="code_projet">
-                                                        <input type="hidden" id="code_action_mener_projet" name="code_action_mener_projet">
-                                                        <div class="col-4" style="width: 30%;">
-                                                            <label for="code_projet">Code du projet</label>
-                                                            <input type="text" class="form-control" id="code_projet_input" name="code_projet" readonly>
-                                                        </div>
-                                                        <div class="col-2" style="width: 18%;">
-                                                            <label for="ordre">N° d'ordre :</label>
-                                                            <input type="text" name="ordre" class="form-control" style="width: 90px;" id="ordre">
-                                                        </div>
-                                                        <div class="col-3" style="width: 25%;">
-                                                                <label for="infrastructure" >Infrastructure</label>
-                                                                <input type="text" name="infrastructure" id="infrastructure" class="form-control">
-                                                                <input type="hidden" name="infrastructurecode" id="infrastructurecode" class="form-control">
-                                                        </div>
-                                                        <div class="col-3" style="width: 27%;">
-                                                            <label for="FamilleInfrastructure" >Famille d'infrastructure</label>
-                                                            <input type="text" class="form-control" name="FamilleInfrastructure" id="FamilleInfrastructure" readonly >
-                                                            <input type="hidden" class="form-control" name="Famillecode" id="Famillecode" >
-                                                        </div>
-
-                                                    </div>
+                                    <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
+                                    
+                                    <div id="caracteristique-container">
+                                        <!-- Formulaire principal -->
+                                        <div id="infrastructureForm">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label>Famille d'Infrastructure *</label>
+                                                    <select class="form-control" id="FamilleInfrastruc">
+                                                        <option value="">Sélectionnez </option>
+                                                        <!-- dynamiquement rempli -->
+                                                    </select>
                                                 </div>
-                                                <div class="form-group">
-                                                    <div class="row">
-                                                        <!--Les caractréristiQues-->
-                                                            <!--  Ouvrage de captage -->
-                                                    @if($codeFamilleInfrastructure == 1)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeCaptage">Type de captage</label>
-                                                            <select name="typeCaptage1" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($typeCaptages as $typeCaptage)
-                                                                    <option value="{{ $typeCatage->code }}">{{ $typeCatage->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="debitCaptage">Débit / Capacité en (m3/)h</label>
-                                                            <input type="number" name="debitCaptage1" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="profondeurCaptage">Profondeur (m)</label>
-                                                            <input type="number" name="profondeurCaptage1" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage1" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                        <div class="col">
-                                                            <hr>
-                                                        </div>
-                                                    @endif
-                                                    <!--  Ouvrage de captage d'eau-->
-                                                    @if($codeFamilleInfrastructure == 2)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeCaptage">Type de captage</label>
-                                                            <select name="typeCaptage" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($typeCaptages as $typeCaptage)
-                                                                    <option value="{{ $typeCaptage->code }}">{{ $typeCaptage->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="debitCaptage">Débit/Capacité (m3/h)</label>
-                                                            <input type="number" name="debitCaptage" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="profondeurCaptage">Profondeur (m)</label>
-                                                            <input type="number" name="profondeurCaptage" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage2" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!--  Unité de traitement -->
-                                                    @if($codeFamilleInfrastructure == 3)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeUnite">Type d'unité</label>
-                                                            <select name="typeUnite" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($uniteTraitements as $uniteTraitement)
-                                                                    <option value="{{ $uniteTraitement->code }}">{{ $uniteTraitement->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="debitUnite">Débit/Capacité (m3/h)</label>
-                                                            <input type="number" name="debitUnite" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage3" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!--  Réservoir -->
-                                                    @if($codeFamilleInfrastructure == 4)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeReservoir">Type de réservoir</label>
-                                                            <select name="typeReservoir" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($typeCaptages as $typeCaptage)
-                                                                    <option value="{{ $typeCaptage->code }}">{{ $typeCaptage->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="materiauReservoir">Matériau</label>
-                                                            <select name="materiauReservoir" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($materielStockages as $materielStockage)
-                                                                    <option value="{{ $materielStockage->code }}">{{ $materielStockage->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="capaciteReservoir">Capacité</label>
-                                                            <input type="number" name="capaciteReservoir" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage4" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!--  Réseau -->
-                                                    @if($codeFamilleInfrastructure == 5)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeTransportReseau">Type de transport</label>
-                                                            <select name="typeTransportReseau" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($OuvrageTransports as $OuvrageTransport)
-                                                                    <option value="{{ $OuvrageTransport->code }}">{{ $OuvrageTransport->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="materiauReseau">Matériau</label>
-                                                            <select name="materiauReseau" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($materielStockages as $materielStockage)
-                                                                    <option value="{{ $materielStockage->code }}">{{ $materielStockage->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="diametreReseau">Diamètre</label>
-                                                            <input type="number" name="diametreReseau" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="lineaireReseau">Linéaire</label>
-                                                            <input type="number" name="lineaireReseau" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage5" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!-- D d'assainissement -->
-                                                    @if($codeFamilleInfrastructure == 6)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeOuvrageAssainissement">Type d'ouvrage</label>
-                                                            <select name="typeOuvrageAssainissement" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($infrastructures as $infrastructure)
-                                                                    @if ($infrastructure->code_domaine==02)
-                                                                    <option value="{{ $infrastructure->code}}">{{ $infrastructure->libelle }}</option>
-                                                                    @endif
-
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="capaciteOuvrageAssainissement">Capacité/Volume</label>
-                                                            <input type="number" name="capaciteOuvrageAssainissement" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage6" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!--  Réseau de collecte et de transport -->
-                                                    @if($codeFamilleInfrastructure == 7)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeOuvrageReseau">Type d'ouvrage</label>
-                                                            <select name="typeOuvrageReseau" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($infrastructures as $infrastructure)
-                                                                    @if ($infrastructure->code_domaine==02)
-                                                                    <option value="{{ $infrastructure->code}}">{{ $infrastructure->libelle }}</option>
-                                                                    @endif
-
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="typeReseauReseau">Type de réseau</label>
-                                                            <select name="typeReseauReseau" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($typeReseaux as $typeReseau)
-                                                                    <option value="{{ $typeReseau->code }}">{{ $typeReseau->libelle }}</option>
-                                                                    @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="classeReseau">Classe</label>
-                                                            <input type="text" name="classeReseau" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="lineaireReseauReseau">Linéaire</label>
-                                                            <input type="number" name="lineaireReseauReseau" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage7" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!--  Ouvrage -->
-                                                    @if($codeFamilleInfrastructure == 9)
-                                                    <div class="row">
-                                                        <div class="col">
-                                                            <label for="typeOuvrage">Type d'ouvrage</label>
-                                                            <select name="typeOuvrage" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($infrastructures as $infrastructure)
-                                                                    @if ($infrastructure->code_domaine==02)
-                                                                    <option value="{{ $infrastructure->code}}">{{ $infrastructure->libelle }}</option>
-                                                                    @endif
-
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="nombreOuvrage">Nombre</label>
-                                                            <input type="number" name="nombreOuvrage" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                                <select name="natureTravauxCaptage8" class="form-select">
-                                                                    <option value=""></option>
-                                                                    @foreach ($natureTravaux as $natureTravau)
-                                                                    <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="row mt-3">
-                                                        <div class="col">
-                                                            <label for="coursEau">Cours d'eau</label>
-                                                            <select name="coursEau" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($coursEaux as $cours)
-                                                                    <option value="{{ $cours->code }}">{{ $cours->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="aquifere">Aquifère</label>
-                                                            <select name="aquifere" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($aquiferes as $aquifere)
-                                                                    <option value="{{ $aquifere->code }}">{{ $aquifere->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="bassin">Bassin</label>
-                                                            <select name="bassin" class="form-control">
-                                                                <option value=""></option>
-                                                                @foreach ($bassins as $bassin)
-                                                                    <option value="{{ $bassin->code }}">{{ $bassin->libelle }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="row mt-3">
-                                                        <div class="col">
-                                                            <label for="codeInternational">Code international</label>
-                                                            <input type="text" name="codeInternational" class="form-control">
-                                                        </div>
-                                                        <div class="col">
-                                                            <label for="nomStation">Nom de la station</label>
-                                                            <input type="text" name="nomStation" class="form-control">
-                                                        </div>
-                                                    </div>
-                                                    @endif
-                                                    <!--  Instrumentation -->
-                                                    @if($codeFamilleInfrastructure == 10)
-                                                <div class="row">
-                                                    <div class="col">
-                                                        <label for="typeInstrument">Type d'instrument</label>
-                                                        <select name="typeInstrument" class="form-control">
-                                                            <option value=""></option>
-                                                            @foreach ($typeInstruments as $typeInstrument)
-                                                                <option value="{{ $typeInstrument->code }}">{{ $typeInstrument->libelle }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col">
-                                                        <label for="nombreInstrument">Nombre</label>
-                                                        <input type="number" name="nombreInstrument" class="form-control">
-                                                    </div>
-                                                    <div class="col">
-                                                        <label for="natureTravauxCaptage">Nature des travaux</label>
-                                                        <select name="natureTravauxCaptage" class="form-select">
-                                                            <option value=""></option>
-                                                            @foreach ($natureTravaux as $natureTravau)
-                                                                <option value="{{ $natureTravau->code }}">{{ $natureTravau->libelle }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
+                                                <div class="col-md-6">
+                                                    <label>Nom de l'infrastructure *</label>
+                                                    <input type="text" class="form-control" id="infrastructureName">
                                                 </div>
-
-                                                <div class="row mt-3">
-                                                    <div class="col">
-                                                        <label for="coursEau">Cours d'eau</label>
-                                                        <select name="coursEau" class="form-control">
-                                                            <option value=""></option>
-                                                            @foreach ($coursEaux as $cours)
-                                                                <option value="{{ $cours->code }}">{{ $cours->libelle }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col">
-                                                        <label for="aquifere">Aquifère</label>
-                                                        <select name="aquifere" class="form-control">
-                                                            <option value=""></option>
-                                                            @foreach ($aquiferes as $aquifere)
-                                                                <option value="{{ $aquifere->code }}">{{ $aquifere->libelle }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col">
-                                                        <label for="bassin">Bassin</label>
-                                                        <select name="bassin" class="form-control">
-                                                            <option value=""></option>
-                                                            @foreach ($bassins as $bassin)
-                                                                <option value="{{ $bassin->code }}">{{ $bassin->libelle }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div class="row mt-3">
-                                                    <div class="col">
-                                                        <label for="codeInternational">Code international</label>
-                                                        <input type="text" name="codeInternational" class="form-control">
-                                                    </div>
-                                                    <div class="col">
-                                                        <label for="nomStation">Nom de la station</label>
-                                                        <input type="text" name="nomStation" class="form-control">
-                                                    </div>
-                                                </div>
-
-                                                    @endif
-
-
-                                                        <div class="col" style="text-align: center;">
-                                                            <a href="#" id="niveauAvancementBtn" class="btn btn-secondary open-niveau-avancement-modal" style="color: white; margin-top:25px; font-size: 10;">Niveau d'avancement</a>
-
-                                                        </div>
-
-
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <div class="row">
-
-                                                    </div>
-                                                </div>
-
                                             </div>
 
+                                            <!-- Ajout de caractéristiques -->
+                                            <div class="row mt-3">
+                                                <div class="col-md-3">
+                                                    <label>Type de caractéristique</label>
+                                                    <select class="form-control" id="tyCaract">
+                                                        <option value="">Sélectionner le type </option>
+                                                        @foreach ($TypeCaracteristiques as $TypeCaracteristique)
+                                                            <option value="{{ $TypeCaracteristique->idTypeCaracteristique }}">{{ $TypeCaracteristique->libelleTypeCaracteristique }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label>Caractéristique</label>
+                                                    <select class="form-control" id="caract">
+                                                        <option value="">Sélectionner la caractéristique</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label>Unité</label>
+                                                    <select class="form-control" id="unitCaract">
+                                                        <option value="">Sélectionner l'unité</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label>Valeur</label>
+                                                    <input type="text" class="form-control" id="caractValue">
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="addCaractToInfra">+ Ajouter caractéristique</button>
+                                            </div>
+
+                                            <!-- Liste temporaire des caractéristiques sous forme de tableau -->
+                                            <div class="mt-3">
+                                                <table class="table table-striped table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Type de Caractéristique</th>
+                                                            <th>Caractéristique</th>
+                                                            <th>Unité</th>
+                                                            <th>Valeur</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="caractListTable">
+                                                        <!-- Les lignes seront ajoutées dynamiquement ici -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+
+                                            <div class="text-end mt-3">
+                                                <button type="button" class="btn btn-secondary" id="addInfrastructureBtn">Ajouter l'infrastructure</button>
+                                            </div>
                                         </div>
-                                        <div class="mt-3 text-center" style="text-align: center;">
-                                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+
+                                        <hr>
+
+                                        <!-- Liste finale des infrastructures -->
+                                        <div class="row">
+                                            <div class="col">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Nom</th>
+                                                            <th>Famille</th>
+                                                            <th>Caractéristiques</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tableInfrastructures">
+                                                        <!-- Dynamically added rows -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
+
+                                    </div>
+                                    <div class="text-center">
+                                        <button type="submit" class="btn btn-primary">Enregistrer les caractéristiques</button>
                                     </div>
                                 </form>
                             </div>
-                            <div class="tab-pane fade" id="dates-effectives" style="background-color:transparent;">
-                                <form class="form" id="personnelForm" method="POST" enctype="multipart/form-data" action="{{ route('enregistrer-dates-effectives') }}">
-                                    @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                                    <div class="form-step">
-                                        <div class="row">
-                                            <div class="col">
-                                                <div class="form-group">
-                                                    <div class="row">
-                                                        <div class="col-4" style="margin-top: 28px;">
-                                                            <input type="hidden" id="code_projet2" name="code_projet2">
-                                                            <label for="date_debut">Date effective de démarrage:</label>
-                                                            @if(isset($dateEnregistree))
-                                                                <input type="text" class="form-control" value="{{ $dateEnregistree }}" id="date_debut" name="date_debut">
-                                                            @else
-                                                                <input type="date" class="form-control" id="date_debut" name="date_debut">
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                    <div class="row">
-                                                            <label for="commentaire">Commentaire:</label>
-                                                            <textarea name="commentaire" id="commentaire" cols="30" rows="3" class="form-control"></textarea>
-                                                        </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="mt-3 text-center" style="text-align: center;">
-                                            <button type="submit" class="btn btn-primary">Enregistrer</button>
 
-                                        </div>
 
-                                </form>
-                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="dates-effectives">
+                            <form method="POST" action="{{ route('enregistrer-dates-effectives') }}" enctype="multipart/form-data">
+                                @csrf
+                                <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
+                                <input type="hidden" id="code_projet2" name="code_projet2">
+
+                                <div class="row mt-3">
+                                    <div class="col-4">
+                                        <label>Date effective de démarrage:</label>
+                                        <input type="date" name="date_debut" class="form-control"
+                                            value="{{ isset($dateEnregistree) ? \Carbon\Carbon::parse($dateEnregistree)->format('Y-m-d') : '' }}">
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2">
+                                    <div class="col">
+                                        <label>Commentaire:</label>
+                                        <textarea name="commentaire" class="form-control" rows="3"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="text-center mt-3">
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
                         </div>
 
-                    </div>
                 </div>
             </div>
         </div>
@@ -660,6 +321,186 @@
     </div>
 </div>
 <script>
+    
+    document.getElementById('tyCaract').addEventListener('change', function() {
+        let idType = this.value;
+
+        // Si rien n’est sélectionné, vide simplement l'autre select
+        if (!idType) {
+            document.getElementById('tyCaract').innerHTML = '<option value=""></option>';
+            return;
+        }
+
+        fetch('{{ url("/") }}/get-caracteristiques/' + idType)
+            .then(response => response.json())
+            .then(data => {
+                let caractSelect = document.getElementById('caract');
+                caractSelect.innerHTML = '<option value=""></option>';
+
+                data.forEach(function(caract) {
+                    let option = document.createElement('option');
+                    option.value = caract.idCaracteristique;
+                    option.text = caract.libelleCaracteristique;
+                    caractSelect.appendChild(option);
+                });
+            });
+    });
+
+    const addInfrastructureBtn = document.getElementById('addInfrastructureBtn');
+    if(addInfrastructureBtn){
+        addInfrastructureBtn.addEventListener('click', function () {
+            var familleText = $("#FamilleInfrastruc option:selected").text();
+            var familleCode = $("#FamilleInfrastruc option:selected").val();
+            var infraName = $("#infrastructureName").val();
+            
+            var caracteristiques = [];
+
+            // Parcourir chaque ligne du tableau temporaire
+            $("#caractListTable tr").each(function () {
+                var typeCarac = $(this).find("td:eq(0)").text();
+                var libelleCarac = $(this).find("td:eq(1)").text();
+                var uniteCarac = $(this).find("td:eq(2)").text();
+                var valeurCarac = $(this).find("td:eq(3)").text();
+
+                caracteristiques.push({
+                    type: typeCarac,
+                    libelle: libelleCarac,
+                    unite: uniteCarac,
+                    valeur: valeurCarac
+                });
+            });
+
+            if (infraName && familleCode && caracteristiques.length > 0) {
+                // Construction de l'affichage des caractéristiques en UL
+                var caracHTML = '<ul>';
+                caracteristiques.forEach(function(carac) {
+                    caracHTML += `<li>${carac.type} - ${carac.libelle} (${carac.unite}): ${carac.valeur}</li>`;
+                });
+                caracHTML += '</ul>';
+
+                var newRow = `
+                    <tr data-famille-code="${familleCode}">
+                        <td>${infraName}</td>
+                        <td>${familleText}</td>
+                        <td>${caracHTML}</td>
+                        <td><button type="button" class="btn btn-danger btn-sm remove-infra">Supprimer</button></td>
+                    </tr>
+
+                `;
+
+                // Ajouter l'infrastructure au tableau final
+                $('#tableInfrastructures').append(newRow);
+
+                // Nettoyer les champs
+                $("#FamilleInfrastruc").val('');
+                $("#infrastructureName").val('');
+                $("#caractListTable").empty();
+            } else {
+                alert("Veuillez remplir tous les champs et ajouter au moins une caractéristique.");
+            }
+        });
+    }
+    // Gestion du bouton Supprimer une infrastructure
+    $(document).on('click', '.remove-infra', function() {
+        $(this).closest('tr').remove();
+    });
+
+    $(document).ready(function() {
+        $('form').on('submit', function(e) {
+            var infrastructures = [];
+
+            $('#tableInfrastructures tr').each(function() {
+                var infraName = $(this).find('td:eq(0)').text();
+                var familleName = $(this).find('td:eq(1)').text();
+                var familleCode = $(this).data('famille-code');
+
+
+                var caracteristiques = [];
+                $(this).find('ul li').each(function() {
+                    var parts = $(this).text().split(':');
+                    var libelleUnite = parts[0].split(' - ');
+                    caracteristiques.push({
+                        type: libelleUnite[0],
+                        libelle: libelleUnite[1].split('(')[0].trim(),
+                        unite: libelleUnite[1].split('(')[1].replace(')', ''),
+                        valeur: parts[1].trim(),
+                        id_caracteristique: null, // ID à envoyer dans ton JS si tu veux (par exemple caché dans une data-attribute)
+                        id_unite: null // Pareil ici
+                    });
+                });
+
+                infrastructures.push({
+                    libelle: infraName,
+                    famille: familleName,
+                    famille_code: familleCode,
+                    caracteristiques: caracteristiques
+                });
+            });
+
+            var infrastructuresInput = $('<input>')
+                .attr('type', 'hidden')
+                .attr('name', 'infrastructures_json')
+                .val(JSON.stringify(infrastructures));
+
+            $(this).append(infrastructuresInput);
+        });
+    });
+
+    document.getElementById('caract').addEventListener('change', function () {
+        let idCaracteristique = this.value;
+
+        fetch('{{ url("/") }}/get-unites/' + idCaracteristique)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Unites reçues:', data);
+
+                let selectUnite = document.getElementById('unitCaract');
+                selectUnite.innerHTML = '<option value="">Unité mésure</option>';
+
+                data.forEach(function (unite) {
+                    let option = document.createElement('option');
+                    option.value = unite.idUnite;
+                    option.text = unite.libelleUnite + (unite.symbole ? ' (' + unite.symbole + ')' : '');
+                    selectUnite.appendChild(option);
+                });
+            });
+    });
+    document.getElementById('addCaractToInfra').addEventListener('click', function () {
+        var typeCaractText = $("#tyCaract option:selected").text();
+        var caractText = $("#caract option:selected").text();
+        var unitText = $("#unitCaract option:selected").text();
+        var value = $("#caractValue").val();
+
+        if (typeCaractText && caractText && unitText && value) {
+            var newRow = `
+               <tr data-id-caracteristique="${$('#caract').val()}" data-id-unite="${$('#unitCaract').val()}">
+                    <td>${typeCaractText}</td>
+                    <td>${caractText}</td>
+                    <td>${unitText}</td>
+                    <td>${value}</td>
+                    <td><button type="button" class="btn btn-danger btn-sm remove-caract">Supprimer</button></td>
+                </tr>
+
+            `;
+            $('#caractListTable').append(newRow);
+
+            // Nettoyer les champs après ajout
+            $("#tyCaract").val('');
+            $("#caract").empty().append('<option value="">Sélectionner la caractéristique</option>');
+            $("#unitCaract").empty().append('<option value="">Sélectionner l\'unité</option>');
+            $("#caractValue").val('');
+        } else {
+            alert("Veuillez remplir tous les champs avant d'ajouter.");
+        }
+    });
+
+    // Gestion du bouton Supprimer
+    $(document).on('click', '.remove-caract', function() {
+        $(this).closest('tr').remove();
+    });
+
+</script>
+<script>
        // Utiliser la classe open-niveau-avancement-modal
        $(document).on("click", ".open-niveau-avancement-modal", function() {
             // Récupérer les valeurs du modal
@@ -696,9 +537,12 @@
             $('#doubleFormModal').modal('show');
             $('#niveauAvancementModal').modal('show');
         });
-        document.getElementById('niveauAvancementBtn').addEventListener('click', function () {
-            $('#doubleFormModal').modal('show');
-        });
+        const niveauAvancementBtn = document.getElementById('niveauAvancementBtn');
+        if (niveauAvancementBtn) {
+            niveauAvancementBtn.addEventListener('click', function () {
+                $('#doubleFormModal').modal('show');
+            });
+        };
     $(document).ready(function() {
         $(".btn-navigate-form-step").click(function() {
             var stepNumber = $(this).attr("step_number");
@@ -732,7 +576,7 @@ $(document).ready(function () {
     $("#code_projet_Modal").val(codeProjet);
 
     $.ajax({
-        url: '/getNumeroOrdre', // Remplacez cela par la route réelle dans votre application
+        url: '{{ url("/") }}/getNumeroOrdre', // Remplacez cela par la route réelle dans votre application
         type: 'GET',
         data: {
             codeProjet: codeProjet,
@@ -760,7 +604,7 @@ $(document).ready(function () {
 
             // Effectuer une requête AJAX pour récupérer la famille d'infrastructure
             $.ajax({
-                url: '/getFamilleInfrastructure', // Remplacez cela par la route réelle dans votre application
+                url: '{{ url("/") }}/getFamilleInfrastructure', // Remplacez cela par la route réelle dans votre application
                 type: 'GET',
                 data: {
                     infrastructureCode: infrastructureCode,
@@ -776,6 +620,78 @@ $(document).ready(function () {
             });
         });
     });
+    $(document).ready(function() {
+        var codeProjet = new URLSearchParams(window.location.search).get('codeProjet');
+
+        if (codeProjet) {
+            $.ajax({
+                url: '{{ url("/") }}/get-familles-by-projet',
+                type: 'GET',
+                data: { codeProjet: codeProjet },
+                success: function(response) {
+                    if (response.familles && response.familles.length > 0) {
+                        var select = $('#FamilleInfrastruc');
+                        select.empty();
+                        select.append('<option value="">Sélectionnez</option>');
+
+                        response.familles.forEach(function(famille) {
+                            select.append(`<option value="${famille.codeFamilleInfrastructure}">${famille.libelleFamille}</option>`);
+                        });
+                    } else {
+                        console.log('Aucune famille trouvée.');
+                    }
+                },
+                error: function() {
+                    console.error('Erreur lors de la récupération des familles.');
+                }
+            });
+        }
+    });
+
+    $(document).ready(function() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var codeProjet = urlParams.get('codeProjet');
+
+        if (codeProjet) {
+            $.ajax({
+                url: '{{ url("/") }}/getInfrastructuresByProjet',
+                type: 'GET',
+                data: { codeProjet: codeProjet },
+                success: function(response) {
+                    if (response.infrastructures && response.infrastructures.length > 0) {
+                        
+                        // Nettoyer le tableau avant remplissage
+                        $('#tableInfrastructures').empty();
+
+                        response.infrastructures.forEach(function(infra) {
+                            var caracHTML = '<ul>';
+                            infra.caracteristiques.forEach(function(carac) {
+                                caracHTML += `<li>${carac.type} - ${carac.libelle} (${carac.unite}): ${carac.valeur}</li>`;
+                            });
+                            caracHTML += '</ul>';
+
+                            var newRow = `
+                                <tr data-famille-code="${infra.famille_code}">
+                                    <td>${infra.nom_infrastructure}</td>
+                                    <td>${infra.famille}</td>
+                                    <td>${caracHTML}</td>
+                                    <td><button type="button" class="btn btn-danger btn-sm remove-infra">Supprimer</button></td>
+                                </tr>
+                            `;
+
+                            $('#tableInfrastructures').append(newRow);
+                        });
+                    } else {
+                        console.log('Aucune infrastructure trouvée pour ce projet.');
+                    }
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des infrastructures.');
+                }
+            });
+        }
+    });
+
 
     // Utilisez cette fonction pour charger les données du projet via Ajax
         /*function chargerDonneesProjet(codeProjet) {
@@ -825,27 +741,30 @@ $(document).ready(function () {
 
         ////////////////////FORMATAGE DE CHAMP NUMBER/////////////////
         function formatNumberInput(input) {
-        // Supprimer tout sauf les chiffres et le séparateur décimal
-        var sanitizedValue = input.value.replace(/[^0-9.]/g, '');
+            // Supprimer tout sauf les chiffres et le séparateur décimal
+            var sanitizedValue = input.value.replace(/[^0-9.]/g, '');
 
-        // Séparer la partie entière et la partie décimale
-        var parts = sanitizedValue.split(' ');
-        var integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            // Séparer la partie entière et la partie décimale
+            var parts = sanitizedValue.split(' ');
+            var integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
-        // Recréer la valeur avec le séparateur de milliers
-        var formattedValue = integerPart;
-        if (parts.length > 1) {
-            formattedValue += ' ' + parts[1];
+            // Recréer la valeur avec le séparateur de milliers
+            var formattedValue = integerPart;
+            if (parts.length > 1) {
+                formattedValue += ' ' + parts[1];
+            }
+
+            // Mettre à jour la valeur du champ
+            input.value = formattedValue;
         }
 
-        // Mettre à jour la valeur du champ
-        input.value = formattedValue;
-    }
-
     // Gérer l'événement de saisie pour le champ cout
-    document.getElementById('quantite').addEventListener('input', function (event) {
-        formatNumberInput(event.target);
-    });
+    const quantiteS = document.getElementById('quantite');
+        if (quantiteS) {
+            quantiteS.addEventListener('input', function (event) {
+                formatNumberInput(event.target);
+            });
+        };
     // Fonction de formatage du nombre avec espaces comme séparateurs de milliers
     function number_format(number, decimals, decPoint, thousandsSep) {
         number = parseFloat(number);

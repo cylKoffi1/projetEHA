@@ -12,10 +12,15 @@
     @endif
     
     <div class="card shadow-sm border-primary mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" style="height: 9px;">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" style="height: 57px;">
             <div>
-                <h4 class="mb-0">{{ $etude->projet->libelle_projet }}</h4>
+                <small class="d-block"><strong>{{ $etude->projet->code_projet}}</strong></small>
                 <small class="d-block">Nature : <strong>{{ $etude->projet->statuts?->statut->libelle }}</strong></small>
+            </div>
+
+            <div>
+                <small class="d-block"><strong style="width: 10px;">Domaine</strong>       : <strong>{{ $etude->projet->sousDomaine?->Domaine?->libelle}}</strong></small>
+                <small class="d-block"><strong style="width: 10px;">Sous domaine</strong> : <strong>{{ $etude->projet->sousDomaine?->lib_sous_domaine}}</strong></small>
             </div>
 
             @if($etude->valider == 0)
@@ -39,7 +44,7 @@
                     <div>
                         <h6 class="mb-1 fw-bold text-muted">Période</h6>
                         <p class="mb-0">Du {{ \Carbon\Carbon::parse($etude->projet->date_demarrage_prevue)->format('d/m/Y') }}
-                        <i class="bi bi-arrow-right mx-2"></i>
+                        
                         Au {{ \Carbon\Carbon::parse($etude->projet->date_fin_prevue)->format('d/m/Y') }}</p>
                     </div>
                 </div>

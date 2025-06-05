@@ -7,9 +7,9 @@ function initDataTable(userNameReplace, table, title) {
     const now = new Date();
     const dateTime = formatDate(now);
     const userName = userNameReplace;
-    const lastColumnAction = isLastColumnAction(table);
+    const actionColumns = getActionColumns(table);
 
-    initializeDataTable(table, title, dateTime, userName, lastColumnAction);
+    initializeDataTable(table, title, dateTime, userName, actionColumns);
 
     function loadImage() {
         $.ajax({
@@ -35,11 +35,18 @@ function initDataTable(userNameReplace, table, title) {
         });
     }
 
-    function isLastColumnAction(table) {
-        return $("#" + table + " thead tr:first-child th:last-child").text().trim().toLowerCase() === "action";
+    function getActionColumns(table) {
+        const actionColumns = [];
+        $("#" + table + " thead th").each(function(index) {
+            const text = $(this).text().trim().toLowerCase();
+            if (text === 'action' || text === 'actions') {
+                actionColumns.push(index);
+            }
+        });
+        return actionColumns;
     }
 
-    function initializeDataTable(table, title, dateTime, userName, lastColumnAction) {
+    function initializeDataTable(table, title, dateTime, userName, actionColumns) {
         $("#" + table).DataTable({
             fixedColumns: true,
             language: getLanguageSettings(),
@@ -47,7 +54,7 @@ function initDataTable(userNameReplace, table, title) {
             scrollX: true,
             dom: "Bfrtip",
             lengthMenu: [[10, 25, 50, -1], ["10", "25", "50", "Tout"]],
-            buttons: getButtons(title, dateTime, userName, lastColumnAction)
+            buttons: getButtons(title, dateTime, userName, actionColumns)
         });
     }
 
@@ -76,7 +83,7 @@ function initDataTable(userNameReplace, table, title) {
         };
     }
 
-    function getButtons(title, dateTime, userName, lastColumnAction) {
+    function getButtons(title, dateTime, userName, actionColumns) {
         return [
             {
                 extend: "pageLength",
@@ -87,58 +94,133 @@ function initDataTable(userNameReplace, table, title) {
                 text: "Exporter",
                 title: title,
                 exportOptions: {
-                    columns: lastColumnAction ? ":not(:last-child)" : "",
+                    columns: function (idx) {
+                        return actionColumns.indexOf(idx) === -1;
+                    }
                 },
             },
             {
-                text: "Imprimer",
-                action: function (e, dt, node, config) {
-                    generatePDF(title, dateTime, userName, lastColumnAction);
+                text: "Imprimer Portrait",
+                className: 'btn-print-portrait',
+                action: function () {
+                    generatePDF(title, dateTime, userName, actionColumns, 'portrait');
+                }
+            },
+            {
+                text: "Imprimer Paysage",
+                className: 'btn-print-landscape',
+                action: function () {
+                    generatePDF(title, dateTime, userName, actionColumns, 'landscape');
                 }
             }
         ];
     }
+    
 
-    function generatePDF(title, dateTime, userName, lastColumnAction) {
+    function showPrintOptions(title, dateTime, userName, actionColumns) {
+        // Créer une boîte de dialogue avec les options d'impression
+        const dialog = $('<div>').css({
+            'padding': '20px',
+            'border-radius': '5px',
+            'background': 'white',
+            'box-shadow': '0 0 10px rgba(0,0,0,0.5)'
+        });
+
+        // Titre
+        dialog.append($('<h4>').css({
+            'margin-top': '0',
+            'color': '#333'
+        }).text('Options d\'impression'));
+
+        // Sélecteur d'orientation
+        dialog.append($('<label>').text('Orientation: '));
+        const orientationSelect = $('<select>').css({
+            'margin': '0 10px 15px 0',
+            'padding': '5px'
+        }).append(
+            $('<option>').val('portrait').text('Portrait'),
+            $('<option>').val('landscape').text('Paysage')
+        );
+        dialog.append(orientationSelect);
+        dialog.append($('<br>'));
+
+        // Boutons
+        const printBtn = $('<button>').addClass('btn btn-primary').text('Imprimer').click(function() {
+            generatePDF(title, dateTime, userName, actionColumns, orientationSelect.val());
+            $(this).closest('.ui-dialog').remove();
+        });
+        
+        const cancelBtn = $('<button>').addClass('btn btn-secondary').css('margin-left', '10px').text('Annuler').click(function() {
+            $(this).closest('.ui-dialog').remove();
+        });
+
+        dialog.append(printBtn, cancelBtn);
+
+        // Afficher la boîte de dialogue
+        $('<div>').append(dialog).dialog({
+            modal: true,
+            title: 'Options d\'impression',
+            width: 400,
+            close: function() {
+                $(this).remove();
+            }
+        });
+    }
+
+    function generatePDF(title, dateTime, userName, actionColumns, orientation = 'portrait') {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'pt', 'a4');
+        const doc = new jsPDF(orientation, 'pt', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-
+    
         const marginX = 40;
         const logoWidth = 40;
         const logoHeight = 35;
-
-        // === 💠 FOND BLEU HEADER ===
         const headerHeight = 90;
-        doc.setFillColor(0, 0, 70);
-        doc.rect(0, 0, pageWidth, headerHeight, 'F');
-
-        // === 📝 TEXTE DU HEADER SUR LE FOND BLEU ===
-        doc.setTextColor(255, 255, 255); // texte blanc
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.text("BTP-PROJECT", marginX, 20);
-        doc.text(`Impression le : ${dateTime}`, pageWidth - marginX, 20, { align: "right" });
-
-        // Titre centré
-        doc.setFontSize(13);
-        doc.text(title.toUpperCase(), pageWidth / 2, 40, { align: "center" });
-
-        // Logo à gauche
-        doc.addImage(imagePath, 'PNG', marginX, 50, logoWidth, logoHeight);
-
-        // "Imprimé par" à droite
-        doc.setTextColor(255, 255, 255); // texte blanc
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Imprimé par : ${$('<div>').html(userName).text()}`, pageWidth - marginX, 70, { align: "right" });
-
+    
+        // Fonction pour dessiner l'en-tête (réutilisable sur chaque page)
+        const drawHeader = () => {
+            // === 💠 FOND BLEU HEADER ===
+            doc.setFillColor(0, 0, 70);
+            doc.rect(0, 0, pageWidth, headerHeight, 'F');
+    
+            // === 📝 TEXTE DU HEADER SUR LE FOND BLEU ===
+            doc.setTextColor(255, 255, 255); // texte blanc
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            
+            // Logo à gauche
+            doc.addImage(imagePath, 'PNG', marginX, 20, logoWidth, logoHeight);
+            doc.text(`Impression le : ${dateTime}`, pageWidth - marginX, 20, { align: "right" });
+    
+            // Titre centré
+            doc.setFontSize(13);
+            doc.text(title.toUpperCase(), pageWidth / 2, 40, { align: "center" });
+    
+            doc.text("BTP-PROJECT", marginX, 70);
+            
+            // "Imprimé par" à droite
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Imprimé par : ${$('<div>').html(userName).text()}`, pageWidth - marginX, 70, { align: "right" });
+        };
+    
+        // Dessiner l'en-tête sur la première page
+        drawHeader();
+    
         // === 🔢 TABLEAU ===
-        const columns = getColumns(table, lastColumnAction);
-        const rows = getRows(table, columns, lastColumnAction);
-
+        const columns = getColumns(table, actionColumns);
+        const rows = getRows(table, columns, actionColumns);
+    
+        // Ajuster la largeur des colonnes pour le paysage
+        const columnStyles = {};
+        if (orientation === 'landscape') {
+            columns.forEach((col, index) => {
+                columnStyles[index] = { cellWidth: 'auto' };
+            });
+        }
+    
         doc.autoTable({
             startY: headerHeight + 20,
             head: [columns.map(col => col.header)],
@@ -153,36 +235,50 @@ function initDataTable(userNameReplace, table, title) {
                 textColor: 20,
                 fontStyle: 'bold'
             },
-            margin: { top: 90, left: marginX, right: marginX },
+            margin: { top: headerHeight + 20, left: marginX, right: marginX },
+            columnStyles: columnStyles,
             didDrawPage: function (data) {
+                // Réafficher l'en-tête sur chaque nouvelle page
+                if (data.pageNumber > 1) {
+                    drawHeader();
+                }
+    
+                // Pied de page avec numéro de page
                 const pageCount = doc.internal.getNumberOfPages();
                 doc.setFontSize(8);
                 doc.setTextColor(100);
-                doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber} sur ${pageCount}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+                doc.text(`Page ${data.pageNumber} sur ${pageCount}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
             }
         });
-
+    
         doc.save(title + '.pdf');
     }
 
-    function getColumns(table, lastColumnAction) {
+    function getColumns(table, actionColumns) {
         const columns = [];
-        $("#" + table + " thead th").each(function () {
-            const text = $(this).text().trim();
-            if (!lastColumnAction || text.toLowerCase() !== "action") {
-                columns.push({ header: text, dataKey: text });
+        $("#" + table + " thead th").each(function (index) {
+            if (actionColumns.indexOf(index) === -1) {
+                const text = $(this).text().trim();
+                columns.push({ 
+                    header: text, 
+                    dataKey: text,
+                    originalIndex: index
+                });
             }
         });
         return columns;
     }
 
-    function getRows(table, columns, lastColumnAction) {
+    function getRows(table, columns, actionColumns) {
         const rows = [];
         $("#" + table + " tbody tr").each(function () {
             const row = {};
             $(this).find("td").each(function (index) {
-                if (!lastColumnAction || index !== $(this).closest("tr").find("td").length - 1) {
-                    row[columns[index].dataKey] = $(this).text().trim();
+                if (actionColumns.indexOf(index) === -1) {
+                    const col = columns.find(c => c.originalIndex === index);
+                    if (col) {
+                        row[col.dataKey] = $(this).text().trim();
+                    }
                 }
             });
             rows.push(row);

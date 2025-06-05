@@ -125,8 +125,9 @@
                                 <div class="col-3">
                                     <label for="code_projet">Code Projet :</label>
                                     <select name="code_projet" id="code_projet" class="form-select" required>
+                                        <option value=""></option>
                                         @foreach($projets as $projet)
-                                            <option value="{{ $projet->CodeProjet }}">{{ $projet->CodeProjet }}</option>
+                                            <option value="{{ $projet->code_projet }}">{{ $projet->code_projet }}</option>
                                         @endforeach
                                     </select>
                                 </div><div class="col-7 d-flex justify-content-end align-items-end">
@@ -148,7 +149,7 @@
                                 </div>
                                 <div class="col-1"></div>
                                 <div class="col-2">
-                                    <label for="cout_projet">Coût du Projet(XOF) :</label>
+                                    <label for="cout_projet">Coût des travaux :</label>
                                     <input type="text" name="cout_projet" id="cout_projet" class="form-control text-end" required oninput="formatNumber(this)">
                                 </div>
                                 <div class="col-2"></div>
@@ -301,7 +302,7 @@
                                             <a class="dropdown-item" href="#"
                                             onclick="editActivite(
                                                 '{{ $travail->codeActivite }}',
-                                                '{{ $travail->CodeProjet }}',
+                                                '{{ $travail->code_projet }}',
                                                 '{{ $travail->type_travaux_id }}',
                                                 '{{ $travail->cout_projet }}',
                                                 '{{ $travail->date_debut_previsionnelle }}',
@@ -384,7 +385,7 @@
     function deleteActivite(id) {
         if (confirm("Êtes-vous sûr de vouloir supprimer ?")) {
             $.ajax({
-                url: '/activiteDelete/' + id,
+                url: '{{ url("/")}}/activiteDelete/' + id,
                 type: 'DELETE',
                 data: {
                     _token: '{{ csrf_token() }}'
@@ -406,13 +407,13 @@
         let number = value.toString().replace(/\s+/g, '');
         return number.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
-    function editActivite(codeActivite, codeProjet, typeTravauxId, coutProjet, dateDebutPrevisionnelle, dateFinPrevisionnelle, dateDebutEffective, dateFinEffective, commentaire) {
+    function editActivite(codeActivite, code_projet, typeTravauxId, coutProjet, dateDebutPrevisionnelle, dateFinPrevisionnelle, dateDebutEffective, dateFinEffective, commentaire) {
         // Cacher le formulaire d'enregistrement
         document.getElementById('addForm').style.display = 'none';
 
         // Remplir les champs du formulaire avec les données passées en paramètres
         document.getElementById('edit_codeActivite').value = codeActivite;
-        document.getElementById('edit_code_projet').value = codeProjet;
+        document.getElementById('edit_code_projet').value = code_projet;
         document.getElementById('edit_type_travaux_id').value = typeTravauxId;
 
         // Formater le coût projet avec des espaces
@@ -425,7 +426,7 @@
         document.getElementById('edit_commentaire').value = commentaire;
 
         // Modifier l'action du formulaire pour inclure l'ID (code_renforcement)
-        document.getElementById('formAction').action = '/activite/' + codeActivite;
+        document.getElementById('formAction').action = '{{ url("/")}}/activite/' + codeActivite;
 
         // Afficher le formulaire de modification
         document.getElementById('editFormContainer').style.display = 'block';

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class projets_natureTravaux extends Model
 {
     use HasFactory;
-    protected $table = 'projets_natureTravaux';
+    protected $table = 'projets_naturetravaux';
     protected $primaryKey = 'id_PNT'; 
     public $timestamps = false; 
     // Colonnes modifiables

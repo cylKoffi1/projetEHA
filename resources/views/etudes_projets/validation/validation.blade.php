@@ -30,6 +30,10 @@
         flex-wrap: wrap;
     }
 
+    .btn-primary.openDrawer.active {
+        background-color: #6c757d !important;
+        border-color: #6c757d !important;
+    }
 
 </style>
 @section('content')
@@ -261,11 +265,19 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             const code = this.dataset.code;
 
+            // Retirer la classe active de tous les boutons
+            document.querySelectorAll('.openDrawer').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Ajouter la classe active au bouton cliqué
+            this.classList.add('active');
+
             // Afficher loading
             const content = document.getElementById('drawerContent');
             content.innerHTML = '<div class="text-center my-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-            fetch(`/projets/validation/${code}`)
+            fetch(`{{ url('/')}}/projets/validation/${code}`)
                 .then(response => response.text())
                 .then(html => {
                     content.innerHTML = html;

@@ -477,7 +477,21 @@ class sigAdminController extends Controller
         $filteredProjects = $query->get();
     
         $codes = $filteredProjects->pluck('code_projet');
-    
+
+        // 🔢 Calcul des coûts publics / privés
+        $publicCost = 0;
+        $privateCost = 0;
+        foreach ($filteredProjects as $project) {
+            $code = $project->code_projet ?? '';
+            $isPublic = substr($code, 6, 1) === '1';
+            $cost = $project->cout_projet ?? 0;
+
+            if ($isPublic) {
+                $publicCost += $cost;
+            } else {
+                $privateCost += $cost;
+            }
+        }
         // BAILLEURS
         $bailleurs = Financer::whereIn('code_projet', $codes)
             ->with('acteur')
@@ -503,7 +517,10 @@ class sigAdminController extends Controller
         return response()->json([
             'projets' => $filteredProjects,
             'bailleurs' => $bailleurs,
-            'statuts' => $statuts
+            'statuts' => $statuts,
+            'public_cost' => $publicCost,
+            'private_cost' => $privateCost,
+            'total_cost' => $publicCost + $privateCost
         ]);
     }
     

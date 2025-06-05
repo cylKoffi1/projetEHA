@@ -329,7 +329,7 @@ document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
         });
 
         // Effectuer une requête AJAX pour obtenir les autorisations du rôle sélectionné
-        fetch('/get-role-permissions/' + roleId)
+        fetch('{{ url("/")}}/get-role-permissions/' + roleId)
             .then(response => response.json())
             .then(data => {
                 console.log(data);
