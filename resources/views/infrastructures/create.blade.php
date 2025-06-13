@@ -195,123 +195,135 @@
                 
                 <div class="card-content">
                     <div class="card-body">
-                        <form id="infrastructure-form" method="POST" action="{{ route('infrastructures.store') }}" enctype="multipart/form-data">
-                            @csrf
+                        <form id="infrastructure-form" 
+                            method="POST" 
+                            action="{{ isset($infrastructure) ? route('infrastructures.update', $infrastructure->id) : route('infrastructures.store') }}" 
+                            enctype="multipart/form-data">
                             
+                            @csrf
+                            @if(isset($infrastructure))
+                                @method('PUT')
+                            @endif
+
+                            <!-- Onglets -->
                             <ul class="nav nav-tabs" id="infraTabs" role="tablist">
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">Informations générales</button>
+                                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#general" type="button">Informations générales</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="localisation-tab" data-bs-toggle="tab" data-bs-target="#localisation" type="button" role="tab">Localisation</button>
+                                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#localisation" type="button">Localisation</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="caracteristiques-tab" data-bs-toggle="tab" data-bs-target="#caracteristiques" type="button" role="tab">Caractéristiques</button>
+                                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#caracteristiques" type="button">Caractéristiques</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="media-tab" data-bs-toggle="tab" data-bs-target="#media" type="button" role="tab">Média</button>
+                                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#media" type="button">Média</button>
                                 </li>
                             </ul>
-                            
-                            <div class="tab-content" id="infraTabsContent">
+
+                            <!-- Contenu des onglets -->
+                            <div class="tab-content mt-3" id="infraTabsContent">
+
                                 <!-- Onglet Informations générales -->
                                 <div class="tab-pane fade show active" id="general" role="tabpanel">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="domaineSelect" class="form-label">Domaine <span class="text-danger">*</span></label>
-                                                <select class="form-select" name="domaine" id="domaineSelect" required>
-                                                    <option value="">Sélectionner un domaine</option>
-                                                    @foreach ($domaines as $domaine)
-                                                        <option value="{{ $domaine->code }}">{{ $domaine->libelle }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                            <label class="form-label">Domaine *</label>
+                                            <select class="form-select" name="domaine" id="domaineSelect" required>
+                                                <option value="">Sélectionner un domaine</option>
+                                                @foreach ($domaines as $domaine)
+                                                    <option value="{{ $domaine->code }}"
+                                                        {{ (old('domaine') ?? $infrastructure->familleInfrastructure->code_domaine ?? '') == $domaine->code ? 'selected' : '' }}>
+                                                        {{ $domaine->libelle }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
-                                        
+
                                         <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="code_famille_infrastructure" class="form-label">Famille <span class="text-danger">*</span></label>
-                                                <select class="form-select" id="code_famille_infrastructure" name="code_famille_infrastructure" required>
-                                                    <option value="">Sélectionner une famille</option>
-                                                </select>
-                                            </div>
+                                            <label class="form-label">Famille *</label>
+                                            <select class="form-select" id="code_famille_infrastructure" name="code_famille_infrastructure" required>
+                                                <option value="">Sélectionner une famille</option>
+                                                @if(isset($infrastructure))
+                                                    <option 
+                                                        value="{{ $infrastructure->code_famille_infrastructure }}" 
+                                                        data-idfamille="{{ $infrastructure->familleInfrastructure->code_famille }}" 
+                                                        selected>
+                                                        {{ $infrastructure->familleInfrastructure->libelleFamille ?? 'Famille inconnue' }}
+                                                    </option>
+                                                @endif
+
+                                            </select>
                                         </div>
-                                        
+
                                         <div class="col-md-8">
-                                            <div class="mb-3">
-                                                <label for="libelle" class="form-label">Nom de l'infrastructure <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="libelle" name="libelle" value="{{ old('libelle') }}" required>
-                                            </div>
+                                            <label class="form-label">Nom de l'infrastructure *</label>
+                                            <input type="text" class="form-control" id="libelle" name="libelle"
+                                                value="{{ old('libelle', $infrastructure->libelle ?? '') }}" required>
                                         </div>
-                                        
+
                                         <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="date_operation" class="form-label">Date de création</label>
-                                                <input type="date" class="form-control" id="date_operation" name="date_operation" value="{{ old('date_operation') }}">
-                                            </div>
+                                            <label class="form-label">Date de création</label>
+                                            <input type="date" class="form-control" id="date_operation" name="date_operation"
+                                                value="{{ old('date_operation', $infrastructure->date_operation ?? '') }}">
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Onglet Localisation -->
                                 <div class="tab-pane fade" id="localisation" role="tabpanel">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="niveau1Select" class="form-label">Localité <span class="text-danger">*</span></label>
-                                                <lookup-select id="niveau1Select" required name="code_localite">
-                                                    <option value="">Sélectionnez une localité</option>
-                                                </lookup-select>
-                                            </div>
+                                            <label class="form-label">Localité *</label>
+                                            <lookup-select name="code_localite" id="niveau1Select" required>
+                                                @if(isset($infrastructure))
+                                                    <option value="{{ $infrastructure->code_localite }}" selected>
+                                                        {{ $infrastructure->localisation->libelle ?? 'Localité inconnue' }}
+                                                    </option>
+                                                @endif
+                                            </lookup-select>
                                         </div>
-                                        
+
                                         <div class="col-md-3">
-                                            <div class="mb-3">
-                                                <label for="niveau2Select" class="form-label">Niveau</label>
-                                                <select class="form-select" id="niveau2Select" disabled>
+                                            <label class="form-label">Niveau</label>
+                                            <select id="niveau2Select" class="form-select" disabled>
+                                                @if(isset($infrastructure))
+                                                    <option selected>{{ old('niveau', $infrastructure->localisation->id_niveau ?? '') }}</option>
+                                                @else
                                                     <option value="">Sélectionnez un niveau</option>
-                                                </select>
-                                            </div>
+                                                @endif
+                                            </select>
                                         </div>
-                                        
+
                                         <div class="col-md-3">
-                                            <div class="mb-3">
-                                                <label for="niveau3Select" class="form-label">Découpage</label>
-                                                <select class="form-select" id="niveau3Select" disabled>
+                                            <label class="form-label">Découpage</label>
+                                            <select id="niveau3Select" class="form-select" disabled>
+                                                @if(isset($infrastructure))
+                                                    <option selected>{{ old('code_decoupage', $infrastructure->localisation->decoupage->libelle_decoupage ?? '') }}</option>
+                                                @else
                                                     <option value="">Sélectionnez un découpage</option>
-                                                </select>
-                                            </div>
+                                                @endif
+                                            </select>
                                         </div>
-                                        
+
                                         <div class="col-md-6">
-                                            <div class="mb-3 coordinates-input">
-                                                <label for="latitude" class="form-label">Latitude</label>
-                                                <input type="text" class="form-control" name="latitude" id="latitude" placeholder="Ex: 14.6928">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="getCurrentLocation()">
-                                                    <i class="bi bi-geo-alt"></i> Localiser
-                                                </button>
-                                            </div>
+                                            <label class="form-label">Latitude</label>
+                                            <input type="text" class="form-control" name="latitude" id="latitude"
+                                                value="{{ old('latitude', $infrastructure->latitude ?? '') }}">
                                         </div>
-                                        
+
                                         <div class="col-md-6">
-                                            <div class="mb-3 coordinates-input">
-                                                <label for="longitude" class="form-label">Longitude</label>
-                                                <input type="text" class="form-control" name="longitude" id="longitude" placeholder="Ex: -17.4467">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="getCurrentLocation()">
-                                                    <i class="bi bi-geo-alt"></i> Localiser
-                                                </button>
-                                            </div>
+                                            <label class="form-label">Longitude</label>
+                                            <input type="text" class="form-control" name="longitude" id="longitude"
+                                                value="{{ old('longitude', $infrastructure->longitude ?? '') }}">
                                         </div>
-                                        
+
                                         <div class="col-12">
-                                            <div class="map-container" id="map">
-                                                <!-- La carte sera chargée ici -->
-                                            </div>
+                                            <div class="map-container" id="map"></div>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Onglet Caractéristiques -->
                                 <div class="tab-pane fade" id="caracteristiques" role="tabpanel">
                                     <div id="caracteristiquesHeriteesSection">
@@ -322,102 +334,30 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {{--<div class="card mt-3" id="caracteristiquesPropreSection">
-                                        <div class="card-header">
-                                            <h5>Caractéristiques spécifiques de l'infrastructure</h5>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row align-items-end g-2">
-                                                <div class="col-md-3">
-                                                    <label>Type</label>
-                                                    <select id="typeCaracSpec" class="form-select">
-                                                        @foreach($typeCaracteristiques as $type)
-                                                            <option value="{{ $type->idTypeCaracteristique }}">{{ $type->libelleTypeCaracteristique }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-
-                                                <div class="col-md-3">
-                                                    <label>Libellé</label>
-                                                    <input type="text" id="libelleCaracSpec" class="form-control" placeholder="Ex: Hauteur">
-                                                </div>
-
-                                                <div class="col-md-3" id="valeursPossiblesBloc" style="display:none;">
-                                                    <label>Valeurs possibles (séparées par des virgules)</label>
-                                                    <input type="text" id="valeursPossiblesCaracSpec" class="form-control" placeholder="Ex: Béton, Acier">
-                                                </div>
-
-                                                <div class="col-md-3" id="valeurBloc">
-                                                    <label>Valeur</label>
-                                                    <input type="text" id="valeurCaracSpec" class="form-control" placeholder="Ex: 15">
-                                                </div>
-
-                                                <div class="col-md-3 uniteBloc" style="display:none;">
-                                                    <label>Unité</label>
-                                                    <input type="text" id="uniteCaracSpec" class="form-control" placeholder="Ex: mètre">
-                                                </div>
-
-                                                <div class="col-md-3 uniteBloc" style="display:none;">
-                                                    <label>Symbole</label>
-                                                    <input type="text" id="symboleCaracSpec" class="form-control" placeholder="Ex: m">
-                                                </div>
-
-                                                <div class="col-md-2">
-                                                    <button class="btn btn-sm btn-primary w-100 mt-2" onclick="ajouterCaracSpec()">Ajouter</button>
-                                                </div>
-                                            </div>
-
-                                            <hr>
-                                            <h6>Caractéristiques ajoutées</h6>
-                                            <table class="table table-bordered mt-3" id="tableCaracSpec">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Libellé</th>
-                                                        <th>Type</th>
-                                                        <th>Valeur</th>
-                                                        <th>Unité</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody></tbody>
-                                            </table>
-
-                                            <input type="hidden" name="caracteristiques_specifiques_json" id="caracteristiques_specifiques_json">
-                                        </div>
-                                    </div>--}}
-
-
                                 </div>
-                                
+
                                 <!-- Onglet Média -->
                                 <div class="tab-pane fade" id="media" role="tabpanel">
-                                    <div class="row">
-                                        
-                                        <div class="col-md-12">
-                                            <div class="mb-3">
-                                                <label for="galleryInput" class="form-label">Galerie de photos</label>
-                                                <input type="file" id="galleryInput" accept="image/*" multiple class="form-control" onchange="addToGallery(this)">
-                                                <div id="galleryPreview" class="row mt-4" style="gap: 10px;"></div>
-                                            </div>
-                                        </div>
-
-
-
+                                    <div class="mb-3">
+                                        <label class="form-label">Galerie de photos</label>
+                                        <input type="file" id="galleryInput" name="gallery[]" multiple accept="image/*" class="form-control">
+                                        <div id="galleryPreview" class="row mt-3" style="gap: 10px;"></div>
                                     </div>
                                 </div>
+
                             </div>
-                            
+
                             <!-- Champs cachés -->
-                            <input type="hidden" id="niveau" name="niveau" value="{{ old('niveau') }}">
-                            <input type="hidden" id="code_decoupage" name="code_decoupage" value="{{ old('code_decoupage') }}">
-                            
-                            <!-- Boutons de soumission -->
+                            <input type="hidden" id="niveau" name="niveau" value="{{ old('niveau', $infrastructure->localisation->niveau ?? '') }}">
+                            <input type="hidden" id="code_decoupage" name="code_decoupage" value="{{ old('code_decoupage', $infrastructure->localisation->code_decoupage ?? '') }}">
+
+                            <!-- Boutons -->
                             <div class="d-flex justify-content-between mt-4">
                                 <a href="{{ route('infrastructures.index') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle me-1"></i> Annuler
                                 </a>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-check-circle me-1"></i> Enregistrer l'infrastructure
+                                    <i class="bi bi-check-circle me-1"></i> {{ isset($infrastructure) ? 'Mettre à jour' : 'Créer' }}
                                 </button>
                             </div>
                         </form>
@@ -452,12 +392,12 @@
         const libelle = document.getElementById('libelleCaracSpec').value.trim();
         const valeursPossibles = document.getElementById('valeursPossiblesCaracSpec').value.trim();
         const valeurInput = document.getElementById('valeurCaracSpec');
-        const valeur = valeurInput.type === 'checkbox' ? valeurInput.checked : valeurInput.value;
+        const valeur = valeursExistantes[carac.id] ?? valeursExistantes[String(carac.id)] ?? null;
         const unite = document.getElementById('uniteCaracSpec').value.trim();
         const symbole = document.getElementById('symboleCaracSpec').value.trim();
 
         if (!libelle || !typeId) {
-            alert("Champs obligatoires manquants.");
+            alert("Champs obligatoires manquants.",'warning');
             return;
         }
 
@@ -507,6 +447,55 @@
     }
 
 </script>--}}
+<script>
+    const valeursExistantes = @json($valeursExistantes ?? []);
+    console.log(valeursExistantes);
+    function generateInputField(carac, valeur = null) {
+        const nameAttr = `caracteristiques[${carac.id}]`;
+        let inputHtml = '';
+
+        switch (carac.type_label.toLowerCase()) {
+            case 'liste':
+                inputHtml = `<select name="${nameAttr}" class="form-select">`;
+                inputHtml += `<option value="">Sélectionner</option>`;
+                carac.valeurs_possibles.forEach(val => {
+                    const selected = valeur == val ? 'selected' : '';
+                    inputHtml += `<option value="${val}" ${selected}>${val}</option>`;
+                });
+                inputHtml += `</select>`;
+                break;
+
+            case 'nombre':
+                inputHtml = `
+                    <div class="input-group">
+                        <input type="number" step="any" name="${nameAttr}" class="form-control" placeholder="Ex: 12.5" value="${valeur ?? ''}">
+                        ${carac.unite_symbole ? `<span class="input-group-text">${carac.unite_symbole}</span>` : ''}
+                    </div>`;
+                break;
+
+            case 'texte':
+                inputHtml = `<input type="text" name="${nameAttr}" class="form-control" value="${valeur ?? ''}" placeholder="Entrer du texte">`;
+                break;
+
+            case 'boolean':
+                const checked = valeur == 1 ? 'checked' : '';
+                inputHtml = `
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="${nameAttr}" value="1" id="carac_${carac.id}" ${checked}>
+                        <label class="form-check-label" for="carac_${carac.id}">Oui</label>
+                    </div>`;
+                break;
+
+            default:
+                inputHtml = `<input type="text" name="${nameAttr}" class="form-control" value="${valeur ?? ''}">`;
+        }
+
+        return inputHtml;
+    }
+
+
+</script>
+
 <script>
 
 // Gestion du changement de domaine pour charger les familles
@@ -561,15 +550,19 @@ document.getElementById('code_famille_infrastructure').addEventListener('change'
             }
 
             let html = '';
+            console.log("Liste des caractéristiques reçues :", data);
+            console.log("Valeurs existantes : ", valeursExistantes);
+
             data.forEach(carac => {
                 html += `
                     <div class="col-md-4">
                         <div class="caracteristique-card">
                             <label class="form-label">${carac.libelle}</label>
-                            ${generateInputField(carac)}
+                            ${generateInputField(carac, valeursExistantes[carac.id] ?? null)}
                         </div>
                     </div>`;
             });
+
 
             container.innerHTML = html;
         })
@@ -579,151 +572,6 @@ document.getElementById('code_famille_infrastructure').addEventListener('change'
         });
 });
 
-// Fonction pour générer les champs de saisie selon le type
-function generateInputField(carac) {
-    const nameAttr = `caracteristiques[${carac.id}]`;
-            let inputHtml = '';
-
-            switch (carac.type_label.toLowerCase()) {
-                case 'liste':
-            inputHtml = `<select name="${nameAttr}" class="form-select">`;
-            inputHtml += `<option value="">Sélectionner</option>`; // Ajoute toujours cette option en premier
-            if (carac.valeurs_possibles.length === 0) {
-                inputHtml += `<option value="">Aucune option disponible</option>`;
-            } else {
-                carac.valeurs_possibles.forEach(val => {
-                    inputHtml += `<option value="${val}">${val}</option>`;
-                });
-            }
-            inputHtml += `</select>`;
-            break;
-
-        case 'nombre':
-            inputHtml = `
-                <div class="input-group">
-                    <input type="number" step="any" name="${nameAttr}" class="form-control" placeholder="Ex: 12.5">
-                    ${carac.unite_symbole ? `<span class="input-group-text">${carac.unite_symbole}</span>` : ''}
-                </div>`;
-            break;
-
-        case 'texte':
-            inputHtml = `<input type="text" name="${nameAttr}" class="form-control" placeholder="Entrer du texte">`;
-            break;
-
-        case 'boolean':
-            inputHtml = `
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" name="${nameAttr}" value="1" id="carac_${carac.id}" role="switch">
-                    <label class="form-check-label" for="carac_${carac.id}">Oui</label>
-                </div>`;
-            break;
-
-        default:
-            inputHtml = `<input type="text" name="${nameAttr}" class="form-control">`;
-    }
-
-    return inputHtml;
-}
-
-// Gestion des caractéristiques personnalisées
-/*document.getElementById('typePerso').addEventListener('change', function() {
-    const selectedType = this.options[this.selectedIndex].text.toLowerCase();
-    const valeursGroup = document.getElementById('valeursPossiblesGroup');
-    const valeurContainer = document.getElementById('valeurPersoContainer');
-    
-    if (selectedType === 'liste') {
-        valeursGroup.style.display = 'block';
-        valeurContainer.style.display = 'none';
-    } else {
-        valeursGroup.style.display = 'none';
-        valeurContainer.style.display = 'block';
-        
-        // Changer le type d'input selon le type sélectionné
-        const valeurInput = document.getElementById('valeurPerso');
-        if (selectedType === 'nombre') {
-            valeurInput.type = 'number';
-            valeurInput.step = 'any';
-        } else if (selectedType === 'boolean') {
-            valeurInput.type = 'checkbox';
-        } else {
-            valeurInput.type = 'text';
-        }
-    }
-});*/
-
-// Ajouter une caractéristique personnalisée
-/*function ajouterCaracPerso() {
-    const libelle = document.getElementById('libellePerso').value.trim();
-    const type = document.getElementById('typePerso').value;
-    const typeLabel = document.getElementById('typePerso').selectedOptions[0].text.toLowerCase();
-    let valeur = '';
-    
-    if (typeLabel === 'boolean') {
-        valeur = document.getElementById('valeurPerso').checked ? '1' : '0';
-    } else if (typeLabel === 'liste') {
-        valeur = document.getElementById('valeursPossibles').value.trim();
-    } else {
-        valeur = document.getElementById('valeurPerso').value.trim();
-    }
-    
-    if (!libelle || (!valeur && typeLabel !== 'boolean')) {
-        alert('Veuillez remplir tous les champs obligatoires');
-        return;
-    }
-
-    const idTemp = `new_${Date.now()}`;
-    const tableBody = document.querySelector('#caracPersoTable tbody');
-    
-    // Créer une nouvelle ligne
-    const row = document.createElement('tr');
-    row.dataset.tempId = idTemp;
-    
-    // Générer l'affichage selon le type
-    let valeurDisplay = '';
-    if (typeLabel === 'liste') {
-        valeurDisplay = `<select class="form-select" disabled>
-            ${valeur.split(',').map(v => `<option>${v.trim()}</option>`).join('')}
-        </select>`;
-    } else if (typeLabel === 'boolean') {
-        valeurDisplay = `<div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" ${valeur === '1' ? 'checked' : ''} disabled>
-        </div>`;
-    } else if (typeLabel === 'nombre') {
-        valeurDisplay = `<input type="number" class="form-control" value="${valeur}" disabled>`;
-    } else {
-        valeurDisplay = `<input type="text" class="form-control" value="${valeur}" disabled>`;
-    }
-    
-    row.innerHTML = `
-        <td>
-            <input type="hidden" name="carac_perso[${idTemp}][libelle]" value="${libelle}">
-            ${libelle}
-        </td>
-        <td>
-            <input type="hidden" name="carac_perso[${idTemp}][type]" value="${type}">
-            ${typeLabel}
-            ${typeLabel === 'liste' ? `<input type="hidden" name="carac_perso[${idTemp}][valeurs_possibles]" value="${valeur}">` : ''}
-        </td>
-        <td>
-            <input type="hidden" name="carac_perso[${idTemp}][valeur]" value="${valeur}">
-            ${valeurDisplay}
-        </td>
-        <td class="text-center">
-            <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">
-                <i class="bi bi-trash"></i>
-            </button>
-        </td>
-    `;
-    
-    tableBody.appendChild(row);
-    
-    // Réinitialiser les champs
-    document.getElementById('libellePerso').value = '';
-    document.getElementById('valeurPerso').value = '';
-    document.getElementById('valeursPossibles').value = '';
-    document.getElementById('valeursPossiblesGroup').style.display = 'none';
-    document.getElementById('valeurPersoContainer').style.display = 'block';
-}*/
 
 // Gestion de la localisation
 function getCurrentLocation() {
@@ -735,11 +583,11 @@ function getCurrentLocation() {
                 updateMap(position.coords.latitude, position.coords.longitude);
             },
             error => {
-                alert('Impossible d\'obtenir votre position : ' + error.message);
+                alert('Impossible d\'obtenir votre position : ' + error.message, 'error');
             }
         );
     } else {
-        alert('La géolocalisation n\'est pas supportée par votre navigateur');
+        alert('La géolocalisation n\'est pas supportée par votre navigateur', 'error');
     }
 }
 
@@ -758,14 +606,52 @@ let map;
 let marker;
 
 function initMap() {
-    // Initialisation par défaut (zoom sur Afrique de l'Ouest)
-    map = L.map('map').setView([7.5, -5], 6);
+    const paysCode = document.getElementById('paysSelect').value;
+    const nomPays = `{!! $nomPays !!}`; // Ce que tu as déjà
+    const lat = parseFloat(document.getElementById('latitude').value);
+    const lng = parseFloat(document.getElementById('longitude').value);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18,
-    }).addTo(map);
+    if (!isNaN(lat) && !isNaN(lng)) {
+        map = L.map('map').setView([lat, lng], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18,
+        }).addTo(map);
+        marker = L.marker([lat, lng]).addTo(map);
+        return;
+    }
+
+    if (!nomPays) {
+        // Si aucun nom, on centre sur Afrique
+        map = L.map('map').setView([0, 20], 3); // Vue Afrique entière
+        return;
+    }
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nomPays)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                const zoom = 6;
+
+                map = L.map('map').setView([lat, lon], zoom);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18,
+                }).addTo(map);
+            } else {
+                // Si pays introuvable : fallback
+                map = L.map('map').setView([0, 20], 3);
+            }
+        })
+        .catch(err => {
+            console.error("Erreur lors de la localisation du pays :", err);
+            map = L.map('map').setView([0, 20], 3);
+        });
 }
+
 
 function updateMap(lat, lng) {
     if (!map) return;
@@ -787,6 +673,37 @@ function updateMap(lat, lng) {
 
 document.addEventListener('DOMContentLoaded', function () {
     initMap(); // Initialiser la carte
+
+    const currentLocaliteId = '{{ $infrastructure->code_localite ?? '' }}';
+    const currentLocaliteLabel = '{{ $infrastructure->localisation->libelle ?? '' }}';
+    const selectEl = document.getElementById("niveau1Select");
+
+    if (currentLocaliteId && currentLocaliteLabel && selectEl && typeof selectEl.setOptions === 'function') {
+        fetch(`{{ url('/') }}/get-localites/${paysCode}`)
+            .then(res => res.json())
+            .then(data => {
+                const options = data.map(localite => ({
+                    value: localite.id,
+                    text: localite.libelle,
+                }));
+
+                // Injecte manuellement la localité si absente
+                if (!options.some(opt => opt.value == currentLocaliteId)) {
+                    options.unshift({
+                        value: currentLocaliteId,
+                        text: currentLocaliteLabel
+                    });
+                }
+
+                selectEl.setOptions(options);
+                selectEl.setSelected(currentLocaliteId);
+            });
+    }
+
+
+
+    
+
 
     const paysCode = document.getElementById('paysSelect').value;
 
@@ -829,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     } catch (err) {
                         console.error("Erreur lors de la recherche des coordonnées :", err);
-                        alert("Erreur lors de la récupération des coordonnées.");
+                        alert("Erreur lors de la récupération des coordonnées.", 'error');
                     }
                 });
 
@@ -857,58 +774,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
     }
+        // 🛠️ Si on est en édition, forcer le chargement des caractéristiques héritées
+        const familleSelect = document.getElementById('code_famille_infrastructure');
+        if (familleSelect && familleSelect.value) {
+            console.log('code_famille',familleSelect);
+                familleSelect.dispatchEvent(new Event('change'));
+            
+        }
 });
 
 
 
 
-// Soumission du formulaire
-document.getElementById('infrastructure-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const formData = new FormData(form);
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn.innerHTML;
-    
-    // Afficher un indicateur de chargement
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Enregistrement...';
-    
-    fetch(form.action, {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: formData
-    })
-    .then(async response => {
-        if (!response.ok) throw await response.json();
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            alert(data.success, 'success');
-            if (data.redirect) {
-                window.location.href = data.redirect;
-            }
-        }
-    })
-    .catch(error => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
-        
-        if (error.errors) {
-            let messages = Object.values(error.errors).flat().join('\n');
-            alert("Erreur(s) de validation :\n" + messages, 'error');
-        } else if (error.message) {
-            alert("Erreur : " + error.message, 'error');
-        } else {
-            alert("Une erreur inattendue est survenue", 'error');
-        }
-    });
-});
+
 
 // Forcer le redimensionnement de Leaflet à l'ouverture de l'onglet "Localisation"
 document.querySelector('button[data-bs-target="#localisation"]').addEventListener('shown.bs.tab', function () {
@@ -942,6 +820,19 @@ function addToGallery(input) {
                         &times;
                     </button>
                 </div>
+                @if(isset($infrastructure) && $infrastructure->images)
+                    <div class="row mb-3">
+                        @foreach($infrastructure->images as $image)
+                            <div class="col-md-2 mb-2 position-relative">
+                                <img src="{{ asset($image->chemin_image) }}" class="img-thumbnail" style="height: 150px; object-fit: cover;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeFromGallery('${id}')">
+                                    &times;
+                                </button>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
             `;
             document.getElementById('galleryPreview').appendChild(container);
         };
@@ -996,9 +887,9 @@ document.getElementById('infrastructure-form').addEventListener('submit', functi
 
         if (error.errors) {
             let messages = Object.values(error.errors).flat().join('\n');
-            alert("Erreur(s) :\n" + messages);
+            alert("Erreur(s) :\n" + messages, 'error');
         } else {
-            alert("Erreur : " + (error.message || 'Une erreur inconnue est survenue'));
+            alert("Erreur : " + (error.message || 'Une erreur inconnue est survenue'), 'error');
         }
     });
 });

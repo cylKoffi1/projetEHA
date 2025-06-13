@@ -36,7 +36,7 @@ class Infrastructure extends Model
     // Relation avec les valeurs de caractéristiques
     public function valeursCaracteristiques()
     {
-        return $this->hasMany(ValeurCaracteristique::class, 'idInfrastructure');
+        return $this->hasMany(ValeurCaracteristique::class, 'infrastructure_code', 'code');
     }
 
     public function localisation(){
@@ -47,5 +47,9 @@ class Infrastructure extends Model
     public function projetInfra()
     {
         return $this->hasOne(ProjetInfrastructure::class, 'idInfrastructure');
+    }
+
+    public function InfrastructureImage(){
+        return $this->hasMany(InfrastructureImage::class, 'infrastructure_code', 'code'); 
     }
 }

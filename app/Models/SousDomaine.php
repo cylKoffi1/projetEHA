@@ -18,9 +18,13 @@ class SousDomaine extends Model
     public function Domaine()
     {
         return $this->belongsTo(Domaine::class, 'code_domaine', 'code')
-                    ->where('groupe_projet_code', session('projet_selectionne'));
+                    ->where('groupe_projet_code', $this->code_groupe_projet);
     }
     
+    public function DomaineSansSession()
+    {
+        return $this->belongsTo(Domaine::class, 'code_domaine', 'code');
+    }
     
 
 }

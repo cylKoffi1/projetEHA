@@ -14,7 +14,7 @@ class ValeurCaracteristique extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'idInfrastructure',
+        'infrastructure_code',
         'idCaracteristique',
         'idUnite',
         'valeur',
@@ -23,7 +23,7 @@ class ValeurCaracteristique extends Model
     // Relation avec l'infrastructure
     public function infrastructure()
     {
-        return $this->belongsTo(Infrastructure::class, 'idInfrastructure');
+        return $this->belongsTo(Infrastructure::class, 'infrastructure_code', 'code');
     }
 
     // Relation avec la caractéristique

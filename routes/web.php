@@ -215,12 +215,15 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('admin/familleinfrastructure', [PlateformeController::class, 'familleinfrastructure'])->name('parGeneraux.familleinfrastructure');
     Route::get('admin/familleinfrastructure/{code}', [PlateformeController::class, 'getFamilleinfrastructure'])->name('familleinfrastructure.show');
     Route::post('admin/familleinfrastructure', [PlateformeController::class, 'storeFamilleinfrastructure'])->name('familleinfrastructure.store');
-    Route::post('/familleinfrastructure/update', [PlateformeController::class, 'updateFamilleInfrastructure'])->name('familleinfrastructure.update');
+    Route::post('/familleinfrastructure/{id}/update', [PlateformeController::class, 'updateFamilleInfrastructure'])->name('familleinfrastructure.update');
     Route::delete('/familleinfrastructure/delete/{id}', [PlateformeController::class, 'deleteFamilleInfrastructure'])->name('familleinfrastructure.delete');
     Route::post('/check-familleinfrastructure-code', [PlateformeController::class, 'checkFamilleinfrastructureCode']);
     Route::post('/familleinfrastructure/caracteristiques', [PlateformeController::class, 'storeCaracteristiquesFamille'])->name('familleinfrastructure.caracteristiques.store');
+    Route::post('/familleinfrastructure/caracteristiques/{id}/update', [PlateformeController::class, 'updateCaracteristiqueFamille'])->name('familleinfrastructure.caracteristiques.update');
     Route::get('/famille/{id}/caracteristiques', [PlateformeController::class, 'getCaracteristiquesFamille']);
     Route::delete('/famille/caracteristique/{famille_id}/{caracteristique_id}', [PlateformeController::class, 'supprimerCaracteristiqueFamille']);
+    Route::get('/getDomaineByGroupeProjet/{code}', [PlateformeController::class, 'getDomaineByGroupeProjet']);
+    Route::get('/get-sous-domaines/{codeDomaine}/{codeGroupeProjet}', [PlateformeController::class, 'getSousDomaines']);
 
     //***************** Cour d'eau ************* */
     Route::get('admin/courdeau', [PlateformeController::class, 'courdeau'])->name('courdeau');
@@ -319,24 +322,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('admin/beneficiaires', [PlateformeController::class, 'beneficiaires'])->name('beneficiaires');
     Route::get('admin/etablissements', [PlateformeController::class, 'etablissements'])->name('etablissements');
     Route::get('admin/ministeres', [PlateformeController::class, 'ministeres'])->name('ministeres');
-
-       // Page principale
-        Route::get('admin/CaractTypeUnite', [PlateformeController::class, 'CaractTypeUniteIndex'])->name('CaractTypeUnite');
-
-        // Type de Caractéristique
-        Route::post('/type-caracteristique/store', [PlateformeController::class, 'storeTypeCaracteristique'])->name('type-caracteristique.store');
-        Route::post('/type-caracteristique/update', [PlateformeController::class, 'updateTypeCaracteristique'])->name('type-caracteristique.update');
-        Route::delete('/type-caracteristique/delete/{id}', [PlateformeController::class, 'deleteTypeCaracteristique'])->name('type-caracteristique.delete');
-
-        // Caractéristique
-        Route::post('/caracteristique/store', [PlateformeController::class, 'storeCaracteristique'])->name('caracteristique.store');
-        Route::post('/caracteristique/update', [PlateformeController::class, 'updateCaracteristique'])->name('caracteristique.update');
-        Route::delete('/caracteristique/delete/{id}', [PlateformeController::class, 'deleteCaracteristique'])->name('caracteristique.delete');
-
-        // Unité
-        Route::post('/unite/store', [PlateformeController::class, 'storeUnite'])->name('unite.store');
-        Route::post('/unite/update', [PlateformeController::class, 'updateUnite'])->name('unite.update');
-        Route::delete('/unite/delete/{id}', [PlateformeController::class, 'deleteUnite'])->name('unite.delete');
 
     //***************** PROJETS ************* */
     Route::get('admin/projet', [ProjetController::class, 'projet'])->name('projet');

@@ -11,7 +11,7 @@ class Caracteristique extends Model
     protected $primaryKey = 'idCaracteristique';
     public $timestamps = false;
 
-    protected $fillable = ['libelleCaracteristique', 'idTypeCaracteristique'];
+    protected $fillable = ['libelleCaracteristique', 'idTypeCaracteristique', 'idUnite'];
 
     public function type()
     {
@@ -34,7 +34,7 @@ class Caracteristique extends Model
     }
     public function unite()
     {
-        return $this->hasOne(Unite::class, 'idCaracteristique');
+        return $this->belongsTo(Unite::class, 'idUnite');
     }
 }
 

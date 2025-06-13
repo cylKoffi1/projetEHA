@@ -12,20 +12,13 @@ class FamilleInfrastructure extends Model
 
     protected $table = 'familleinfrastructure'; 
     protected $primaryKey = 'idFamille';
-    protected $fillable = ['code_famille','code_domaine', 'code_sdomaine', 'libelleFamille', 'code_groupe_projet'];
+    protected $fillable = ['code_famille', 'libelleFamille'];
+ 
+    public function familleDomaine()
+    {
+        return $this->hasMany(FamilleDomaine::class, 'code_famille', 'code_famille');
+    }
     
-   
-    public function domaine()
-    {
-        return $this->belongsTo(Domaine::class, 'code_domaine', 'code')
-                    ->where('groupe_projet_code', session('projet_selectionne'));
-    }
-
-    public function sousdomaine()
-    {
-        return $this->belongsTo(SousDomaine::class, 'code_sdomaine', 'code_sous_domaine')
-                    ->where('code_groupe_projet', session('projet_selectionne'));
-    }
     // Relation avec les infrastructures
     public function infrastructures()
     {

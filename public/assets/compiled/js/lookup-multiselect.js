@@ -192,8 +192,11 @@ class LookupMultiSelect extends HTMLElement {
             checkbox.checked = isSelected;
             if (isSelected) div.classList.add("selected");
 
-            checkbox.onchange = () => this.toggleOption(option, checkbox.checked);
-
+            checkbox.onchange = () => {
+                this.toggleOption(option, checkbox.checked);
+                this.dispatchChangeEvent(); 
+            };
+            
             div.appendChild(checkbox);
             div.appendChild(document.createTextNode(option.text));
             this.dropdownList.appendChild(div);
@@ -327,8 +330,10 @@ class LookupMultiSelect extends HTMLElement {
             detail: {
                 selectedValues: this.value,
                 selectedObjects: this.getSelected()
-            }
+            },
+            bubbles: true
         });
+        
         this.dispatchEvent(event);
     }
 }

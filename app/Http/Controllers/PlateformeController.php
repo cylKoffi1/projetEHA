@@ -52,6 +52,8 @@ use App\Models\uniteVolume;
 use App\Models\TypeCaracteristique;
 use App\Models\Caracteristique;
 use App\Models\FamilleCaracteristique;
+use App\Models\FamilleDomaine;
+use App\Models\GroupeProjet;
 use App\Models\Infrastructure;
 use App\Models\Projet;
 use App\Models\Unite;
@@ -1105,16 +1107,27 @@ class PlateformeController extends Controller
     public function familleinfrastructure(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
-       
-       $groupeSelectionne = session('projet_selectionne');
-       $domaine = Domaine::where('groupe_projet_code', '=', $groupeSelectionne)->get();
+       $unites = Unite::orderBy('libelleUnite')->get();
+
+       $groupeProjets = GroupeProjet::all();
+       $domaine = Domaine::all();
        $sous_domaines = SousDomaine::all();
        $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')
-        ->whereIn('code_groupe_projet', [session('projet_selectionne')])->get();
+        ->get();
         $caracteristiques = Caracteristique::with('type')->get();
         $typesCaracteristique = TypeCaracteristique::all();
         
-        return view('parGeneraux.familleinfrastructure', ['domaine' => $domaine,'sous_domaines'=>$sous_domaines,'familleinfrastructure' => $familleinfrastructure,'ecran' => $ecran, 'caracteristiques' =>$caracteristiques, 'typesCaracteristique'=>$typesCaracteristique ]);
+        return view('parGeneraux.familleinfrastructure', 
+        [
+            'domaine' => $domaine,
+            'sous_domaines'=>$sous_domaines,
+            'familleinfrastructure' => $familleinfrastructure,
+            'ecran' => $ecran, 
+            'caracteristiques' =>$caracteristiques, 
+            'typesCaracteristique'=>$typesCaracteristique,
+            'groupeProjets' => $groupeProjets,
+            'unites' => $unites
+        ]);
     }
 
     public function getFamilleinfrastructure($code)
@@ -1141,42 +1154,146 @@ class PlateformeController extends Controller
     
         return redirect()->back()->with('success', 'Famille supprimée avec succès.');
     }
-
+    public function supprimerCaracteristiqueFamille($famille_id, $caracteristique_id)
+    {
+        $association = FamilleCaracteristique::where('idFamille', $famille_id)
+            ->where('idCaracteristique', $caracteristique_id)
+            ->first();
+    
+        if ($association) {
+            $association->delete();
+            return response()->json(['status' => 'success', 'message' => 'Caractéristique supprimée.']);
+        }
+    
+        return response()->json(['status' => 'error', 'message' => 'Association introuvable.'], 404);
+    }
+    
     public function storeFamilleinfrastructure(Request $request)
     {
-        try {
-            $id = $request->input('id');
+        DB::beginTransaction();
     
-            if ($id) {
-                $familleinfrastructure = FamilleInfrastructure::find($id);
-                if (!$familleinfrastructure) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Famille introuvable pour mise à jour.'
+        try {dd($request->all());
+            $request->validate([
+                'libelle' => 'required|string|max:255',
+                'code' => 'required|string|max:3|unique:familleinfrastructure,code_famille',
+                'domaine' => 'required|array',
+                'SDomaine' => 'nullable|array',
+                'groupeProjet' => 'required|array',
+            ]);
+    
+            // Création de la famille
+            $famille = new FamilleInfrastructure();
+            $famille->libelleFamille = $request->input('libelle');
+            $famille->code_famille = $request->input('code');
+            $famille->save();
+    
+            $insertions = 0;
+    
+            // Association avec les domaines via la table pivot
+            foreach ($request->domaine as $i => $codeDomaine) {
+                $codeSousDomaine = $request->SDomaine[$i] ?? null;
+                $codeGroupeProjet = $request->groupeProjet[$i] ?? null;
+    
+                if ($codeDomaine && $codeSousDomaine && $codeGroupeProjet) {
+                    FamilleDomaine::create([
+                        'code_famille' => $famille->code_famille,
+                        'code_domaine' => $codeDomaine,
+                        'code_sdomaine' => $codeSousDomaine,
+                        'code_groupe_projet' => $codeGroupeProjet,
                     ]);
+                    $insertions++;
                 }
-            } else {
-                $familleinfrastructure = new FamilleInfrastructure;
             }
     
-            $familleinfrastructure->code_famille = $request->input('code');
-            $familleinfrastructure->code_sdomaine = $request->input('SDomaine');
-            $familleinfrastructure->libelleFamille = $request->input('libelle');
-            $familleinfrastructure->code_domaine = $request->input('domaine');
-            $familleinfrastructure->code_groupe_projet = session('projet_selectionne');
+            // ✅ Vérifier qu'au moins une association a été faite
+            if ($insertions === 0) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Aucune association valide domaine/sous-domaine/groupe projet n’a été fournie.',
+                ]);
+            }
     
-            $familleinfrastructure->save();
+            DB::commit();
     
             return response()->json([
                 'status' => 'success',
-                'message' => $id ? 'Famille modifiée avec succès.' : 'Famille créée avec succès.',
-                'idFamille' => $familleinfrastructure->idFamille
+                'message' => 'Famille créée avec succès.',
+                'idFamille' => $famille->idFamille,
             ]);
     
         } catch (\Exception $e) {
+            DB::rollBack();
+    
             return response()->json([
                 'status' => 'error',
-                'message' => 'Erreur lors de l’enregistrement : ' . $e->getMessage()
+                'message' => 'Erreur lors de la création : ' . $e->getMessage(),
+            ]);
+        }
+    }
+    
+    public function updateCaracteristiques(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'caracteristiques_json' => 'required'
+            ]);
+    
+            $caracs = json_decode($request->caracteristiques_json, true);
+    
+            // Supprimer toutes les anciennes associations pour repartir proprement
+            FamilleCaracteristique::where('idFamille', $id)->delete();
+    
+            foreach ($caracs as $carac) {
+                // Vérifier si la caractéristique existe déjà
+                $caracteristique = Caracteristique::firstOrCreate(
+                    [
+                        'libelleCaracteristique' => $carac['libelle'],
+                        'idTypeCaracteristique' => $carac['type_id'],
+                    ]
+                );
+    
+                // Si type "liste", ajouter les valeurs possibles
+                if (strtolower($carac['type_label']) === 'liste' && !empty($carac['valeurs_possibles'])) {
+                    $valeurs = array_map('trim', explode(',', $carac['valeurs_possibles']));
+                    foreach ($valeurs as $valeur) {
+                        ValeurPossible::firstOrCreate([
+                            'idCaracteristique' => $caracteristique->idCaracteristique,
+                            'valeur' => $valeur
+                        ]);
+                    }
+                }
+    
+                // Si type "nombre", associer une unité
+                if (strtolower($carac['type_label']) === 'nombre') {
+                    if (!empty($carac['unite_id']) && $carac['unite_id'] !== 'autre') {
+                        $caracteristique->idUnite = $carac['unite_id'];
+                        $caracteristique->save();
+                    } elseif (!empty($carac['unite_libelle']) && !empty($carac['unite_symbole'])) {
+                        $unite = Unite::firstOrCreate([
+                            'libelleUnite' => $carac['unite_libelle'],
+                            'symbole' => $carac['unite_symbole']
+                        ]);
+                        $caracteristique->idUnite = $unite->idUnite;
+                        $caracteristique->save();
+                    }
+                }
+    
+                // Associer la caractéristique à la famille
+                FamilleCaracteristique::firstOrCreate([
+                    'idFamille' => $id,
+                    'idCaracteristique' => $caracteristique->idCaracteristique
+                ]);
+            }
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Caractéristiques mises à jour avec succès.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur : ' . $e->getMessage()
             ]);
         }
     }
@@ -1192,23 +1309,32 @@ class PlateformeController extends Controller
             $caracs = json_decode($request->caracteristiques_json, true);
     
             foreach ($caracs as $carac) {
-                // Vérifier si la caractéristique existe déjà
+                // Vérifie si caractéristique existe
                 $existing = Caracteristique::where('libelleCaracteristique', $carac['libelle'])
                     ->where('idTypeCaracteristique', $carac['type_id'])
                     ->first();
     
                 if (!$existing) {
-                    // Créer la caractéristique
-                    $existing = Caracteristique::create([
+                    $caracteristiqueData = [
                         'libelleCaracteristique' => $carac['libelle'],
                         'idTypeCaracteristique' => $carac['type_id'],
-                    ]);
+                    ];
     
-                    // Si c'est un type "liste" : créer les valeurs possibles
-                    if (
-                        strtolower($carac['type_label']) === 'liste' &&
-                        !empty($carac['valeurs_possibles'])
-                    ) {
+                    if (strtolower($carac['type_label']) === 'nombre') {
+                        if (!empty($carac['unite_id']) && $carac['unite_id'] !== 'autre') {
+                            $caracteristiqueData['idUnite'] = $carac['unite_id'];
+                        } elseif (!empty($carac['unite_libelle']) && !empty($carac['unite_symbole'])) {
+                            $unite = Unite::firstOrCreate([
+                                'libelleUnite' => $carac['unite_libelle'],
+                                'symbole' => $carac['unite_symbole'],
+                            ]);
+                            $caracteristiqueData['idUnite'] = $unite->idUnite;
+                        }
+                    }
+    
+                    $existing = Caracteristique::create($caracteristiqueData);
+    
+                    if (strtolower($carac['type_label']) === 'liste' && !empty($carac['valeurs_possibles'])) {
                         $valeurs = array_map('trim', explode(',', $carac['valeurs_possibles']));
                         foreach ($valeurs as $valeur) {
                             ValeurPossible::create([
@@ -1217,22 +1343,8 @@ class PlateformeController extends Controller
                             ]);
                         }
                     }
-    
-                    // Si c'est un type "nombre" : créer l'unité
-                    if (
-                        strtolower($carac['type_label']) === 'nombre' &&
-                        !empty($carac['unite_libelle']) &&
-                        !empty($carac['unite_symbole'])
-                    ) {
-                        Unite::create([
-                            'libelleUnite' => $carac['unite_libelle'],
-                            'symbole' => $carac['unite_symbole'],
-                            'idCaracteristique' => $existing->idCaracteristique
-                        ]);
-                    }
                 }
     
-                // Associer à la famille si ce n'est pas déjà fait
                 FamilleCaracteristique::firstOrCreate([
                     'idFamille' => $request->idFamille,
                     'idCaracteristique' => $existing->idCaracteristique
@@ -1250,20 +1362,7 @@ class PlateformeController extends Controller
             ]);
         }
     }
-    
-    public function supprimerCaracteristiqueFamille($famille_id, $caracteristique_id)
-    {
-        $association = FamilleCaracteristique::where('idFamille', $famille_id)
-            ->where('idCaracteristique', $caracteristique_id)
-            ->first();
-    
-        if ($association) {
-            $association->delete();
-            return response()->json(['status' => 'success', 'message' => 'Caractéristique supprimée.']);
-        }
-    
-        return response()->json(['status' => 'error', 'message' => 'Association introuvable.'], 404);
-    }
+
     
     public function getCaracteristiquesFamille($id)
     {
@@ -1281,35 +1380,94 @@ class PlateformeController extends Controller
                     'unite_symbole' => $fc->caracteristique->unite?->symbole,
                 ];
             });
-
+    
         return response()->json($caracs);
     }
+    
 
+    public function getDomaineByGroupeProjet($code)
+    {
+        // Découper s’il y a plusieurs codes (séparés par virgules)
+        $codes = explode(',', $code);
+    
+        $domaines = Domaine::whereIn('groupe_projet_code', $codes)->get();
+    
+        if ($domaines->isEmpty()) {
+            return response()->json(['error' => 'Aucun domaine trouvé'], 404);
+        }
+    
+        return response()->json($domaines);
+    }
     
     
-    public function updateFamilleInfrastructure(Request $request)
+    
+    public function getSousDomaines($codeDomaine, $codeGroupeProjet)
+    {
+        $sousDomaines = SousDomaine::where('code_domaine', $codeDomaine)
+                                    ->where('code_groupe_projet', $codeGroupeProjet)
+                                    ->get();
+
+        if ($sousDomaines->isEmpty()) {
+            return response()->json(['error' => 'Aucun sous-domaine trouvé'], 404);
+        }
+
+        return response()->json($sousDomaines);
+    }
+
+
+    public function updateFamilleinfrastructure(Request $request, $id)
     {
         try {
+            // 🔍 Validation
             $request->validate([
-                'id' => 'required|exists:famille_infrastructures,id',
                 'libelle' => 'required|string|max:255',
-                'SDomaine' => 'required|exists:sous_domaines,code_sous_domaine',
+                'code' => 'required|string|max:3|unique:familleinfrastructure,code_famille,' . $id . ',idFamille',
+                'domaine' => 'required|array',
+                'SDomaine' => 'nullable|array',
+                'groupeProjet' => 'required|array',
             ]);
     
-            $famille = FamilleInfrastructure::find($request->input('id'));
-            $famille->libelleFamille = $request->input('libelle');
-            $famille->code_sdomaine = $request->input('SDomaine');
-            $famille->code_famille = $request->input('code');
-            $famille->code_domaine = $request->input('domaine');
-            $famille->code_groupe_projet = session('projet_selectionne');
+            //  Récupération famille
+            $famille = FamilleInfrastructure::findOrFail($id);
     
+            //  Mise à jour des champs simples
+            $famille->libelleFamille = $request->input('libelle');
+            $famille->code_famille = $request->input('code');
             $famille->save();
     
-            return redirect()->back()->with('success', 'Famille modifiée avec succès.');
+            // 🔄 Supprimer les anciennes associations pivot
+            FamilleDomaine::where('code_famille', $famille->code_famille)->delete();
+
+            // 🔁 Recréer les liaisons
+            foreach ($request->domaine as $i => $codeDomaine) {
+                $codeSousDomaine = $request->SDomaine[$i] ?? null;
+                $codeGroupeProjet = $request->groupeProjet[$i] ?? null;
+
+                if ($codeSousDomaine && $codeGroupeProjet) {
+                    FamilleDomaine::create([
+                        'code_famille' => $famille->code_famille,
+                        'code_domaine' => $codeDomaine,
+                        'code_sdomaine' => $codeSousDomaine,
+                        'code_groupe_projet' => $codeGroupeProjet,
+                    ]);
+                }
+            }
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Famille modifiée avec succès.',
+                'idFamille' => $famille->idFamille
+            ]);
+    
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Erreur lors de la modification : ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur lors de la modification : ' . $e->getMessage()
+            ]);
         }
     }
+    
+    
     
     
     public function indexInfrastructure(){
@@ -2008,158 +2166,6 @@ class PlateformeController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $typeInstrument = TypeInstrument::orderBy('code', 'asc')->get();
         return view('parGeneraux.typeInstrument', ['typeInstrument' => $typeInstrument, 'ecran' => $ecran,]);
-    }
-
-    /**
-     * Affiche la page de gestion des types de caractéristiques, caractéristiques et unités.
-     */
-    public function CaractTypeUniteIndex()
-    {
-        $typesCaracteristiques = TypeCaracteristique::all();
-        $caracteristiques = Caracteristique::with('typeCaracteristique')->get();
-        $unites = Unite::with('caracteristique')->get();
-
-        return view('parGeneraux.Caracteristiques-unite-Type', compact('typesCaracteristiques', 'caracteristiques', 'unites'));
-    }
-
-    /**
-     * Stocke un nouveau type de caractéristique.
-     */
-    public function storeTypeCaracteristique(Request $request)
-    {
-        $request->validate([
-            'libelleType' => 'required|string|max:255',
-        ]);
-
-        TypeCaracteristique::create([
-            'libelleTypeCaracteristique' => $request->libelleType,
-        ]);
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Type de caractéristique ajouté avec succès.');
-    }
-
-    /**
-     * Met à jour un type de caractéristique existant.
-     */
-    public function updateTypeCaracteristique(Request $request)
-    {
-        $request->validate([
-            'id' => 'required|exists:type_caracteristique,idTypeCaracteristique',
-            'libelleType' => 'required|string|max:255',
-        ]);
-
-        $type = TypeCaracteristique::find($request->id);
-        $type->libelleTypeCaracteristique = $request->libelleType;
-        $type->save();
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Type de caractéristique mis à jour avec succès.');
-    }
-
-    /**
-     * Supprime un type de caractéristique.
-     */
-    public function deleteTypeCaracteristique($id)
-    {
-        $type = TypeCaracteristique::findOrFail($id);
-        $type->delete();
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Type de caractéristique supprimé avec succès.');
-    }
-
-    /**
-     * Stocke une nouvelle caractéristique.
-     */
-    public function storeCaracteristique(Request $request)
-    {
-        $request->validate([
-            'typeCaracteristique' => 'required|exists:type_caracteristique,idTypeCaracteristique',
-            'libelleCaracteristique' => 'required|string|max:255',
-        ]);
-
-        Caracteristique::create([
-            'idTypeCaracteristique' => $request->typeCaracteristique,
-            'libelleCaracteristique' => $request->libelleCaracteristique,
-        ]);
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Caractéristique ajoutée avec succès.');
-    }
-
-    /**
-     * Met à jour une caractéristique existante.
-     */
-    public function updateCaracteristique(Request $request)
-    {
-        $request->validate([
-            'id' => 'required|exists:caracteristiques,idCaracteristique',
-            'typeCaracteristique' => 'required|exists:type_caracteristique,idTypeCaracteristique',
-            'libelleCaracteristique' => 'required|string|max:255',
-        ]);
-
-        $caracteristique = Caracteristique::find($request->id);
-        $caracteristique->idTypeCaracteristique = $request->typeCaracteristique;
-        $caracteristique->libelleCaracteristique = $request->libelleCaracteristique;
-        $caracteristique->save();
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Caractéristique mise à jour avec succès.');
-    }
-
-    /**
-     * Supprime une caractéristique.
-     */
-    public function deleteCaracteristique($id)
-    {
-        $caracteristique = Caracteristique::findOrFail($id);
-        $caracteristique->delete();
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Caractéristique supprimée avec succès.');
-    }
-
-    /**
-     * Stocke une nouvelle unité.
-     */
-    public function storeUnite(Request $request)
-    {
-        $request->validate([
-            'caracteristiqueUnite' => 'required|exists:caracteristiques,idCaracteristique',
-            'libelleUnite' => 'required|string|max:255',
-        ]);
-
-        Unite::create([
-            'idCaracteristique' => $request->caracteristiqueUnite,
-            'libelleUnite' => $request->libelleUnite,
-        ]);
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Unité ajoutée avec succès.');
-    }
-
-    /**
-     * Met à jour une unité existante.
-     */
-    public function updateUnite(Request $request)
-    {
-        $request->validate([
-            'id' => 'required|exists:unites,idUnite',
-            'caracteristiqueUnite' => 'required|exists:caracteristiques,idCaracteristique',
-            'libelleUnite' => 'required|string|max:255',
-        ]);
-
-        $unite = Unite::find($request->id);
-        $unite->idCaracteristique = $request->caracteristiqueUnite;
-        $unite->libelleUnite = $request->libelleUnite;
-        $unite->save();
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Unité mise à jour avec succès.');
-    }
-
-    /**
-     * Supprime une unité.
-     */
-    public function deleteUnite($id)
-    {
-        $unite = Unite::findOrFail($id);
-        $unite->delete();
-
-        return redirect()->route('CaractTypeUnite')->with('success', 'Unité supprimée avec succès.');
     }
 
 }

@@ -10,10 +10,16 @@ class Unite extends Model
     protected $primaryKey = 'idUnite';
     public $timestamps = false;
 
-    protected $fillable = ['libelleUnite', 'symbole', 'idCaracteristique'];
+    protected $fillable = ['libelleUnite', 'symbole','idCaracteristique'];
+
+    public function caracteristiques()
+    {
+        return $this->hasMany(Caracteristique::class, 'idCaracteristique', 'idCaracteristique');
+    }
 
     public function valeurs()
     {
         return $this->hasMany(ValeurCaracteristique::class, 'idUnite');
     }
 }
+

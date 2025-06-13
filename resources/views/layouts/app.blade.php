@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ asset('assets/multiSelect/filter_multi_select.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/app-dark.rtl.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/app-dark.css') }}">
@@ -62,6 +61,9 @@
     <script src="{{ asset('assets/static/js/components/sidebar.js') }}"></script>
     <script src="{{ asset('assets/extensions/choices.js/public/assets/scripts/choices.js') }}"></script>
 
+         <!-- Multiple select -->
+    <link rel="stylesheet" href="{{ asset('assets/multiSelect/filter_multi_select.css') }}">
+    <!-- Multiple select -->
     <link rel="shortcut icon" href="{{ asset('assets/compiled/svg/favicon.svg')}}" type="image/x-icon">
 </head>
 
@@ -108,12 +110,6 @@
 
     <!-- Multiple select -->
     <script src="{{ asset('assets/multiSelect/filter-multi-select-bundle.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.min.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
 
     <script src="{{ asset('assets/multiSelect/filter-multi-select-bundle.min.js') }}"></script>
     {{-- <script src="{{ asset('assets/multiSelect/filter-multi-select.js') }}"></script> --}}

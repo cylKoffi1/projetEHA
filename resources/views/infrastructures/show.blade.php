@@ -92,7 +92,7 @@
                         <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                             <thead>
                                 <tr>
-                                    <th>Type</th>
+                                    {{--<th>Type</th>--}}
                                     <th>Caractéristique</th>
                                     <th>Valeur</th>
                                     <th>Unité</th>
@@ -102,10 +102,15 @@
                             <tbody>
                                 @foreach($infrastructure->valeursCaracteristiques as $caract)
                                 <tr>
-                                    <td>{{ $caract->caracteristique->typeCaracteristique->libelleTypeCaracteristique ?? '-' }}</td>
+                                    {{--<td>{{ $caract->caracteristique->type->libelleTypeCaracteristique ?? '-' }}</td>--}}
                                     <td>{{ $caract->caracteristique->libelleCaracteristique ?? '-' }}</td>
                                     <td>{{ $caract->valeur }}</td>
-                                    <td>{{ $caract->unite ? $caract->unite->libelleUnite . ' (' . $caract->unite->symbole . ')' : '-' }}</td>
+                                    <td>@if($caract->unite)
+                                            {{ $caract->unite->libelleUnite }} ({{ $caract->unite->symbole }})
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                     <td>
                                         <form action="{{ route('infrastructures.caracteristiques.destroy', $caract->idValeurCaracteristique) }}" method="POST" class="d-inline">
                                             @csrf

@@ -19,9 +19,14 @@ class Domaine extends Model
     {
         return $this->belongsTo(GroupeProjet::class, 'groupe_projet_code', 'code');
     }
-    public function sousdomaine()
+    public function sousdomaines()
     {
-        return $this->belongsTo(SousDomaine::class, 'code', 'code_domaine')
-                    ->where('code_groupe_projet', session('projet_selectionne'));
+        return $this->hasMany(SousDomaine::class, 'code_domaine', 'code')
+                    ->where('code_groupe_projet', $this->groupe_projet_code);
+    }
+    
+    public function familleInfrastructure()
+    {
+        return $this->belongsTo(FamilleInfrastructure::class, 'code', 'code_domaine');
     }
 }

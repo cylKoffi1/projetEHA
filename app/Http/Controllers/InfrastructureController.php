@@ -8,6 +8,7 @@ use App\Models\FamilleCaracteristique;
 use App\Models\FamilleInfrastructure;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\Infrastructure;
+use App\Models\InfrastructureImage;
 use App\Models\LocalitesPays;
 use App\Models\Pays;
 use App\Models\ProjetActionAMener;
@@ -17,6 +18,7 @@ use App\Models\ValeurCaracteristique;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class InfrastructureController extends Controller
 {
@@ -85,22 +87,39 @@ class InfrastructureController extends Controller
      public function store(Request $request)
      {
          try {
+             Log::info("Début du store() infrastructure", $request->all());
+     
              $request->validate([
                  'libelle' => 'required|string|max:255',
                  'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_famille',
                  'code_localite' => 'required|exists:localites_pays,id',
              ]);
      
-             // Récupération de la famille correspondante
              $famille = FamilleInfrastructure::where('code_famille', $request->code_famille_infrastructure)->firstOrFail();
              $familleId = $famille->idFamille;
      
-             // Génération du code unique de l'infrastructure
-             $code = $request->code_famille_infrastructure .
-                     strtoupper(substr(preg_replace('/\s+/', '', $request->libelle), 0, 3)) .
-                     strtoupper(substr(md5(uniqid()), 0, 2));
+             Log::info("Famille trouvée", ['famille_id' => $familleId]);
      
-             // Création de l'infrastructure
+             $prefix = $request->code_famille_infrastructure;
+
+             // Récupérer le dernier code pour cette famille
+             $lastInfrastructure = Infrastructure::where('code', 'like', $prefix . '%')
+                 ->orderByDesc('code')
+                 ->first();
+             
+             if ($lastInfrastructure) {
+                 // Extraire la partie numérique, à partir du 4ème caractère
+                 $lastNumber = (int)substr($lastInfrastructure->code, 3);
+                 $nextNumber = $lastNumber + 1;
+             } else {
+                 $nextNumber = 1;
+             }
+             
+             // Formater avec 8 zéros
+             $code = $prefix . str_pad($nextNumber, 8, '0', STR_PAD_LEFT);
+             
+             Log::info("Code généré pour infrastructure", ['code' => $code]);
+     
              $infrastructure = Infrastructure::create([
                  'code' => $code,
                  'libelle' => $request->libelle,
@@ -113,64 +132,166 @@ class InfrastructureController extends Controller
                  'longitude' => $request->longitude
              ]);
      
-             // Enregistrement des valeurs de caractéristiques héritées
+             Log::info("Infrastructure créée", ['infra_id' => $infrastructure->id]);
+     
              if ($request->has('caracteristiques')) {
                  foreach ($request->input('caracteristiques', []) as $idCarac => $valeur) {
+                     Log::info("Traitement caractéristique", ['idCaracteristique' => $idCarac, 'valeur_reçue' => $valeur]);
+     
                      $caracValide = FamilleCaracteristique::where('idFamille', $familleId)
                          ->where('idCaracteristique', $idCarac)
                          ->exists();
      
                      if (!$caracValide) {
+                         Log::warning("Caractéristique non autorisée pour cette famille", ['id' => $idCarac]);
                          return response()->json([
                              'error' => "La caractéristique (ID: $idCarac) n'est pas autorisée pour cette famille."
                          ], 422);
                      }
      
-                     // Ne pas enregistrer les valeurs vides (optionnel)
-                     if ($valeur !== null && $valeur !== '') {
+                     $caracteristique = Caracteristique::with('type', 'valeursPossibles')->findOrFail($idCarac);
+                     $type = strtolower($caracteristique->type->libelleTypeCaracteristique);
+                     $valeurFinale = null;
+     
+                     switch ($type) {
+                         case 'liste':
+                             $option = $caracteristique->valeursPossibles->firstWhere('valeur', $valeur)
+                                 ?? $caracteristique->valeursPossibles->firstWhere('id', $valeur);
+                             $valeurFinale = $option?->valeur;
+                             Log::info("Valeur 'liste' convertie", ['finale' => $valeurFinale]);
+                             break;
+     
+                         case 'boolean':
+                             $valeurFinale = $valeur ? 1 : 0;
+                             Log::info("Valeur 'boolean' convertie", ['finale' => $valeurFinale]);
+                             break;
+     
+                         default:
+                             $valeurFinale = $valeur;
+                             Log::info("Valeur par défaut", ['finale' => $valeurFinale]);
+                             break;
+                     }
+     
+                     if ($valeurFinale !== null && $valeurFinale !== '') {
                          ValeurCaracteristique::create([
-                             'idInfrastructure' => $infrastructure->id,
+                             'infrastructure_code' => $code,
                              'idCaracteristique' => $idCarac,
-                             'valeur' => $valeur
+                             'valeur' => $valeurFinale
+                         ]);
+     
+                         Log::info("Valeur enregistrée", [
+                             'infra_id' => $infrastructure->id,
+                             'carac_id' => $idCarac,
+                             'valeur' => $valeurFinale
                          ]);
                      }
                  }
              }
      
-             // Enregistrement de la photo principale
-             if ($request->hasFile('photo')) {
-                 $file = $request->file('photo');
-                 $filename = $code . '_' . time() . '.' . $file->getClientOriginalExtension();
-                 $path = 'Data/Infrastructure/';
-                 $file->move(public_path($path), $filename);
-                 $infrastructure->imageInfras = $path . $filename;
-                 $infrastructure->save();
+             if ($request->hasFile('gallery')) {
+                 foreach ($request->file('gallery') as $file) {
+                     if ($file->isValid()) {
+                         $filename = $code . '_Infras_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                         $path = 'Data/Infrastructure/';
+                         $file->move(public_path($path), $filename);
+     
+                         InfrastructureImage::create([
+                             'infrastructure_code' => $code,
+                             'chemin_image' => $path . $filename
+                         ]);
+     
+                         Log::info("Image enregistrée", ['filename' => $filename]);
+                     }
+                 }
              }
      
              return response()->json([
                  'success' => 'Infrastructure créée avec succès.',
                  'redirect' => route('infrastructures.show', $infrastructure->id)
              ], 200);
+     
          } catch (\Throwable $e) {
+             Log::error("Erreur dans store()", ['exception' => $e]);
              return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
          }
      }
      
-     
- 
-     // Afficher les détails d'une infrastructure
-     public function show($id)
-     {
-         $infrastructure = Infrastructure::with(['familleInfrastructure', 'localisation', 'valeursCaracteristiques.caracteristique.typeCaracteristique', 'valeursCaracteristiques.unite'])
-             ->findOrFail($id);
-        $typeCaracteristiques = TypeCaracteristique::all();
-             
-         return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques'));
-     }
- 
-     // Afficher le formulaire d'édition
     
-     public function edit($id)
+    
+
+    // Afficher les détails d'une infrastructure
+    public function show($id)
+    {
+        $infrastructure = Infrastructure::with(['familleInfrastructure', 'localisation', 'valeursCaracteristiques.caracteristique.type', 'valeursCaracteristiques.unite'])
+            ->findOrFail($id);
+    $typeCaracteristiques = TypeCaracteristique::all();
+            
+        return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques'));
+    }
+
+    // Afficher le formulaire d'édition
+    public function edit($id)
+    {
+        $infrastructure = Infrastructure::with([
+            'familleInfrastructure.domaine',
+            'localisation',
+            'valeursCaracteristiques.caracteristique.valeursPossibles',
+            'valeursCaracteristiques.caracteristique.type',
+            'valeursCaracteristiques.unite',
+            'InfrastructureImage',
+            'projetInfra',
+        ])->findOrFail($id);
+    
+        $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
+        $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))->get();
+        $typeCaracteristiques = TypeCaracteristique::all();
+        $valeursExistantes = ValeurCaracteristique::where('infrastructure_code', $infrastructure->code)
+            ->pluck('valeur', 'idCaracteristique')
+            ->toArray();
+        
+       // dd($valeursExistantes);
+        // Pays pour carte & localisation
+        $pays = GroupeProjetPaysUser::with('pays')
+            ->select('pays_code')
+            ->distinct()
+            ->where('pays_code', session('pays_selectionne'))
+            ->get()
+            ->pluck('pays.nom_fr_fr', 'pays.alpha3')
+            ->sort();
+    
+        $paysCode = session('pays_selectionne');
+        $nomPays = Pays::where('alpha3', $paysCode)->value('nom_fr_fr');
+    
+        // Niveaux de découpage (comme dans index)
+        $niveaux = DB::table('localites_pays')
+            ->join('decoupage_admin_pays', 'decoupage_admin_pays.num_niveau_decoupage', '=', 'localites_pays.id_niveau')
+            ->join('decoupage_administratif', 'decoupage_administratif.code_decoupage', '=', 'decoupage_admin_pays.code_decoupage')
+            ->join('pays', 'pays.id', '=', 'decoupage_admin_pays.id_pays')
+            ->where('pays.alpha3', session('pays_selectionne'))
+            ->where('localites_pays.id_pays', session('pays_selectionne'))
+            ->select('decoupage_administratif.libelle_decoupage', 'localites_pays.id_niveau')
+            ->distinct()
+            ->orderBy('decoupage_administratif.libelle_decoupage')
+            ->pluck('decoupage_administratif.libelle_decoupage', 'localites_pays.id_niveau');
+    
+        // Pour le JS : correspondance famille → domaine
+        $mappingFamilleDomaine = FamilleInfrastructure::pluck('code_domaine', 'code_famille');
+    
+        return view('infrastructures.create', compact(
+            'infrastructure',
+            'familles',
+            'domaines',
+            'typeCaracteristiques',
+            'pays',
+            'nomPays',
+            'niveaux',
+            'mappingFamilleDomaine',
+            'valeursExistantes'
+        ));
+    }
+     
+     
+    /* public function edit($id)
      {
          $country = session('pays_selectionne');
          $group = session('projet_selectionne');
@@ -206,7 +327,7 @@ class InfrastructureController extends Controller
              'domaines',
              'selectedDomaineCode'
          ));
-     }
+     }*/
      
  
      public function getByPays(Request $request)
@@ -232,6 +353,7 @@ public function getNiveaux(Request $request)
         'libelle_decoupage' => $localite->libelle_decoupage
     ]);
 }
+
      // Mettre à jour une infrastructure
      public function update(Request $request, $id)
      {
@@ -365,7 +487,7 @@ public function getNiveaux(Request $request)
         $infrastructure = Infrastructure::with([
             'familleInfrastructure',
             'localisation',
-            'valeursCaracteristiques.caracteristique.typeCaracteristique',
+            'valeursCaracteristiques.caracteristique.type',
             'valeursCaracteristiques.unite'
         ])->findOrFail($id);
 
