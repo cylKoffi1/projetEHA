@@ -12,7 +12,7 @@ class FamilleDomaine extends Model
     protected $table = 'famille_domaine';
 
     protected $fillable = [
-        'code_famille',
+        'code_Ssys',
         'code_domaine',
         'code_sdomaine',
         'code_groupe_projet',
@@ -20,7 +20,7 @@ class FamilleDomaine extends Model
 
     public function famille()
     {
-        return $this->belongsTo(FamilleInfrastructure::class, 'code_famille', 'code_famille');
+        return $this->belongsTo(FamilleInfrastructure::class, 'code_Ssys', 'code_Ssys');
     }
 
     public function groupeProjet(){

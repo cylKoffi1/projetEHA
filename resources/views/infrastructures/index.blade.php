@@ -72,14 +72,14 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label>Niveau</label>
-                            <select id="filter-niveau" class="form-control">
-                                <option value="">Tous</option>
-                                @foreach ($niveaux as $idNiveau => $libelle)
-                                    <option value="{{ $idNiveau }}">{{ $libelle }}</option>
+                            <label>Localisation</label>
+                            <lookup-select id="filter-niveau" >
+                                <option value="">Selectionner </option>
+                                @foreach ($localite as $localites )
+                                    <option value="{{ $localites->code }}">{{ $localites->libelle }}</option>
                                 @endforeach
 
-                            </select>
+                            </lookup-select>
                         </div>
                         <div class="col-md-3 d-flex align-items-end justify-content-between">
                             <button type="button" class="btn btn-primary" onclick="applyFilters()">Filtrer</button>

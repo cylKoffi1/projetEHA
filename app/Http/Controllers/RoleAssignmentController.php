@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleAssignmentController extends Controller
 {
@@ -26,9 +27,22 @@ class RoleAssignmentController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $groupes = GroupeUtilisateur::all();
         $roles = GroupeUtilisateur::all();
+       
+
 
         return view('habilitations.role-assignment', compact('groupes', 'ecran',  'roles'));
     }
+        /******************** HABILITATIONS ******************* */
+
+        public function habilitations(Request $request)
+        {
+            $views = View::all();
+            $ecran = Ecran::find($request->input('ecran_id'));
+            $groupes = GroupeUtilisateur::all();
+            $roles = GroupeUtilisateur::all();
+        
+            return view('habilitations.habilitations', compact('groupes', 'ecran', 'roles',  'views'));
+        }
 
     public function assignRoles(Request $request)
     {
@@ -281,6 +295,7 @@ class RoleAssignmentController extends Controller
             }
         }
 
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
 
         // Retourner une réponse JSON
@@ -320,16 +335,7 @@ class RoleAssignmentController extends Controller
 
 
 
-    /******************** HABILITATIONS ******************* */
 
-    public function habilitations(Request $request)
-    {
-        $views = View::all();
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $groupes = GroupeUtilisateur::all();
-        $roles = GroupeUtilisateur::all();
-        return view('habilitations.habilitations', compact('groupes', 'ecran', 'roles',  'views'));
-    }
 
 
 

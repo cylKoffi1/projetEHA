@@ -17,4 +17,19 @@ class TypeCaracteristique extends Model
     {
         return $this->hasMany(Caracteristique::class, 'idTypeCaracteristique');
     }
+    public function getLibelleLowerAttribute()
+    {
+        return strtolower($this->libelleTypeCaracteristique);
+    }
+    public function getEmojiLabelAttribute(): string
+{
+    return match ($this->getLibelleLowerAttribute()) {
+        'boolean' => '☑️ boolean',
+        'texte'   => '✏️ texte',
+        'nombre'  => '🔢 nombre',
+        'liste'   => '📋 liste',
+        default   => ucfirst($this->libelleTypeCaracteristique),
+    };
+}
+
 }

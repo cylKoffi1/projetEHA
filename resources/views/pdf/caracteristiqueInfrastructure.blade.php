@@ -97,13 +97,29 @@
     <div class="section">
         <div class="section-title">INFORMATIONS GÉNÉRALES</div>
         <table class="info-grid">
-            <tr><td class="label">Nom :</td><td>{{ $infrastructure->libelle }}</td></tr>
-            <tr><td class="label">Code :</td><td>{{ $infrastructure->code }}</td></tr>
-            <tr><td class="label">Famille :</td><td>{{ $infrastructure->familleInfrastructure->libelleFamille ?? '-' }}</td></tr>
-            <tr><td class="label">Projet :</td><td>{{ $infrastructure->code_groupe_projet ?? '-' }}</td></tr>
-            <tr><td class="label">Localisation :</td><td>{{ $infrastructure->localisation->libelle ?? '-' }}</td></tr>
-            <tr><td class="label">Date de création :</td><td>{{ $infrastructure->date_operation ? \Carbon\Carbon::parse($infrastructure->date_operation)->format('d/m/Y') : '-' }}</td></tr>
+            <tr>
+                <td style="width: 70%;">
+                    <table>
+                        <tr><td class="label">Groupe projet :</td><td>{{ $infrastructure->groupeProjet?->libelle ?? '-' }}</td></tr>
+                        <tr><td class="label">Famille d'infrastructure :</td><td>{{ $infrastructure->familleInfrastructure->libelleFamille ?? '-' }}</td></tr>
+                        <tr><td class="label">Code :</td><td>{{ $infrastructure->code }}</td></tr>
+                        <tr><td class="label">Libelle :</td><td>{{ $infrastructure->libelle }}</td></tr>
+                        <tr><td class="label">Localisation :</td><td>{{ $infrastructure->localisation->libelle ?? '-' }}</td></tr>
+                        <tr><td class="label">Date de mise en service :</td><td>{{ $infrastructure->date_operation ? \Carbon\Carbon::parse($infrastructure->date_operation)->format('d/m/Y') : '-' }}</td></tr>
+                    </table>
+                </td>
+                <td style="width: 30%; text-align: center;">
+                    <div class="qr-code-container">
+                        <p style="font-weight: bold; margin-bottom: 8px;">QR Code d’identification</p>
+                        <img src="data:image/png;base64,{{ $qrCodeBase64 }}" alt="QR Code" style="width: 150px; height: 150px;"><br>
+                        <small class="text-muted">Code ID : {{ $infrastructure->code }}</small>
+                    </div>
+                </td>
+            </tr>
         </table>
+
+
+
     </div>
 
     <!-- CARACTÉRISTIQUES -->
@@ -124,17 +140,50 @@
                 <tbody>
                     @foreach($infrastructure->valeursCaracteristiques as $caract)
                         <tr>
-                            <td>{{ $caract->caracteristique->typeCaracteristique->libelleTypeCaracteristique ?? '-' }}</td>
+                            <td>{{ $caract->caracteristique->type->libelleTypeCaracteristique ?? '-' }}</td>
                             <td>{{ $caract->caracteristique->libelleCaracteristique ?? '-' }}</td>
                             <td>{{ $caract->valeur }}</td>
                             <td>
-                                {{ $caract->unite ? $caract->unite->libelleUnite . ' (' . $caract->unite->symbole . ')' : '-' }}
+                                {{ $caract->caracteristique->unite ? $caract->caracteristique->unite->libelleUnite . ' (' . $caract->caracteristique->unite->symbole . ')' : '-' }}
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         @endif
+    </div>
+    <div class="section">
+        <div class="section-title">HISTORIQUES PROJETS</div>
+       
+            <table class="table"> 
+                <thead>
+                    <tr>
+                        <th>Code projet</th>
+                        <th>Nature des travaux</th>
+                        <th>Date début</th>
+                        <th>Date fin</th>
+                        <th>Coût du projet</th>
+                        <th>Devise</th>
+                    </tr>
+                </thead>
+                @if(!empty($projets))
+                <tbody>
+                    @foreach($projets as $projet)
+                        <tr>
+                            <td>{{ $projet['code_projet'] }}</td>
+                            <td>{{ $projet['nature'] }}</td>
+                            <td>{{ $projet['date_debut'] }}</td>
+                            <td>{{ $projet['date_fin'] }}</td>
+                            <td>{{ $projet['cout'] }}</td>
+                            <td>{{ $projet['devise'] }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                @else
+                    <p>Aucun projet associé.</p>
+                @endif
+            </table>
+       
     </div>
 
     <!-- FOOTER -->

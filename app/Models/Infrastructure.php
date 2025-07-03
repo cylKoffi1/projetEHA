@@ -16,7 +16,7 @@ class Infrastructure extends Model
     protected $fillable = [
         'code',
         'libelle',
-        'code_famille_infrastructure',
+        'code_Ssys',
         'code_groupe_projet',
         'code_pays',
         'code_localite',
@@ -26,13 +26,19 @@ class Infrastructure extends Model
         'longitude'
     ];
     
-
+    public function groupeProjet()
+    {
+        return $this->belongsTo(GroupeProjet::class, 'code_groupe_projet', 'code');
+    }
     // Relation avec la famille d'infrastructure
     public function familleInfrastructure()
     {
-        return $this->belongsTo(FamilleInfrastructure::class, 'code_famille_infrastructure', 'code_famille');
+        return $this->belongsTo(FamilleInfrastructure::class, 'code_Ssys', 'code_Ssys');
     }
 
+    public function familleDomaine(){
+        return $this->belongsTo(FamilleDomaine::class, 'code_Ssys', 'code_Ssys');
+    }
     // Relation avec les valeurs de caractéristiques
     public function valeursCaracteristiques()
     {

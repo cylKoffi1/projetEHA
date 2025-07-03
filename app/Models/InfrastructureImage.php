@@ -9,8 +9,10 @@ class InfrastructureImage extends Model
 {
     use HasFactory;
 
-    protected $table = 'InfrastructureImage';
+    protected $table = 'infrastructureimage';
 
+    public $timestamps = true; 
+    protected $primaryKey = 'id';
     protected $fillable = [
         'infrastructure_code',
         'chemin_image',
@@ -20,5 +22,4 @@ class InfrastructureImage extends Model
         return $this->belongsTo(Infrastructure::class, 'infrastructure_code', 'code');
     }
     
-    public $timestamps = true; 
 }

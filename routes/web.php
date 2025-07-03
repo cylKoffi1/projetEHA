@@ -12,6 +12,7 @@ use App\Http\Controllers\AnnexeController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\CaracteristiqueStructureController;
 use App\Http\Controllers\cloturerProjetController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\EtatController;
@@ -212,18 +213,42 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
 
     //***************** Famille d'infrastructure ************* */
+    Route::get('famille/{id}/formulaire', [PlateformeController::class, 'renderForm'])->name('famille.formulaire');
     Route::get('admin/familleinfrastructure', [PlateformeController::class, 'familleinfrastructure'])->name('parGeneraux.familleinfrastructure');
     Route::get('admin/familleinfrastructure/{code}', [PlateformeController::class, 'getFamilleinfrastructure'])->name('familleinfrastructure.show');
     Route::post('admin/familleinfrastructure', [PlateformeController::class, 'storeFamilleinfrastructure'])->name('familleinfrastructure.store');
     Route::post('/familleinfrastructure/{id}/update', [PlateformeController::class, 'updateFamilleInfrastructure'])->name('familleinfrastructure.update');
     Route::delete('/familleinfrastructure/delete/{id}', [PlateformeController::class, 'deleteFamilleInfrastructure'])->name('familleinfrastructure.delete');
     Route::post('/check-familleinfrastructure-code', [PlateformeController::class, 'checkFamilleinfrastructureCode']);
-    Route::post('/familleinfrastructure/caracteristiques', [PlateformeController::class, 'storeCaracteristiquesFamille'])->name('familleinfrastructure.caracteristiques.store');
-    Route::post('/familleinfrastructure/caracteristiques/{id}/update', [PlateformeController::class, 'updateCaracteristiqueFamille'])->name('familleinfrastructure.caracteristiques.update');
-    Route::get('/famille/{id}/caracteristiques', [PlateformeController::class, 'getCaracteristiquesFamille']);
-    Route::delete('/famille/caracteristique/{famille_id}/{caracteristique_id}', [PlateformeController::class, 'supprimerCaracteristiqueFamille']);
     Route::get('/getDomaineByGroupeProjet/{code}', [PlateformeController::class, 'getDomaineByGroupeProjet']);
     Route::get('/get-sous-domaines/{codeDomaine}/{codeGroupeProjet}', [PlateformeController::class, 'getSousDomaines']);
+    
+    Route::prefix('familles/{famille}/caracteristiques')->name('caracteristiques.')->group(function () {
+        // Récupérer toutes les caractéristiques d'une famille (hiérarchie)
+        Route::get('/', [CaracteristiqueStructureController::class, 'index'])->name('index');
+    
+        // Enregistrer un ensemble de caractéristiques (JSON imbriqué)
+        Route::post('/', [CaracteristiqueStructureController::class, 'store'])->name('store');
+    
+        // Mettre à jour la structure complète
+        Route::put('/', [CaracteristiqueStructureController::class, 'update'])->name('update');
+    
+        // Supprimer toutes les caractéristiques d'une famille (optionnel)
+        Route::delete('/', [CaracteristiqueStructureController::class, 'destroy'])->name('destroy');
+    });
+    
+    Route::prefix('caracteristiques')->name('caracteristique.')->group(function () {
+        Route::get('/{id}', [CaracteristiqueStructureController::class, 'show'])->name('show');
+        Route::put('/{id}', [CaracteristiqueStructureController::class, 'updateSingle'])->name('update.single');
+        Route::delete('/{id}', [CaracteristiqueStructureController::class, 'destroySingle'])->name('destroy.single');
+    });
+    
+    // Routes pour la structure hiérarchique des caractéristiques
+    Route::prefix('famille-infrastructure/{famille}/structure')->group(function() {
+        Route::get('/data', [CaracteristiqueStructureController::class, 'getStructures'])->name('famille.structure.get');
+        Route::post('/save', [CaracteristiqueStructureController::class, 'saveStructure'])->name('famille.structure.save');
+    });
+    Route::delete('famille-infrastructure/{famille}/structure', [CaracteristiqueStructureController::class, 'destroy'])->name('famille.structure.destroy');
 
     //***************** Cour d'eau ************* */
     Route::get('admin/courdeau', [PlateformeController::class, 'courdeau'])->name('courdeau');
@@ -526,6 +551,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     // Routes principales pour les infrastructures
     Route::get('/familles/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
     Route::get('/familles-by-domaine/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
+    Route::get('/familles/{idFamille}/caracteristiques', [InfrastructureController::class, 'getCaracteristiques']);
 
     Route::prefix('admin/infrastructures')->group(function () {
     Route::get('/{id}/impression', [InfrastructureController::class, 'print'])->name('infrastructures.print');
@@ -534,6 +560,11 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('/{id}/historique', [InfrastructureController::class, 'historique'])
     ->name('infrastructures.historique');
     
+    Route::put('/infrastructures/{infrastructure}/caracteristiques', [InfrastructureController::class, 'updateCaracteristiques'])
+    ->name('infrastructures.caracteristiques.updateMultiple');
+
+    Route::delete('admin/infrastructure/image/{id}/{code}', [InfrastructureController::class, 'deleteImage'])->name('infrastructure.image.delete');
+
     // Liste des infrastructures
     Route::get('/', [InfrastructureController::class, 'index'])
         ->name('infrastructures.index');
@@ -786,3 +817,4 @@ Route::get('password/reset/{token}', [ResetPasswordController::class, 'showReset
 Route::get('/etat/pdf', [EtatController::class, 'generatePDF'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 
+Route::get('/{id}/impressions', [InfrastructureController::class, 'print'])->name('infrastructures.printNoConnect');

@@ -13,7 +13,7 @@ class SousDomaine extends Model
 
     protected $table = 'sous_domaine'; 
     protected $primaryKey = 'id';
-    protected $fillable = ['code_sous_domaine', 'lib_sous_domaine', 'code_domaine', 'code_groupe_projet', 'type'];
+    protected $fillable = ['code_sous_domaine', 'lib_sous_domaine', 'code_domaine', 'code_groupe_projet', 'type', 'code_Ssys'];
 
     public function Domaine()
     {

@@ -9,6 +9,7 @@ use App\Models\FamilleInfrastructure;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\Infrastructure;
 use App\Models\InfrastructureImage;
+use App\Models\Localite;
 use App\Models\LocalitesPays;
 use App\Models\Pays;
 use App\Models\ProjetActionAMener;
@@ -19,21 +20,31 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\Writer\PngWriter;
 
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\Color\Color;
 class InfrastructureController extends Controller
 {
+
+
     // Afficher la liste des infrastructures
     public function index()
     {
-        $infrastructures = Infrastructure::with(['familleInfrastructure.domaine', 'localisation', 'projetInfra'])
+        $infrastructures = Infrastructure::with(['familleInfrastructure.familleDomaine', 'localisation', 'projetInfra'])
             ->where('code_groupe_projet', session('projet_selectionne'))
             ->where('code_pays', session('pays_selectionne'))
             ->get();
-    
+        
+        $localite = LocalitesPays::where('id_pays', session('pays_selectionne'))->get();
         $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))->get();
-    
-        $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
-    
+        $infrasExistantes = Infrastructure::where('code_groupe_projet', session('projet_selectionne'))
+        ->where('code_pays', session('pays_selectionne'))
+        ->get();
+        $familles = FamilleInfrastructure::where('famille_domaine.code_groupe_projet', session('projet_selectionne'))
+        ->join('famille_domaine', 'familleinfrastructure.code_Ssys', '=', 'famille_domaine.code_Ssys')->get();
         // Récupère tous les niveaux uniques depuis les localisations associées aux infrastructures
         
         $niveaux = DB::table('localites_pays')
@@ -47,18 +58,19 @@ class InfrastructureController extends Controller
         ->orderBy('decoupage_administratif.libelle_decoupage')
         ->pluck('decoupage_administratif.libelle_decoupage', 'localites_pays.id_niveau');
     
-        $mappingFamilleDomaine = FamilleInfrastructure::pluck('code_domaine', 'code_famille');
+        $mappingFamilleDomaine = FamilleInfrastructure::pluck('code_Ssys', 'code_Ssys');
     
-        return view('infrastructures.index', compact('infrastructures', 'domaines', 'familles', 'niveaux', 'mappingFamilleDomaine'));
+        return view('infrastructures.index', compact('infrasExistantes','infrastructures', 'domaines', 'familles', 'niveaux', 'mappingFamilleDomaine', 'localite'));
 
     }
     public function getFamillesByDomaine($codeDomaine)
     {
         $projet = session('projet_selectionne');
 
-        return FamilleInfrastructure::where('code_domaine', $codeDomaine)
-            ->where('code_groupe_projet', $projet)
-            ->select('idFamille', 'code_famille', 'libelleFamille')
+        return FamilleInfrastructure::where('famille_domaine.code_domaine', $codeDomaine)
+        ->join('famille_domaine', 'familleinfrastructure.code_Ssys', '=', 'famille_domaine.code_Ssys')
+            ->where('famille_domaine.code_groupe_projet', $projet)
+            ->select('familleinfrastructure.idFamille', 'familleinfrastructure.code_Ssys', 'familleinfrastructure.libelleFamille')
             ->get();
     }
 
@@ -66,7 +78,9 @@ class InfrastructureController extends Controller
      // Afficher le formulaire de création
      public function create()
      {
-         $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
+         $familles = FamilleInfrastructure::where('famille_domaine.code_groupe_projet', session('projet_selectionne'))
+        ->join('famille_domaine', 'familleinfrastructure.code_Ssys', '=', 'famille_domaine.code_Ssys')->get();
+       
          $localites = LocalitesPays::all();
          $pays = GroupeProjetPaysUser::with('pays')
          ->select('pays_code') // Sélectionne uniquement le code pays
@@ -78,12 +92,45 @@ class InfrastructureController extends Controller
          $typeCaracteristiques = TypeCaracteristique::all();
          $paysCode = session('pays_selectionne');
         $nomPays = Pays::where('alpha3', $paysCode)->value('nom_fr_fr');
-
+        $caracs = [];
+        $valeurs = [];
         $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))->get();
 
-         return view('infrastructures.create', compact('nomPays','familles', 'localites','pays', 'domaines', 'typeCaracteristiques'));
+         return view('infrastructures.create', compact('caracs','valeur','nomPays','familles', 'localites','pays', 'domaines', 'typeCaracteristiques'));
      }
- 
+     public function getCaracteristiques($idFamille)
+     {
+         $caracs = Caracteristique::where('code_famille', $idFamille)
+             ->with(['type', 'valeursPossibles', 'enfants.type', 'enfants.valeursPossibles']) // inclut les types et enfants avec leurs types
+             ->get();
+     
+         // Ajout dynamique des infos pour le front
+         $caracs->transform(function ($carac) {
+             $carac->libelleTypeCaracteristique = $carac->type->libelleTypeCaracteristique ?? null;
+     
+             if ($carac->isListe()) {
+                 // Depuis la relation valeursPossibles
+                 $carac->valeurs_possibles = $carac->valeursPossibles->pluck('valeur')->toArray();
+             }
+     
+             // Pour chaque enfant récursivement
+             $carac->enfants->transform(function ($enfant) {
+                 $enfant->libelleTypeCaracteristique = $enfant->type->libelleTypeCaracteristique ?? null;
+     
+                 if ($enfant->isListe()) {
+                     $enfant->valeurs_possibles = $enfant->valeursPossibles->pluck('valeur')->toArray();
+                 }
+     
+                 return $enfant;
+             });
+     
+             return $carac;
+         });
+         LOG::INFO($caracs);
+         return response()->json($caracs);
+     }
+     
+     
      public function store(Request $request)
      {
          try {
@@ -91,33 +138,34 @@ class InfrastructureController extends Controller
      
              $request->validate([
                  'libelle' => 'required|string|max:255',
-                 'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_famille',
+                 'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_Ssys',
                  'code_localite' => 'required|exists:localites_pays,id',
              ]);
      
-             $famille = FamilleInfrastructure::where('code_famille', $request->code_famille_infrastructure)->firstOrFail();
+             $famille = FamilleInfrastructure::where('code_Ssys', $request->code_famille_infrastructure)->firstOrFail();
              $familleId = $famille->idFamille;
      
              Log::info("Famille trouvée", ['famille_id' => $familleId]);
-     
-             $prefix = $request->code_famille_infrastructure;
-
-             // Récupérer le dernier code pour cette famille
-             $lastInfrastructure = Infrastructure::where('code', 'like', $prefix . '%')
+             
+             $codePays = session('pays_selectionne'); // Exemple: 'CIV'
+             $codeFamille = $request->code_famille_infrastructure; // Exemple: 'HEB'
+             $prefix = $codePays . $codeFamille;
+         
+             $last = Infrastructure::where('code', 'like', $prefix . '%')
                  ->orderByDesc('code')
                  ->first();
-             
-             if ($lastInfrastructure) {
-                 // Extraire la partie numérique, à partir du 4ème caractère
-                 $lastNumber = (int)substr($lastInfrastructure->code, 3);
-                 $nextNumber = $lastNumber + 1;
-             } else {
-                 $nextNumber = 1;
+         
+             $nextNumber = 1;
+         
+             if ($last) {
+                 $suffix = substr($last->code, strlen($prefix)); // Récupère "000012"
+                 if (is_numeric($suffix)) {
+                     $nextNumber = (int) $suffix + 1;
+                 }
              }
-             
-             // Formater avec 8 zéros
-             $code = $prefix . str_pad($nextNumber, 8, '0', STR_PAD_LEFT);
-             
+         
+             $code = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT); // CIVHEB000013
+         
              Log::info("Code généré pour infrastructure", ['code' => $code]);
      
              $infrastructure = Infrastructure::create([
@@ -131,6 +179,16 @@ class InfrastructureController extends Controller
                  'latitude' => $request->latitude,
                  'longitude' => $request->longitude
              ]);
+             if ($request->filled('code_infras_rattacher')) {
+                $infraRattachee = Infrastructure::where('code', $request->code_infras_rattacher)->first();
+            
+                if ($infraRattachee) {
+                    $infrastructure->code_localite = $infraRattachee->code_localite;
+                    $infrastructure->longitude = $infraRattachee->longitude;
+                    $infrastructure->latitude = $infraRattachee->latitude;
+                }
+            }
+            
      
              Log::info("Infrastructure créée", ['infra_id' => $infrastructure->id]);
      
@@ -154,16 +212,16 @@ class InfrastructureController extends Controller
                      $valeurFinale = null;
      
                      switch ($type) {
-                         case 'liste':
+                         case 'Liste':
                              $option = $caracteristique->valeursPossibles->firstWhere('valeur', $valeur)
                                  ?? $caracteristique->valeursPossibles->firstWhere('id', $valeur);
                              $valeurFinale = $option?->valeur;
-                             Log::info("Valeur 'liste' convertie", ['finale' => $valeurFinale]);
+                             Log::info("Valeur 'Liste' convertie", ['finale' => $valeurFinale]);
                              break;
      
-                         case 'boolean':
+                         case 'Boolean':
                              $valeurFinale = $valeur ? 1 : 0;
-                             Log::info("Valeur 'boolean' convertie", ['finale' => $valeurFinale]);
+                             Log::info("Valeur 'Boolean' convertie", ['finale' => $valeurFinale]);
                              break;
      
                          default:
@@ -176,7 +234,11 @@ class InfrastructureController extends Controller
                          ValeurCaracteristique::create([
                              'infrastructure_code' => $code,
                              'idCaracteristique' => $idCarac,
-                             'valeur' => $valeurFinale
+                             'valeur' => $valeurFinale,
+                             'idUnite' => $infrastructure->idUnite,
+                             'ordre' => $infrastructure->ordre,
+                             'parent_saisie_id' => $infrastructure->parent_saisie_id,
+                             'description' => $infrastructure->description
                          ]);
      
                          Log::info("Valeur enregistrée", [
@@ -189,21 +251,25 @@ class InfrastructureController extends Controller
              }
      
              if ($request->hasFile('gallery')) {
-                 foreach ($request->file('gallery') as $file) {
-                     if ($file->isValid()) {
-                         $filename = $code . '_Infras_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                         $path = 'Data/Infrastructure/';
-                         $file->move(public_path($path), $filename);
-     
-                         InfrastructureImage::create([
-                             'infrastructure_code' => $code,
-                             'chemin_image' => $path . $filename
-                         ]);
-     
-                         Log::info("Image enregistrée", ['filename' => $filename]);
-                     }
-                 }
-             }
+                foreach ($request->file('gallery') as $file) {
+                    if ($file->isValid()) {
+                        $filename = $infrastructure->code . '_Infras_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                        $path = 'Data/Infrastructure/';
+                        $file->move(public_path($path), $filename);
+                        Log::info("Image enregistrée", [
+                            'chemin' => $path . $filename,
+                            'infra_code' => $infrastructure->code
+                        ]);
+                        
+                        InfrastructureImage::create([
+                            'infrastructure_code' => $infrastructure->code,
+                            'chemin_image' => $path . $filename
+                        ]);
+                    }
+                }
+            }
+            
+            
      
              return response()->json([
                  'success' => 'Infrastructure créée avec succès.',
@@ -217,14 +283,118 @@ class InfrastructureController extends Controller
      }
      
     
-    
+
+     public function updateCaracteristiques(Request $request, Infrastructure $infrastructure)
+     {
+         try {
+             if (!$infrastructure) {
+                 Log::warning('🚫 Infrastructure introuvable.');
+                 return redirect()
+                     ->route('infrastructures.index')
+                     ->with('error', 'Infrastructure introuvable.');
+             }
+     
+             DB::beginTransaction();
+     
+             Log::debug('🔁 Début mise à jour des caractéristiques', [
+                 'infrastructure_id' => $infrastructure->id,
+                 'code' => $infrastructure->code,
+                 'caracteristiques' => $request->input('caracteristiques', [])
+             ]);
+     
+             foreach ($request->input('caracteristiques', []) as $idKey => $valeur) {
+                 // 🔧 Nettoyer l'ID si formaté avec "new_"
+                 $idCaracteristique = is_string($idKey) && str_starts_with($idKey, 'new_')
+                     ? intval(str_replace('new_', '', $idKey))
+                     : intval($idKey);
+     
+                 Log::debug("🧼 ID nettoyé : {$idKey} → {$idCaracteristique}");
+     
+                 // Vérifier que la caractéristique existe
+                 $caracteristique = Caracteristique::with('type', 'valeursPossibles')->find($idCaracteristique);
+     
+                 if (!$caracteristique) {
+                     Log::warning("⚠️ ID de caractéristique introuvable : {$idKey}");
+                     continue;
+                 }
+     
+                 // Rechercher une valeur existante
+                 $valeurExistante = ValeurCaracteristique::where('infrastructure_code', $infrastructure->code)
+                     ->where('idCaracteristique', $idCaracteristique)
+                     ->first();
+     
+                 if ($valeurExistante) {
+                     Log::debug('✏️ Mise à jour valeur existante', [
+                         'id' => $valeurExistante->id,
+                         'ancienne_valeur' => $valeurExistante->valeur,
+                         'nouvelle_valeur' => $valeur
+                     ]);
+     
+                     $valeurExistante->update([
+                         'valeur' => $valeur,
+                         'idUnite' => $caracteristique->idUnite,
+                         'parent_saisie_id' => $caracteristique->parent_id,
+                         'ordre' => $caracteristique->ordre,
+                     ]);
+                 } else {
+                     Log::debug('➕ Création nouvelle valeur', [
+                         'caracteristique_id' => $idCaracteristique,
+                         'valeur' => $valeur
+                     ]);
+     
+                     ValeurCaracteristique::create([
+                         'idCaracteristique' => $idCaracteristique,
+                         'valeur' => $valeur,
+                         'infrastructure_code' => $infrastructure->code,
+                         'idUnite' => $caracteristique->idUnite,
+                         'parent_saisie_id' => $caracteristique->parent_id,
+                         'ordre' => $caracteristique->ordre,
+                     ]);
+                 }
+             }
+     
+             DB::commit();
+     
+             Log::info('✅ Caractéristiques enregistrées avec succès', [
+                 'infrastructure_code' => $infrastructure->code,
+                 'total_traitées' => count($request->input('caracteristiques', []))
+             ]);
+     
+             return redirect()
+                 ->route('infrastructures.show', $infrastructure->id)
+                 ->with('success', 'Caractéristiques mises à jour avec succès.');
+         } catch (\Exception $e) {
+             DB::rollBack();
+     
+             Log::error('❌ Erreur lors de la mise à jour des caractéristiques', [
+                 'message' => $e->getMessage(),
+                 'line' => $e->getLine(),
+                 'file' => $e->getFile(),
+             ]);
+     
+             return redirect()
+                 ->route('infrastructures.show', $infrastructure->id)
+                 ->with('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
+         }
+     }
+     
+     
+     
+     
 
     // Afficher les détails d'une infrastructure
     public function show($id)
     {
-        $infrastructure = Infrastructure::with(['familleInfrastructure', 'localisation', 'valeursCaracteristiques.caracteristique.type', 'valeursCaracteristiques.unite'])
-            ->findOrFail($id);
-    $typeCaracteristiques = TypeCaracteristique::all();
+        $infrastructure = Infrastructure::with([
+            'familleInfrastructure.caracteristiques.valeursPossibles',
+            'valeursCaracteristiques.caracteristique.type',
+            'valeursCaracteristiques.caracteristique.valeursPossibles',
+            'valeursCaracteristiques.unite',
+            'localisation',
+        ])->findOrFail($id);
+        
+        
+        $typeCaracteristiques = TypeCaracteristique::all();
             
         return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques'));
     }
@@ -233,7 +403,7 @@ class InfrastructureController extends Controller
     public function edit($id)
     {
         $infrastructure = Infrastructure::with([
-            'familleInfrastructure.domaine',
+            'familleInfrastructure.familleDomaine',
             'localisation',
             'valeursCaracteristiques.caracteristique.valeursPossibles',
             'valeursCaracteristiques.caracteristique.type',
@@ -241,14 +411,20 @@ class InfrastructureController extends Controller
             'InfrastructureImage',
             'projetInfra',
         ])->findOrFail($id);
-    
-        $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
+        $infrasExistantes = Infrastructure::where('code_groupe_projet', session('projet_selectionne'))
+        ->where('code_pays', session('pays_selectionne'))
+        ->get();
+        $caracs = Caracteristique::where('code_famille', $infrastructure->familleInfrastructure->code_Ssys)
+            ->with(['type', 'valeursPossibles', 'enfants.type', 'enfants.valeursPossibles'])
+            ->get();
+
+        $familles = FamilleInfrastructure::where('famille_domaine.code_groupe_projet', session('projet_selectionne'))
+        ->join('famille_domaine', 'familleinfrastructure.code_Ssys', '=', 'famille_domaine.code_Ssys')->get();
         $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))->get();
         $typeCaracteristiques = TypeCaracteristique::all();
         $valeursExistantes = ValeurCaracteristique::where('infrastructure_code', $infrastructure->code)
             ->pluck('valeur', 'idCaracteristique')
             ->toArray();
-        
        // dd($valeursExistantes);
         // Pays pour carte & localisation
         $pays = GroupeProjetPaysUser::with('pays')
@@ -275,8 +451,8 @@ class InfrastructureController extends Controller
             ->pluck('decoupage_administratif.libelle_decoupage', 'localites_pays.id_niveau');
     
         // Pour le JS : correspondance famille → domaine
-        $mappingFamilleDomaine = FamilleInfrastructure::pluck('code_domaine', 'code_famille');
-    
+        $mappingFamilleDomaine = FamilleInfrastructure::pluck('code_Ssys', 'code_Ssys');
+       
         return view('infrastructures.create', compact(
             'infrastructure',
             'familles',
@@ -286,154 +462,173 @@ class InfrastructureController extends Controller
             'nomPays',
             'niveaux',
             'mappingFamilleDomaine',
-            'valeursExistantes'
+            'valeursExistantes',
+            'caracs' ,
+            'infrasExistantes'
         ));
     }
-     
-     
-    /* public function edit($id)
-     {
-         $country = session('pays_selectionne');
-         $group = session('projet_selectionne');
-     
-         $infrastructure = Infrastructure::with('localisation')->findOrFail($id);
-         $familles = FamilleInfrastructure::all();
-     
-         // Ajout ici : récupérer toutes les localités disponibles
-         $localites = LocalitesPays::where('id_pays', $country)
-                         ->orderBy('libelle')
-                         ->get();
-     
-         // Préparer les pays disponibles
-         $pays = GroupeProjetPaysUser::with('pays')
-             ->select('pays_code')
-             ->where('pays_code', $country)
-             ->get()
-             ->filter(fn($item) => str_starts_with($item->code_projet, $country . $group))
-             ->mapWithKeys(fn($item) => [$item->pays->alpha3 => $item->pays->nom_fr_fr])
-             ->sort();
-     
-         $domaines = Domaine::where('groupe_projet_code', $group)->get();
-     
-         $selectedDomaineCode = $familles
-             ->firstWhere('code_famille', $infrastructure->code_famille_infrastructure)
-             ->code_domaine ?? null;
-     
-         return view('infrastructures.edit', compact(
-             'infrastructure',
-             'familles',
-             'pays',
-             'localites',
-             'domaines',
-             'selectedDomaineCode'
-         ));
-     }*/
-     
+    public function deleteImage($id, $code)
+    {
+        try {
+            $image = InfrastructureImage::findOrFail($id);
+    
+            if ($image->infrastructure_code !== $code) {
+                return response()->json(['error' => 'Code infrastructure non valide.'], 403);
+            }
+    
+            $imagePath = public_path($image->chemin_image);
+    
+            if (file_exists($imagePath)) {
+                unlink($imagePath);
+            }
+    
+            $image->delete();
+    
+            return response()->json(['success' => 'Image supprimée.']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Image non trouvée.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erreur lors de la suppression : ' . $e->getMessage()], 500);
+        }
+    }
+    
  
      public function getByPays(Request $request)
-{
-    $request->validate(['pays_code' => 'required|string|size:3']);
-    
-    $localites = LocalitesPays::where('pays_code', $request->pays_code)
-        ->orderBy('libelle')
-        ->get(['id', 'code_rattachement', 'libelle']);
-    
-    return response()->json($localites);
-}
+    {
+        $request->validate(['pays_code' => 'required|string|size:3']);
+        
+        $localites = LocalitesPays::where('pays_code', $request->pays_code)
+            ->orderBy('libelle')
+            ->get(['id', 'code_rattachement', 'libelle']);
+        
+        return response()->json($localites);
+    }
 
-public function getNiveaux(Request $request)
-{
-    $request->validate(['localite_id' => 'required|integer']);
-    
-    $localite = LocalitesPays::findOrFail($request->localite_id);
-    
-    return response()->json([
-        'niveau' => $localite->niveau,
-        'code_decoupage' => $localite->code_decoupage,
-        'libelle_decoupage' => $localite->libelle_decoupage
-    ]);
-}
+    public function getNiveaux(Request $request)
+    {
+        $request->validate(['localite_id' => 'required|integer']);
+        
+        $localite = LocalitesPays::findOrFail($request->localite_id);
+        
+        return response()->json([
+            'niveau' => $localite->niveau,
+            'code_decoupage' => $localite->code_decoupage,
+            'libelle_decoupage' => $localite->libelle_decoupage
+        ]);
+    }
 
-     // Mettre à jour une infrastructure
-     public function update(Request $request, $id)
-     {
-         try {
-             // 1. Validation des champs requis
-             $request->validate([
-                 'libelle' => 'required|string|max:255',
-                 'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_famille',
-                 'code_localite' => 'required|exists:localites_pays,id',
-             ]);
-     
-             // 2. Récupération de l'infrastructure existante
-             $infrastructure = Infrastructure::findOrFail($id);
-             $ancienCode = $infrastructure->code;
-     
-             // 3. Déterminer si on doit générer un nouveau code
-             if (
-                 $request->libelle !== $infrastructure->libelle ||
-                 $request->code_famille_infrastructure !== $infrastructure->code_famille_infrastructure
-             ) {
-                 // Génération du nouveau code
-                 $nouveauCode = $request->code_famille_infrastructure .
-                                strtoupper(substr(str_replace(' ', '', $request->libelle), 0, 3)) .
-                                strtoupper(substr(md5(uniqid()), 0, 2));
-     
-                 // Vérifier si ce code est déjà utilisé ailleurs (autre enregistrement)
-                 $codeExiste = Infrastructure::where('code', $nouveauCode)
-                     ->where('id', '!=', $infrastructure->id)
-                     ->exists();
-     
-                 if ($codeExiste) {
-                     return response()->json([
-                         'error' => "Le code généré ($nouveauCode) est déjà utilisé. Veuillez modifier le libellé ou la famille pour générer un code unique."
-                     ], 400);
-                 }
-     
-                 // Vérifier si l'ancien code est utilisé dans un projet
-                 $utiliseDansProjet = ProjetActionAMener::where('Infrastrucrues_id', $ancienCode)->exists();
-     
-                 if ($utiliseDansProjet) {
-                     return response()->json([
-                         'error' => "Impossible de modifier le code car il est déjà utilisé dans un projet."
-                     ], 400);
-                 }
-     
-                 // Tout est OK : on met à jour le code
-                 $infrastructure->code = $nouveauCode;
-             }
-     
-             // 4. Mise à jour des champs standards
-             $infrastructure->libelle = $request->libelle;
-             $infrastructure->code_famille_infrastructure = $request->code_famille_infrastructure;
-             $infrastructure->code_localite = $request->code_localite;
-             $infrastructure->date_operation = $request->date_operation;
-             $infrastructure->latitude = $request->latitude;
-             $infrastructure->longitude = $request->longitude;
-     
-             // 5. Gérer la photo si envoyée
-             if ($request->hasFile('photo')) {
-                 $file = $request->file('photo');
-                 $filename = $infrastructure->code . '_' . time() . '.' . $file->getClientOriginalExtension();
-                 $path = 'Data/Infrastructure/';
-                 $file->move(public_path($path), $filename);
-     
-                 // Supprimer l’ancienne photo si elle existe
-                 if ($infrastructure->imageInfras && file_exists(public_path($infrastructure->imageInfras))) {
-                     @unlink(public_path($infrastructure->imageInfras));
-                 }
-     
-                 $infrastructure->imageInfras = $path . $filename;
-             }
-     
-             // 6. Sauvegarde
-             $infrastructure->save();
-     
-             return response()->json(['success' => 'Infrastructure mise à jour avec succès.'], 200);
-         } catch (\Throwable $e) {
-             return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
-         }
-     }
+    public function update(Request $request, $id)
+    {
+        try {
+            Log::info("🛠️ Début update infrastructure ID: $id", $request->all());
+
+            $request->validate([
+                'libelle' => 'required|string|max:255',
+                'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_Ssys',
+                'code_localite' => 'required|exists:localites_pays,id',
+            ]);
+
+            $infrastructure = Infrastructure::findOrFail($id);
+            $ancienCode = $infrastructure->code;
+
+            if (
+                $request->libelle !== $infrastructure->libelle ||
+                $request->code_famille_infrastructure !== $infrastructure->code_Ssys
+            ) {
+                if (ProjetActionAMener::where('Infrastrucrues_id', $ancienCode)->exists()) {
+                    return response()->json(['error' => 'Impossible de modifier le code : déjà utilisé dans un projet.'], 400);
+                }
+        
+                $codePays = session('pays_selectionne');
+                $codeFamille = $request->code_famille_infrastructure;
+                $prefix = $codePays . $codeFamille;
+        
+                $last = Infrastructure::where('code', 'like', $prefix . '%')
+                    ->orderByDesc('code')
+                    ->first();
+        
+                $nextNumber = 1;
+        
+                if ($last) {
+                    $suffix = substr($last->code, strlen($prefix));
+                    if (is_numeric($suffix)) {
+                        $nextNumber = (int) $suffix + 1;
+                    }
+                }
+        
+                $nouveauCode = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+                if (Infrastructure::where('code', $nouveauCode)->where('id', '!=', $infrastructure->id)->exists()) {
+                    return response()->json([
+                        'error' => "Le code généré ($nouveauCode) est déjà utilisé."
+                    ], 400);
+                }
+
+                if (ProjetActionAMener::where('Infrastrucrues_id', $ancienCode)->exists()) {
+                    return response()->json([
+                        'error' => "Impossible de modifier le code : déjà utilisé dans un projet."
+                    ], 400);
+                }
+
+                $infrastructure->code = $nouveauCode;
+            }
+               
+            
+
+            $infrastructure->libelle = $request->libelle;
+            $infrastructure->code_Ssys = $request->code_famille_infrastructure;
+            $infrastructure->code_localite = $request->code_localite;
+            $infrastructure->date_operation = $request->date_operation;
+            $infrastructure->latitude = $request->latitude;
+            $infrastructure->longitude = $request->longitude;
+
+            if ($request->hasFile('gallery')) {
+                $files = $request->file('gallery');
+            
+                // Si un seul fichier a été envoyé, on le met dans un tableau pour uniformiser
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+            
+                foreach ($files as $file) {
+                    if ($file->isValid()) {
+                        $filename = $infrastructure->code . '_Infras_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+                        $relativePath = 'Data/Infrastructure/';
+                        $absolutePath = base_path('../public_html/projectsBTP/' . $relativePath);
+            
+                        if (!file_exists($absolutePath)) {
+                            mkdir($absolutePath, 0775, true);
+                        }
+            
+                        $file->move($absolutePath, $filename);
+            
+                        InfrastructureImage::create([
+                            'infrastructure_code' => $infrastructure->code,
+                            'chemin_image' => $relativePath . $filename
+                        ]);
+            
+                        Log::info("📷 Image galerie enregistrée", [
+                            'infra_code' => $infrastructure->code,
+                            'chemin_image' => $relativePath . $filename
+                        ]);
+                    }
+                }
+            }
+            $infrastructure->save();            
+
+            Log::info("✅ Infrastructure mise à jour avec succès", ['id' => $infrastructure->id]);
+
+            return response()->json(['success' => 'Infrastructure mise à jour avec succès.'], 200);
+
+        } catch (\Throwable $e) {
+            Log::error("❌ Erreur lors de la mise à jour de l'infrastructure ID: $id", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
+        }
+    }
+
      
      // Supprimer une infrastructure
      public function destroy($id)
@@ -459,6 +654,9 @@ public function getNiveaux(Request $request)
              'idCaracteristique' => $request->idCaracteristique,
              'idUnite' => $request->idUnite,
              'valeur' => $request->valeur,
+             'ordre' => $request->ordre,
+             'parent_saisie_id' => $request->parent_saisie_id,
+             'description' => $request->description,
          ]);
  
          return redirect()->back()->with('success', 'Caractéristique ajoutée avec succès.');
@@ -482,20 +680,67 @@ public function getNiveaux(Request $request)
         return view('infrastructures.historique', compact('infraProjet'));
     }
     
+    
+    
+
     public function print($id)
     {
         $infrastructure = Infrastructure::with([
             'familleInfrastructure',
             'localisation',
             'valeursCaracteristiques.caracteristique.type',
-            'valeursCaracteristiques.unite'
+            'valeursCaracteristiques.unite',
+            'projetInfra.projet.projetNaturesTravaux.natureTravaux',
+            'projetInfra.projet.devise',
         ])->findOrFail($id);
+        
+        $projets = [];
 
-        $pdf = Pdf::loadView('pdf/caracteristiqueInfrastructure', compact('infrastructure'))
-                ->setPaper('a4', 'portrait');
+        if ($infrastructure->projetInfra && $infrastructure->projetInfra->projet) {
+            $projet = $infrastructure->projetInfra->projet;
+        
+            $projets[] = [
+                'code_projet' => $projet->code_projet,
+                'nature' => $projet->projetNaturesTravaux?->natureTravaux?->libelle ?? '-',
+                'date_debut' => $projet->date_demarrage_prevue ? \Carbon\Carbon::parse($projet->date_demarrage_prevue)->format('d/m/Y') : '-',
+                'date_fin' => $projet->date_fin_prevue ? \Carbon\Carbon::parse($projet->date_fin_prevue)->format('d/m/Y') : '-',
+                'cout' => number_format($projet->cout_projet, 0, ',', ' ') ?? '-',
+                'devise' => $projet->devise?->monnaie ?? '-',
+            ];
+        }
+        
+       
+       
+        $url = route('infrastructures.show', $infrastructure->id); // ou autre route
 
-        return $pdf->stream('Fiche_Infrastructure_'.$infrastructure->code.'.pdf');
+        $qrCode = new QrCode(
+            data: $url,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel:  ErrorCorrectionLevel::High,
+            size: 250,
+            margin: 10,
+            foregroundColor: new Color(0, 0, 0),
+            backgroundColor: new Color(255, 255, 255),
+        );
+        
+        $writer = new PngWriter();
+        $result = $writer->write($qrCode);
+        
+        // Encode en base64 pour affichage direct dans la vue
+        $qrCodeBase64 = base64_encode($result->getString());
+    
+        // Génération PDF
+        $pdf = \PDF::loadView('pdf.caracteristiqueInfrastructure', [
+            'infrastructure' => $infrastructure,
+            'qrCodeBase64' => $qrCodeBase64,
+            'projets' => $projets
+        ])->setPaper('a4', 'portrait');
+    
+    
+        return $pdf->stream('Fiche_Infrastructure_' . $infrastructure->code . '.pdf');
     }
+    
+    
     public function imprimer(Request $request)
     {
         $query = Infrastructure::with(['familleInfrastructure', 'localisation']);

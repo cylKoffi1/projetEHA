@@ -12,17 +12,17 @@ class FamilleInfrastructure extends Model
 
     protected $table = 'familleinfrastructure'; 
     protected $primaryKey = 'idFamille';
-    protected $fillable = ['code_famille', 'libelleFamille'];
+    protected $fillable = ['code_Ssys', 'libelleFamille'];
  
     public function familleDomaine()
     {
-        return $this->hasMany(FamilleDomaine::class, 'code_famille', 'code_famille');
+        return $this->hasMany(FamilleDomaine::class, 'code_Ssys', 'code_Ssys');
     }
     
     // Relation avec les infrastructures
     public function infrastructures()
     {
-        return $this->hasMany(Infrastructure::class, 'code_famille_infrastructure', 'code_sdomaine');
+        return $this->hasMany(Infrastructure::class, 'code_Ssys', 'code_Ssys');
     }
 
     public function caracteristiques()

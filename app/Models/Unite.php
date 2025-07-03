@@ -6,15 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Unite extends Model
 {
-    protected $table = 'unites';
+    use HasFactory;
+
+    protected $table = 'unites';    
     protected $primaryKey = 'idUnite';
     public $timestamps = false;
 
-    protected $fillable = ['libelleUnite', 'symbole','idCaracteristique'];
+    protected $fillable = ['libelleUnite', 'symbole'];
 
     public function caracteristiques()
     {
-        return $this->hasMany(Caracteristique::class, 'idCaracteristique', 'idCaracteristique');
+        return $this->hasMany(Caracteristique::class, 'idUnite');
     }
 
     public function valeurs()
@@ -22,4 +24,3 @@ class Unite extends Model
         return $this->hasMany(ValeurCaracteristique::class, 'idUnite');
     }
 }
-

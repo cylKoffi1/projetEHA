@@ -9,7 +9,7 @@ class ValeurPossible extends Model
 {
     protected $table = 'valeurs_possibles_caracteristique';
     public $timestamps = false;
-
+    protected $primaryKey = 'id';
     protected $fillable = ['idCaracteristique', 'valeur'];
 
     public function caracteristique()

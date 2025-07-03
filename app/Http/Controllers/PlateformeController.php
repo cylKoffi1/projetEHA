@@ -58,10 +58,12 @@ use App\Models\Infrastructure;
 use App\Models\Projet;
 use App\Models\Unite;
 use App\Models\ValeurPossible;
+use App\Services\CaracteristiqueBuilderService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Str;
 
 
 class PlateformeController extends Controller
@@ -1102,34 +1104,48 @@ class PlateformeController extends Controller
     }
 
 
+    private function genererCodeFamilleUnique()
+    {
+        do {
+            // Génère 3 lettres aléatoires (ex : "QZT")
+            $code = strtoupper(Str::random(3));
+        } while (FamilleInfrastructure::where('code_Ssys', $code)->exists());
 
+        return $code;
+    }
     //***************** FAMILLE INFRASTRUCTURE  ************* */
+
     public function familleinfrastructure(Request $request)
     {
-       $ecran = Ecran::find($request->input('ecran_id'));
-       $unites = Unite::orderBy('libelleUnite')->get();
-
-       $groupeProjets = GroupeProjet::all();
-       $domaine = Domaine::all();
-       $sous_domaines = SousDomaine::all();
-       $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')
-        ->get();
-        $caracteristiques = Caracteristique::with('type')->get();
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $unites = Unite::orderBy('libelleUnite')->get();
+        $codeFamilleGenere = $this->genererCodeFamilleUnique();
         $typesCaracteristique = TypeCaracteristique::all();
-        
-        return view('parGeneraux.familleinfrastructure', 
-        [
+        $groupeProjets = GroupeProjet::all();
+        $domaine = Domaine::all();
+        $sous_domaines = SousDomaine::all();
+        $familleinfrastructure = FamilleInfrastructure::orderBy('libelleFamille', 'asc')->get();
+        $caracteristiques = Caracteristique::with('type')->get();
+    
+        // 👇 Si une famille est déjà sélectionnée, générer sa structure
+        $structure = [];
+        if ($familleinfrastructure->isNotEmpty()) {
+            $structure = (new CaracteristiqueBuilderService())->buildFromFamille($familleinfrastructure->first());
+        }
+    
+        return view('infrastructures.famille.familleinfrastructure', [
             'domaine' => $domaine,
-            'sous_domaines'=>$sous_domaines,
+            'sous_domaines' => $sous_domaines,
             'familleinfrastructure' => $familleinfrastructure,
-            'ecran' => $ecran, 
-            'caracteristiques' =>$caracteristiques, 
-            'typesCaracteristique'=>$typesCaracteristique,
+            'ecran' => $ecran,
+            'caracteristiques' => $caracteristiques,
+            'typesCaracteristique' => $typesCaracteristique,
             'groupeProjets' => $groupeProjets,
-            'unites' => $unites
-        ]);
+            'unites' => $unites,
+            'codeFamilleGenere' => $codeFamilleGenere,
+            'structure' => $structure
+         ]);
     }
-
     public function getFamilleinfrastructure($code)
     {
         $familleinfrastructure = FamilleInfrastructure::find($code);
@@ -1140,8 +1156,16 @@ class PlateformeController extends Controller
 
         return response()->json($familleinfrastructure);
     }
-
-
+    public function getStructureCaracteristiques($id)
+    {
+        $famille = FamilleInfrastructure::with('caracteristiques')->findOrFail($id);
+        $structure = (new CaracteristiqueBuilderService())->buildFromFamille($famille);
+    
+        return response()->json([
+            'status' => 'success',
+            'data' => $structure
+        ]);
+    }
     public function deleteFamilleInfrastructure($id)
     {
         $famille = FamilleInfrastructure::find($id);
@@ -1172,47 +1196,53 @@ class PlateformeController extends Controller
     {
         DB::beginTransaction();
     
-        try {dd($request->all());
+        try {
             $request->validate([
                 'libelle' => 'required|string|max:255',
-                'code' => 'required|string|max:3|unique:familleinfrastructure,code_famille',
+                'code' => 'required|string|max:3|unique:familleinfrastructure,code_Ssys',
                 'domaine' => 'required|array',
                 'SDomaine' => 'nullable|array',
                 'groupeProjet' => 'required|array',
             ]);
-    
+            $mapping = json_decode($request->input('domaine_mapping'), true);
+
+            if (!is_array($mapping)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Le mapping domaine/sous-domaine est invalide ou vide.',
+                ]);
+            }
+            
             // Création de la famille
             $famille = new FamilleInfrastructure();
             $famille->libelleFamille = $request->input('libelle');
-            $famille->code_famille = $request->input('code');
+            $famille->code_Ssys = $request->input('code');
             $famille->save();
     
             $insertions = 0;
     
-            // Association avec les domaines via la table pivot
-            foreach ($request->domaine as $i => $codeDomaine) {
-                $codeSousDomaine = $request->SDomaine[$i] ?? null;
-                $codeGroupeProjet = $request->groupeProjet[$i] ?? null;
-    
-                if ($codeDomaine && $codeSousDomaine && $codeGroupeProjet) {
+            foreach ($mapping as $row) {
+                if (!empty($row['domaine']) && !empty($row['groupeProjet'])) {
                     FamilleDomaine::create([
-                        'code_famille' => $famille->code_famille,
-                        'code_domaine' => $codeDomaine,
-                        'code_sdomaine' => $codeSousDomaine,
-                        'code_groupe_projet' => $codeGroupeProjet,
+                        'code_Ssys' => $famille->code_Ssys,
+                        'code_domaine' => $row['domaine'],
+                        'code_sdomaine' => $row['sdomaine'] ?? null, // peut rester null
+                        'code_groupe_projet' => $row['groupeProjet'],
                     ]);
                     $insertions++;
                 }
             }
+            
+
     
-            // ✅ Vérifier qu'au moins une association a été faite
             if ($insertions === 0) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Aucune association valide domaine/sous-domaine/groupe projet n’a été fournie.',
+                    'message' => 'Aucune association valide domaine / groupe projet fournie.',
                 ]);
             }
+            
     
             DB::commit();
     
@@ -1297,7 +1327,39 @@ class PlateformeController extends Controller
             ]);
         }
     }
-    
+    protected function enregistrerCaracteristiques(array $caracs, $familleId, $parentId = null)
+    {
+        foreach ($caracs as $carac) {
+            $caracteristique = Caracteristique::create([
+                'libelleCaracteristique' => $carac['libelle'],
+                'idTypeCaracteristique' => $carac['type_id'],
+                'idUnite' => $carac['unite_id'] ?? null,
+                'parent_id' => $parentId,
+                'is_repetable' => $carac['is_repetable'] ?? false,
+            ]);
+
+            // Valeurs possibles
+            if ($carac['type_label'] === 'liste' && !empty($carac['valeurs_possibles'])) {
+                foreach ($carac['valeurs_possibles'] as $valeur) {
+                    ValeurPossible::create([
+                        'idCaracteristique' => $caracteristique->idCaracteristique,
+                        'valeur' => $valeur,
+                    ]);
+                }
+            }
+
+            FamilleCaracteristique::create([
+                'idFamille' => $familleId,
+                'idCaracteristique' => $caracteristique->idCaracteristique
+            ]);
+
+            // Récursion
+            if (!empty($carac['children'])) {
+                $this->enregistrerCaracteristiques($carac['children'], $familleId, $caracteristique->idCaracteristique);
+            }
+        }
+    }
+
     public function storeCaracteristiquesFamille(Request $request)
     {
         try {
@@ -1319,7 +1381,17 @@ class PlateformeController extends Controller
                         'libelleCaracteristique' => $carac['libelle'],
                         'idTypeCaracteristique' => $carac['type_id'],
                     ];
-    
+                    $existing = Caracteristique::create($caracteristiqueData);
+
+                    if (strtolower($carac['type_label']) === 'liste' && !empty($carac['valeurs_possibles'])) {
+                        $valeurs = array_map('trim', explode(',', $carac['valeurs_possibles']));
+                        foreach ($valeurs as $valeur) {
+                            ValeurPossible::create([
+                                'idCaracteristique' => $existing->idCaracteristique,
+                                'valeur' => $valeur
+                            ]);
+                        }
+                    }
                     if (strtolower($carac['type_label']) === 'nombre') {
                         if (!empty($carac['unite_id']) && $carac['unite_id'] !== 'autre') {
                             $caracteristiqueData['idUnite'] = $carac['unite_id'];
@@ -1331,18 +1403,12 @@ class PlateformeController extends Controller
                             $caracteristiqueData['idUnite'] = $unite->idUnite;
                         }
                     }
+
+                    
     
-                    $existing = Caracteristique::create($caracteristiqueData);
+                    
     
-                    if (strtolower($carac['type_label']) === 'liste' && !empty($carac['valeurs_possibles'])) {
-                        $valeurs = array_map('trim', explode(',', $carac['valeurs_possibles']));
-                        foreach ($valeurs as $valeur) {
-                            ValeurPossible::create([
-                                'idCaracteristique' => $existing->idCaracteristique,
-                                'valeur' => $valeur
-                            ]);
-                        }
-                    }
+                    
                 }
     
                 FamilleCaracteristique::firstOrCreate([
@@ -1363,7 +1429,6 @@ class PlateformeController extends Controller
         }
     }
 
-    
     public function getCaracteristiquesFamille($id)
     {
         $caracs = FamilleCaracteristique::with(['caracteristique.type', 'caracteristique.valeursPossibles', 'caracteristique.unite'])
@@ -1383,11 +1448,10 @@ class PlateformeController extends Controller
     
         return response()->json($caracs);
     }
-    
 
     public function getDomaineByGroupeProjet($code)
     {
-        // Découper s’il y a plusieurs codes (séparés par virgules)
+        // Découpe la chaîne en tableau si plusieurs codes sont envoyés : "GP1,GP2,..."
         $codes = explode(',', $code);
     
         $domaines = Domaine::whereIn('groupe_projet_code', $codes)->get();
@@ -1398,6 +1462,7 @@ class PlateformeController extends Controller
     
         return response()->json($domaines);
     }
+    
     
     
     
@@ -1414,58 +1479,78 @@ class PlateformeController extends Controller
         return response()->json($sousDomaines);
     }
 
-
     public function updateFamilleinfrastructure(Request $request, $id)
     {
+        DB::beginTransaction();
+    
         try {
-            // 🔍 Validation
             $request->validate([
                 'libelle' => 'required|string|max:255',
-                'code' => 'required|string|max:3|unique:familleinfrastructure,code_famille,' . $id . ',idFamille',
+                'code' => 'required|string|max:3|unique:familleinfrastructure,code_Ssys,' . $id . ',idFamille',
                 'domaine' => 'required|array',
                 'SDomaine' => 'nullable|array',
                 'groupeProjet' => 'required|array',
             ]);
     
-            //  Récupération famille
-            $famille = FamilleInfrastructure::findOrFail($id);
+            $mapping = json_decode($request->input('domaine_mapping'), true);
     
-            //  Mise à jour des champs simples
+            if (!is_array($mapping)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Le mapping domaine/sous-domaine est invalide ou vide.',
+                ]);
+            }
+    
+            // Récupérer la famille
+            $famille = FamilleInfrastructure::findOrFail($id);
             $famille->libelleFamille = $request->input('libelle');
-            $famille->code_famille = $request->input('code');
+            $famille->code_Ssys = $request->input('code');
             $famille->save();
     
-            // 🔄 Supprimer les anciennes associations pivot
-            FamilleDomaine::where('code_famille', $famille->code_famille)->delete();
-
-            // 🔁 Recréer les liaisons
-            foreach ($request->domaine as $i => $codeDomaine) {
-                $codeSousDomaine = $request->SDomaine[$i] ?? null;
-                $codeGroupeProjet = $request->groupeProjet[$i] ?? null;
-
-                if ($codeSousDomaine && $codeGroupeProjet) {
+            // Supprimer les anciennes relations
+            FamilleDomaine::where('code_Ssys', $famille->code_Ssys)->delete();
+    
+            $insertions = 0;
+    
+            foreach ($mapping as $row) {
+                if (!empty($row['domaine']) && !empty($row['groupeProjet'])) {
                     FamilleDomaine::create([
-                        'code_famille' => $famille->code_famille,
-                        'code_domaine' => $codeDomaine,
-                        'code_sdomaine' => $codeSousDomaine,
-                        'code_groupe_projet' => $codeGroupeProjet,
+                        'code_Ssys' => $famille->code_Ssys,
+                        'code_domaine' => $row['domaine'],
+                        'code_sdomaine' => $row['sdomaine'] ?? null,
+                        'code_groupe_projet' => $row['groupeProjet'],
                     ]);
+                    $insertions++;
                 }
             }
     
+            if ($insertions === 0) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Aucune association valide domaine / groupe projet fournie.',
+                    
+                ]);
+            }
+    
+            DB::commit();
+    
             return response()->json([
                 'status' => 'success',
-                'message' => 'Famille modifiée avec succès.',
-                'idFamille' => $famille->idFamille
+                'message' => 'Famille mise à jour avec succès.',
+                'idFamille' => $famille->idFamille,
             ]);
     
         } catch (\Exception $e) {
+            DB::rollBack();
+    
             return response()->json([
                 'status' => 'error',
-                'message' => 'Erreur lors de la modification : ' . $e->getMessage()
+                'message' => 'Erreur lors de la mise à jour : ' . $e->getMessage(),
             ]);
         }
     }
+    
     
     
     

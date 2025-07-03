@@ -237,7 +237,7 @@
 <script src="{{ asset('betsa/vend/bootstrap/js/bootstrap.min.js') }}"></script>
 <script>
     $(document).ready(function () {
-        console.log('Vue initialisée : Étape 1 affichée.');
+        //console.log('Vue initialisée : Étape 1 affichée.');
 
         // Étape 1 : Vérification des identifiants
         $('#verify-login').click(function () {
@@ -245,35 +245,41 @@
             const password = $('#password').val();
 
             if (!email || !password) {
-                alert('Veuillez remplir les champs.');
-                console.log('Erreur : Champs email ou mot de passe vide.');
+                alert('Saisissez vos informations', 'info');
+                //console.log('Erreur : Champs email ou mot de passe vide.');
                 return;
             }
 
-            console.log('Identifiants soumis :', { email, password });
+            //console.log('Identifiants soumis :', { email, password });
 
             $.post("{{ route('login.check') }}", { email, password, _token: '{{ csrf_token() }}' }, function (response) {
-                console.log('Réponse du serveur après vérification :', response);
+                //console.log('Réponse du serveur après vérification :', response);
 
                 if (response.step === 'choose_country') {
-                    console.log('Étape suivante : Sélection de pays.');
+                    //console.log('Étape suivante : Sélection de pays.');
                     populateCountries(response.data);
                     $('#step-login').addClass('hidden');
                     $('#step-country').removeClass('hidden');
                 }else if (response.step === 'choose_group') {
-                    console.log('Étape suivante : Sélection de groupe projet (direct depuis pays unique).');
+                    //console.log('Étape suivante : Sélection de groupe projet (direct depuis pays unique).');
                     populateGroups(response.data);
                     $('#step-login').addClass('hidden');
                     $('#step-group').removeClass('hidden');
                 }
                 else if (response.step === 'finalize') {
-                    console.log('Connexion finalisée. Redirection...');
+                    //console.log('Connexion finalisée. Redirection...');
                     window.location.href = "{{ route('projets.index') }}";
                 }
             }).fail(function (xhr) {
-                console.error('Erreur AJAX :', xhr.responseJSON.error);
-                alert(xhr.responseJSON.error);
+                if (xhr.status === 500) {
+                    alert("Une erreur est survenue. Veuillez recharger la page.", 'error');
+                } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                    alert(xhr.responseJSON.error, 'error');
+                } else {
+                    alert("Une erreur inattendue est survenue.", 'error');
+                }
             });
+
         });
 
         // Étape 2 : Sélection d'un pays
@@ -281,29 +287,35 @@
             const selectedCountry = $('#country-select').val();
 
             if (!selectedCountry) {
-                alert('Veuillez sélectionner un pays.');
-                console.log('Erreur : Aucun pays sélectionné.');
+                alert('Veuillez sélectionner un pays.', 'info');
+                //console.log('Erreur : Aucun pays sélectionné.');
                 return;
             }
 
-            console.log('Pays sélectionné :', selectedCountry);
+            //console.log('Pays sélectionné :', selectedCountry);
 
             $.post("{{ route('login.selectCountry') }}", { pays_code: selectedCountry, _token: '{{ csrf_token() }}' }, function (response) {
-                console.log('Réponse du serveur après sélection du pays :', response);
+                //console.log('Réponse du serveur après sélection du pays :', response);
 
                 if (response.step === 'choose_group') {
-                    console.log('Étape suivante : Sélection de groupe projet.');
+                    //console.log('Étape suivante : Sélection de groupe projet.');
                     populateGroups(response.data);
                     $('#step-country').addClass('hidden');
                     $('#step-group').removeClass('hidden');
                 } else if (response.step === 'finalize') {
-                    console.log('Connexion finalisée. Redirection...');
+                    //console.log('Connexion finalisée. Redirection...');
                     window.location.href = "{{ route('projets.index') }}";
                 }
             }).fail(function (xhr) {
-                console.error('Erreur AJAX :', xhr.responseJSON.error);
-                alert(xhr.responseJSON.error);
+                if (xhr.status === 500) {
+                    alert("Une erreur est survenue. Veuillez recharger la page.", 'error');
+                } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                    alert(xhr.responseJSON.error, 'error');
+                } else {
+                    alert("Une erreur inattendue est survenue.", 'error');
+                }
             });
+
         });
 
         // Étape 3 : Sélection d'un groupe projet
@@ -311,24 +323,30 @@
             const selectedGroup = $('#group-select').val();
 
             if (!selectedGroup) {
-                alert('Veuillez sélectionner un groupe projet.');
-                console.log('Erreur : Aucun groupe projet sélectionné.');
+                alert('Veuillez sélectionner un groupe projet.', 'info');
+                //console.log('Erreur : Aucun groupe projet sélectionné.');
                 return;
             }
 
-            console.log('Groupe projet sélectionné :', selectedGroup);
+            //console.log('Groupe projet sélectionné :', selectedGroup);
 
             $.post("{{ route('login.selectGroup') }}", { projet_id: selectedGroup, _token: '{{ csrf_token() }}' }, function (response) {
-                console.log('Réponse du serveur après sélection du groupe projet :', response);
+                //console.log('Réponse du serveur après sélection du groupe projet :', response);
 
                 if (response.step === 'finalize') {
-                    console.log('Connexion finalisée. Redirection...');
+                    //console.log('Connexion finalisée. Redirection...');
                     window.location.href = "{{ route('projets.index') }}";
                 }
             }).fail(function (xhr) {
-                console.error('Erreur AJAX :', xhr.responseJSON.error);
-                alert(xhr.responseJSON.error);
+                if (xhr.status === 500) {
+                    alert("Une erreur est survenue. Veuillez recharger la page.", 'error');
+                } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                    alert(xhr.responseJSON.error, 'error');
+                } else {
+                    alert("Une erreur inattendue est survenue.", 'error');
+                }
             });
+
         });
         // Bouton Retour pour Pays -> Identifiants
         $('#prev-country').click(function () {
@@ -344,7 +362,7 @@
 
         // Peupler les options de pays
         function populateCountries(countries) {
-            console.log('Peuplement des pays :', countries);
+            //console.log('Peuplement des pays :', countries);
 
             const select = $('#country-select');
             select.empty();
@@ -363,7 +381,7 @@
 
         // Peupler les options de groupes projets
         function populateGroups(groups) {
-            console.log('Peuplement des groupes projets :', groups);
+            //console.log('Peuplement des groupes projets :', groups);
 
             const select = $('#group-select');
             select.empty();
@@ -378,7 +396,7 @@
                     select.append(`<option value="${group.groupe_projet_id}">${group.groupe_projet.libelle}</option>`);
                 } else {
                     // Si les données sont invalides, loguez une erreur et affichez une option par défaut
-                    console.error('Erreur : Données du groupe projet invalides.', group);
+                    //console.error('Erreur : Données du groupe projet invalides.', group);
                     select.append(`<option value="${group.groupe_projet_id}">Groupe projet ID: ${group.groupe_projet_id}</option>`);
                 }
             });
