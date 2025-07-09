@@ -15,6 +15,7 @@ use App\Models\Pays;
 use App\Models\ProjetActionAMener;
 use App\Models\ProjetInfrastructure;
 use App\Models\TypeCaracteristique;
+use App\Models\UniteDerivee;
 use App\Models\ValeurCaracteristique;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -95,8 +96,12 @@ class InfrastructureController extends Controller
         $caracs = [];
         $valeurs = [];
         $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))->get();
+        $infrasExistantes = Infrastructure::where('code_groupe_projet', session('projet_selectionne'))
+        ->where('code_pays', session('pays_selectionne'))
+        ->get();
 
-         return view('infrastructures.create', compact('caracs','valeur','nomPays','familles', 'localites','pays', 'domaines', 'typeCaracteristiques'));
+         return view('infrastructures.create', compact('caracs','valeurs','nomPays','familles', 'localites','pays', 'domaines', 'typeCaracteristiques',
+        'infrasExistantes'));
      }
      public function getCaracteristiques($idFamille)
      {
@@ -105,7 +110,7 @@ class InfrastructureController extends Controller
              ->get();
      
          // Ajout dynamique des infos pour le front
-         $caracs->transform(function ($carac) {
+         $caracs->transform(function ($carac) { 
              $carac->libelleTypeCaracteristique = $carac->type->libelleTypeCaracteristique ?? null;
      
              if ($carac->isListe()) {
@@ -151,21 +156,11 @@ class InfrastructureController extends Controller
              $codeFamille = $request->code_famille_infrastructure; // Exemple: 'HEB'
              $prefix = $codePays . $codeFamille;
          
-             $last = Infrastructure::where('code', 'like', $prefix . '%')
-                 ->orderByDesc('code')
-                 ->first();
-         
-             $nextNumber = 1;
-         
-             if ($last) {
-                 $suffix = substr($last->code, strlen($prefix)); // Récupère "000012"
-                 if (is_numeric($suffix)) {
-                     $nextNumber = (int) $suffix + 1;
-                 }
-             }
-         
-             $code = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT); // CIVHEB000013
-         
+
+             $last = Infrastructure::where('code', 'like', $prefix . '%')->orderByDesc('code')->first();
+             $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
+             $code = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
              Log::info("Code généré pour infrastructure", ['code' => $code]);
      
              $infrastructure = Infrastructure::create([
@@ -179,15 +174,19 @@ class InfrastructureController extends Controller
                  'latitude' => $request->latitude,
                  'longitude' => $request->longitude
              ]);
-             if ($request->filled('code_infras_rattacher')) {
-                $infraRattachee = Infrastructure::where('code', $request->code_infras_rattacher)->first();
-            
-                if ($infraRattachee) {
-                    $infrastructure->code_localite = $infraRattachee->code_localite;
-                    $infrastructure->longitude = $infraRattachee->longitude;
-                    $infrastructure->latitude = $infraRattachee->latitude;
+             // Gestion du rattachement à une infrastructure mère
+                if ($request->filled('code_infras_rattacher')) {
+                    $infraMere = Infrastructure::where('code', $request->code_infras_rattacher)->first();
+
+                    if ($infraMere) {
+                        $infrastructure->code_localite = $infraMere->code_localite;
+                        $infrastructure->latitude = $infraMere->latitude;
+                        $infrastructure->longitude = $infraMere->longitude;
+                        $infrastructure->code_infras_rattacher = $infraMere->code;
+                        $infrastructure->save(); // Sauvegarde mise à jour
+                    }
                 }
-            }
+
             
      
              Log::info("Infrastructure créée", ['infra_id' => $infrastructure->id]);
@@ -334,6 +333,7 @@ class InfrastructureController extends Controller
                          'valeur' => $valeur,
                          'idUnite' => $caracteristique->idUnite,
                          'parent_saisie_id' => $caracteristique->parent_id,
+                         'uniteDerivee' => $request->input("unites_derivees.$idCaracteristique"),
                          'ordre' => $caracteristique->ordre,
                      ]);
                  } else {
@@ -346,7 +346,8 @@ class InfrastructureController extends Controller
                          'idCaracteristique' => $idCaracteristique,
                          'valeur' => $valeur,
                          'infrastructure_code' => $infrastructure->code,
-                         'idUnite' => $caracteristique->idUnite,
+                         'idUnite' => $caracteristique->idUnite,                         
+                        'idUniteDerivee' => $request->input("unites_derivees.$idCaracteristique"),
                          'parent_saisie_id' => $caracteristique->parent_id,
                          'ordre' => $caracteristique->ordre,
                      ]);
@@ -390,13 +391,15 @@ class InfrastructureController extends Controller
             'valeursCaracteristiques.caracteristique.type',
             'valeursCaracteristiques.caracteristique.valeursPossibles',
             'valeursCaracteristiques.unite',
+            'valeursCaracteristiques.uniteDerivee',
             'localisation',
         ])->findOrFail($id);
         
         
+        $unitesDerivees = UniteDerivee::with('uniteBase')->get()->groupBy('id_unite_base');
         $typeCaracteristiques = TypeCaracteristique::all();
             
-        return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques'));
+        return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques', 'unitesDerivees'));
     }
 
     // Afficher le formulaire d'édition
@@ -408,12 +411,14 @@ class InfrastructureController extends Controller
             'valeursCaracteristiques.caracteristique.valeursPossibles',
             'valeursCaracteristiques.caracteristique.type',
             'valeursCaracteristiques.unite',
+            'valeursCaracteristiques.uniteDerivee',
             'InfrastructureImage',
             'projetInfra',
         ])->findOrFail($id);
         $infrasExistantes = Infrastructure::where('code_groupe_projet', session('projet_selectionne'))
         ->where('code_pays', session('pays_selectionne'))
         ->get();
+
         $caracs = Caracteristique::where('code_famille', $infrastructure->familleInfrastructure->code_Ssys)
             ->with(['type', 'valeursPossibles', 'enfants.type', 'enfants.valeursPossibles'])
             ->get();
@@ -543,20 +548,11 @@ class InfrastructureController extends Controller
                 $codeFamille = $request->code_famille_infrastructure;
                 $prefix = $codePays . $codeFamille;
         
-                $last = Infrastructure::where('code', 'like', $prefix . '%')
-                    ->orderByDesc('code')
-                    ->first();
-        
-                $nextNumber = 1;
-        
-                if ($last) {
-                    $suffix = substr($last->code, strlen($prefix));
-                    if (is_numeric($suffix)) {
-                        $nextNumber = (int) $suffix + 1;
-                    }
-                }
-        
+                    
+                $last = Infrastructure::where('code', 'like', $prefix . '%')->orderByDesc('code')->first();
+                $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
                 $nouveauCode = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        
                 if (Infrastructure::where('code', $nouveauCode)->where('id', '!=', $infrastructure->id)->exists()) {
                     return response()->json([
                         'error' => "Le code généré ($nouveauCode) est déjà utilisé."
@@ -573,6 +569,7 @@ class InfrastructureController extends Controller
             }
                
             
+            
 
             $infrastructure->libelle = $request->libelle;
             $infrastructure->code_Ssys = $request->code_famille_infrastructure;
@@ -580,6 +577,19 @@ class InfrastructureController extends Controller
             $infrastructure->date_operation = $request->date_operation;
             $infrastructure->latitude = $request->latitude;
             $infrastructure->longitude = $request->longitude;
+            // Gestion du rattachement ou suppression
+            if ($request->filled('code_infras_rattacher')) {
+                $infraMere = Infrastructure::where('code', $request->code_infras_rattacher)->first();
+
+                if ($infraMere) {
+                    $infrastructure->code_localite = $infraMere->code_localite;
+                    $infrastructure->latitude = $infraMere->latitude;
+                    $infrastructure->longitude = $infraMere->longitude;
+                    $infrastructure->code_infras_rattacher = $infraMere->code;
+                }
+            } else {
+                $infrastructure->code_infras_rattacher = null; // Suppression du lien si décoché
+            }
 
             if ($request->hasFile('gallery')) {
                 $files = $request->file('gallery');
@@ -690,6 +700,7 @@ class InfrastructureController extends Controller
             'localisation',
             'valeursCaracteristiques.caracteristique.type',
             'valeursCaracteristiques.unite',
+            'valeursCaracteristiques.uniteDerivee',
             'projetInfra.projet.projetNaturesTravaux.natureTravaux',
             'projetInfra.projet.devise',
         ])->findOrFail($id);

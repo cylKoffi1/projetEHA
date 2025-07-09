@@ -247,14 +247,30 @@
                                                             echo '<input type="checkbox" class="form-check-input" name="' . $name . '" value="1" ' . ($val == 1 ? 'checked' : '') . '>';
                                                             echo '<label class="form-check-label">Oui / Non</label>';
                                                             echo '</div>';
-                                                        } elseif ($type === 'nombre') {
+                                                        }elseif ($type === 'nombre') {
                                                             echo '<div class="input-group">';
                                                             echo '<input type="number" step="any" name="' . $name . '" value="' . e($val) . '" class="form-control">';
+
                                                             if ($unite) {
-                                                                echo '<span class="input-group-text">' . e($unite) . '</span>';
+                                                                $uniteId = $carac->unite->idUnite ?? null;
+                                                                $selectedDerivee = $valeur?->uniteDerivee?->id ?? null;
+
+                                                                echo '<select name="unites_derivees[' . $carac->idCaracteristique . ']" class="form-select">';
+
+                                                                if (isset($unitesDerivees[$uniteId])) {
+                                                                    foreach ($unitesDerivees[$uniteId] as $der) {
+                                                                        $selected = ($selectedDerivee == $der->id) ? 'selected' : '';
+                                                                        echo '<option value="' . $der->id . '" ' . $selected . '>' . e($der->libelle) . ' (' . e($der->code) . ')</option>';
+                                                                    }
+                                                                } else {
+                                                                    echo '<option value="">Aucune unité dérivée</option>';
+                                                                }
+
+                                                                echo '</select>';
                                                             }
+
                                                             echo '</div>';
-                                                        } else {
+                                                        }else {
                                                             echo '<input type="text" name="' . $name . '" value="' . e($val) . '" class="form-control">';
                                                         }
 

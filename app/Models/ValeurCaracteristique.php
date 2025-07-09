@@ -17,6 +17,7 @@ class ValeurCaracteristique extends Model
         'idCaracteristique',
         'valeur',
         'idUnite',
+        'idUniteDerivee',
         'parent_saisie_id',
         'ordre'
     ];
@@ -25,7 +26,11 @@ class ValeurCaracteristique extends Model
     {
         return $this->belongsTo(Caracteristique::class, 'idCaracteristique');
     }
-
+    public function uniteDerivee()
+    {
+        return $this->belongsTo(UniteDerivee::class, 'idUniteDerivee');
+    }
+    
     public function unite()
     {
         return $this->belongsTo(Unite::class, 'idUnite');

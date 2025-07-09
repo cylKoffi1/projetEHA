@@ -18,8 +18,6 @@ class Caracteristique extends Model
         'idTypeCaracteristique',
         'idUnite',
         'parent_id',
-        'is_repetable',
-        'required',
         'ordre',
         'description',
         'code_famille'

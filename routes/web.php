@@ -222,7 +222,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::post('/check-familleinfrastructure-code', [PlateformeController::class, 'checkFamilleinfrastructureCode']);
     Route::get('/getDomaineByGroupeProjet/{code}', [PlateformeController::class, 'getDomaineByGroupeProjet']);
     Route::get('/get-sous-domaines/{codeDomaine}/{codeGroupeProjet}', [PlateformeController::class, 'getSousDomaines']);
-    
+    Route::delete('/famille-infrastructure/{famille}/structure/delete', [CaracteristiqueStructureController::class, 'destroyStructure']);
+
     Route::prefix('familles/{famille}/caracteristiques')->name('caracteristiques.')->group(function () {
         // Récupérer toutes les caractéristiques d'une famille (hiérarchie)
         Route::get('/', [CaracteristiqueStructureController::class, 'index'])->name('index');

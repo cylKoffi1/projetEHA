@@ -67,7 +67,7 @@ class UtilisateurController extends Controller
                 'lieuxExercice',
                 'pays'
             ])
-            ->whereHas('pays', function ($query) use ($paysSelectionne) {
+            ->whereHas('acteur.pays', function ($query) use ($paysSelectionne) {
                 $query->where('alpha3', $paysSelectionne);
             })
             ->whereHas('groupeProjets', function ($query) use ($groupeSelectionne) {

@@ -28,122 +28,248 @@ class CaracteristiqueStructureController extends Controller
         return response()->json(['status' => 'success', 'data' => $structure]);
     }
     
-
+    private function validateHierarchyOrder(array $nodes, string $expectedPrefix = '')
+    {
+        foreach ($nodes as $i => $node) {
+            $expectedOrder = $expectedPrefix ? "{$expectedPrefix}-" . ($i + 1) : (string)($i + 1);
+    
+            if (($node['order'] ?? null) !== $expectedOrder) {
+                throw new \Exception("Ordre invalide : attendu '{$expectedOrder}', trouvé '{$node['order']}' pour '{$node['name']}'");
+            }
+    
+            if (!empty($node['children'])) {
+                $this->validateHierarchyOrder($node['children'], $expectedOrder);
+            }
+        }
+    }
+    
     public function saveStructure(Request $request, $familleId)
     {
         DB::beginTransaction();
     
         try {
-            Log::debug("💾 [saveStructure] Début - familleId: $familleId");
+            Log::info("💾 [saveStructure] Début - familleId: $familleId");
     
             $famille = FamilleInfrastructure::findOrFail($familleId);
-            Log::debug("✅ Famille trouvée", ['id' => $famille->idFamille, 'nom' => $famille->libelleFamille]);
-    
+            Log::info('[saveStructure] Structure reçue', [
+                'payload' => $request->all()
+            ]);
+            
             $data = $request->validate([
-                'structure' => 'required|array'
+                'structure' => 'required|array',
+                'structure.*.name' => 'required|string|max:255',
+                'structure.*.type' => 'required|exists:typecaracteristique,idTypeCaracteristique',
+                'structure.*.order' => 'nullable|integer|min:1',
+                'structure.*.unit' => 'nullable|string|max:50',
+                'structure.*.options' => 'nullable|array',
+                'structure.*.options.*' => 'nullable|string|max:255',
+                'structure.*.description' => 'nullable|string|max:1000',
+                'structure.*.children' => 'nullable|array',
             ]);
-            Log::debug("📦 Données reçues", ['structure' => $data['structure']]);
     
-            // Supprimer les anciennes liaisons
-            $caracteristiqueASupprimer = Caracteristique::where('code_famille', $famille->code_Ssys)->get();
-
-            Log::debug("🧹 Vérification des anciennes caractéristiques à supprimer", [
-                'famille' => $famille->code_Ssys,
-                'total' => $caracteristiqueASupprimer->count()
-            ]);
-
-            foreach ($caracteristiqueASupprimer as $carac) {
-                if ($carac->valeursCaracteristiques()->exists()) {
-                    Log::debug("⛔️ Non supprimée : la caractéristique a des valeurs", [
-                        'id' => $carac->idCaracteristique,
-                        'valeur' => $carac->valeur,
+            $structure = $data['structure'];
+    
+            foreach ($structure as &$node) {
+                try {
+                    $this->prepareNode($node);
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $e->getMessage()
                     ]);
-                    return response()->json(['message' => 'Erreur: Des valeurs sont associées à certaines caractéristiques.']); // Ne pas supprimer
                 }
-
-                $carac->valeursPossibles()->delete(); // Supprimer options si c'est une liste
-                $carac->familles()->detach();         // Retirer de la pivot
-                $carac->delete();                     // Supprimer la caractéristique
-
-                Log::debug("✅ Supprimée : caractéristique sans valeurs", [
-                    'id' => $carac->idCaracteristique,
-                    'name' => $carac->libelleCaracteristique,
-                ]);
             }
+            Log::debug('🧱 Structure préparée pour enregistrement', json_decode(json_encode($structure), true));
 
-            // Traiter la nouvelle structure
-            $this->processStructure($data['structure'], null, [
+
+            // Suppression des caractéristiques existantes (hors celles avec valeurs)
+            $caracteristiquesExistantes = Caracteristique::where('code_famille', $famille->code_Ssys)->get();
+            $nonSupprimees = [];
+    
+            foreach ($caracteristiquesExistantes as $carac) {
+                if ($carac->valeursCaracteristiques()->exists()) {
+                    $nonSupprimees[] = $carac->libelleCaracteristique;
+                    continue;
+                }
+    
+                $carac->valeursPossibles()->delete();
+                $carac->familles()->detach();
+                $carac->delete();
+            }
+    
+            // Traitement
+            $this->processStructure($structure, null, [
                 'id' => $famille->idFamille,
-                'code' => $famille->code_Ssys,
+                'code' => $famille->code_Ssys
             ]);
-            Log::debug("🔁 Structure traitée avec succès");
     
             DB::commit();
     
-            Log::debug("✅ Transaction validée");
             return response()->json([
-                'status' => 'success',
-                'message' => 'Structure enregistrée avec succès'
+                'status' => count($nonSupprimees) > 0 ? 'partial' : 'success',
+                'message' => count($nonSupprimees) > 0
+                    ? 'Structure partiellement enregistrée (caractéristiques avec valeurs conservées).'
+                    : 'Structure enregistrée avec succès.',
+                'non_supprimables' => $nonSupprimees
             ]);
-    
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("❌ Erreur lors de saveStructure", [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTraceAsString()
+                'file' => $e->getFile()
             ]);
     
             return response()->json([
                 'status' => 'error',
-                'message' => 'Erreur lors de l\'enregistrement: ' . $e->getMessage()
+                'message' => "Erreur lors de l'enregistrement : " . $e->getMessage()
             ], 500);
         }
     }
+    
+    protected function isNombreType($typeId)
+    {
+        $type = TypeCaracteristique::find($typeId);
+        return $type && strtolower($type->libelleTypeCaracteristique) === 'nombre';
+    }
+    protected function prepareNode(&$node)
+    {
+        unset($node['typeLabel']);
+        unset($node['parentId']); // Nettoyer le parentId qui pourrait interférer
+    
+        $node['description'] = isset($node['description']) ? strip_tags($node['description']) : null;
+    
+        // Normaliser options
+        $node['options'] = isset($node['options']) && is_array($node['options']) 
+            ? $node['options'] 
+            : [];
+    
+        // Nettoyage des options
+        foreach ($node['options'] as &$option) {
+            $option = preg_replace('/[<>{};()=]|script|php/i', '', $option);
+        }
+    
+        // Préserver la structure des enfants
+        if (isset($node['children'])) {
+            if (!is_array($node['children'])) {
+                $node['children'] = [];
+            }
+            
+            // Préparer récursivement chaque enfant
+            foreach ($node['children'] as &$child) {
+                $this->prepareNode($child);
+            }
+        } else {
+            $node['children'] = [];
+        }
+    }
+    
     protected function processStructure(array $nodes, $parentId, array $familleData)
     {
-        foreach ($nodes as $node) {
-            // Créer ou mettre à jour la caractéristique
-            $caracteristique = Caracteristique::updateOrCreate(
-                ['idCaracteristique' => $node['id'] ?? null],
-                [
-                    'libelleCaracteristique' => $node['name'],
-                    'idTypeCaracteristique' => $this->getTypeId($node['type']),
-                    'parent_id' => $parentId,
-                    'is_repetable' => $node['repeatable'] ?? false,
-                    'ordre' => $node['order'] ?? 1,
-                    'code_famille' => $familleData['code'], // ✅ Ligne ajoutée pour corriger l'erreur SQL
-                    'description' => $node['description'] ?? null,
-                ]
-            );
-            
-            // Gérer l'unité pour les nombres
-            if ($node['typeLabel'] === 'nombre' && isset($node['unit'])) {
-                $unite = Unite::firstOrCreate(
-                    ['symbole' => $node['unit']],
-                    ['libelleUnite' => $node['unit']]
+        Log::debug('Début processStructure', [
+            'nodes_count' => count($nodes),
+            'parent_id' => $parentId,
+            'first_node' => $nodes[0] ?? null
+        ]);
+        foreach ($nodes as $index => $node) {
+            Log::info("🧩 Traitement d'une caractéristique", [
+                'nom' => $node['name'] ?? 'inconnu',
+                'parent_id' => $parentId,
+                'ordre' => $node['order'] ?? 'non défini',
+                'niveau' => $parentId ? 'enfant' : 'racine',
+                'index' => $index,
+                'has_children' => !empty($node['children']),
+                'children_count' => count($node['children'] ?? []),
+                'children_data' => $node['children'] ?? [] 
+            ]);
+    
+            // Sécurité : ignorer les IDs non valides
+            $id = $node['id'] ?? null;
+            $id = is_numeric($id) ? $id : null;
+    
+            try {
+                $caracteristique = Caracteristique::updateOrCreate(
+                    ['idCaracteristique' => $id],
+                    [
+                        'libelleCaracteristique' => $node['name'],
+                        'idTypeCaracteristique' => $this->getTypeId($node['type']),
+                        'parent_id' => $parentId,
+                        'ordre' => $node['order'] ?? 1,
+                        'code_famille' => $familleData['code'],
+                        'description' => $node['description'] ?? null,
+                    ]
                 );
-                $caracteristique->idUnite = $unite->idUnite;
-                $caracteristique->save();
-            }
-            
-            // Gérer les valeurs possibles pour les listes
-            if ($this->isListeType($node['type'])) {
-                $this->syncValeursPossibles($caracteristique, $node['options']);
-            }
-            
-          
-            
-            // Associer à la famille
-            $caracteristique->familles()->syncWithoutDetaching($familleData['id']);
-            
-            // Traiter les enfants récursivement
-            if (!empty($node['children'])) {
-                $this->processStructure($node['children'], $caracteristique->idCaracteristique, $familleData);
+    
+                Log::info("✅ Caractéristique enregistrée", [
+                    'id' => $caracteristique->idCaracteristique,
+                    'libelle' => $caracteristique->libelleCaracteristique,
+                    'parent_id' => $caracteristique->parent_id
+                ]);
+    
+                // Unité
+                if ($this->isNombreType($node['type']) && isset($node['unit'])) {
+                    Log::info("Unités", ['unit' => $node['unit']]);
+
+                    $unite = Unite::find($node['unit']);
+                    if ($unite) {
+                        $caracteristique->idUnite = $unite->idUnite;
+                        $caracteristique->save();
+
+                        Log::info("🔢 Unité associée", ['symbole' => $unite->symbole]);
+                    } else {
+                        Log::warning("⚠️ Unité non trouvée", ['id' => $node['unit']]);
+                    }
+
+                }
+    
+                // Options liste
+                if ($this->isListeType($node['type'])) {
+                    $this->syncValeursPossibles($caracteristique, $node['options']);
+                    Log::info("📋 Options enregistrées", ['nb_options' => count($node['options'])]);
+                }
+    
+                // Liaison famille
+                $caracteristique->familles()->syncWithoutDetaching($familleData['id']);
+    
+                // 🔁 Récursion enfants - CORRECTION ICI
+                if (!empty($node['children']) && is_array($node['children'])) {
+                    Log::info("🔁 Traitement des enfants", [
+                        'parent' => $node['name'],
+                        'parent_id' => $caracteristique->idCaracteristique,
+                        'children_count' => count($node['children'])
+                    ]);
+                    
+                    // Log détaillé des enfants
+                    foreach ($node['children'] as $childIndex => $child) {
+                        Log::debug("👶 Enfant à traiter", [
+                            'index' => $childIndex,
+                            'nom' => $child['name'] ?? 'inconnu',
+                            'parent_attendu' => $caracteristique->idCaracteristique
+                        ]);
+                    }
+                    
+                    $this->processStructure($node['children'], $caracteristique->idCaracteristique, $familleData);
+                } else {
+                    Log::info("🚫 Pas d'enfants à enregistrer", [
+                        'nom' => $node['name'],
+                        'children_empty' => empty($node['children']),
+                        'children_is_array' => is_array($node['children'] ?? null)
+                    ]);
+                }
+    
+            } catch (\Throwable $e) {
+                Log::error("❌ Erreur lors de l'enregistrement d'une caractéristique", [
+                    'message' => $e->getMessage(),
+                    'node' => $node,
+                    'parent_id' => $parentId,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e; // Propager l'erreur pour annuler la transaction
             }
         }
     }
+    
+    
     
     protected function isListeType($typeId)
     {
@@ -269,7 +395,6 @@ class CaracteristiqueStructureController extends Controller
             'idTypeCaracteristique',
             'idUnite',
             'ordre',
-            'is_repetable',
             'description'
         ]));
 
@@ -296,7 +421,8 @@ class CaracteristiqueStructureController extends Controller
                 return [
                     'idCaracteristique' => $carac->idCaracteristique,
                     'libelleCaracteristique' => $carac->libelleCaracteristique,
-                    'type' => $carac->type,
+                    'type' => $carac->idTypeCaracteristique,
+                    'typeLabel' => strtolower($carac->type?->libelleTypeCaracteristique ?? 'inconnu'),
                     'unite' => $carac->unite,
                     'enfants' => $this->buildHierarchy($caracs, $carac->idCaracteristique)
                 ];
@@ -317,7 +443,6 @@ class CaracteristiqueStructureController extends Controller
                 'idUnite' => $node['unit'] ?? null,
                 'parent_id' => $parentId,
                 'ordre' => $node['order'] ?? 1,
-                'is_repetable' => $node['repeatable'] ?? false,
                 'description' => $node['description'] ?? null,
             ]);
 

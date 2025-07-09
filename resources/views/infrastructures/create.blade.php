@@ -306,9 +306,6 @@ tr[data-parent-id] {
                                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#localisation" type="button">Localisation</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#Infrastructure_rattachement" type="button">Infrastructure rattachée</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
                                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#caracteristiques" type="button">Caractéristiques</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
@@ -365,16 +362,44 @@ tr[data-parent-id] {
                                             </select>
                                         </div>
 
-                                        <div class="col-md-8">
+                                        <div class="col-md-4">
                                             <label class="form-label">Nom de l'infrastructure *</label>
                                             <input type="text" class="form-control" id="libelle" name="libelle"
                                                 value="{{ old('libelle', $infrastructure->libelle ?? '') }}" required>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-2">
                                             <label class="form-label">Date de création</label>
                                             <input type="date" class="form-control" id="date_operation" name="date_operation"
                                                 value="{{ old('date_operation', $infrastructure->date_operation ?? '') }}">
+                                        </div>
+                                        
+
+                                        <div class="col-md-2 d-flex align-items-center">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input me-2" type="checkbox" id="isRattacheCheckbox"
+                                                    {{ old('code_infras_rattacher', $infrastructure->code_infras_rattacher ?? '') ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="isRattacheCheckbox">
+                                                    Infrastructure existante ?
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <div id="infraRattacheSelectContainer"
+                                                style="{{ old('code_infras_rattacher', $infrastructure->code_infras_rattacher ?? '') ? '' : 'display: none;' }}">
+                                                <label for="">Infrastrusture rattachée</label>
+                                                <select class="form-select" id="infraMereSelect" name="code_infras_rattacher">
+                                                    <option value="">-- Sélectionner une infrastructure --</option>
+                                                    @foreach ($infrasExistantes as $infra)
+                                                        <option value="{{ $infra->code }}"
+                                                            data-localite="{{ $infra->code_localite }}"
+                                                            {{ old('code_infras_rattacher', $infrastructure->code_infras_rattacher ?? '') == $infra->code ? 'selected' : '' }}>
+                                                            {{ $infra->libelle }} ({{ $infra->code }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -432,81 +457,64 @@ tr[data-parent-id] {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="tab-pane fade" id="Infrastructure_rattachement" role="tabpanel">
-
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <h5 class="section-title">Infrastructures rattachées</h5>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Infrastructure de rattachement (géographique)</label>
-                                        <select class="form-select" name="code_infras_rattacher">
-                                            <option value="">Aucune</option>
-                                            @foreach($infrasExistantes as $infra)
-                                                <option value="{{ $infra->code }}" {{ old('code_infras_rattacher', $infrastructure->code_infras_rattacher ?? '') == $infra->code ? 'selected' : '' }}>
-                                                    {{ $infra->libelle }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-
-                                </div>
+                                
                                 @php
-    function afficherCaracRow($carac, $valeurs, $niveau = 0, $parentId = null) {
-        $valeur = $valeurs[$carac->idCaracteristique] ?? '';
-        $type = strtolower($carac->type->libelleTypeCaracteristique ?? '');
-        $unite = $valeur?->unite?->symbole ?? $carac->unite?->symbole ?? null;
-        $hasChildren = $carac->enfants && count($carac->enfants);
-        $padding = $niveau * 20;
+                                if (!function_exists('afficherCaracRow')) {
+                                    function afficherCaracRow($carac, $valeurs, $niveau = 0, $parentId = null) {
+                                        $valeur = $valeurs[$carac->idCaracteristique] ?? '';
+                                        $type = strtolower($carac->type->libelleTypeCaracteristique ?? '');
+                                        $unite = $valeur?->unite?->symbole ?? $carac->unite?->symbole ?? null;
+                                        $hasChildren = $carac->enfants && count($carac->enfants);
+                                        $padding = $niveau * 20;
 
-        $rowId = "carac_row_" . $carac->idCaracteristique;
-        $parentAttr = $parentId ? "data-parent='{$parentId}'" : '';
+                                        $rowId = "carac_row_" . $carac->idCaracteristique;
+                                        $parentAttr = $parentId ? "data-parent='{$parentId}'" : '';
 
-        echo "<tr id='{$rowId}' class='carac-row level-{$niveau}' {$parentAttr}>";
-        echo "<td>" . ucfirst($type) . "</td>";
-        echo "<td style='padding-left: {$padding}px;'>";
-        if ($hasChildren) {
-            echo "<span class='expand-icon' data-id='{$carac->idCaracteristique}'>&#9654;</span> ";
-        }
-        echo e($carac->libelleCaracteristique) . "</td>";
-        echo "<td>";
+                                        echo "<tr id='{$rowId}' class='carac-row level-{$niveau}' {$parentAttr}>";
+                                        echo "<td>" . ucfirst($type) . "</td>";
+                                        echo "<td style='padding-left: {$padding}px;'>";
+                                        if ($hasChildren) {
+                                            echo "<span class='expand-icon' data-id='{$carac->idCaracteristique}'>&#9654;</span> ";
+                                        }
+                                        echo e($carac->libelleCaracteristique) . "</td>";
+                                        echo "<td>";
 
-        // Type de champ
-        if ($type === 'liste') {
-            echo "<select class='form-select form-select-sm' name='caracteristiques[{$carac->idCaracteristique}]'>";
-            echo "<option value=''>-- Choisir --</option>";
-            foreach ($carac->valeursPossibles as $opt) {
-                $selected = $opt->valeur == $valeur ? 'selected' : '';
-                echo "<option value='" . e($opt->valeur) . "' $selected>" . e($opt->valeur) . "</option>";
-            }
-            echo "</select>";
-        } elseif ($type === 'boolean') {
-            $checked = $valeur == 1 ? 'checked' : '';
-            echo "<input type='hidden' name='caracteristiques[{$carac->idCaracteristique}]' value='0'>";
-            echo "<input type='checkbox' class='form-check-input' name='caracteristiques[{$carac->idCaracteristique}]' value='1' $checked>";
-        } elseif ($type === 'nombre') {
-            echo "<div class='input-group'>";
-            echo "<input type='number' step='any' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur) . "' class='form-control form-control-sm'>";
-            if ($unite) {
-                echo "<span class='input-group-text'>" . e($unite) . "</span>";
-            }
-            echo "</div>";
-        } else {
-            echo "<input type='text' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur) . "' class='form-control form-control-sm'>";
-        }
+                                        // Type de champ
+                                        if ($type === 'liste') {
+                                            echo "<select class='form-select form-select-sm' name='caracteristiques[{$carac->idCaracteristique}]'>";
+                                            echo "<option value=''>-- Choisir --</option>";
+                                            foreach ($carac->valeursPossibles as $opt) {
+                                                $selected = $opt->valeur == $valeur ? 'selected' : '';
+                                                echo "<option value='" . e($opt->valeur) . "' $selected>" . e($opt->valeur) . "</option>";
+                                            }
+                                            echo "</select>";
+                                        } elseif ($type === 'boolean') {
+                                            $checked = $valeur == 1 ? 'checked' : '';
+                                            echo "<input type='hidden' name='caracteristiques[{$carac->idCaracteristique}]' value='0'>";
+                                            echo "<input type='checkbox' class='form-check-input' name='caracteristiques[{$carac->idCaracteristique}]' value='1' $checked>";
+                                        } elseif ($type === 'nombre') {
+                                            echo "<div class='input-group'>";
+                                            echo "<input type='number' step='any' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur) . "' class='form-control form-control-sm'>";
+                                            if ($unite) {
+                                                echo "<span class='input-group-text'>" . e($unite) . "</span>";
+                                            }
+                                            echo "</div>";
+                                        } else {
+                                            echo "<input type='text' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur) . "' class='form-control form-control-sm'>";
+                                        }
 
-        echo "</td>";
-        echo "<td></td>";
-        echo "</tr>";
+                                        echo "</td>";
+                                        echo "<td></td>";
+                                        echo "</tr>";
 
-        if ($hasChildren) {
-            foreach ($carac->enfants as $enfant) {
-                afficherCaracRow($enfant, $valeurs, $niveau + 1, $carac->idCaracteristique);
-            }
-        }
-    }
-@endphp
+                                        if ($hasChildren) {
+                                            foreach ($carac->enfants as $enfant) {
+                                                afficherCaracRow($enfant, $valeurs, $niveau + 1, $carac->idCaracteristique);
+                                            }
+                                        }
+                                    }
+                                }
+                                @endphp
 
                                 <!-- Onglet Caractéristiques -->
                                 <div class="tab-pane fade" id="caracteristiques" role="tabpanel">
@@ -532,7 +540,7 @@ tr[data-parent-id] {
                                                         $valeurs = $valeursExistantes ?? [];
                                                     @endphp
 
-                                                    @foreach($caracs->where('parent_id', null) as $carac)
+                                                    @foreach(collect($caracs)->where('parent_id', null) as $carac)
                                                         @php afficherCaracRow($carac, $valeurs) @endphp
                                                     @endforeach
                                                 </tbody>
@@ -648,6 +656,33 @@ tr[data-parent-id] {
                     console.error('Erreur chargement sous-domaines :', error);
                     sousDomaineSelect.innerHTML = '<option value="">Erreur chargement</option>';
                 });
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkbox = document.getElementById('isRattacheCheckbox');
+        const selectContainer = document.getElementById('infraRattacheSelectContainer');
+        const selectInfraMere = document.getElementById('infraMereSelect');
+        const selectLocalite = document.getElementById('niveau1Select');
+
+        checkbox.addEventListener('change', function () {
+            selectContainer.style.display = this.checked ? 'block' : 'none';
+            if (!this.checked) {
+                selectInfraMere.value = '';
+            }
+        });
+
+        selectInfraMere.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const codeLocalite = selectedOption.getAttribute('data-localite');
+            if (codeLocalite) {
+                const matchingOption = [...selectLocalite.options].find(opt => opt.value == codeLocalite);
+                if (matchingOption) {
+                    selectLocalite.value = codeLocalite;
+                    selectLocalite.dispatchEvent(new Event('change'));
+                }
+            }
         });
     });
 </script>
