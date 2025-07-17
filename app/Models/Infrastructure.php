@@ -23,7 +23,8 @@ class Infrastructure extends Model
         'date_operation',
         'imageInfras',
         'latitude',
-        'longitude'
+        'longitude',
+        'IsOver'
     ];
     
     public function groupeProjet()

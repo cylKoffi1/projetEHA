@@ -217,6 +217,66 @@ tr[data-parent-id] {
 .carac-row[data-parent] {
     display: none;
 }
+    /* Styles pour le roller picker des unités */
+    .unite-roller-container {
+        position: relative;
+        width: auto;
+        height: 32px;
+        overflow-y: auto;
+        margin: 0 auto;
+        border-radius: 20px;
+        background: linear-gradient(145deg, #f0f0f0, #cacaca);
+        box-shadow: inset 5px 5px 15px #b8b8b8, inset -5px -5px 15px #ffffff;
+        scroll-snap-type: y mandatory;
+    }
+    .unite-roller-list::before,
+    .unite-roller-list::after {
+        content: "";
+        display: block;
+        height: 32px; /* ajustable selon la hauteur du conteneur */
+        width: auto;
+        flex-shrink: 0;
+    }
+
+    .unite-roller-list {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        scroll-behavior: smooth;
+    }
+
+    .unite-roller-item {
+        scroll-snap-align: center;
+        font-size: 1.2rem;
+        padding: 10px 0;
+        opacity: 0.4;
+        transition: all 0.3s ease;
+        color: #333;
+        position: relative;
+    }
+
+    .unite-roller-item.selected {
+        font-size: 20px;
+        font-weight: 700;
+        color: #000;
+        opacity: 1;
+        transform: scale(0.8);
+
+    }
+    .unite-roller-item.selected::after {
+        content: attr(data-libelle);
+        position: absolute;
+        top: -30px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        white-space: nowrap;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+    }
 
 </style>
 
@@ -460,12 +520,17 @@ tr[data-parent-id] {
                                 
                                 @php
                                 if (!function_exists('afficherCaracRow')) {
-                                    function afficherCaracRow($carac, $valeurs, $niveau = 0, $parentId = null) {
-                                        $valeur = $valeurs[$carac->idCaracteristique] ?? '';
+                                    function afficherCaracRow($carac, $valeurs, $unitesDerivees, $niveau = 0, $parentId = null) {
+                                        $valeur = $valeurs[$carac->idCaracteristique] ?? null;
                                         $type = strtolower($carac->type->libelleTypeCaracteristique ?? '');
                                         $unite = $valeur?->unite?->symbole ?? $carac->unite?->symbole ?? null;
                                         $hasChildren = $carac->enfants && count($carac->enfants);
                                         $padding = $niveau * 20;
+
+                                        $idUniteRef = $carac->unite?->idUnite ?? null;
+                                        $selectedUniteId = $valeur?->uniteDerivee?->id ?? ($idUniteRef && isset($unitesDerivees[$idUniteRef]) && count($unitesDerivees[$idUniteRef]) > 0
+                                            ? $unitesDerivees[$idUniteRef][0]->id
+                                            : null);
 
                                         $rowId = "carac_row_" . $carac->idCaracteristique;
                                         $parentAttr = $parentId ? "data-parent='{$parentId}'" : '';
@@ -479,42 +544,61 @@ tr[data-parent-id] {
                                         echo e($carac->libelleCaracteristique) . "</td>";
                                         echo "<td>";
 
-                                        // Type de champ
+                                        // Champ selon le type
                                         if ($type === 'liste') {
                                             echo "<select class='form-select form-select-sm' name='caracteristiques[{$carac->idCaracteristique}]'>";
                                             echo "<option value=''>-- Choisir --</option>";
                                             foreach ($carac->valeursPossibles as $opt) {
-                                                $selected = $opt->valeur == $valeur ? 'selected' : '';
+                                                $selected = ($opt->valeur == ($valeur?->valeur ?? '')) ? 'selected' : '';
                                                 echo "<option value='" . e($opt->valeur) . "' $selected>" . e($opt->valeur) . "</option>";
                                             }
                                             echo "</select>";
                                         } elseif ($type === 'boolean') {
-                                            $checked = $valeur == 1 ? 'checked' : '';
+                                            $checked = ($valeur?->valeur ?? '') == 1 ? 'checked' : '';
                                             echo "<input type='hidden' name='caracteristiques[{$carac->idCaracteristique}]' value='0'>";
                                             echo "<input type='checkbox' class='form-check-input' name='caracteristiques[{$carac->idCaracteristique}]' value='1' $checked>";
                                         } elseif ($type === 'nombre') {
                                             echo "<div class='input-group'>";
-                                            echo "<input type='number' step='any' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur) . "' class='form-control form-control-sm'>";
+                                            echo "<input type='number' step='any' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur?->valeur ?? '') . "' class='form-control form-control-sm'>";
                                             if ($unite) {
                                                 echo "<span class='input-group-text'>" . e($unite) . "</span>";
                                             }
                                             echo "</div>";
                                         } else {
-                                            echo "<input type='text' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur) . "' class='form-control form-control-sm'>";
+                                            echo "<input type='text' name='caracteristiques[{$carac->idCaracteristique}]' value='" . e($valeur?->valeur ?? '') . "' class='form-control form-control-sm'>";
                                         }
 
-                                        echo "</td>";
-                                        echo "<td></td>";
-                                        echo "</tr>";
+                                        echo "</td><td>";
+
+                                        if ($unite && isset($unitesDerivees[$idUniteRef])) {
+                                            $unitList = $unitesDerivees[$idUniteRef];
+                                            if (count($unitList)) {
+                                                echo "<div class='unite-roller-container' data-id='{$carac->idCaracteristique}'>";
+                                                echo "<div class='unite-roller-libelle'>—</div>";
+                                                echo "<div class='unite-roller-list' data-name='unites_derivees[{$carac->idCaracteristique}]'>";
+                                                foreach ($unitList as $der) {
+                                                    $selectedClass = ($der->id == $selectedUniteId) ? 'selected' : '';
+                                                    echo "<div class='unite-roller-item {$selectedClass}' data-id='{$der->id}' data-symbol='" . e($der->code) . "' data-libelle='" . e($der->libelle) . "'>";
+                                                    echo e($der->code);
+                                                    echo "</div>";
+                                                }
+                                                echo "</div>";
+                                                echo "<input type='hidden' name='unites_derivees[{$carac->idCaracteristique}]' value='{$selectedUniteId}'>";
+                                                echo "</div>";
+                                            }
+                                        }
+
+                                        echo "</td></tr>";
 
                                         if ($hasChildren) {
                                             foreach ($carac->enfants as $enfant) {
-                                                afficherCaracRow($enfant, $valeurs, $niveau + 1, $carac->idCaracteristique);
+                                                afficherCaracRow($enfant, $valeurs, $unitesDerivees, $niveau + 1, $carac->idCaracteristique);
                                             }
                                         }
                                     }
                                 }
                                 @endphp
+
 
                                 <!-- Onglet Caractéristiques -->
                                 <div class="tab-pane fade" id="caracteristiques" role="tabpanel">
@@ -531,7 +615,7 @@ tr[data-parent-id] {
                                                         <th>Type</th>
                                                         <th>Libellé</th>
                                                         <th>Valeur</th>
-                                                        <th>Action</th>
+                                                        <th>unité dérivée</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="caracteristiquesHeriteesContainer">
@@ -541,8 +625,9 @@ tr[data-parent-id] {
                                                     @endphp
 
                                                     @foreach(collect($caracs)->where('parent_id', null) as $carac)
-                                                        @php afficherCaracRow($carac, $valeurs) @endphp
+                                                        @php afficherCaracRow($carac, $valeurs, $unitesDerivees) @endphp
                                                     @endforeach
+
                                                 </tbody>
 
                                             </table>
@@ -1370,5 +1455,90 @@ function removeExistingImage(id, code) {
         }, 200); // Attend que le DOM des images soit bien prêt
     });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.unite-roller-container').forEach(container => {
+        const list = container.querySelector('.unite-roller-list');
+        const hiddenInput = container.querySelector('input[type="hidden"]');
+        const items = Array.from(container.querySelectorAll('.unite-roller-item'));
 
+        let lastScrollTime = 0;
+        let isScrolling;
+
+        // Fonction pour détecter l'élément centré
+        const detectSelected = () => {
+            const containerRect = container.getBoundingClientRect();
+            const centerY = containerRect.top + container.offsetHeight / 2;
+
+            let closest = null;
+            let minDistance = Infinity;
+
+            items.forEach(item => {
+                const rect = item.getBoundingClientRect();
+                const itemCenter = rect.top + rect.height / 2;
+                const distance = Math.abs(centerY - itemCenter);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closest = item;
+                }
+            });
+
+            if (closest) {
+                items.forEach(i => i.classList.remove('selected'));
+                closest.classList.add('selected');
+                hiddenInput.value = closest.dataset.id;
+                // MAJ du libellé affiché
+                const libelleZone = container.querySelector('.unite-roller-libelle');
+                if (libelleZone) {
+                    libelleZone.textContent = closest.dataset.libelle;
+                }
+            }
+        };
+
+        // Sur scroll, attendre un peu avant de détecter
+        container.addEventListener('scroll', () => {
+            clearTimeout(isScrolling);
+            isScrolling = setTimeout(() => {
+                detectSelected();
+            }, 50);
+        });
+
+        // Si clic sur un élément, scroll vers lui
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                const topOffset = item.offsetTop - container.clientHeight / 2 + item.offsetHeight / 2;
+                container.scrollTo({ top: topOffset, behavior: 'smooth' });
+
+                // Sélection immédiate visuelle + mise à jour de l'input
+                items.forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                hiddenInput.value = item.dataset.id;
+
+                // MAJ libellé visible
+                const libelleZone = container.querySelector('.unite-roller-libelle');
+                if (libelleZone) {
+                    libelleZone.textContent = item.dataset.libelle;
+                }
+            });
+        });
+
+
+        // Initialiser
+        window.addEventListener('load', () => {
+            const selectedItem = container.querySelector('.unite-roller-item.selected');
+            if (selectedItem) {
+                const topOffset = selectedItem.offsetTop - container.clientHeight / 2 + selectedItem.offsetHeight / 2;
+                container.scrollTo({ top: topOffset });
+
+                        // MAJ initiale du libellé
+                const libelleZone = container.querySelector('.unite-roller-libelle');
+                if (libelleZone) {
+                    libelleZone.textContent = selectedItem.dataset.libelle;
+                }
+            }
+        });
+    });
+});
+</script>
 @endsection

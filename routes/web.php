@@ -374,6 +374,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
         Route::get('/pays/{alpha3}/niveau/{niveau}/localites', [EtudeProjet::class, 'getLocalitesByNiveau']);
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
+        Route::get('/get-bailleurs', [EtudeProjet::class, 'getBailleursParStatutLocal']);
         Route::post('/contrats/chef/update', [ProjetController::class, 'changerChefUpdate'])->name('contrats.chef.update');
 
                 /*******************SAUVEGARDE DE DEMANDE DE PROJET */
@@ -553,6 +554,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('/familles/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
     Route::get('/familles-by-domaine/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
     Route::get('/familles/{idFamille}/caracteristiques', [InfrastructureController::class, 'getCaracteristiques']);
+    Route::get('/famillesCaracteristiquess/{idFamille}/', [InfrastructureController::class, 'getCaracteristiques']);
 
     Route::prefix('admin/infrastructures')->group(function () {
     Route::get('/{id}/impression', [InfrastructureController::class, 'print'])->name('infrastructures.print');

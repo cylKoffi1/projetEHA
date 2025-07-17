@@ -50,13 +50,15 @@ class Caracteristique extends Model
 
     public function parent()
     {
-        return $this->belongsTo(self::class, 'parent_id');
+        return $this->belongsTo(Caracteristique::class, 'parent_id', 'idCaracteristique');
     }
+    
 
     public function enfants()
     {
-        return $this->hasMany(self::class, 'parent_id');
+        return $this->hasMany(Caracteristique::class, 'parent_id', 'idCaracteristique');
     }
+
 
     /** Logique métier */
     public function isRepetable(): bool

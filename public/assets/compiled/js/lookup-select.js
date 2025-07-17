@@ -214,11 +214,23 @@ class LookupSelect extends HTMLElement {
             ...opt
         }));
         this.populateDropdown();
+
+        // 🔥 Si une valeur précédente était sélectionnée, on la conserve (optionnel)
+        const previousValue = this._value;
+        if (previousValue) {
+            this.setSelectedValue(previousValue);
+        }
+
+        // 🔥 Déclenchement automatique d’un "change" simulé pour forcer les listeners
+        this.dispatchChangeEvent();
+        console.log('[LOOKUP] setOptions -> Event "change" déclenché automatiquement');
     }
 
     dispatchChangeEvent() {
-        this.dispatchEvent(new Event("change", { bubbles: true }));
+        const event = new Event('change', { bubbles: true });
+        this.dispatchEvent(event);
     }
+    
     clear() {
         this.input.value = "";
         this._value = null;

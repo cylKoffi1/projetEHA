@@ -54,6 +54,7 @@ use App\Models\Jouir;
 use App\Models\Profiter;
 use App\Models\Beneficier;
 use App\Models\Executer;
+use App\Models\FamilleDomaine;
 use App\Models\Financer;
 use App\Models\Posseder;
 use App\Models\ProjetApprobation;
@@ -126,19 +127,37 @@ class EtudeProjet extends Controller
             $Pieceidentite = Pieceidentite::all();
             $TypeCaracteristiques = TypeCaracteristique::all();
             $infrastructures = Infrastructure::where('code_pays', $paysSelectionne)
-            ->where('code_groupe_projet', $groupeSelectionne)
             ->get();
+            
             $acteurs = Acteur::where('type_acteur', '=', 'etp')
             ->where('code_pays', $paysSelectionne)
             ->get();
-            
+            $familleInfrastructures = FamilleInfrastructure::all();
             $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];   
 
             $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
             
             $Devises = Pays::where('alpha3', $paysSelectionne)->get();
-            return view('etudes_projets.naissance', compact('typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            return view('etudes_projets.naissance', compact('familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
+        public function getBailleursParStatutLocal(Request $request)
+        {
+            $pays = session('pays_selectionne');
+            $local = $request->input('local'); 
+
+            $query = Acteur::query();
+
+            if ($local == 1) {
+                $query->whereIn('code_pays', [ $pays, 'NEU']); 
+            } else {
+                $query->whereIn('code_pays', [ 'ARB', 'AFQ', 'ONU', 'ZAF']);          
+            }
+
+            $bailleurs = $query->get(['code_acteur', 'libelle_court', 'libelle_long']);
+
+            return response()->json($bailleurs);
+        }
+
         public function search(Request $request)
         {
             $query = $request->input('search');
@@ -161,13 +180,22 @@ class EtudeProjet extends Controller
         // Récupérer les localités associées à un pays donné
         public function getLocalites($paysCode)
         {
-
-            $localites = LocalitesPays::where('id_pays', $paysCode)
-            ->orderBy('libelle', 'asc')
-            ->get(['id', 'libelle', 'code_rattachement', 'id_pays']);
+            $localites = \DB::table('localites_pays')
+                ->join('decoupage_administratif', 'localites_pays.code_decoupage', '=', 'decoupage_administratif.code_decoupage')
+                ->where('localites_pays.id_pays', $paysCode)
+                ->orderBy('localites_pays.libelle', 'asc')
+                ->select(
+                    'localites_pays.id',
+                    'localites_pays.libelle',
+                    'localites_pays.code_rattachement',
+                    'localites_pays.id_pays',
+                    'decoupage_administratif.libelle_decoupage'
+                )
+                ->get();
+        
             return response()->json($localites);
         }
-
+        
         // Récupérer le niveau et découpage associés à une localité sélectionnée
         public function getDecoupageNiveau($localiteId)
         {
@@ -197,12 +225,22 @@ class EtudeProjet extends Controller
         
         public function getFamilles($codeDomaine)
         {
-            $familles = FamilleInfrastructure::whereIn('code_groupe_projet',  [session('projet_selectionne')])
-            ->where('code_domaine', $codeDomaine)->get();
-
+            $codeProjet = session('projet_selectionne');
+        
+            // Vérifie que la session contient bien un projet
+            if (!$codeProjet) {
+                return response()->json(['error' => 'Aucun projet sélectionné.'], 400);
+            }
+        
+            $familles = FamilleDomaine::join('familleinfrastructure', 'famille_domaine.code_Ssys', '=', 'familleinfrastructure.code_Ssys')
+                ->where('famille_domaine.code_domaine', $codeDomaine)
+                ->whereIn('famille_domaine.code_groupe_projet', [$codeProjet])
+                ->select('familleinfrastructure.*')
+                ->get();
+        
             return response()->json($familles);
         }
-
+        
         public function getActeurs(Request $request)
         {
             // Vérification du type de requête : Maître d’Ouvrage ou Maître d’Œuvre
@@ -382,7 +420,7 @@ class EtudeProjet extends Controller
         public function saveStep1(Request $request)
         {
             try {
-                $request->validate([
+                /*$request->validate([
                     'libelle_projet' => 'required|string|max:255',
                     'code_sous_domaine' => 'required|string|max:10',
                     'date_demarrage_prevue' => 'required|date',
@@ -392,7 +430,7 @@ class EtudeProjet extends Controller
                     'code_nature' => 'required|string|max:10',
                     'code_pays' => 'required|string|max:3',
                     'commentaire' => 'nullable|string|max:500'
-                ]);
+                ]);*/
         
                 $data = $request->only([
                     'libelle_projet', 'commentaire', 'code_sous_domaine',
@@ -511,7 +549,9 @@ class EtudeProjet extends Controller
         {
             try {
                 $request->validate([
-                    'code_acteur_moe' => 'required|exists:acteur,code_acteur',
+                    'acteurs' => 'required|array|min:1',
+                    'acteurs.*.code_acteur' => 'required|exists:acteur,code_acteur',
+                    'acteurs.*.secteur_id' => 'nullable|string',
                     'type_ouvrage' => 'nullable|string',
                     'priveMoeType' => 'nullable|string',
                     'sectActivEntMoe' => 'nullable|string',
@@ -519,7 +559,7 @@ class EtudeProjet extends Controller
                 ]);
         
                 $data = $request->only([
-                    'code_acteur_moe', 'type_ouvrage', 'priveMoeType', 'sectActivEntMoe', 'descriptionMoe'
+                    'type_ouvrage', 'priveMoeType', 'descriptionMoe', 'acteurs'
                 ]);
         
                 session(['form_step4' => $data]);
@@ -692,7 +732,11 @@ class EtudeProjet extends Controller
                 $step6 = session('form_step6');
                 $step7 = session('form_step7');
         
-                $codeLocalisation = $step2['localites'][0]['code_rattachement'] ?? null;
+                $codeLocalisation = collect($step2['localites'] ?? [])
+                    ->pluck('code_rattachement')
+                    ->filter()
+                    ->first();
+
 
         
                 // Générer le code projet
@@ -722,7 +766,23 @@ class EtudeProjet extends Controller
                     'type_statut' => 1, // Remplace par l'ID réel du statut (ex : 1 = Prévu, etc.)
                     'date_statut' => now(),
                 ]);
-                
+                $codePays = session('pays_selectionne'); // Exemple : CIV
+                $codeFamille = $infra['famille_code'] ?? null; // Exemple : HEB
+
+                if (!$codeFamille) {
+                    throw new \Exception("Famille d'infrastructure manquante pour l'infrastructure.");
+                }
+
+                $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->firstOrFail();
+                $familleId = $famille->idFamille;
+                Log::info("Famille trouvée", ['famille_id' => $familleId]);
+
+                $prefix = $codePays . $codeFamille;
+
+                $last = Infrastructure::where('code', 'like', $prefix . '%')->orderByDesc('code')->first();
+                $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
+                $codeInfra = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
                 // Enregistrer localisations
                 foreach ($step2['localites'] as $loc) {
                     ProjetLocalisation::create([
@@ -737,27 +797,39 @@ class EtudeProjet extends Controller
                 // Infrastructures
                 foreach ($step2['infrastructures'] ?? [] as $infra) {
                     $infraDB = Infrastructure::create([
-                        'code' => 'INFRA-' . strtoupper(Str::random(4)),
+                        'code' => $codeInfra,
                         'libelle' => $infra['libelle'],
-                        'code_famille_infrastructure' => $infra['famille_code'] ?? null,
+                        'code_Ssys' => $codeFamille,
                         'code_groupe_projet' => session('projet_selectionne'),
-                        'code_pays' => session('pays_selectionne'),
+                        'code_pays' => $codePays,
+                        'code_localite' => $infra['localisation_id'] ?? null,
+                        'date_operation' => now(),
+                        'IsOver' => false
                     ]);
+                    
         
                     $projetInfra = ProjetInfrastructure::create([
                         'idInfrastructure' => $infraDB->id,
                         'code_projet' => $codeProjet,
-                        'localisation_id' => $codeLocalisation ?? null,
+                        'localisation_id' => $infra['localisation_id'] ?? $codeLocalisation,
                     ]);
+                    
         
-                    foreach ($infra['caracteristiques'] ?? [] as $carac) {
+                    foreach ($infra['caracteristiques'] ?? [] as $index => $carac) {
+                        if (!isset($carac['id'], $carac['valeur'])) {
+                            Log::warning("Caractéristique incomplète", ['carac' => $carac]);
+                            continue;
+                        }
+                    
                         ValeurCaracteristique::create([
-                            'idInfrastructure' => $infraDB->id,
+                            'infrastructure_code' => $infraDB->code,
                             'idCaracteristique' => $carac['id'],
-                            'idUnite' => $carac['unite_id'],
+                            'idUnite' => $carac['unite_id'] ?? null,
                             'valeur' => $carac['valeur'],
+                            'ordre' => $index + 1, // enregistrement ordonné
                         ]);
                     }
+                    
                 }
         
                 // Actions à mener
@@ -792,13 +864,17 @@ class EtudeProjet extends Controller
                 }
         
                 // Maître d’Ouvrage
-                Posseder::create([
-                    'code_projet' => $codeProjet,
-                    'code_acteur' => $step4['code_acteur_moe'],
-                    'secteur_id' => $step4['sectActivEntMoe'] ?? null,
-                    'date' => now(),
-                    'is_active' => true,
-                ]);
+                foreach ($step4['acteurs'] ?? [] as $acteur) {
+                    Posseder::create([
+                        'code_projet' => $codeProjet,
+                        'code_acteur' => $acteur['code_acteur'],
+                        'secteur_id' => $acteur['secteur_id'] ?? null,
+                        'isAssistant' => $acteur['isAssistant'] ? true : false,
+                        'date' => now(),
+                        'is_active' => true,
+                    ]);
+                }
+                
         
                 // Maîtres d’œuvre
                 foreach ($step5['acteurs'] as $acteur) {

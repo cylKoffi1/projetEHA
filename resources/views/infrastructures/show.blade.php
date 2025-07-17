@@ -50,6 +50,40 @@
         color: #3a7bd5;
     }
 </style>
+<style>
+/* Style pour les caractéristiques */
+.caracteristique-item {
+    padding: 12px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.caracteristique-item:hover {
+    background-color: #e9ecef;
+    border-left-color: #0d6efd;
+}
+
+.caracteristique-item[data-level="1"] { margin-left: 20px; }
+.caracteristique-item[data-level="2"] { margin-left: 40px; }
+.caracteristique-item[data-level="3"] { margin-left: 60px; }
+
+/* Style pour les indicateurs */
+.change-indicator {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* Style pour le sticky bottom */
+.sticky-bottom {
+    position: sticky;
+    bottom: 0;
+    z-index: 1020;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+</style>
 
 <!-- GLightbox CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
@@ -190,7 +224,7 @@
 
                         <!-- Edition des caractéristiques -->
                         <div class="tab-pane fade" id="edit">
-                            <form method="POST" action="{{ route('infrastructures.caracteristiques.updateMultiple', $infrastructure->id) }}">
+                            <form method="POST" action="{{ route('infrastructures.caracteristiques.updateMultiple', $infrastructure->id) }}" id="caracteristiques-form">
                                 @csrf
                                 @method('PUT')
 
@@ -203,106 +237,38 @@
                                 @if($caracsFamille->isEmpty())
                                     <div class="alert alert-info">Aucune caractéristique définie pour cette famille d'infrastructure.</div>
                                 @else
+
                                     @foreach($groupedCaracs as $groupe => $caracs)
-                                        <div class="caracteristique-group">
-                                            <h5 class="caracteristique-group-title">{{ $groupe ?? 'Autres caractéristiques' }}</h5>
-                                                @php
-                                                if (!function_exists('afficherCaracEditable')) {
-                                                    function afficherCaracEditable($carac, $valeurs, $level = 0) {
-                                                        $valeur = $valeurs[$carac->idCaracteristique] ?? null;
-                                                        $type = strtolower($carac->type->libelleTypeCaracteristique ?? '');
-                                                        $name = "caracteristiques[" . ($valeur?->idValeurCaracteristique ?? 'new_' . $carac->idCaracteristique) . "]";
-                                                        $val = $valeur?->valeur ?? '';
-                                                        $valeursPossibles = $carac->valeursPossibles ?? [];
-                                                        $unite = $valeur?->unite?->symbole  ?? $carac->unite?->symbole ?? null;
-
-                                                        $hasChildren = $carac->enfants->isNotEmpty();
-                                                        $toggleId = 'carac-children-' . $carac->idCaracteristique;
-
-                                                        echo '<div class="caracteristique-card mb-2" style="margin-left:' . ($level * 20) . 'px;">';
-
-                                                        // Header avec icône + libellé
-                                                        echo '<div class="d-flex align-items-center mb-1">';
-                                                        if ($hasChildren) {
-                                                            echo '<i class="bi bi-caret-right toggle-btn text-primary me-2" data-target="#' . $toggleId . '" style="cursor: pointer;"></i>';
-                                                        } else {
-                                                            echo '<i class="bi bi-dot text-muted me-2"></i>';
-                                                        }
-                                                        echo '<span class="fw-bold" style="color: black;">' . e($carac->libelleCaracteristique) . '</span>';
-                                                        echo '<span class="text-muted ms-2 small">Ordre: ' . $carac->ordre . '</span>';
-                                                        echo '</div>';
-
-                                                        // Champ de saisie
-                                                        if ($type === 'liste') {
-                                                            echo '<select name="' . $name . '" class="form-select">';
-                                                            echo '<option value="">Sélectionner</option>';
-                                                            foreach ($valeursPossibles as $option) {
-                                                                $selected = $option->valeur == $val ? 'selected' : '';
-                                                                echo '<option value="' . e($option->valeur) . '" ' . $selected . '>' . e($option->valeur) . '</option>';
-                                                            }
-                                                            echo '</select>';
-                                                        } elseif ($type === 'boolean') {
-                                                            echo '<div class="form-check form-switch">';
-                                                            echo '<input type="hidden" name="' . $name . '" value="0">';
-                                                            echo '<input type="checkbox" class="form-check-input" name="' . $name . '" value="1" ' . ($val == 1 ? 'checked' : '') . '>';
-                                                            echo '<label class="form-check-label">Oui / Non</label>';
-                                                            echo '</div>';
-                                                        }elseif ($type === 'nombre') {
-                                                            echo '<div class="input-group">';
-                                                            echo '<input type="number" step="any" name="' . $name . '" value="' . e($val) . '" class="form-control">';
-
-                                                            if ($unite) {
-                                                                $uniteId = $carac->unite->idUnite ?? null;
-                                                                $selectedDerivee = $valeur?->uniteDerivee?->id ?? null;
-
-                                                                echo '<select name="unites_derivees[' . $carac->idCaracteristique . ']" class="form-select">';
-
-                                                                if (isset($unitesDerivees[$uniteId])) {
-                                                                    foreach ($unitesDerivees[$uniteId] as $der) {
-                                                                        $selected = ($selectedDerivee == $der->id) ? 'selected' : '';
-                                                                        echo '<option value="' . $der->id . '" ' . $selected . '>' . e($der->libelle) . ' (' . e($der->code) . ')</option>';
-                                                                    }
-                                                                } else {
-                                                                    echo '<option value="">Aucune unité dérivée</option>';
-                                                                }
-
-                                                                echo '</select>';
-                                                            }
-
-                                                            echo '</div>';
-                                                        }else {
-                                                            echo '<input type="text" name="' . $name . '" value="' . e($val) . '" class="form-control">';
-                                                        }
-
-                                                        if ($unite && $type !== 'nombre') {
-                                                            echo '<small class="text-muted">Unité: ' . e($unite->libelleUnite) . ' (' . e($unite->symbole) . ')</small>';
-                                                        }
-
-                                                        echo '</div>'; // .caracteristique-card
-
-                                                        // Affichage des enfants (masqué par défaut)
-                                                        if ($hasChildren) {
-                                                            echo '<div id="' . $toggleId . '" class="carac-children" style="display: none;">';
-                                                            foreach ($carac->enfants->sortBy('ordre') as $child) {
-                                                                afficherCaracEditable($child, $valeurs, $level + 1);
-                                                            }
-                                                            echo '</div>';
-                                                        }
-                                                    }
-                                                }
-                                                @endphp
-
-                                                @foreach($caracs->where('parent_id', null)->sortBy('ordre') as $carac)
-                                                    @php afficherCaracEditable($carac, $valeurs); @endphp
-                                                @endforeach
-
+                                        <div class="card caracteristique-group mb-4">
+                                        
+                                            
+                                            <div class="collapse show" id="groupe-{{ Str::slug($groupe) }}">
+                                                <div class="card-body">
+                                                    @foreach($caracs->where('parent_id', null)->sortBy('ordre') as $carac)
+                                                        @include('infrastructures.partials.caracteristique-edit', [
+                                                            'carac' => $carac,
+                                                            'valeurs' => $valeurs,
+                                                            'unitesDerivees' => $unitesDerivees,
+                                                            'level' => 0
+                                                        ])
+                                                    @endforeach
+                                                </div>
+                                            </div>
                                         </div>
                                     @endforeach
 
-                                    <div class="d-grid gap-2 mt-4">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="bi bi-save"></i> Enregistrer toutes les modifications
-                                        </button>
+                                    <div class="sticky-bottom bg-white py-3 border-top">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="confirm-changes">
+                                                <label class="form-check-label" for="confirm-changes">
+                                                    Je confirme ces modifications
+                                                </label>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary" id="save-btn" disabled>
+                                                <i class="bi bi-save"></i> Enregistrer toutes les modifications
+                                            </button>
+                                        </div>
                                     </div>
                                 @endif
                             </form>
@@ -320,12 +286,16 @@
                     <h5 class="mb-0">QR Code d'identification</h5>
                 </div>
                 <div class="card-body">
-                    <div class="qr-code-container">
-                        <div class="qr-code-title">Scannez pour accéder aux détails</div>
-                        <center><div id="qrCode" class="mb-2"></div></center>
-                        <small class="text-muted">Code ID: {{ $infrastructure->code }}</small>
+                    <div class="qr-code-container text-center">
+                        <div class="qr-code-title mb-2">Scannez pour accéder aux détails</div>
+
+                        <!-- Canvas qui contiendra le QR code fusionné avec le logo -->
+                        <canvas id="qrCanvas" width="180" height="180" style="image-rendering: pixelated;"></canvas>
+
+                        <small class="text-muted d-block mt-2">Code ID: {{ $infrastructure->code }}</small>
                     </div>
                 </div>
+
             </div>
 
             <!-- Statistiques -->
@@ -378,6 +348,61 @@
 <!-- GLightbox JS -->
 <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Activation des tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Gestion de l'affichage des enfants
+    document.querySelectorAll('.toggle-children').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (icon.classList.contains('bi-chevron-right')) {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-down');
+            } else {
+                icon.classList.remove('bi-chevron-down');
+                icon.classList.add('bi-chevron-right');
+            }
+        });
+    });
+
+
+    // Détection des modifications
+    document.querySelectorAll('#edit input, #edit select').forEach(el => {
+        const initialValue = el.value;
+        
+        el.addEventListener('change', function() {
+            if (this.value !== initialValue) {
+                const indicator = this.closest('.d-flex').querySelector('.change-indicator');
+                if (indicator) {
+                    indicator.style.opacity = '1';
+                    setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+                }
+            }
+        });
+        
+    });
+
+    // Activation du bouton de sauvegarde
+    document.getElementById('confirm-changes').addEventListener('change', function() {
+        document.getElementById('save-btn').disabled = !this.checked;
+    });
+
+    // Validation avant soumission
+    document.getElementById('caracteristiques-form').addEventListener('submit', function(e) {
+        // Ajouter ici toute validation supplémentaire si nécessaire
+        if (!document.getElementById('confirm-changes').checked) {
+            e.preventDefault();
+            alert('Veuillez confirmer les modifications avant de soumettre.');
+        };
+    });
+});
+</script>
+
+<script>
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.toggle-btn').forEach(btn => {
             btn.addEventListener('click', function () {
@@ -395,23 +420,60 @@
         });
     });
 </script>
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const qrData = "{{ route('infrastructures.printNoConnect', $infrastructure->id) }}";
+        const logoSrc = "{{ asset(auth()->user()?->paysSelectionne()?->armoirie) }}";
+        const canvas = document.getElementById("qrCanvas");
+        const ctx = canvas.getContext("2d");
 
-        new QRCode(document.getElementById("qrCode"), {
+        // Dimensions QR haute définition
+        const size = 150;
+        canvas.width = size;
+        canvas.height = size;
+
+        // Génération du QR dans un canvas temporaire
+        const qrTemp = document.createElement("div");
+        new QRCode(qrTemp, {
             text: qrData,
-            width: 180,
-            height: 180,
+            width: size,
+            height: size,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
 
-    });
+        // Extraction QR en image
+        setTimeout(() => {
+            const qrImg = qrTemp.querySelector('img') || qrTemp.querySelector('canvas');
+            const qrImage = new Image();
+            qrImage.src = qrImg.src;
 
+            qrImage.onload = function () {
+                ctx.drawImage(qrImage, 0, 0, size, size);
+
+                // Insertion logo HD
+                const logo = new Image();
+                logo.src = logoSrc;
+                logo.onload = function () {
+                    const logoSize = size * 0.3; // taille = 18% du QR
+                    const x = (size - logoSize) / 2;
+                    const y = (size - logoSize) / 2;
+
+                    // Fond blanc pour contraste
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(x - 5, y - 5, logoSize + 10, logoSize + 10);
+
+                    ctx.drawImage(logo, x, y, logoSize, logoSize);
+                };
+            };
+        }, 300);
+    });
+</script>
+
+
+<script>
     // Initialisation des composants
     document.addEventListener('DOMContentLoaded', function() {
 

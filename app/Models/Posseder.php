@@ -18,11 +18,16 @@ class Posseder extends Model
         'code_acteur',
         'secteur_id',
         'date',
+        'isAssistant',
         'is_active',
         'created_at',
         'updated_at'
     ];
-
+    protected $casts = [
+        'isAssistant' => 'boolean',
+        'is_active' => 'boolean',
+    ];
+    
      /**
      * Relation avec le modèle Projet
      * Un enregistrement dans `executer` appartient à un projet

@@ -60,7 +60,7 @@ class CaracteristiqueStructureController extends Controller
                 'structure.*.name' => 'required|string|max:255',
                 'structure.*.type' => 'required|exists:typecaracteristique,idTypeCaracteristique',
                 'structure.*.order' => 'nullable|integer|min:1',
-                'structure.*.unit' => 'nullable|string|max:50',
+                'structure.*.unit' => 'nullable',
                 'structure.*.options' => 'nullable|array',
                 'structure.*.options.*' => 'nullable|string|max:255',
                 'structure.*.description' => 'nullable|string|max:1000',

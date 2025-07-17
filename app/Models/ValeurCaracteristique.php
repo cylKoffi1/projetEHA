@@ -28,7 +28,7 @@ class ValeurCaracteristique extends Model
     }
     public function uniteDerivee()
     {
-        return $this->belongsTo(UniteDerivee::class, 'idUniteDerivee');
+        return $this->belongsTo(UniteDerivee::class, 'idUniteDerivee', 'id');
     }
     
     public function unite()

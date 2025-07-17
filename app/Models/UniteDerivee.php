@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class UniteDerivee extends Model
 {
     protected $table = 'unites_derivees';
-
+    protected $primaryKey = 'id';
     protected $fillable = [
         'code',
         'libelle',

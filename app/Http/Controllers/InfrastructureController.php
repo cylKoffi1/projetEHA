@@ -100,39 +100,37 @@ class InfrastructureController extends Controller
         ->where('code_pays', session('pays_selectionne'))
         ->get();
 
-         return view('infrastructures.create', compact('caracs','valeurs','nomPays','familles', 'localites','pays', 'domaines', 'typeCaracteristiques',
+       
+        $unitesDerivees = UniteDerivee::with('uniteBase')
+            ->get()
+            ->groupBy('id_unite_base');
+         return view('infrastructures.create', compact('unitesDerivees','caracs','valeurs','nomPays','familles', 'localites','pays', 'domaines', 'typeCaracteristiques',
         'infrasExistantes'));
      }
      public function getCaracteristiques($idFamille)
      {
          $caracs = Caracteristique::where('code_famille', $idFamille)
-             ->with(['type', 'valeursPossibles', 'enfants.type', 'enfants.valeursPossibles']) // inclut les types et enfants avec leurs types
+             ->with(['type', 'valeursPossibles', 'enfants.type', 'enfants.valeursPossibles'])
              ->get();
      
-         // Ajout dynamique des infos pour le front
-         $caracs->transform(function ($carac) { 
-             $carac->libelleTypeCaracteristique = $carac->type->libelleTypeCaracteristique ?? null;
+         // Regrouper par ID
+         $grouped = $caracs->groupBy('parent_id');
      
-             if ($carac->isListe()) {
-                 // Depuis la relation valeursPossibles
-                 $carac->valeurs_possibles = $carac->valeursPossibles->pluck('valeur')->toArray();
-             }
-     
-             // Pour chaque enfant récursivement
-             $carac->enfants->transform(function ($enfant) {
-                 $enfant->libelleTypeCaracteristique = $enfant->type->libelleTypeCaracteristique ?? null;
-     
-                 if ($enfant->isListe()) {
-                     $enfant->valeurs_possibles = $enfant->valeursPossibles->pluck('valeur')->toArray();
+         // Construction récursive de l'arbre
+         $buildTree = function ($parentId = null) use (&$buildTree, $grouped) {
+             return ($grouped[$parentId] ?? collect())->map(function ($carac) use ($buildTree) {
+                 $carac->libelleTypeCaracteristique = $carac->type->libelleTypeCaracteristique ?? null;
+                 if ($carac->isListe()) {
+                     $carac->valeurs_possibles = $carac->valeursPossibles->pluck('valeur')->toArray();
                  }
+                 $carac->enfants = $buildTree($carac->idCaracteristique);
+                 return $carac;
+             })->values();
+         };
      
-                 return $enfant;
-             });
+         $tree = $buildTree();
      
-             return $carac;
-         });
-         LOG::INFO($caracs);
-         return response()->json($caracs);
+         return response()->json($tree);
      }
      
      
@@ -396,7 +394,12 @@ class InfrastructureController extends Controller
         ])->findOrFail($id);
         
         
-        $unitesDerivees = UniteDerivee::with('uniteBase')->get()->groupBy('id_unite_base');
+       
+        $unitesDerivees = UniteDerivee::with('uniteBase')
+            ->get()
+            ->groupBy('id_unite_base');
+
+
         $typeCaracteristiques = TypeCaracteristique::all();
             
         return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques', 'unitesDerivees'));
@@ -458,6 +461,10 @@ class InfrastructureController extends Controller
         // Pour le JS : correspondance famille → domaine
         $mappingFamilleDomaine = FamilleInfrastructure::pluck('code_Ssys', 'code_Ssys');
        
+       
+        $unitesDerivees = UniteDerivee::with('uniteBase')
+            ->get()
+            ->groupBy('id_unite_base');
         return view('infrastructures.create', compact(
             'infrastructure',
             'familles',
@@ -469,7 +476,8 @@ class InfrastructureController extends Controller
             'mappingFamilleDomaine',
             'valeursExistantes',
             'caracs' ,
-            'infrasExistantes'
+            'infrasExistantes',
+            'unitesDerivees'
         ));
     }
     public function deleteImage($id, $code)
@@ -719,23 +727,33 @@ class InfrastructureController extends Controller
                 'devise' => $projet->devise?->monnaie ?? '-',
             ];
         }
-        
+        $armoiriePath = public_path(auth()->user()?->paysSelectionne()?->armoirie);
+
        
        
         $url = route('infrastructures.show', $infrastructure->id); // ou autre route
 
+
         $qrCode = new QrCode(
             data: $url,
             encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel:  ErrorCorrectionLevel::High,
-            size: 250,
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 300, // taille du QR
             margin: 10,
             foregroundColor: new Color(0, 0, 0),
             backgroundColor: new Color(255, 255, 255),
         );
         
+        // ✅ Récupère l’armoirie du pays sélectionné
+        $armoiriePath = public_path(auth()->user()?->paysSelectionne()?->armoirie);
+        
+        $logo = null;
+        if (file_exists($armoiriePath)) {
+            $logo = Logo::create($armoiriePath)->setResizeToWidth(60); // ajuste selon tes besoins
+        }
+        
         $writer = new PngWriter();
-        $result = $writer->write($qrCode);
+        $result = $writer->write($qrCode, $logo); // 💥 Logo inséré ici
         
         // Encode en base64 pour affichage direct dans la vue
         $qrCodeBase64 = base64_encode($result->getString());
