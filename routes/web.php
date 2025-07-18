@@ -386,7 +386,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                 Route::post('/projets/temp/save-step6', [EtudeProjet::class, 'saveStep6'])->name('projets.temp.save.step6');
                 Route::post('/projets/temp/save-step7', [EtudeProjet::class, 'saveStep7'])->name('projets.temp.save.step7');
                 Route::post('/projets/finaliser', [EtudeProjet::class, 'finaliserProjet'])->name('projets.finaliser');
-                Route::delete('/projets/abort', [EtudeProjet::class, 'abortProjet'])->name('projets.abort');
 
         /***********************VALIDATION***************** */
 

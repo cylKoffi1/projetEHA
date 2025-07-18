@@ -1,4 +1,3 @@
-<!-- 🟠 Étape  : Localisation -->
 <div class="step" id="step-2">
     <div class="tab-content mt-3" id="tabContent">
         <!-- Infrastructure Form -->
@@ -220,7 +219,6 @@ function saveStep2(callback = null) {
                 console.log("[✅ Sauvegarde] Étape 2 enregistrée :", response);
 
                 populateInfrastructureSelect();
-                // Si on a une fonction callback (ex : nextStep), on l'appelle
                 if (typeof callback === "function") {
                     callback();
                 } else {

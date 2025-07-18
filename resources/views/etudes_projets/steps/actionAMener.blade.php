@@ -223,9 +223,6 @@
             success: function (response) {
                 //alert(response.message || "Étape 3 sauvegardée.");
                 if (response.success) {
-                    console.log("Step 1 sauvegardé temporairement.");
-                    localStorage.setItem("code_projet_temp", response.code_projet);
-                    //if (typeof callback === 'function') callback();
                     nextStep();
                 }
 

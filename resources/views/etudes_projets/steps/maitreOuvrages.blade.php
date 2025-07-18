@@ -1,4 +1,4 @@
-<!-- Étape : Informations sur le Maître d’Œuvre -->
+
 <div class="step" id="step-4">
     <h5 class="text-secondary">👷 Informations / Maître d’ouvrage</h5>
 
@@ -58,7 +58,7 @@
                 <input type="checkbox" class="form-check-input" id="isAssistantMoe">
                 <label class="form-check-label" for="isAssistantMoe">Assistant Maître d’Ouvrage</label>
             </div>
-            <button type="button" class="btn btn-secondary" id="addMoeBtn" style="heght: 34px">
+            <button type="button" class="btn btn-secondary" id="addMoeBtn" style="height: 34px">
                 <i class="fas fa-plus"></i> Ajouter 
             </button>
         </div>
