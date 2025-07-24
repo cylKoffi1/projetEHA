@@ -189,6 +189,23 @@
 
         const typeFinancement = document.getElementById("typeFinancement").value;
         localStorage.setItem("type_financement", typeFinancement);
+    
+        // Lire le coût total du projet depuis le champ #coutProjet
+        const coutProjet = parseFloat(document.getElementById("coutProjet")?.value.replace(/\s/g, '') || 0);
+
+        // Calcul de la somme des montants des bailleurs
+        let sommeMontants = 0;
+        document.querySelectorAll("#tableFinancements tbody tr").forEach(row => {
+            const montantStr = row.querySelector('input[name$="[montant]"]')?.value || '0';
+            const montant = parseFloat(montantStr.replace(/\s/g, '')) || 0;
+            sommeMontants += montant;
+        });
+
+        // Comparaison
+        if (sommeMontants > coutProjet) {
+            alert(`⚠️ La somme des financements (${sommeMontants.toLocaleString()}) dépasse le coût du projet (${coutProjet.toLocaleString()}).`, 'warning');
+            return;
+}
 
         const financements = [];
 

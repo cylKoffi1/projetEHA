@@ -673,6 +673,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
     /*************************TYPE ACTEURS */
     Route::get('admin/type-acteurs', [TypeActeurController::class, 'index'])->name('type-acteurs.index');
+    Route::get('/get-infrastructures/{domaine}/{sousDomaine}/{pays}', [EtudeProjet::class, 'getInfrastructures']);
 
     Route::get('/get-acteurs', [EtudeProjet::class, 'getActeurs'])->name('acteur.filter');
     Route::get('/get-actor-details', [EtudeProjet::class, 'getActeurs'])->name('acteur.filter');

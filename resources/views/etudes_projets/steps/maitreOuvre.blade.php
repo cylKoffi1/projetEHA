@@ -126,8 +126,8 @@
             },
             success: function (res) {
                 //alert(res.message);
-                nextStep();
-                //if (typeof callback === "function") callback();
+                if (typeof callback === "function") callback();
+                else nextStep();
             },
             error: function (xhr) {
                 let message = "Une erreur est survenue.";

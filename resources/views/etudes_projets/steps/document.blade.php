@@ -356,7 +356,10 @@
         const codeTemp = localStorage.getItem('code_projet_temp');
         const codeLocalisation = localStorage.getItem('code_localisation');
         const typeFinancement = localStorage.getItem('type_financement');
-
+        console.log('codeTemp',codeTemp);
+        console.log('codeLocalisation', codeLocalisation);
+        console.log('typeFinancement', typeFinancement);
+        
         if (!codeTemp || !codeLocalisation || !typeFinancement) {
             alert("Des informations manquent pour finaliser le projet.");
             return;

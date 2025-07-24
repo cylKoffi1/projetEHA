@@ -40,6 +40,7 @@ class Infrastructure extends Model
     public function familleDomaine(){
         return $this->belongsTo(FamilleDomaine::class, 'code_Ssys', 'code_Ssys');
     }
+    
     // Relation avec les valeurs de caractéristiques
     public function valeursCaracteristiques()
     {

@@ -79,7 +79,7 @@ class Projet extends Model
     }
     
     public function maitreOuvrage() {
-        return $this->hasOne(Posseder::class, 'code_projet', 'code_projet')->where('is_active', true);
+        return $this->hasOne(Posseder::class, 'code_projet', 'code_projet');
     }
     
     public function ChefProjet(){

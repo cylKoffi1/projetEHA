@@ -222,9 +222,8 @@
             },
             success: function (response) {
                 //alert(response.message || "Étape 3 sauvegardée.");
-                if (response.success) {
-                    nextStep();
-                }
+                if (typeof callback === "function") callback();
+                else nextStep();
 
             },
             error: function (xhr) {
@@ -328,15 +327,19 @@
 
     // 🔹 Ajouter un bénéficiaire
     $("#addBtnBene").on("click", function () {
-        const selectedType = $("input[name='beneficiaire_type[]']:checked").val();
-        const selectId = typeToSelectId[selectedType];
+        const selectedType = $("input[name='beneficiaire_type[]']:checked").val(); // 'acteur', 'localite', etc.
+        const selectId = typeToSelectId[selectedType]; // mapping correct
         const selectedLookup = document.getElementById(selectId);
         const selectedOption = selectedLookup?.getSelected();
 
         if (selectedOption && selectedOption.value) {
             const code = selectedOption.value;
             const libelle = selectedOption.text;
-            const type = selectId;
+            const type = selectedType;
+
+            // ✅ Extraction des données spécifiques
+            const codePays = selectedOption.codePays || '';
+            const codeRattachement = selectedOption.codeRattachement || '';
 
             const row = `
                 <tr>
@@ -344,6 +347,8 @@
                     <td>${code}</td>
                     <td>${libelle}</td>
                     <td>${type}</td>
+                    <td hidden>${codePays}</td>
+                    <td hidden>${codeRattachement}</td>
                 </tr>
             `;
             $("#beneficiaireTable tbody").append(row);
@@ -352,7 +357,7 @@
         }
     });
 
-    // 🔹 Supprimer bénéficiaires sélectionnés
+    // 🔹 Supprimer les bénéficiaires sélectionnés
     $("#deleteBtn").on("click", function () {
         $("#beneficiaireTable tbody input[type='checkbox']:checked").closest("tr").remove();
     });
@@ -363,25 +368,26 @@
         const quantite = $("#quantite").val();
         const infrastructureSelect = document.getElementById("insfrastructureSelect");
         const infrastructureOption = infrastructureSelect.options[infrastructureSelect.selectedIndex];
-        if ( !action.value ) {
-            alert("Veuillez sélectionner l'action à mener.",'warning');
-            return;
-        }
-        if ( !quantite ) {
-            alert("Veuillez sélectionner la quantité.",'warning');
-            return;
-        }
-        if ( !infrastructureOption || !infrastructureOption.value) {
-            alert("Veuillez sélectionner l'infrastructure.",'warning');
-            return;
-        }
-        const infrastructureLibelle = infrastructureOption.textContent;
-        const infrastructureCode = infrastructureOption.value;
 
+        if (!action.value) {
+            alert("Veuillez sélectionner l'action à mener.", 'warning');
+            return;
+        }
+        if (!quantite) {
+            alert("Veuillez indiquer la quantité.", 'warning');
+            return;
+        }
+        if (!infrastructureOption || !infrastructureOption.value) {
+            alert("Veuillez sélectionner l'infrastructure.", 'warning');
+            return;
+        }
+
+        const infrastructureLibelle = infrastructureOption.textContent;
+        const infrastructureCode = infrastructureSelect.value;
         const $beneficiaires = $("#beneficiaireTable tbody tr");
 
         if ($beneficiaires.length === 0) {
-            alert("Veuillez ajouter au moins un bénéficiaire.",'warning');
+            alert("Veuillez ajouter au moins un bénéficiaire.", 'warning');
             return;
         }
 
@@ -389,17 +395,8 @@
             const codeB = $(this).find("td:eq(1)").text();
             const libelleB = $(this).find("td:eq(2)").text();
             const typeB = $(this).find("td:eq(3)").text();
-
-            let extraData = {
-                codePays: "",
-                codeRattachement: ""
-            };
-
-            if (typeB === "localite") {
-                const selected = $("#localite option:selected");
-                extraData.codePays = selected.data("code-pays") || "";
-                extraData.codeRattachement = selected.data("code-rattachement") || "";
-            }
+            const codePays = $(this).find("td:eq(4)").text();
+            const codeRattachement = $(this).find("td:eq(5)").text();
 
             const newRow = `
                 <tr>
@@ -412,8 +409,8 @@
                     <td>${libelleB}</td>
                     <td hidden>${codeB}</td>
                     <td>${typeB}</td>
-                    <td hidden>${extraData.codePays}</td>
-                    <td hidden>${extraData.codeRattachement}</td>
+                    <td hidden>${codePays}</td>
+                    <td hidden>${codeRattachement}</td>
                     <td>
                         <button class="btn btn-danger btn-sm delete-row">
                             <i class="fas fa-trash"></i>
@@ -425,16 +422,16 @@
             $("#beneficiaire-table-body").append(newRow);
         });
 
-        // Incrémentation et nettoyage
+        // 🔁 Incrémenter le compteur et nettoyer le formulaire
         actionCounter++;
         $("#nordre").val(actionCounter);
-
         $("#quantite").val('');
         $("#action").val('');
         $("#insfrastructureSelect").val('');
         $("#beneficiaireTable tbody").empty();
         $("#infrastructureField").addClass("d-none");
     });
+
 
     // 🔹 Suppression ligne dans tableau final
     $(document).on("click", ".delete-row", function () {

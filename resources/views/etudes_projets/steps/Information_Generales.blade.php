@@ -108,7 +108,8 @@
                 if (response.success) {
                     console.log("Step 1 sauvegardé temporairement.");
                     localStorage.setItem("code_projet_temp", response.code_projet);
-                    //if (typeof callback === 'function') callback();
+                    if (typeof callback === 'function') callback();
+                    updateInfrastructureField();
                     nextStep();
                 }
             },
@@ -131,9 +132,12 @@
 
         });
     }
+
+
 </script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        
         const dateDebutInput = document.getElementById("dateDemarragePrev");
         const dateFinInput = document.getElementById("dateFinPrev");
 

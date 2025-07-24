@@ -221,7 +221,7 @@
 
 <!-- ======= Barre de navigation ======= -->
 <nav class="navbar">
-    <a class="navbar-brand" href="{{ url('/')}} ">BTP-PROJECT <span style="font-size:15px;">version.β</span> </a>
+    <a class="navbar-brand" href="{{ url('/')}} ">GESPROI <span style="font-size:15px;">version.β</span> </a>
     <button type="button" class="navbar-toggle" id="navbar-toggle">
         ☰ <!-- Icône hamburger -->
     </button>

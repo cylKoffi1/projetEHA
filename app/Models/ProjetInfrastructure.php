@@ -20,16 +20,14 @@ class ProjetInfrastructure extends Model
     {
         return $this->belongsTo(Infrastructure::class, 'idInfrastructure', 'id');
     }
+    
 
     public function localisation()
     {
         return $this->belongsTo(ProjetLocalisation::class, 'localisation_id');
     }
 
-    public function valeursCaracteristiques()
-    {
-        return $this->hasMany(ValeurCaracteristique::class, 'idInfrastructure');
-    }
+
 
     public function projet()
     {

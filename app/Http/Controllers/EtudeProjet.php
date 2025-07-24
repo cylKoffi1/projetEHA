@@ -62,6 +62,7 @@ use App\Models\ProjetDocument;
 use App\Models\projets_natureTravaux;
 use App\Models\ProjetStatut;
 use App\Models\TypeFinancement;
+use App\Models\UniteDerivee;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
@@ -126,8 +127,9 @@ class EtudeProjet extends Controller
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
             $TypeCaracteristiques = TypeCaracteristique::all();
+            
             $infrastructures = Infrastructure::where('code_pays', $paysSelectionne)
-            ->get();
+            ->get();        
             
             $acteurs = Acteur::where('type_acteur', '=', 'etp')
             ->where('code_pays', $paysSelectionne)
@@ -138,8 +140,26 @@ class EtudeProjet extends Controller
             $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
             
             $Devises = Pays::where('alpha3', $paysSelectionne)->get();
-            return view('etudes_projets.naissance', compact('familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            
+            $unitesDerivees = UniteDerivee::with('uniteBase')
+            ->get()
+            ->groupBy('id_unite_base');
+            return view('etudes_projets.naissance', compact('unitesDerivees', 'familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
+
+        public function getInfrastructures($domaine, $sousDomaine, $pays)
+        {
+            $infras = Infrastructure::where('code_pays', $pays)
+                ->whereHas('familleDomaine', function ($q) use ($domaine, $sousDomaine) {
+                    $q->where('code_domaine', $domaine)
+                    ->where('code_sdomaine', $sousDomaine);
+                })
+                ->get(['code', 'libelle']);
+
+            return response()->json($infras); // ✅ Important : retourner du JSON
+        }
+
+
         public function getBailleursParStatutLocal(Request $request)
         {
             $pays = session('pays_selectionne');
@@ -420,7 +440,7 @@ class EtudeProjet extends Controller
         public function saveStep1(Request $request)
         {
             try {
-                /*$request->validate([
+                $request->validate([
                     'libelle_projet' => 'required|string|max:255',
                     'code_sous_domaine' => 'required|string|max:10',
                     'date_demarrage_prevue' => 'required|date',
@@ -430,7 +450,7 @@ class EtudeProjet extends Controller
                     'code_nature' => 'required|string|max:10',
                     'code_pays' => 'required|string|max:3',
                     'commentaire' => 'nullable|string|max:500'
-                ]);*/
+                ]);
         
                 $data = $request->only([
                     'libelle_projet', 'commentaire', 'code_sous_domaine',
@@ -513,10 +533,10 @@ class EtudeProjet extends Controller
         public function saveStep3(Request $request)
         {
             try {
-                /*$request->validate([
+                $request->validate([
                      'actions' => 'required|array',
                 ]);
-                */
+                
                 $data = $request->only(['actions']);
                 session(['form_step3' => $data]);
         
@@ -767,46 +787,55 @@ class EtudeProjet extends Controller
                     'date_statut' => now(),
                 ]);
                 $codePays = session('pays_selectionne'); // Exemple : CIV
-                $codeFamille = $infra['famille_code'] ?? null; // Exemple : HEB
-
-                if (!$codeFamille) {
-                    throw new \Exception("Famille d'infrastructure manquante pour l'infrastructure.");
-                }
-
-                $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->firstOrFail();
-                $familleId = $famille->idFamille;
-                Log::info("Famille trouvée", ['famille_id' => $familleId]);
-
-                $prefix = $codePays . $codeFamille;
-
-                $last = Infrastructure::where('code', 'like', $prefix . '%')->orderByDesc('code')->first();
-                $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
-                $codeInfra = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
-
+               
                 // Enregistrer localisations
                 foreach ($step2['localites'] as $loc) {
+                    log::error('données de localité', $loc);
                     ProjetLocalisation::create([
                         'code_projet' => $codeProjet,
                         'code_localite' => $loc['code_rattachement'],
                         'niveau' => $loc['niveau'] ?? null,
-                        'decoupage' => $loc['decoupage'] ?? null,
+                        'decoupage' => $loc['code_decoupage'] ?? null,
                         'pays_code' => $step1['code_pays'],
                     ]);
                 }
         
                 // Infrastructures
                 foreach ($step2['infrastructures'] ?? [] as $infra) {
-                    $infraDB = Infrastructure::create([
-                        'code' => $codeInfra,
-                        'libelle' => $infra['libelle'],
-                        'code_Ssys' => $codeFamille,
-                        'code_groupe_projet' => session('projet_selectionne'),
-                        'code_pays' => $codePays,
-                        'code_localite' => $infra['localisation_id'] ?? null,
-                        'date_operation' => now(),
-                        'IsOver' => false
-                    ]);
-                    
+                    $codeFamille = $infra['famille_code'] ?? null; // Exemple : HEB
+
+                    if (!$codeFamille) {
+                        throw new \Exception("Famille d'infrastructure manquante pour l'infrastructure.");
+                    }
+                  
+                    // Vérifier si l'infrastructure existe si non, créer un nouveau 
+                    $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
+                        ->where('libelle', $infra['libelle'] ?? '')
+                        ->first();
+
+                    if (!$infraDB) {
+                        $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->firstOrFail();
+                        $familleId = $famille->idFamille;
+                        Log::info("Famille trouvée", ['famille_id' => $familleId]);
+
+                        $prefix = $codePays . $codeFamille;
+
+                        $last = Infrastructure::where('code', 'like', $prefix . '%')->orderByDesc('code')->first();
+                        $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
+                        $codeInfra = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
+                        $infraDB = Infrastructure::create([
+                            'code' => $codeInfra,
+                            'libelle' => $infra['libelle'],
+                            'code_Ssys' => $codeFamille,
+                            'code_groupe_projet' => session('projet_selectionne'),
+                            'code_pays' => $codePays,
+                            'code_localite' => $infra['localisation_id'] ?? null,
+                            'date_operation' => now(),
+                            'IsOver' => false
+                        ]);
+                    }
+
         
                     $projetInfra = ProjetInfrastructure::create([
                         'idInfrastructure' => $infraDB->id,
@@ -816,19 +845,20 @@ class EtudeProjet extends Controller
                     
         
                     foreach ($infra['caracteristiques'] ?? [] as $index => $carac) {
-                        if (!isset($carac['id'], $carac['valeur'])) {
-                            Log::warning("Caractéristique incomplète", ['carac' => $carac]);
+                        if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') {
+                            Log::warning("Caractéristique manquante ou vide", ['carac' => $carac]);
                             continue;
                         }
-                    
+
                         ValeurCaracteristique::create([
                             'infrastructure_code' => $infraDB->code,
                             'idCaracteristique' => $carac['id'],
                             'idUnite' => $carac['unite_id'] ?? null,
                             'valeur' => $carac['valeur'],
-                            'ordre' => $index + 1, // enregistrement ordonné
+                            'ordre' => $index + 1,
                         ]);
                     }
+
                     
                 }
         
@@ -868,8 +898,8 @@ class EtudeProjet extends Controller
                     Posseder::create([
                         'code_projet' => $codeProjet,
                         'code_acteur' => $acteur['code_acteur'],
-                        'secteur_id' => $acteur['secteur_id'] ?? null,
-                        'isAssistant' => $acteur['isAssistant'] ? true : false,
+                        'secteur_id' => $acteur['secteur_code'] ?? null,
+                        'isAssistant' => $acteur['is_assistant'] ? true : false,
                         'date' => now(),
                         'is_active' => true,
                     ]);

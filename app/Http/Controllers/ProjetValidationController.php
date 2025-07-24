@@ -45,7 +45,7 @@ class ProjetValidationController extends Controller
             $etude = EtudeProject::with([
                 'projet',
                 'projet.localisations.localite.decoupage',
-                'projet.infrastructures.valeursCaracteristiques',
+                'projet.infrastructures.infra',
                 'projet.actions',
                 'projet.maitreOuvrage',
                 'projet.maitresOeuvre',

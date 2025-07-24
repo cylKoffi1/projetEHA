@@ -80,18 +80,12 @@
     <!-- Main Content -->
     <main>
         <section id="home" >
-            <!-- Ajout de la vidéo en arrière-plan -->
-            <video class="video-background" autoplay loop muted id="background-video">
-                <source src="{{ asset('assets/BTP-Image/logoVideo.mp4') }}" type="video/mp4">
-                Votre navigateur ne supporte pas la balise vidéo.
-            </video>
-
-
+          
 
             <div class="container" >
                  <div class="welcome-hero-txt" >
-                 <h2>GESTION DE PROJETS</h2>
-                    <h2>DU BÂTIMENT ET DES TRAVAUX PUBLICS</h2>
+                 <h2>GESPRO-INFRAS</h2>
+                    <h2>DGeston</h2>
                 </div>
             </div>
         </section>

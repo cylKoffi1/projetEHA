@@ -62,7 +62,7 @@
                         <i class="bi bi-building me-3 fs-4 text-primary"></i>
                         <div>
                             <h6 class="mb-1 fw-bold text-muted">Maître d’ouvrage</h6>
-                            <p class="mb-0">{{ $etude->projet->maitreOuvrage?->acteur?->libelle_court ?? '—' }}</p>
+                            <p class="mb-0">{{ $etude->projet->maitreOuvrage?->acteur?->libelle_court ?? $etude->projet->maitreOuvrage?->acteur?->libelle_long ?? '—' }}</p>
                         </div>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
                         <div>
                             <h6 class="mb-1 fw-bold text-muted">Maîtres d’œuvre</h6>
                             @foreach($etude->projet->maitresOeuvre as $moe)
-                                <p class="mb-0">{{ $moe->acteur->libelle_court ?? '—' }}</p>
+                                <p class="mb-0">{{ $moe->acteur->libelle_court ?? $moe->acteur->libelle_long ?? '—' }}</p>
                             @endforeach
                         </div>
                     </div>
@@ -165,19 +165,28 @@
         {{-- Infrastructures --}}
         <div class="tab-pane fade" id="tab-infra">
             <h5 class="mb-3">Infrastructures concernées</h5>
-            @foreach($etude->projet->infrastructures as $infra)
-                <div class="mb-3">
-                    <strong>{{ $infra->libelle }}</strong>
-                    <ul class="list-group list-group-flush">
-                        @foreach($infra->valeursCaracteristiques as $val)
-                            <li class="list-group-item d-flex justify-content-between">
-                                {{ $val->caracteristique?->libelle }} : {{ $val->valeur }} {{ $val->idUnite }}
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endforeach
+            <table class="table table-bordered table-sm">
+    <thead class="table-light">
+        <tr>
+            <th>Libellé</th>
+            <th>Valeur</th>
+            <th>Unité</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($projetInfra->infra->valeursCaracteristiques as $val)
+            <tr>
+                <td>{{ $val->caracteristique?->libelleCaracteristique ?? '—' }}</td>
+                <td>{{ $val->valeur ?? '—' }}</td>
+                <td>{{ $val->unite?->symbole ?? '' }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+
+
         </div>
+
 
         {{-- Actions --}}
         <div class="tab-pane fade" id="tab-actions">
