@@ -47,6 +47,11 @@ class ProjetActionAMener extends Model
     {
         return $this->belongsTo(Infrastructure::class, 'Infrastrucrues_id', 'code');
     }
+    public function caracteristiques()
+{
+    return $this->hasMany(ValeurCaracteristique::class, 'infrastructure_code', 'Infrastrucrues_id')
+        ->whereNotNull('idCaracteristique');
+}
     
     public function actionMener()
     {

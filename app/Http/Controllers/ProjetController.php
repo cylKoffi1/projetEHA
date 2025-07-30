@@ -10,6 +10,7 @@ use App\Models\MotifStatutProjet;
 use App\Models\Projet;
 use App\Models\ProjetStatut;
 use App\Models\SecteurActivite;
+use App\Models\StatutProjet;
 use Exception;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -80,6 +81,8 @@ class ProjetController extends Controller
             'SecteurActivites'
         ));
     }
+
+
     
     public function storeReatt(Request $request)
     {
@@ -186,10 +189,43 @@ class ProjetController extends Controller
             'id' => $execution->id,
             'code_projet' => $execution->code_projet,
             'code_acteur' => $execution->code_acteur,
+            'acteur_nom' => $execution->acteur->libelle_court . ' ' . $execution->acteur->libelle_long,
             'secteur_id' => $execution->secteur_id,
             'motif' => $execution->motif,
             'acteur_type' => $execution->acteur->type_acteur
         ]);
+        
+    }
+
+    public function getProjetSupprimer($code_projet)
+    {
+        $execution = Projet::where('code_projet', $code_projet)
+            ->first();
+
+        if (!$execution) {
+            return response()->json(null);
+        }
+
+        return response()->json([
+            'code_projet' => $execution->code_projet,
+            'nature' => $execution->statuts?->statut->libelle,
+            'domaine' => $execution->sousDomaine?->Domaine?->libelle,
+            'sousDomaine' =>$execution->sousDomaine?->lib_sous_domaine,
+            'cout' => $execution->cout_projet,
+            'maitreOeuvre' => $execution->maitresOeuvre->map(function($moe) {
+                                return $moe->acteur->libelle_long ?? null;
+                            })->filter()->values(),
+
+            'maitreOuvrage' => $execution->maitreOuvrage?->acteur->libelle_long ,
+            'localite' => $execution->localisations?->map(function($mose) {
+                return $mose->localite->libelle ?? null;
+            })->filter()->values(),
+            'devise' => $execution->code_devise,
+            'libelle_projet' => $execution->libelle_projet,
+            'date_demarrage_prevue' => $execution->date_demarrage_prevue,
+            'date_fin_prevue' => $execution->date_fin_prevue
+        ]);
+        
     }
 
     /*
@@ -261,7 +297,6 @@ class ProjetController extends Controller
                 'date_fin' => $validated['date_fin'],
                 'is_active' => true,
             ]);
-
             Log::info('Contrat créé', ['user_id' => auth()->id(), 'contrat' => $contrat]);
 
             return response()->json(['success' => 'Contrat enregistré avec succès.', 'data' => $contrat]);
@@ -381,7 +416,7 @@ class ProjetController extends Controller
             ->where('projets.code_projet', 'like', $country . $group . '%')
             ->join('projet_statut', 'projet_statut.code_projet', '=', 'projets.code_projet')
             ->where('projet_statut.type_statut', 2)
-            ->where()
+           
             ->get();
 
         $chefs = Acteur::where('type_acteur', 'etp')
@@ -394,7 +429,7 @@ class ProjetController extends Controller
             ->where('projets.code_alpha3_pays', $country)
             ->where('projets.code_projet', 'like', $country . $group . '%')
             ->where('projet_statut.type_statut', 2)
-            ->select('controler.*') // ← très important !
+            ->select('controler.*') 
             ->get();
         
 
@@ -418,7 +453,7 @@ class ProjetController extends Controller
         // Création d'un nouveau contrat avec le nouveau chef
         $contrat = controler::create([
             'code_projet' => $ancienContrat->code_projet,
-            'code_acteur' => $data['nouveau_chef_id'], // ✅ corrigé ici
+            'code_acteur' => $data['nouveau_chef_id'], 
             'date_debut' => now()->toDateString(),
             'date_fin' => $ancienContrat->date_fin,
             'is_active' => true,
@@ -435,16 +470,12 @@ class ProjetController extends Controller
     {
         $pays = session('pays_selectionne');        
         $groupe = session('projet_selectionne');
-        $projets = Projet::where('code_projet', 'like', $pays . $groupe . '%')
+        $projets = Projet::where('projet_statut.code_projet', 'like', $pays . $groupe . '%')
         ->join('projet_statut', 'projet_statut.code_projet', '=', 'projets.code_projet')
         ->whereIn('projet_statut.type_statut', [1, 2, 5, 6])->get();
 
-        // Liste des projets annulés
-        $projetsAnnules = Projet::whereHas('statuts', function ($query) {
-            $query->where('type_statut', 4);
-        })->with(['statuts', 'statuts.statut'])->get();
 
-        return view('annulationProjet', compact('projets', 'projetsAnnules'));
+        return view('annulationProjet', compact('projets'));
     }
 
 
@@ -496,18 +527,32 @@ class ProjetController extends Controller
     {
         $paysSelectionne = session('pays_selectionne');
         $groupeSelectionne = session('projet_selectionne');
-
+    
+        // Projets éligibles à la suspension
         $projets = Projet::where('code_alpha3_pays', $paysSelectionne)
             ->where('code_projet', 'like', $paysSelectionne . $groupeSelectionne . '%')
-            ->whereIn('projet_statut.type_statut', [1, 2, 6])
+            ->whereHas('dernierStatut', function ($query) {
+                $query->whereIn('type_statut', [1, 2, 6]);
+            })
             ->get();
-
-        $projetsSuspendus = Projet::whereHas('statuts', function ($query) {
-            $query->where('type_statut', 5);
-        })->get();
-
+    
+        // Projets suspendus (dont dernier statut est 5 ou 6)
+        $projetsSuspendus = Projet::where('code_projet', 'like', $paysSelectionne . $groupeSelectionne . '%')
+            ->whereHas('dernierStatut', function ($query) {
+                $query->whereIn('type_statut', [5, 6]);
+            })
+            ->with([
+                'statuts' => function ($q) {
+                    $q->whereIn('type_statut', [5, 6])
+                      ->orderBy('date_statut');
+                },
+                'dernierStatut.statut'
+            ])
+            ->get();
+    
         return view('suspendreProjet', compact('projets', 'projetsSuspendus'));
     }
+    
 
     public function suspendreProjet(Request $request)
     {
@@ -519,13 +564,14 @@ class ProjetController extends Controller
         try {
             ProjetStatut::create([
                 'code_projet' => $request->code_projet,
-                'type_statut' => 5, // 5 = Suspendu
+                'type_statut' => 5,
                 'date_statut' => now(),
+                'motif' => $request->motif,
             ]);
 
             Log::info('Projet suspendu', [
                 'code_projet' => $request->code_projet,
-                'motif' => $request->motif,
+                
                 'user_id' => auth()->id()
             ]);
 
@@ -533,6 +579,47 @@ class ProjetController extends Controller
         } catch (\Throwable $e) {
             Log::error('Erreur suspension projet', ['message' => $e->getMessage()]);
             return back()->with('error', 'Erreur lors de la suspension du projet.');
+        }
+    }
+
+    public function redemarrerProjet(Request $request){
+        try{
+            $request->validate([
+                'code_projet' => 'required|string|exists:projets,code_projet',
+               
+            ]);
+
+            $reslt = ProjetStatut::where('code_projet', $request->code_projet )
+                ->where('type_statut', 5)
+                ->orderByDesc('date_statut')
+                ->first();
+
+            if ($reslt && $reslt->date_statut >= $request->dateRedemarrage) {
+                return response()->json([
+                    'error' => 'La date de redémarrage doit être supérieure à la date de suspension.'
+                ]);
+            } else {
+                ProjetStatut::create([
+                    'code_projet' => $request->code_projet,
+                    'type_statut' => 6,
+                    'date_statut' => $request->dateRedemarrage,
+                ]);
+            }
+            Log::info('Projet suspendu', [
+                'code_projet' => $request->code_projet,                
+                'user_id' => auth()->id()
+            ]);
+
+            return response()->json([
+                 'success' => 'Projet redemarré avec succes.',
+                 //'redirect' => route('projets.suspension.store')
+            ], 200);
+        }catch(\Throwable $e){
+            Log::error('Erreur redemarrage projet', ['message' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Erreur lors du redemarrage de projet.'
+           ], 200);
+            return back()->with('error', 'Erreur lors du redemarrage de projet.');
         }
     }
 }

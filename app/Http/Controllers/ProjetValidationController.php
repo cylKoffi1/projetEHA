@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NotificationValidationProjet;
 use App\Mail\ProjetRefuseNotification;
+use App\Models\Approbateur;
 use App\Models\Projet;
 use Exception;
 
@@ -19,7 +20,8 @@ class ProjetValidationController extends Controller
     {
         try {
             $code_acteur = auth()->user()->acteur_id;
-            $country = session('pays_selectionne');
+            $country = session('pays_sel
+            ectionne');
             $group = session('projet_selectionne');
 
 
@@ -28,8 +30,10 @@ class ProjetValidationController extends Controller
                 ->where('etudeprojects.code_projet', 'like', $country . $group . '%')
                 ->where('etudeprojects.valider', 0)
                 ->where('projet_statut.type_statut', 1)
+               
                 ->select('etudeprojects.*')
                 ->get();
+
             
         
             return view('etudes_projets.validation.validation', compact('projets'));
@@ -54,6 +58,9 @@ class ProjetValidationController extends Controller
                 'projet.statuts',
                 'approbations.approbateur.acteur',
                 'approbations.statutValidation',
+                'projet.beneficiairesActeurs.acteur',
+                'projet.beneficiairesLocalites.localite',
+                'projet.beneficiairesInfrastructures.infrastructure',
             ])->where('codeEtudeProjets', $codeProjet)->firstOrFail();
 
             if (ProjetApprobation::where('codeEtudeProjets', $codeProjet)->count() === 0) {
@@ -76,7 +83,9 @@ class ProjetValidationController extends Controller
     private function genererApprobations($codeEtudeProjets)
     {
         try {
-            $listeApprobateurs = \App\Models\Approbateur::orderBy('numOrdre')->get();
+            $listeApprobateurs = Approbateur::orderBy('numOrdre')
+            ->where('codePays', session('pays_selectionne'))
+            ->where('groupeProjetId', session('projet_selectionne'))->get();
 
             foreach ($listeApprobateurs as $appro) {
                 ProjetApprobation::create([
@@ -147,16 +156,6 @@ class ProjetValidationController extends Controller
                 $etude = EtudeProject::where('codeEtudeProjets', $codeProjet)->firstOrFail();
                 $etude->valider = true;
                 $etude->save();
-    
-                // ⚠️ Désactiver tous les statuts précédents
-                $etude->projet->statuts()->update(['type_statut' => 0]);
-    
-                // ✅ Créer un nouveau statut "en cours"
-                $etude->projet->statuts()->create([
-                    'statut_id' => 2,        // En cours
-                    'type_statut' => 1,      // Actif
-                    'created_at' => now(),
-                ]);
             }
     
             return redirect()->route('projets.validation.index')->with('success', 'Projet validé.');

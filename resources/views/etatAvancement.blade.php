@@ -285,11 +285,6 @@
                                         Section des informations effectives du projet
                                     </div>
                                 </div>
-                                <div class="col-md-3" id="finalisation-projet-container" style="display: none;">
-                                    <button type="button" class="btn btn-primary w-100" onclick="finaliserProjet()">
-                                        <i class="fas fa-flag-checkered me-2"></i> Finaliser totalement le projet
-                                    </button>
-                                </div>
 
 
                             </div>
@@ -356,9 +351,9 @@
                                                 <th>N° ordre</th>
                                                 <th>Action à mener</th>
                                                 <th>Quantité</th>
-                                                <th>Unité de mesure</th>
-                                                <th>Infrastructure</th>
-                                                <th>Bénéficiaire</th>
+                                                <th>Infrastructures</th>
+                                                <th>Bénéficiaires</th>
+                                                <th>Caractéristiques</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -553,13 +548,6 @@
                                 rows="2" placeholder="Décrivez l'état final"></textarea>
                     </div>
                 </div>
-                <div class="row mt-2" id="btn-finalisation-partielle" style="display: none;">
-                    <div class="col-12">
-                        <button type="button" class="btn btn-success w-100" onclick="finaliserPartiellement()">
-                            <i class="fas fa-check-circle me-1"></i> Finaliser l’infrastructure
-                        </button>
-                    </div>
-                </div>
 
                 <div class="row mb-3 d-flex ">
                     <div class="col-8">
@@ -596,7 +584,9 @@
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody>
+                                    
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -688,79 +678,9 @@
 
         }
         
-        /*if (parseInt(val) >= 100) {
-            $('#finalisation-section').show();
-            $('#btn-finalisation-partielle').show();
-        } else {
-            $('#finalisation-section').hide();
-            $('#btn-finalisation-partielle').hide();
-        }*/
     }
 
-    function finaliserPartiellement() {
-        const codeProjet = $('#code_projet_Modal').val();
-        const numOrdre = $('#ordre_Modal').val();
-        const dateFin = $('#date_fin_effective').val();
-        const description = $('#description_finale').val();
-
-        if (!dateFin) {
-            Swal.fire('Attention', 'Veuillez renseigner la date de fin effective.', 'warning');
-            return;
-        }
-
-        $.ajax({
-            url: '{{ route("finaliser.partiel") }}',
-            type: 'POST',
-            data: {
-                _token: '{{ csrf_token() }}',
-                code_projet: codeProjet,
-                num_ordre: numOrdre,
-                date_fin_effective: dateFin,
-                description_finale: description
-            },
-            success: function(response) {
-                Swal.fire('Succès', response.message, 'success');
-                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('niveauAvancementModal'));
-                if (offcanvas) offcanvas.hide();
-
-            },
-            error: function(xhr) {
-                Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur de finalisation.', 'error');
-            }
-        });
-    }
-
-    function finaliserProjet() {
-        const codeProjet = $('#code_projet').val();
-
-        Swal.fire({
-            title: 'Confirmer la finalisation',
-            text: 'Êtes-vous sûr de vouloir finaliser totalement ce projet ?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Oui, finaliser',
-            cancelButtonText: 'Annuler'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '{{ route("finaliser.projet") }}',
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        code_projet: codeProjet,
-                        date_fin_effective: '{{ now()->toDateString() }}'
-                    },
-                    success: function(response) {
-                        Swal.fire('Succès', response.message, 'success');
-                        $('#finalisation-projet-container').hide();
-                    },
-                    error: function(xhr) {
-                        Swal.fire('Erreur', xhr.responseJSON?.message || 'Erreur lors de la finalisation.', 'error');
-                    }
-                });
-            }
-        });
-    }
+ 
 
     // Mise à jour de la barre de progression
     function updateProgressBar(val) {
@@ -777,9 +697,11 @@
         if (parseInt(val) >= 100) {
             $('#finalisation-section').show();
             $('#btn-finalisation-partielle').show();
+            $('enregistrerBtn').hide();
         } else {
             $('#finalisation-section').hide();
             $('#btn-finalisation-partielle').hide();
+            $('enregistrerBtn').show();
         }
 
     }
@@ -882,7 +804,7 @@
                                 <div class="carousel-inner">
                                     ${photos.split(',').map((photo, index) => `
                                         <div class="carousel-item ${index === 0 ? 'active' : ''}">
-                                            <img src="/storage/avancement/${photo}" class="d-block w-100" alt="Photo avancement">
+                                            <img src="/Data/avancement/${photo}" class="d-block w-100" alt="Photo avancement">
                                         </div>
                                     `).join('')}
                                 </div>
@@ -900,13 +822,14 @@
                 </div>
             </div>
         `;
-        
+
         $('body').append(modal);
         $('#photosModal').modal('show');
-        $('#photosModal').on('hidden.bs.modal', function() {
+        $('#photosModal').on('hidden.bs.modal', function () {
             $(this).remove();
         });
     }
+
 
     // Suppression d'un suivi
     function deleteSuivi(id) {
@@ -973,14 +896,8 @@
                     .html('<i class="fas fa-spinner fa-spin me-1"></i> Enregistrement...');
             },
             success: function(response) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Succès',
-                    text: 'Le suivi a été enregistré avec succès',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
+                    alert('Le suivi a été enregistré avec succès');
+                 
                 // Recharger l'historique
                 const codeProjet = $('#code_projet_Modal').val();
                 const numOrdre = $('#ordre_Modal').val();
@@ -1145,7 +1062,7 @@
                     <td>
                         <a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}" 
                         class="btn btn-sm btn-primary action-btn">
-                            <i class="fas fa-cog me-1"></i> Paramètres
+                            <i class="fas fa-cog me-1"></i> Caractéristiques
                         </a>
 
                     </td>
@@ -1215,6 +1132,8 @@
                 $('#nature_travaux_Modal').val(data.nature_travaux || 'Non défini');
                 $('#quantite_provisionnel_Modal').val(data.Quantite || 0);
                 $('#date_debut_Modal').val(data.date_debut_effective || '');
+                loadHistorique(codeProjet, numOrdre);
+
             },
             error: function(xhr) {
                 const message = xhr.responseJSON?.message || 'Erreur inconnue lors du chargement des données.';

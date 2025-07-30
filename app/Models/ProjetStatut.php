@@ -13,6 +13,7 @@ class ProjetStatut extends Model
         'code_projet',
         'type_statut',
         'date_statut',
+        'motif'
     ];
     public function statut()
     {

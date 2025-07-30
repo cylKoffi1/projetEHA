@@ -133,7 +133,7 @@
                 <td class="label">Localisation</td>
                 <td>
                     @foreach($contrat?->projet->localisations as $loc)
-                        {{ $loc->localite->libelle }} ({{ $loc->decoupage->libelle_decoupage }})<br>
+                        {{ $loc->localite?->libelle }} ({{ $loc->localite?->decoupage->libelle_decoupage }})<br>
                     @endforeach
                 </td>
             </tr>

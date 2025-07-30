@@ -19,7 +19,8 @@ class Profiter extends Model
     ];
     public function localite()
     {
-        return $this->belongsTo(LocalitesPays::class, 'code_rattachement', 'code_rattachement');
+        return $this->belongsTo(LocalitesPays::class, 'code_rattachement', 'code_rattachement')
+        ->where('id_pays', session('pays_selectionne'));
     }
     
 

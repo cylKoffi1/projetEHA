@@ -368,6 +368,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::put('/contrats/{id}', [ProjetController::class, 'update'])->name('contrats.update');
     Route::delete('/contrats/{id}', [ProjetController::class, 'destroy'])->name('contrats.destroy');
     Route::get('admin/projet/changementChefProjet', [ProjetController::class, 'changerChef']);
+    Route::post('/contrats/chef/update', [ProjetController::class, 'changerChefUpdate'])->name('contrats.chef.update');
+
         /*****************ETUDE DE PROJET**************** */
         Route::get('admin/naissanceProjet',[EtudeProjet::class, 'createNaissance'])->name('project.create');
         Route::get('/pays/{alpha3}/niveaux', [EtudeProjet::class, 'getNiveauxAdministratifs']);
@@ -375,8 +377,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
         Route::get('/get-bailleurs', [EtudeProjet::class, 'getBailleursParStatutLocal']);
-        Route::post('/contrats/chef/update', [ProjetController::class, 'changerChefUpdate'])->name('contrats.chef.update');
-
+       
                 /*******************SAUVEGARDE DE DEMANDE DE PROJET */
                 Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
                 Route::post('/projets/temp/save-step2', [EtudeProjet::class, 'saveStep2'])->name('projets.temp.save.step2');
@@ -392,7 +393,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::get('admin/validationProjetss', [EtudeProjet::class, 'validation'])->name('projects.validate');
             Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
             Route::post('/planning/{id}/approve', [EtudeProjet::class, 'approve'])->name('projects.approve');
-           
+            Route::get('/get-infrastructure-localite/{code}', [EtudeProjet::class, 'getLocaliteInfrastructure']);
+
             Route::get('admin/validationProjet', [ProjetValidationController::class, 'index'])->name('projets.validation.index');
             Route::get('/projets/validation/{codeProjet}', [ProjetValidationController::class, 'show'])->name('projets.validation.show');
             
@@ -420,12 +422,12 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
         /**************************** REATTRIBUTION DE PROJET ******************************/
             Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('maitre_ouvrage.index');
             Route::get('/get-execution-by-projet/{code_projet}', [ProjetController::class, 'getExecutionByProjet']);
+            Route::get('/getProjetADeleted/{code_projet}', [ProjetController::class, 'getProjetSupprimer']);
             Route::prefix('reatributionProjet')->group(function () {
                Route::post('/', [ProjetController::class, 'storeReatt'])->name('maitre_ouvrage.store');
                 Route::put('/{id}', [ProjetController::class, 'updateReatt'])->name('maitre_ouvrage.update');
                 Route::delete('/{id}', [ProjetController::class, 'destroyReatt'])->name('maitre_ouvrage.destroy');
             });
-        
         /**************************** ANNULER DE PROJET ******************************/
         Route::get('admin/annulProjet', [ProjetController::class, 'formAnnulation'])->name('projets.annulation.form');
         Route::post('/projets/annulation', [ProjetController::class, 'annulerProjet'])->name('projets.annulation.store');
@@ -456,7 +458,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('admin/realise', [RealiseProjetController::class, 'realise']);
     Route::post('/get-project-details', [RealiseProjetController::class, 'getProjectDetails'])->name('get.project.details');
     Route::post('/fetch-project-details', [RealiseProjetController::class, 'fetchDetails'])->name('fetch.project.details');
-    Route::get('/admin/realise', [RealiseProjetController::class, 'VoirListe']);
+    Route::get('/admin/realise', [RealiseProjetController::class, 'VoirListe'])->name('projet.realise');
     Route::get('/fetchProjectDetails', [RealiseProjetController::class, 'fetchProjectDetails']);
     Route::get('/getProjetData', [RealiseProjetController::class, 'getProjetData']);
     Route::get('/getBeneficiaires', [RealiseProjetController::class, 'getBeneficiaires']);
@@ -464,6 +466,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('/getFamilleInfrastructure', [RealiseProjetController::class, 'getFamilleInfrastructure']);
     Route::get('/getInfrastructuresByProjet', [RealiseProjetController::class, 'getInfrastructuresByProjet']);
     Route::get('/get-familles-by-projet', [RealiseProjetController::class, 'getFamillesByProjet']);
+    Route::get('/recuperer-caracteristiques', [RealiseProjetController::class, 'recupererCaracteristiques'])
+    ->name('projets.recuperer.caracteristiques');
 
     //Route::get('/getDataDateEffective', [RealiseProjetController::class, 'obtenirDonneesProjet'])->name('obtenir-donnees-projet');
     Route::get('admin/etatAvancement', [RealiseProjetController::class, 'etatAvancement']);
@@ -478,10 +482,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::delete('/delete-suivi/{id}', [RealiseProjetController::class, 'deleteSuivi'])->name('delete.suivi');
     Route::post('/caracteristiques/store', [RealiseProjetController::class, 'storeCaracteristiques'])->name('caracteristique.store');
     Route::get('/get-donnees-suivi', [RealiseProjetController::class, 'getDonneesFormulaireSimplifie'])->name('get.donnees.suivi');
-    // Finalisation partielle d'une infrastru
-    Route::post('/projet/finaliser-partiel', [RealiseProjetController::class, 'finaliserPartiel'])->name('finaliser.partiel');
-    // Finalisation totale d'un projet
-    Route::post('/projet/finaliser', [RealiseProjetController::class, 'finaliserProjet'])->name('finaliser.projet');
+
     Route::get('/verifier-projet-finalisable', [RealiseProjetController::class, 'verifierProjetFinalisable'])->name('verifier.projet.finalisable');
 
     Route::get('/get-project-status/{id}', [ProjectStatusController::class, 'getProjectStatus']);    //***************** GESTION FINANCIERE ************* */

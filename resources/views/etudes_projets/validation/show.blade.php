@@ -62,7 +62,13 @@
                         <i class="bi bi-building me-3 fs-4 text-primary"></i>
                         <div>
                             <h6 class="mb-1 fw-bold text-muted">Maître d’ouvrage</h6>
-                            <p class="mb-0">{{ $etude->projet->maitreOuvrage?->acteur?->libelle_court ?? $etude->projet->maitreOuvrage?->acteur?->libelle_long ?? '—' }}</p>
+                            <p class="mb-0">
+                                {{ $etude->projet->maitreOuvrage?->acteur?->libelle_court ?? $etude->projet->maitreOuvrage?->acteur?->libelle_long ?? '—' }}
+                                @if($etude->projet->maitreOuvrage?->secteurActivite)
+                                    {{ $etude->projet->maitreOuvrage?->acteur->libelle_long }} de {{ $etude->projet->maitreOuvrage?->secteurActivite?->libelle ?? '' }}
+                                
+                                @endif
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -73,7 +79,13 @@
                         <div>
                             <h6 class="mb-1 fw-bold text-muted">Maîtres d’œuvre</h6>
                             @foreach($etude->projet->maitresOeuvre as $moe)
-                                <p class="mb-0">{{ $moe->acteur->libelle_court ?? $moe->acteur->libelle_long ?? '—' }}</p>
+                                <p class="mb-0">
+                                    {{ $moe->acteur->libelle_court ?? $moe->acteur->libelle_long ?? '—' }}
+                                    @if($etude->projet->maitreOuvrage?->secteurActivite)
+                                       {{ $etude->projet->maitreOuvrage?->acteur->libelle_long }} de {{ $etude->projet->maitreOuvrage?->secteurActivite?->libelle ?? '' }}
+                                    
+                                    @endif
+                                </p>
                             @endforeach
                         </div>
                     </div>
@@ -132,6 +144,9 @@
         @if($etude->projet->actions->count())
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-actions">Actions</button></li>
         @endif
+        @if($etude->projet->beneficiaires->count())
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-beneficiaires">Bénéficiaires</button></li>
+        @endif
         @if($etude->projet->financements->count())
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-finance">Financements</button></li>
         @endif
@@ -166,25 +181,50 @@
         <div class="tab-pane fade" id="tab-infra">
             <h5 class="mb-3">Infrastructures concernées</h5>
             <table class="table table-bordered table-sm">
-    <thead class="table-light">
-        <tr>
-            <th>Libellé</th>
-            <th>Valeur</th>
-            <th>Unité</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach($projetInfra->infra->valeursCaracteristiques as $val)
-            <tr>
-                <td>{{ $val->caracteristique?->libelleCaracteristique ?? '—' }}</td>
-                <td>{{ $val->valeur ?? '—' }}</td>
-                <td>{{ $val->unite?->symbole ?? '' }}</td>
-            </tr>
-        @endforeach
-    </tbody>
-</table>
+                <thead class="table-light">
+                    <tr>
+                        <th>Infrastructure</th>
+                        <th>Caractéristique</th>
+                        <th>Valeur</th>
+                        <th>Unité</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($etude->projet->infrastructures as $projetInfra)
+                        @foreach($projetInfra->infra->valeursCaracteristiques as $val)
+                            @php
+                                $carac = $val->caracteristique;
+                                $type = strtolower($carac?->type?->libelleTypeCaracteristique ?? '');
 
-
+                                switch ($type) {
+                                    case 'boolean':
+                                        $affichage = $val->valeur == 1 ? 'Oui' : 'Non';
+                                        break;
+                                    case 'liste':
+                                        // Tu dois avoir la relation vers la valeur possible si elle existe
+                                        $affichage = $val->valeursPossibles?->valeur ?? $val->valeur;
+                                        break;
+                                    case 'texte':
+                                        $affichage = $val->valeur;
+                                        break;
+                                    case 'nombre':
+                                        $affichage = is_numeric($val->valeur) ? number_format($val->valeur, 2, ',', ' ') : $val->valeur;
+                                        break;
+                                    default:
+                                        $affichage = $val->valeur;
+                                        break;
+                                }
+                            @endphp
+                            <tr>
+                                <td>{{ $projetInfra->infra->libelle ?? '—' }}</td>
+                                <td>{{ $carac?->libelleCaracteristique ?? '—' }}</td>
+                                <td>{{ $affichage }}</td>
+                                <td>{{ $val->unite?->symbole ?? '' }}</td>
+                            </tr>
+                        @endforeach
+                    @endforeach
+                </tbody>
+            </table>
         </div>
 
 
@@ -204,7 +244,7 @@
                     @foreach($etude->projet->actions as $act)
                         <tr>
                             <td>{{ $act->Num_ordre }}</td>
-                            <td>{{ $act->Action_mener }}</td>
+                            <td>{{ $act->actionMener?->libelle }}</td>
                             <td>{{ $act->Quantite }}</td>
                             <td>{{ $act->Unite }}</td>
                         </tr>
@@ -227,7 +267,12 @@
                 <tbody>
                     @foreach($etude->projet->financements as $f)
                         <tr>
-                            <td>{{ $f->bailleur?->libelle_court }} {{ $f->bailleur?->libelle_long }}</td>
+                            <td>
+                                {{ $f->bailleur?->libelle_court }} {{ $f->bailleur?->libelle_long }}
+                                @if($etude->projet->maitreOuvrage?->secteurActivite)
+                                     de {{ $etude->projet->maitreOuvrage?->secteurActivite?->libelle ?? '' }}                                
+                                @endif
+                            </td>
                             <td>{{ number_format($f->montant_finance, 0, ',', ' ') }} {{ $f->devise }}</td>
                             <td>
                                 <span class="badge {{ $f->financement_local ? 'bg-info' : 'bg-primary' }}">
@@ -239,6 +284,38 @@
                 </tbody>
             </table>
         </div>
+
+        {{-- Onglet Bénéficiaires --}}
+        <div class="tab-pane fade" id="tab-beneficiaires">
+            <h5 class="mb-3">Bénéficiaires du projet</h5>
+            <table class="table table-bordered table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Libellé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($etude->projet->beneficiaires as $b)
+                        <tr>
+                            @if($b instanceof \App\Models\Beneficier)
+                                <td>Acteur</td>
+                                 <td>{{ $b->acteur?->libelle_court ?? $b->acteur?->libelle_long ?? '—' }}</td>
+                            @elseif($b instanceof \App\Models\Profiter)
+                                <td>Localité</td>
+                                <td>{{ $b->localite?->libelle ?? '—' }}</td>
+                            @elseif($b instanceof \App\Models\Jouir)
+                                <td>Infrastructure</td>
+                                <td>{{ $b->infrastructure?->libelle ?? '—' }}</td>
+                            @else
+                                <td colspan="3">Type inconnu</td.0>
+                            @endif
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
 
         {{-- Documents --}}
         <div class="tab-pane fade" id="tab-docs">

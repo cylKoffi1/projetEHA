@@ -53,7 +53,7 @@
                             <input type="hidden" name="execution_id" id="execution_id">
 
                             <div class="row">
-                                <div class="col-5">
+                                <div class="col-4">
                                     <label for="projet_id">Projet</label>
                                     <select name="projet_id" class="form-control" required>
                                         <option value="">-- Sélectionnez --</option>
@@ -62,7 +62,22 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <!-- Affichage des infos du MO actuel -->
+                                <div id="moeInfosCard" class="col-7 card " style="display: none; height: 49px; top: 12px; width: 65%; border: none">
+                                   <div class="card-body">                                        
+                                        <p><strong>Type :</strong> <span id="moe-type">  </span>
+                                        <strong>  ||   Maître d'oeuvre actuel :</strong> <span id="moe-acteur">  <span id="moe-secteur"></span></span></p>                                      
+                                    </div>
+                                </div>
 
+
+                               
+                            </div>
+
+                            
+
+                            <!-- Sélection d’acteur -->
+                            <div class="row mt-3">
                                 <div class="col-4">
                                     <label>Type de Maître d’œuvre *</label><br>
                                     <div class="form-check form-check-inline">
@@ -86,14 +101,8 @@
                                         <label class="form-check-label" for="moeIndividu">Individu</label>
                                     </div>
                                 </div>
-                            </div>
-
-                            
-
-                            <!-- Sélection d’acteur -->
-                            <div class="row mt-3">
                                 <div class="col">
-                                    <label for="acteur_id">Nom acteur *</label>
+                                    <label for="acteur_id">Nouveau maître d'oeuvre *</label>
                                     <select name="acteur_id" id="acteurMoeSelect" class="form-control" required>
                                         <option value="">Sélectionnez un acteur</option>
                                         @foreach($acteurs as $acteur)
@@ -113,16 +122,16 @@
                                     </select>
                                 </div>
                             </div>
-
-                            <!-- Motif -->
-                            <div class="row mt-3">
-                                <div class="col">
+                            <div class="row">
+                                <div class="col-9">
                                     <label for="motif">Motif *</label>
                                     <textarea name="motif" id="motif" class="form-control" rows="2" required placeholder="Expliquer la raison de la réattribution."></textarea>
                                 </div>
+                                <div class="col text-end">
+                                    <button type="submit" class="btn btn-primary mt-3" id="formButton">Enregistrer</button>
+                                </div>
                             </div>
-
-                            <button type="submit" class="btn btn-primary mt-3" id="formButton">Enregistrer</button>
+                            
                         </form>
                     </div>
                 </div>
@@ -231,7 +240,7 @@
         const selectedProjet = $(this).val();
         if (!selectedProjet) return;
 
-        fetch(`'{{ url("/")}}/get-execution-by-projet/${selectedProjet}`)
+        fetch(`{{ url("/")}}/get-execution-by-projet/${selectedProjet}`)
             .then(response => response.json())
             .then(data => {
                 if (!data) {
@@ -245,12 +254,13 @@
                     $('#optionsMoePrive').addClass('d-none');
                     return;
                 }
-
-                editMO(data); // ← Réutilise la logique d’édition
+                console.log(data);
+                editMO(data); 
             })
             .catch(err => {
                 console.error('Erreur chargement exécution:', err);
             });
+
     });
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -294,49 +304,29 @@
             }
         });
     });
-
     function editMO(data) {
+        $('#moeInfosCard').show();
+        $('#moe-projet-code').text(data.code_projet);
+        //$('#moe-acteur').text(data.code_acteur); 
+        $('#moe-acteur').text(data.acteur_nom || data.code_acteur);
+        $('#moe-type').text(['eta', 'clt'].includes(data.acteur_type) ? 'Public' : 'Privé');
+        if(data.secteur_id){
+            $('#moe-secteur').text(data.secteur_id || '-');
+        };
+        $('#moe-motif').text(data.motif || '-');
+
+        // Réinitialiser le formulaire
+        $('#moForm')[0].reset();
         $('#execution_id').val(data.id);
-        $('#motif').val(data.motif || '');
-        $('input[name="secteur_id"]').val(data.secteur_id);
 
-        // Déterminer si l'acteur est public ou privé (à adapter selon ta logique serveur)
-        const isPublic = ['eta', 'clt'].includes(data.acteur_type); // ← Tu dois passer ce champ dans le JS côté @js($execution)
-
-        // Cocher le bon bouton radio pour type_ouvrage
-        if (isPublic) {
-            $('#moePublic').prop('checked', true);
-            $('#optionsMoePrive').addClass('d-none');
-        } else {
-            $('#moePrive').prop('checked', true);
-            $('#optionsMoePrive').removeClass('d-none');
-
-            // Déterminer le type privé (Entreprise ou Individu)
-            if (data.acteur_type === 'etp') {
-                $('#moeIndividu').prop('checked', true);
-            } else {
-                $('#moeEntreprise').prop('checked', true);
-            }
-        }
-
-        // Recharger les acteurs selon les types cochés
-        fetchActeurs().then(() => {
-            // Attendre que le SELECT soit mis à jour
-            $('#acteurMoeSelect').val(data.code_acteur);
-        });
-
-        // Préselectionner le projet
-        let projetSelect = $('select[name="projet_id"]');
-        if (!projetSelect.find(`option[value="${data.code_projet}"]`).length) {
-            projetSelect.append(`<option value="${data.code_projet}">${data.code_projet}</option>`);
-        }
-        projetSelect.val(data.code_projet);
-
-        // Mise à jour de l’action du formulaire
-        $('#moForm').attr('action', `{{ url('/')}}/reatributionProjet/${data.id}`);
-        $('input[name="_method"]').val('PUT');
-        $('#formButton').text('Mettre à jour');
+        // Réinitialiser visuellement
+        $('#secteurContainer').hide();
+        $('#optionsMoePrive').addClass('d-none');
+        $('#moForm').attr('action', '{{ route("maitre_ouvrage.store") }}');
+        $('input[name="_method"]').val('POST');
+        $('#formButton').text('Enregistrer');
     }
+
 
 
     function deleteMO(id) {

@@ -307,10 +307,45 @@ function saveStep2(callback = null) {
                             // ✅ Liste trouvée → select
                             const select = $('<select class="form-control" id="infrastructureName"></select>');
                             select.append('<option value="">Sélectionner une infrastructure</option>');
+                            select.append(`<option value="__new__">➕ Créer une nouvelle infrastructure</option>`);
                             data.forEach(infra => {
                                 select.append(`<option value="${infra.code}">${infra.libelle}</option>`);
                             });
                             container.append(select);
+
+                            select.on('change', function () {
+                                const selectedValue = this.value;
+                                if (selectedValue === '__new__') {
+                                    // Remplacer le <select> par un <input>
+                                    const container = $("#infrastructureNameContainer");
+                                    container.empty();
+                                    container.append('<label>Nom de l\'infrastructure *</label>');
+                                    container.append('<input type="text" class="form-control" id="infrastructureName" placeholder="Nom de l\'infrastructure">');
+                                } else {
+                                    // 🔁 Si besoin : charger la localité liée à l’infrastructure existante
+                                    const infraCode = this.value;
+                                    if (!infraCode) return;
+
+                                    fetch(`{{ url('/') }}/get-infrastructure-localite/${infraCode}`)
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (!data || !data.id) return;
+
+                                            $("#niveau1Select").val(data.id).trigger('change');
+                                            $("#niveau2Select").html(`<option value="${data.niveau}">${data.niveau}</option>`).prop("disabled", false);
+                                            $("#niveau3Select").html(`<option value="${data.code_decoupage}">${data.libelle_decoupage}</option>`).prop("disabled", false);
+
+                                            selectedLocalite = {
+                                                id: data.id,
+                                                code_rattachement: data.code_rattachement,
+                                                libelle: data.libelle,
+                                                niveau: data.niveau,
+                                                code_decoupage: data.code_decoupage,
+                                                libelle_decoupage: data.libelle_decoupage
+                                            };
+                                        });
+                                }
+                            });
                         }
                     })
                     .catch(err => {
@@ -465,13 +500,15 @@ function saveStep2(callback = null) {
                 const col = document.createElement('div');
                 col.className = 'col-md-3'; // Taille ajustée pour contenir 4 par ligne
                 col.style.marginBottom = '8px';
+                col.setAttribute('data-idcarac', carac.idCaracteristique);
+                col.setAttribute('data-libelle', carac.libelleCaracteristique);
 
                 const label = document.createElement('label');
                 label.textContent = carac.libelleCaracteristique + ' *';
 
                 const name = `caracteristiques[${carac.idCaracteristique}]`;
-                const type = (carac.libelleTypeCaracteristique || '').toLowerCase();
-
+                const type = (carac.libelleTypeCaracteristique || carac.type?.libelleTypeCaracteristique || '').toLowerCase();
+            
                 let inputElement = null;
 
                 if (type === 'nombre') {
@@ -569,34 +606,51 @@ function saveStep2(callback = null) {
             }
 
             function appendCaracAndChildren(carac, targetContainer) {
+                const existing = targetContainer.querySelector(`[data-idcarac="${carac.idCaracteristique}"]`);
+                if (existing) return; // ⚠️ Ne pas afficher à nouveau si déjà présent
+
                 const { col, inputElement } = renderCarac(carac);
+                col.dataset.idcarac = carac.idCaracteristique; // utile pour l'anti-duplication
                 targetContainer.appendChild(col);
 
-                // Affichage conditionnel des enfants
+                const type = (carac.libelleTypeCaracteristique || carac.type?.libelleTypeCaracteristique || '').toLowerCase();
+
+                function showChildrenOnce() {
+                    if (carac._childrenShown) return;
+                    carac._childrenShown = true;
+                    carac.enfants.forEach(enfant => appendCaracAndChildren(enfant, targetContainer));
+                }
+
+                function hideChildren() {
+                    if (!carac._childrenShown) return;
+                    carac._childrenShown = false;
+                    carac.enfants.forEach(enfant => {
+                        const el = targetContainer.querySelector(`[data-idcarac="${enfant.idCaracteristique}"]`);
+                        if (el) el.remove();
+                    });
+                }
+
+                // Conditions d'affichage dynamique
                 if (carac.enfants && carac.enfants.length > 0) {
-                    const triggerShow = () => {
-                        carac.enfants.forEach(enfant => {
-                            appendCaracAndChildren(enfant, targetContainer);
-                        });
-                    };
-
-                    const type = (carac.libelleTypeCaracteristique || '').toLowerCase();
-
                     if (type === 'boolean') {
                         inputElement.addEventListener('change', () => {
-                            if (inputElement.checked) triggerShow();
+                            if (inputElement.checked) showChildrenOnce();
+                            else hideChildren();
                         });
                     } else if (type === 'liste') {
                         inputElement.addEventListener('change', () => {
-                            if (inputElement.value) triggerShow();
+                            if (inputElement.value) showChildrenOnce();
+                            else hideChildren();
                         });
-                    } else if (['nombre', 'texte'].includes(type)) {
+                    } else if (type === 'nombre' || type === 'texte') {
                         inputElement.addEventListener('input', () => {
-                            if (inputElement.value.trim() !== '') triggerShow();
+                            if (inputElement.value.trim() !== '') showChildrenOnce();
+                            else hideChildren();
                         });
                     }
                 }
             }
+
 
             caracs.forEach(carac => {
                 appendCaracAndChildren(carac, fieldsContainer);
@@ -673,16 +727,28 @@ function saveStep2(callback = null) {
                     } else if (input.tagName === 'SELECT') {
                         displayValue = input.options[input.selectedIndex].text;
                     }
-                    const labelElement = input.closest('.col-md-4, .col-md-12')?.querySelector('label');
-                    const libelle = labelElement ? labelElement.textContent.replace(' *', '') : 'Caractéristique';
+                    const colParent = input.closest('[data-idcarac]');
+                    const libelle = colParent ? colParent.getAttribute('data-libelle') : 'Caractéristique';
+
+
+                    let uniteId = '';
+                    if (input.type === 'number') {
+                        const span = input.closest('.input-group')?.querySelector('.input-group-text');
+                        if (span) {
+                            const symbole = span.textContent.trim();
+                            const unite = Object.values(window.unitesSI).find(u => u.symbole === symbole);
+                            uniteId = unite?.idUnite || '';
+                        }
+                    }
 
                     caracteristiques.push({
                         id: caracId,
-                        unite_id: '1',
+                        unite_id: uniteId,
                         valeur: input.value,
                         libelle: libelle,
                         display: displayValue
                     });
+
 
                 }
             });
@@ -784,14 +850,14 @@ function saveStep2(callback = null) {
 
             caracteristiques.forEach(carac => {
                 caracDisplay += `
-                    <div class="carac-item">
-                        <span class="carac-label">${carac.libelle}</span>
-                        <span class="carac-separator">:</span>
-                        <span class="carac-value">${carac.display}</span>
+                    <div class="carac-item mb-1">
+                        <strong>${carac.libelle}</strong> : <span>${carac.display}</span>
                     </div>
                 `;
 
-                caracHidden += `<input type="hidden" value="${carac.id}|${carac.unite_id}|${carac.valeur}">`;
+                caracHidden += `
+                    <input type="hidden" value="${carac.id}|${carac.unite_id || ''}|${carac.valeur}">
+                `;
             });
 
             return `
@@ -806,7 +872,10 @@ function saveStep2(callback = null) {
                     <td>${infrastructureName}</td>
                     <td hidden>${familleCode}</td>
                     <td>${familleText}</td>
-                    <td>${caracDisplay}${caracHidden}</td>
+                    <td>
+                        ${caracDisplay}
+                        ${caracHidden}
+                    </td>
                     <td>
                         <button type="button" class="btn btn-danger btn-sm deleteRowBtn">
                             <i class="fas fa-trash"></i>
@@ -816,6 +885,7 @@ function saveStep2(callback = null) {
                 </tr>
             `;
         }
+
 
         // Réinitialisation du formulaire
         function resetForm(full = true) {

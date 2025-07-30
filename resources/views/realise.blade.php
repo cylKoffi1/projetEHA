@@ -136,6 +136,35 @@
         color: var(--secondary-color);
         text-decoration: underline;
     }
+
+    .drawer-left {
+        position: fixed;
+        top: 0;
+        left: -420px;
+        width: 400px;
+        height: 100%;
+        background-color: #fff;
+        border-right: 1px solid #dee2e6;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+        transition: left 0.3s ease;
+        z-index: 1055;
+        overflow-y: auto;
+        padding: 20px;
+    }
+    .drawer-left.show {
+        left: 0;
+    }
+    .drawer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    .drawer-body {
+        padding-top: 10px;
+    }
+
     
     /* Animation pour les changements de données */
     @keyframes highlight {
@@ -342,7 +371,7 @@
                                                 <th>Quantité</th>
                                                 <th>Infrastructure</th>
                                                 <th>Bénéficiaire</th>
-                                                <th>Actions</th>
+                                                <th>Caractéristiques</th>
                                             </tr>
                                         </thead>
                                         <tbody id="beneficiaire-table-body">
@@ -524,6 +553,31 @@
             </div>
         </div>
     </div>
+    <!-- Drawer latéral gauche -->
+<div id="caracDrawer" style="
+    position: fixed;
+    top: 12%;
+    right: -400px;
+    width: 350px;
+    height: 100%;
+    background-color: #fff;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+    z-index: 1050;
+    transition: left 0.3s ease-in-out;
+    overflow-y: auto;
+    padding: 20px;
+">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 id="caracDrawerTitle">Caractéristiques</h5>
+        <button class="btn btn-sm btn-outline-danger" onclick="closeCaracDrawer()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div id="caracDrawerContent">
+        <p class="text-muted">Chargement...</p>
+    </div>
+</div>
+
 
 <script>
     $(document).ready(function() {
@@ -622,10 +676,10 @@
                         </button>
                     </td>
                     <td>
-                        <a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}" 
-                        class="btn btn-sm btn-primary action-btn">
-                            <i class="fas fa-cog me-1"></i> Paramètres
-                        </a>
+                        <button
+                        class="btn btn-sm btn-primary btn-caracteristiques action-btn"">
+                            <i class="fas fa-cog me-1"></i> Caractéristiques
+                        </button>
 
                     </td>
                 </tr>
@@ -821,7 +875,7 @@
                     success: function (response) {
                         if (response.success) {
                             alert(response.message);
-                            // Optionnel : location.reload();
+                            window.location.href = '{{ route("projet.realise") }}';
                         } else {
                             alert(response.message, "error");
                         }
@@ -885,6 +939,58 @@
         });
 
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Gestion du bouton "Caractéristiques"
+    $(document).on('click', '.action-btn', function () {
+        const $row = $(this).closest('tr');
+        const codeProjet = $('#codeProjetHidden').val();
+        const numOrdre = $row.find('.num_ordre_cell').text().trim();
 
+        $('#caracDrawer').css('left', '0px');
+        $('#caracDrawerTitle').text('Caractéristiques');
+
+        $('#caracDrawerContent').html('<p class="text-muted">Chargement...</p>');
+
+        $.ajax({
+            url: '{{ route("projets.recuperer.caracteristiques") }}',
+            type: 'GET',
+            data: {
+                code_projet: codeProjet,
+                NumOrdre: numOrdre
+            },
+            success: function (response) {
+                const { caracteristiques, infra } = response;
+                let html = `<h6 class="mb-3 text-primary">${infra}</h6>`;
+
+                if (caracteristiques.length === 0) {
+                    html += '<p class="text-muted">Aucune caractéristique renseignée.</p>';
+                } else {
+                    html += '<ul class="list-group">';
+                    caracteristiques.forEach(carac => {
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <strong>${carac.libelle}</strong>
+                                <span>${carac.valeur} ${carac.unite}</span>
+                            </li>`;
+                    });
+                    html += '</ul>';
+                }
+
+                $('#caracDrawerContent').html(html);
+            },
+            error: function () {
+                $('#caracDrawerContent').html('<div class="alert alert-danger">Erreur lors du chargement.</div>');
+            }
+        });
+    });
+});
+
+// Fonction pour fermer le drawer
+function closeCaracDrawer() {
+    document.getElementById('caracDrawer').style.left = '-400px';
+}
+
+</script>
 
 @endsection

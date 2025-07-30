@@ -159,7 +159,26 @@ class EtudeProjet extends Controller
             return response()->json($infras); // ✅ Important : retourner du JSON
         }
 
-
+        public function getLocaliteInfrastructure($code)
+        {
+            $infra = Infrastructure::where('code', $code)
+                ->with('localisation') 
+                ->first();
+        
+            if (!$infra || !$infra->localisation) {
+                return response()->json(null, 404);
+            }
+        
+            return response()->json([
+                'id' => $infra->localisation->id,
+                'code_rattachement' => $infra->localisation->code_rattachement,
+                'libelle' => $infra->localisation->libelle,
+                'niveau' => $infra->localisation->niveau,
+                'code_decoupage' => $infra->localisation->code_decoupage,
+                'libelle_decoupage' => $infra->localisation->libelle_decoupage,
+            ]);
+        }
+        
         public function getBailleursParStatutLocal(Request $request)
         {
             $pays = session('pays_selectionne');
@@ -376,55 +395,7 @@ class EtudeProjet extends Controller
             return response()->json($unites);
         }
 
-       /* private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
-        {
-            $paysAlpha3 = session('pays_selectionne');        // ex: CIV
-            $groupeProjet = session('projet_selectionne');    // ex: BAT
 
-            $date = Carbon::parse($dateDebut);
-            $annee = $date->format('Y');
-
-            // Extraire les 2 premiers caractères du code sous-domaine pour déterminer le domaine
-            $codeDomaine = strtoupper(substr($codeSousDomaine, 0, 2));
-
-            // Compter les projets déjà enregistrés avec la même configuration
-            $ordre = Projet::where('code_alpha3_pays', $paysAlpha3)
-                ->where('code_sous_domaine', 'like', $codeDomaine . '%')
-                ->whereYear('date_demarrage_prevue', $annee)
-                ->whereMonth('date_demarrage_prevue', $mois)
-                ->count() + 1;
-
-            return strtoupper("{$paysAlpha3}{$groupeProjet}{$typeFinancement}_{$codeLocalisation}_{$codeSousDomaine}_{$annee}_{$ordre}");
-        }
-        private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
-        {
-            $paysAlpha3 = session('pays_selectionne'); // ex: CIV
-            $groupeProjet = session('projet_selectionne'); // ex: BAT
-        
-            $date = Carbon::parse($dateDebut);
-            $annee = $date->format('Y');
-            $mois = $date->format('m');
-        
-            // Extraire les 2 premiers caractères du code sous-domaine
-            $codeDomaine = substr($codeSousDomaine, 0, 2);
-        
-            // Compter les projets existants
-            $ordre = Projet::where('code_alpha3_pays', $paysAlpha3)
-                ->where('code_sous_domaine', 'like', $codeDomaine . '%')
-                ->whereYear('date_demarrage_prevue', $annee)
-                ->whereMonth('date_demarrage_prevue', $mois)
-                ->count() + 1;
-        
-            return sprintf('%s%s%s_%s_%s_%s_%02d',
-                strtoupper($paysAlpha3),
-                strtoupper($groupeProjet),
-                $typeFinancement, // 1 ou 2
-                strtoupper($codeLocalisation),
-                strtoupper($codeDomaine),
-                $annee,
-                $ordre
-            );
-        }*/
         private function genererCodeEtude($codePays, $codeGroupeProjet)
         {
             $now = Carbon::now();
@@ -777,16 +748,21 @@ class EtudeProjet extends Controller
                     'date_fin_prevue' => $step1['date_fin_prevue'],
                     'cout_projet' => $step1['cout_projet'],
                     'code_devise' => $step1['code_devise'],
-                    'code_nature' => $step1['code_nature'],
-                    'code_alpha3_pays' => $step1['code_pays'],
+                    'code_alpha3_pays' => $step1['code_pays']
                 ]);
+
+                projets_natureTravaux::create([
+                    'code_projet' => $codeProjet,
+                    'code_nature' => $step1['code_nature'],
+                    'date' => now()
+                ]);                
 
                 ProjetStatut::create([
                     'code_projet' => $codeProjet, 
-                    'type_statut' => 1, // Remplace par l'ID réel du statut (ex : 1 = Prévu, etc.)
+                    'type_statut' => 1, 
                     'date_statut' => now(),
                 ]);
-                $codePays = session('pays_selectionne'); // Exemple : CIV
+                $codePays = session('pays_selectionne');
                
                 // Enregistrer localisations
                 foreach ($step2['localites'] as $loc) {
@@ -802,7 +778,7 @@ class EtudeProjet extends Controller
         
                 // Infrastructures
                 foreach ($step2['infrastructures'] ?? [] as $infra) {
-                    $codeFamille = $infra['famille_code'] ?? null; // Exemple : HEB
+                    $codeFamille = $infra['famille_code'] ?? null; 
 
                     if (!$codeFamille) {
                         throw new \Exception("Famille d'infrastructure manquante pour l'infrastructure.");
@@ -869,7 +845,7 @@ class EtudeProjet extends Controller
                         'Num_ordre' => $action['ordre'],
                         'Action_mener' => $action['action_code'],
                         'Quantite' => $action['quantite'],
-                        'Infrastrucrues_id' => $action['infrastructure_code'],
+                        'Infrastrucrues_id' => $action['infrastructure_code'] ?? $infraDB->code ?? 0,
                     ]);
         
                     foreach ($action['beneficiaires'] ?? [] as $b) {

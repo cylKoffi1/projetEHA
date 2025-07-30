@@ -32,22 +32,39 @@ use Illuminate\Support\Str;
 class RealiseProjetController extends Controller
 {
 
-    public function realise()
+    public function recupererCaracteristiques(Request $request)
     {
-        $country = session('pays_selectionne');
-        $group = session('projet_selectionne');
-       
-        $projets = Projet::with('dernierStatut.typeStatut')
-        ->where('code_projet', 'like', $country . $group . '%')
-        ->join('projet_statut', 'projets.code_projet', '=', 'projet_statut.code_projet')
-        ->join('type_statut', 'type_statut.id', '=', 'projet_statut.type_statut')
-        ->where('projet_statut.type_statut', 1)
-        ->get();
-
-        $acteurs = Acteur::where('code_pays', $country)->get();
-
-        return view('realise',compact('projet', 'acteurs'));
+        $code = $request->code_projet;
+        $ordre = $request->NumOrdre;
+    
+        $action = ProjetActionAMener::with([
+            'caracteristiques.caracteristique',
+            'caracteristiques.unite',
+            'infrastructure'
+        ])
+        ->where('code_projet', $code)
+        ->where('Num_ordre', $ordre)
+        ->first();
+    
+        if (!$action || !$action->caracteristiques) {
+            return response()->json(['caracteristiques' => [], 'infra' => null], 200);
+        }
+    
+        $caracs = $action->caracteristiques->map(function ($valeur) {
+            return [
+                'libelle' => $valeur->caracteristique?->libelleCaracteristique ?? '—',
+                'valeur' => $valeur->valeur,
+                'unite' => $valeur->unite?->symbole ?? '',
+            ];
+        });
+    
+        return response()->json([
+            'caracteristiques' => $caracs,
+            'infra' => $action->infrastructure?->libelle ?? 'Inconnue'
+        ]);
     }
+    
+    
 
     public function PramatreRealise(Request $request)
     {
@@ -185,20 +202,35 @@ class RealiseProjetController extends Controller
         ->where('code_projet', 'like', $country . $group . '%')
         ->get();
 
-        $projets = Projet::with(['sousDomaine.Domaine'])
-            ->where('projets.code_projet', 'like', $country . $group . '%')
-            ->whereHas('sousDomaine.Domaine', function ($query) use ($group) {
-                $query->where('groupe_projet_code', $group);
-            })
-            ->join('projet_statut', 'projets.code_projet', '=', 'projet_statut.code_projet')
-            ->join('type_statut', 'type_statut.id', '=', 'projet_statut.type_statut')
-            ->where('projet_statut.type_statut', 1)
-            ->get();
+        $lastStatuses = DB::table('projet_statut')
+        ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
+        ->groupBy('code_projet');
 
-        //$user = auth()->user();
-        $acteurs = Acteur::all();
+        $projets = Projet::joinSub($lastStatuses, 'last_status', function ($join) {
+            $join->on('projets.code_projet', '=', 'last_status.code_projet');
+        })
+        ->join('projet_statut', function ($join) {
+            $join->on('projet_statut.code_projet', '=', 'last_status.code_projet')
+                 ->on('projet_statut.date_statut', '=', 'last_status.max_date');
+        })
+        ->where('projet_statut.type_statut', 1)
+        ->where('projets.code_projet', 'like', $country . $group . '%')
+        ->whereNotExists(function ($query) {
+            $query->select(DB::raw(1))
+                  ->from('projet_statut as ps2')
+                  ->whereColumn('ps2.code_projet', 'projets.code_projet')
+                  ->where('ps2.type_statut', '!=', 1);
+        })
+        ->select('projets.*')
+        ->with('dernierStatut') 
+        ->get();
+    
+
         $localites = LocalitesPays::all();
         $infras = Infrastructure::all();
+
+        $acteurs = Acteur::where('code_pays', $country)->get(); 
+
         return view('realise', [
             'ecran' => $ecran,
             'projetsNonTrouves'=>$projetsNonTrouves,
@@ -410,15 +442,15 @@ class RealiseProjetController extends Controller
             }
     
             // Enregistrement
-            DateEffectiveProjet::updateorreate([
+            DateEffectiveProjet::updateOrCreate([
                 'code_projet' => $request->code_projet,
                 'date_debut_effective' => $request->date_debut,
-                'commentaire' => $request->commentaire,
+                'description' => $request->commentaire,
             ]);
     
-            ProjetStatut::updateorcreate([
+            ProjetStatut::create([
                 'code_projet' => $request->code_projet,
-                'type_statut' => 2, // 2 = en cours
+                'type_statut' => 2, 
                 'date_statut' => now(),
             ]);
     
@@ -508,15 +540,24 @@ class RealiseProjetController extends Controller
             ->where('code_projet', 'like', $country . $group . '%')
             ->get();
        
-        $projets = Projet::with(['sousDomaine.Domaine'])
-        ->where('projets.code_projet', 'like', $country . $group . '%')
-        ->whereHas('sousDomaine.Domaine', function ($query) use ($group) {
-            $query->where('groupe_projet_code', $group);
-        })
-        ->join('projet_statut', 'projets.code_projet', '=', 'projet_statut.code_projet')
-        ->join('type_statut', 'type_statut.id', '=', 'projet_statut.type_statut')
-        ->where('projet_statut.type_statut', 2)
-        ->get();
+            $lastStatuses = DB::table('projet_statut')
+            ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
+            ->groupBy('code_projet');
+        
+        $projets = Projet::joinSub($lastStatuses, 'last_status', function ($join) {
+                $join->on('projets.code_projet', '=', 'last_status.code_projet');
+            })
+            ->join('projet_statut', function ($join) {
+                $join->on('projet_statut.code_projet', '=', 'last_status.code_projet')
+                     ->on('projet_statut.date_statut', '=', 'last_status.max_date');
+            })
+            ->where('projet_statut.type_statut', 2)
+            ->where('projets.code_projet', 'like', $country . $group . '%')
+           
+            ->select('projets.*')
+            ->with('dernierStatut')
+            ->get();
+        
 
         $localites = LocalitesPays::all();
         $acteurs = Acteur::all();
@@ -804,11 +845,10 @@ class RealiseProjetController extends Controller
                     'quantite_reel' => 'required|numeric|min:0',
                     'date_avancement' => 'required|date',
                     'photos_avancement.*' => 'nullable|image|max:2048',
-                    'date_fin_effective' => 'nullable|required_if:pourcentage,100|date',
-                    'description_finale' => 'nullable|required_if:pourcentage,100|string|max:500'
+                    'date_fin_effective' => 'nullable|date',
+                    'description_finale' => 'nullable|string|max:500'
                 ]);
         
-                // Récupérer la quantité prévue depuis ProjetActionAMener
                 $action = ProjetActionAMener::where('code_projet', $request->code_projet)
                     ->where('Num_ordre', $request->num_ordre)
                     ->first();
@@ -820,41 +860,60 @@ class RealiseProjetController extends Controller
                     ], 400);
                 }
         
-                // Calcul du pourcentage
                 $pourcentage = ($request->quantite_reel / $action->Quantite) * 100;
         
                 // Gestion des photos
                 $photoPaths = [];
                 if ($request->hasFile('photos_avancement')) {
                     foreach ($request->file('photos_avancement') as $photo) {
-                        $path = $photo->store('data/avancementInfrastructure');
-                        $photoPaths[] = basename($path);
+                        if ($photo->isValid()) {
+                            $filename = 'avancement_' . time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                            $path = 'Data/avancement/';
+                            $photo->move(public_path($path), $filename);
+                            $photoPaths[] = $path . $filename;
+                        }
                     }
                 }
         
-                // Enregistrement
-                AvancementProjet::create([
+                // Enregistrement du suivi
+                $avancement = AvancementProjet::create([
                     'code_projet' => $request->code_projet,
                     'num_ordre' => $request->num_ordre,
-                    'quantite' => $request->quantite_reel,
+                    'quantite' => $action->Quantite,
                     'pourcentage' => $pourcentage,
                     'date_avancement' => $request->date_avancement,
                     'photos' => implode(',', $photoPaths),
-                    'date_fin_effective' => $pourcentage >= 100 ? $request->date_fin_effective : null,
-                    'description_finale' => $pourcentage >= 100 ? $request->description_finale : null,
-                    'code_acteur' => auth()->id()
+                    'date_fin_effective' => ($pourcentage >= 100) ? $request->date_fin_effective : null,
+                    'description_finale' => ($pourcentage >= 100) ? $request->description_finale : null,
+                    'code_acteur' => auth()->user()->acteur_id
                 ]);
         
-                // Si 100%, marquer le projet comme terminé
-                if ($pourcentage >= 100) {
-                    Projet::where('code_projet', $request->code_projet)
-                        ->update([
-                            'statut' => 'termine',
-                            'date_fin_effective' => $request->date_fin_effective
-                        ]);
+                // Si finalisation
+                if ($pourcentage >= 100 && $request->date_fin_effective) {
+                    ProjetStatut::create([
+                        'code_projet' => $request->code_projet,
+                        'type_statut' => 7,
+                        'date_statut' => now()
+                    ]);
+        
+                    DateEffectiveProjet::updateOrCreate(
+                        ['code_projet' => $request->code_projet],
+                        ['date_fin_effective' => $request->date_fin_effective]
+                    );
+        
+                    if ($action->infrastructure_idCode) {
+                        Infrastructure::where('code', $action->infrastructure_idCode)
+                            ->update(['isOver' => true]);
+                    }
+        
+                    $avancement->update([
+                        'date_fin_effective' => $request->date_fin_effective,
+                        'description_finale' => $request->description_finale
+                    ]);
                 }
         
                 return response()->json(['success' => true]);
+        
             } catch (\Throwable $e) {
                 Log::error('Erreur lors de l’enregistrement de l’avancement', [
                     'exception' => $e,
@@ -869,6 +928,7 @@ class RealiseProjetController extends Controller
                 ], 500);
             }
         }
+        
         
         
         public function deleteSuivi($id)
@@ -923,112 +983,8 @@ class RealiseProjetController extends Controller
                 'result' => $data
             ]);
         }
-        public function finaliserPartiel(Request $request)
-        {
-            try {
-                $request->validate([
-                    'code_projet' => 'required|string|exists:projets,code_projet',
-                    'num_ordre' => 'required|integer',
-                    'date_fin_effective' => 'required|date',
-                    'description_finale' => 'nullable|string|max:500'
-                ]);
-        
-                $avancement = AvancementProjet::where('code_projet', $request->code_projet)
-                    ->where('num_ordre', $request->num_ordre)
-                    ->orderByDesc('date_avancement')
-                    ->first();
-        
-                if (!$avancement || $avancement->pourcentage < 100) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Le pourcentage d’avancement doit être égal à 100% pour finaliser partiellement.'
-                    ], 400);
-                }
-        
-                $avancement->update([
-                    'date_fin_effective' => $request->date_fin_effective,
-                    'description_finale' => $request->description_finale,
-                ]);
-        
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Infrastructure finalisée avec succès.'
-                ]);
-            } catch (\Throwable $e) {
-                Log::error('Erreur lors de la finalisation partielle', [
-                    'exception' => $e,
-                    'projet' => $request->code_projet,
-                    'ordre' => $request->num_ordre
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Une erreur est survenue lors de la finalisation partielle.',
-                    'error' => $e->getMessage()
-                ], 500);
-            }
-        }
-        
-        public function finaliserProjet(Request $request)
-        {
-            try {
-                $request->validate([
-                    'code_projet' => 'required|string|exists:projets,code_projet',
-                    'date_fin_effective' => 'required|date',
-                    'description_finale' => 'nullable|string|max:1000'
-                ]);
 
-                $code_projet = $request->code_projet;
-
-                $actions = ProjetActionAMener::where('code_projet', $code_projet)->pluck('Num_ordre');
-
-                $nonCompletes = AvancementProjet::where('code_projet', $code_projet)
-                    ->whereIn('num_ordre', $actions)
-                    ->select('num_ordre', DB::raw('MAX(pourcentage) as max_pourcentage'))
-                    ->groupBy('num_ordre')
-                    ->havingRaw('max_pourcentage < 100')
-                    ->count();
-
-                if ($nonCompletes > 0) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Toutes les infrastructures doivent être finalisées (100%) pour finaliser le projet.'
-                    ], 400);
-                }
-
-                Projet::where('code_projet', $code_projet)->update([
-                    'date_fin_effective' => $request->date_fin_effective,
-                    'description_finale' => $request->description_finale,
-                ]);
-
-                ProjetStatut::updateOrCreate(
-                    [
-                        'code_projet' => $code_projet,
-                        'type_statut' => 3 // Statut: terminé
-                    ],
-                    [
-                        'date_statut' => now()
-                    ]
-                );
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Projet finalisé avec succès.'
-                ]);
-            } catch (\Throwable $e) {
-                \Log::error('Erreur lors de la finalisation totale', [
-                    'exception' => $e,
-                    'projet' => $request->code_projet
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Une erreur est survenue lors de la finalisation du projet.',
-                    'error' => $e->getMessage()
-                ], 500);
-            }
-        }
-
+     
         public function verifierProjetFinalisable(Request $request)
         {
             $code_projet = $request->code_projet;

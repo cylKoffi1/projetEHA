@@ -29,6 +29,33 @@ class Projet extends Model
         'updated_at',
     ];
 
+
+    public function beneficiairesActeurs()
+    {
+        return $this->hasMany(Beneficier::class, 'code_projet', 'code_projet');
+    }
+    
+    public function beneficiairesLocalites()
+    {
+        return $this->hasMany(Profiter::class, 'code_projet', 'code_projet');
+    }
+    
+    public function beneficiairesInfrastructures()
+    {
+        return $this->hasMany(Jouir::class, 'code_projet', 'code_projet');
+    }
+    
+    public function getBeneficiairesAttribute()
+    {
+        return collect()
+            ->merge($this->beneficiairesActeurs)
+            ->merge($this->beneficiairesLocalites)
+            ->merge($this->beneficiairesInfrastructures);
+    }
+    
+
+    
+
     public function sousDomaine()
     {
         return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code_sous_domaine')
@@ -81,6 +108,8 @@ class Projet extends Model
     public function maitreOuvrage() {
         return $this->hasOne(Posseder::class, 'code_projet', 'code_projet');
     }
+
+
     
     public function ChefProjet(){
         return $this->belongsTo(Controler::class, 'code_projet', 'code_projet');
@@ -96,7 +125,7 @@ class Projet extends Model
     public function dernierStatut()
     {
         return $this->hasOne(ProjetStatut::class, 'code_projet', 'code_projet')
-                    ->latest('date_statut');
+                    ->latestOfMany('date_statut');
     }
 
 }

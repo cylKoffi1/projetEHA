@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTP-Project</title>
+    <title>GESPRO-INFRAS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
@@ -299,7 +299,7 @@ function confirmDelete(url, onSuccess, messages = {}) {
 
             <a class="navbar-brand d-flex align-items-center" href="#" style="color: white; flex-direction: column;">
                 <img src="{{ asset(auth()->user()?->paysSelectionne()?->armoirie) }}" style="width: 40px; height: auto; " class="logo-img" alt="Logo" />
-                <span class="project-title">BTP-PROJECT</span>
+                <span class="project-title">GESPRO-INFRAS</span>
             </a>
         </div>
 

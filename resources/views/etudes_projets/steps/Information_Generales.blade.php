@@ -108,7 +108,7 @@
                 if (response.success) {
                     console.log("Step 1 sauvegardé temporairement.");
                     localStorage.setItem("code_projet_temp", response.code_projet);
-                    if (typeof callback === 'function') callback();
+                    //if (typeof callback === 'function') callback();
                     updateInfrastructureField();
                     nextStep();
                 }
@@ -126,7 +126,7 @@
                     console.warn("Réponse brute :", xhr.responseText);
                 }
 
-                alert(message);
+                alert(message, 'warning');
                 console.error("Détail complet :", xhr.responseText);
             }
 
