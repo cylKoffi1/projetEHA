@@ -345,13 +345,13 @@ class ComposerStaticInit9c491b8531eec05ba41a11d9276a5749
         ),
         'Spatie\\LaravelIgnition\\' => 
         array (
-            0 => __DIR__ . '/..' . '/spatie/error-solutions/legacy/laravel-ignition',
-            1 => __DIR__ . '/..' . '/spatie/laravel-ignition/src',
+            0 => __DIR__ . '/..' . '/spatie/laravel-ignition/src',
+            1 => __DIR__ . '/..' . '/spatie/error-solutions/legacy/laravel-ignition',
         ),
         'Spatie\\Ignition\\' => 
         array (
-            0 => __DIR__ . '/..' . '/spatie/error-solutions/legacy/ignition',
-            1 => __DIR__ . '/..' . '/spatie/ignition/src',
+            0 => __DIR__ . '/..' . '/spatie/ignition/src',
+            1 => __DIR__ . '/..' . '/spatie/error-solutions/legacy/ignition',
         ),
         'Spatie\\FlareClient\\' => 
         array (
@@ -845,6 +845,7 @@ class ComposerStaticInit9c491b8531eec05ba41a11d9276a5749
         'App\\Models\\TypeStockage' => __DIR__ . '/../..' . '/app/Models/TypeStockage.php',
         'App\\Models\\TypeTravauxConnexes' => __DIR__ . '/../..' . '/app/Models/TypeTravauxConnexes.php',
         'App\\Models\\Unite' => __DIR__ . '/../..' . '/app/Models/Unite.php',
+        'App\\Models\\UniteDerivee' => __DIR__ . '/../..' . '/app/Models/UniteDerivee.php',
         'App\\Models\\UniteDistance' => __DIR__ . '/../..' . '/app/Models/UniteDistance.php',
         'App\\Models\\UniteMesure' => __DIR__ . '/../..' . '/app/Models/UniteMesure.php',
         'App\\Models\\UniteStockage' => __DIR__ . '/../..' . '/app/Models/UniteStockage.php',
@@ -880,6 +881,7 @@ class ComposerStaticInit9c491b8531eec05ba41a11d9276a5749
         'App\\Providers\\RubriquesServiceProvider' => __DIR__ . '/../..' . '/app/Providers/RubriquesServiceProvider.php',
         'App\\Services\\CaracteristiqueBuilderService' => __DIR__ . '/../..' . '/app/Services/CaracteristiqueBuilderService.php',
         'App\\Services\\NotificationService' => __DIR__ . '/../..' . '/app/Services/NotificationService.php',
+        'App\\View\\Components\\CaracteristiqueRow' => __DIR__ . '/../..' . '/app/View/Components/CaracteristiqueRow.php',
         'App\\View\\Components\\InfoBlock' => __DIR__ . '/../..' . '/app/View/Components/InfoBlock.php',
         'App\\View\\Components\\Sidebar' => __DIR__ . '/../..' . '/app/View/Components/Sidebar.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
