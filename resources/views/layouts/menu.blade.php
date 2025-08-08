@@ -1,772 +1,812 @@
-<script src="{{ asset('assets/compiled/js/lookup-multiselect.js')}}"></script>
-<script src="{{ asset('assets/compiled/js/lookup-select.js')}}"></script>
-<style>
-    /* ======== Style général ======== */
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
+<!doctype html>
+<html class="no-js" lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="GESPRO-INFRAS - Spécialiste en gestion de projet et infrastructure de pays">
+  
+  @include('layouts.lurl')
+
+  <!-- Bootstrap CSS -->
+  <link href="{{ asset('betsa/assets/css/bootstrap.min.css') }}" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --primary-color: #435EBE;
+      --primary-hover: #374e9e;
+      --text-light: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.8);
+      --transition-speed: 0.3s;
     }
 
-    /* ======== Barre de navigation ======== */
+    /* === HEADER STYLES === */
     .navbar {
-        background-color: #435EBE;
-        padding: 18px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: relative;
+      background-color: var(--primary-color);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
 
     /* Logo */
     .navbar-brand {
-        color: #fff;
-        text-decoration: none;
-        font-size: 24px;
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 2.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
     }
 
-    /* Bouton hamburger */
+    .navbar-brand span {
+      font-size: 0.8rem;
+      margin-left: 8px;
+      opacity: 0.8;
+    }
+
+    /* Menu toggle button */
     .navbar-toggle {
-        display: none;
-        background-color: transparent;
-        border: none;
-        color: white;
-        font-size: 28px;
-        cursor: pointer;
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-light);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 5px;
     }
 
-    /* Menu normal */
+    /* Menu container */
     .navbar-collapse {
-        display: flex;
-        justify-content: flex-end;
+      display: flex;
+      transition: all var(--transition-speed) ease;
     }
 
-    /* Liste des liens */
-    .navbar-collapse ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
+    /* Menu list */
+    .navbar-nav {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
     }
 
-    .navbar-collapse ul li {
-        margin-left: 20px;
+    /* Menu items */
+    .nav-item {
+      margin-left: 15px;
     }
 
-    .navbar-collapse ul li a {
-        color: #fff;
-        text-decoration: none;
-        padding: 10px 15px;
-        display: block;
-        transition: background 0.3s;
+    /* Menu links */
+    .nav-link {
+      color: var(--text-light);
+      text-decoration: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      transition: all var(--transition-speed) ease;
+      display: flex;
+      align-items: center;
+      font-weight: 500;
     }
 
-    .navbar-collapse ul li a:hover {
-        background-color: #575757;
-        border-radius: 4px;
+    .nav-link i {
+      margin-right: 8px;
+      font-size: 0.9rem;
     }
 
-    /* ======== Responsive (mobile) ======== */
-    @media (max-width: 768px) {
-        .navbar-toggle {
-            display: block;
-        }
-
-        .navbar-collapse {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            background-color: #333;
-            padding: 10px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-
-        .navbar-collapse.active {
-            display: flex;
-            animation: slideDown 0.3s ease-in-out;
-        }
-
-        .navbar-collapse ul {
-            flex-direction: column;
-            width: 100%;
-            text-align: center;
-        }
-
-        .navbar-collapse ul li {
-            width: 100%;
-            margin: 0;
-        }
-
-        .navbar-collapse ul li a {
-            padding: 15px;
-            display: block;
-            width: 100%;
-            color: white;
-            background: #444;
-            border-bottom: 1px solid #555;
-        }
-
-        .navbar-collapse ul li a:hover {
-            background: #575757;
-        }
+    .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.15);
     }
 
-    /* Animation du menu */
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Active link */
+    .nav-link.active {
+      background-color: rgba(255, 255, 255, 0.2);
     }
 
-    /* Styles du Modal */
+    /* === MODAL STYLES === */
     .modal {
-        display: none ;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity var(--transition-speed) ease;
+    }
 
-        align-items: center;
-        justify-content: center;
+    .modal.show {
+      display: flex;
+      opacity: 1;
     }
 
     .modal-content {
-        background: #fff;
-        padding: 20px;
-        width: 80%;
-        max-width: 1000px;
-        border-radius: 8px;
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(8%);
+      transition: transform var(--transition-speed) ease;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--primary-color);
     }
 
     .close {
-        float: right;
-        font-size: 24px;
-        cursor: pointer;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #777;
+      transition: color var(--transition-speed) ease;
     }
 
-    /* Styles des champs */
-
-
-    .btn-primary {
-        background-color: #007bff;
-        color: white;
-        padding: 10px 15px;
-        border: none;
-        cursor: pointer;
-        border-radius: 5px;
+    .close:hover {
+      color: #333;
     }
 
-    .btn-primary:hover {
-        background: #0056b3;
+    .modal-body {
+      padding: 20px;
     }
 
-    /* Styles des onglets */
+    /* === FORM STYLES === */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .radio-group input[type="radio"] {
+      margin-right: 8px;
+    }
+
+    /* Tabs */
     .tabs {
-        display: flex;
-        border-bottom: 2px solid #ccc;
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
     }
 
     .tab-link {
-        flex: 1;
-        padding: 10px;
-        border: 1px solid #ddd;
-        cursor: pointer;
-        background: #f8f9fa;
-        text-align: center;
+      padding: 12px 20px;
+      cursor: pointer;
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+      transition: all var(--transition-speed) ease;
     }
 
     .tab-link.active {
-        background: #007bff;
-        color: white;
+      background: white;
+      border-bottom: 1px solid white;
+      margin-bottom: -1px;
+      color: var(--primary-color);
+      font-weight: 600;
     }
 
     .tab-pane {
-        display: none;
+      display: none;
+      animation: fadeIn var(--transition-speed) ease;
     }
 
     .tab-pane.active {
-        display: block;
-    }
-    /* Cacher les formulaires au début */
-    .hidden {
-        display: none;
+      display: block;
     }
 
-    /* Activer l'affichage */
-    .formulaire {
-        display: block;
-    }
-    /* Assure que le bouton est bien aligné à droite */
-    .text-end {
-        display: flex;
-        justify-content: flex-end; /* Aligner à droite */
-        width: 100%;
+    /* Form fields */
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      transition: border-color var(--transition-speed) ease;
     }
 
-
-</style>
-
-<!-- ======= Barre de navigation ======= -->
-<nav class="navbar">
-    <a class="navbar-brand" href="{{ url('/')}} ">GESPROI <span style="font-size:15px;">version.β</span> </a>
-    <button type="button" class="navbar-toggle" id="navbar-toggle">
-        ☰ <!-- Icône hamburger -->
-    </button>
-    <div class="navbar-collapse" id="navbar-menu">
-        <ul>
-            <li><a href="#" id="btnOuvrirModal" data-toggle="modale" data-target="#modaleAjouter"><i class="fas fa-user-plus"></i> Demande d'adhésion</a></li>
-            <li><a href="{{ url('/login') }}"><i class="fas fa-sign-in-alt"></i> Connexion</a></li>
-        </ul>
-    </div>
-</nav>
-
-<style>
-    /* Style pour le modal de notification */
-    .modal-notification {
-        display: none;
-        position: fixed;
-        z-index: 9999;
-        left: 50%;
-        top: 20px;
-        transform: translateX(-50%);
-        background-color: rgba(0,0,0,0.8);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 5px;
-        max-width: 80%;
-        text-align: center;
-        animation: fadeIn 0.3s;
+    .form-control:focus {
+      border-color: var(--primary-color);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(67, 94, 190, 0.2);
     }
 
-    .modal-notification.success {
-        background-color: rgba(40, 167, 69, 0.9);
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color var(--transition-speed) ease;
     }
 
-    .modal-notification.error {
-        background-color: rgba(220, 53, 69, 0.9);
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
     }
 
-    .modal-contents {
-        position: relative;
+    /* Responsive grid */
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -10px;
     }
 
+    .col-md-6 {
+      flex: 0 0 50%;
+      max-width: 50%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
 
+    /* Notification */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 25px;
+      border-radius: 4px;
+      color: white;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+      animation: slideDown 0.3s ease-out;
+    }
 
+    .notification.success {
+      background-color: #28a745;
+    }
+
+    .notification.error {
+      background-color: #dc3545;
+    }
+
+    .notification i {
+      margin-right: 10px;
+    }
+
+    /* Animations */
     @keyframes fadeIn {
-        from {opacity: 0; top: 0;}
-        to {opacity: 1; top: 20px;}
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
-</style>
-<script>
-        // Fonctions pour gérer le modal de notification
-    function alert(message, type = 'success') {
-        const modal = document.getElementById('notificationModal');
-        const messageEl = document.getElementById('notificationMessage');
-        
-        modal.className = `modal-notification ${type}`;
-        messageEl.textContent = message;
-        modal.style.display = 'block';
-        
-        // Fermer automatiquement après 3 secondes
-        setTimeout(() => {
-            modal.style.display = 'none';
-        }, 3000);
-    }
-    // Fermer le modal quand on clique sur la croix
-    document.querySelector('.close-notification').addEventListener('click', function() {
-        document.getElementById('notificationModal').style.display = 'none';
-    });
-</script>
-<!-- Modal de notification -->
-<div id="notificationModal" class="modal-notification">
-    <div class="modal-contents">
-        <p id="notificationMessage"></p>
-    </div>
-</div>
-<!-- ======= Modal pour l'enregistrement ======= -->
-<div id="modalAjouter" class="modal" >
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 class="modal-title">Renseignez vos informations</h2>
 
-        <!-- Sélection du type d'adhésion -->
-        <div class="form-group">
+    @keyframes slideDown {
+      from { transform: translate(-50%, -30px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .navbar-toggle {
+        display: block;
+      }
+
+      .navbar-collapse {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--primary-color);
+        flex-direction: column;
+        align-items: stretch;
+        max-height: 0;
+        overflow: hidden;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .navbar-collapse.show {
+        max-height: 300px;
+        padding: 10px 0;
+      }
+
+      .navbar-nav {
+        flex-direction: column;
+      }
+
+      .nav-item {
+        margin: 0;
+      }
+
+      .nav-link {
+        padding: 12px 20px;
+      }
+
+      .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+
+      .radio-group {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header>
+    <nav class="navbar">
+      <a class="navbar-brand" href="{{ url('/') }}">GESPRO-INFRAS <span>version.β</span></a>
+      <button class="navbar-toggle" id="navbar-toggle">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="navbar-collapse" id="navbar-collapse">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a href="#" class="nav-link" id="btnOuvrirModal">
+              <i class="fas fa-user-plus"></i> Demande d'adhésion
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ url('/login') }}" class="nav-link">
+              <i class="fas fa-sign-in-alt"></i> Connexion
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Modal d'adhésion -->
+  <div id="modalAjouter" class="modal">
+    <center>
+        <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Demande d'adhésion</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
             <label><strong>Type d'adhésion :</strong></label>
             <div class="radio-group">
-                <label><input type="radio" name="typePersonne" value="morale" id="radioMorale"> Entreprise (Personne morale)</label><br>
-                <label><input type="radio" name="typePersonne" value="physique" id="radioPhysique"> Individu (Personne physique)</label>
+                <label>
+                <input type="radio" name="typePersonne" value="morale" id="radioMorale"> 
+                <i class="fas fa-building"></i> Entreprise (Personne morale)
+                </label>
+                <label>
+                <input type="radio" name="typePersonne" value="physique" id="radioPhysique"> 
+                <i class="fas fa-user"></i> Individu (Personne physique)
+                </label>
             </div>
-        </div>
+            </div>
 
-        <!-- Formulaire pour Entreprise -->
-        <div id="entrepriseFields" class="formulaire hidden">
-            <h3>Détails pour l’Entreprise</h3>
+            <!-- Formulaire Entreprise -->
+            <div id="entrepriseFields" class="hidden">
             <div class="tabs">
-                <button class="tab-link active" data-tab="entreprise-general">Informations Générales</button>
-                <button class="tab-link" data-tab="entreprise-legal">Informations Juridiques</button>
-                <button class="tab-link" data-tab="entreprise-contact">Informations de Contact</button>
-            </div>
-            <div class="tab-content">
-                <div class="tab-pane active" id="entreprise-general">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Nom complet (Raison sociale) *</label>
-                            <input type="text" class="form-control" placeholder="Nom complet de l'entreprise">
-                        </div>
-                        <div class="col-md-6">
-                            <label>Nom abrégé </label>
-                            <input type="text" class="form-control" placeholder="Nom abrégé de l'entreprise">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label>Date de création *</label>
-                            <input type="date" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label>Forme juridique </label>
-                            <select class="form-control" name="formJuri" id="formJuri">
-                                <option value=""></option>
-                            </select>
-                        </div>
-                    </div>
-
+                <div class="tab-link active" data-tab="entreprise-general">
+                <i class="fas fa-info-circle"></i> Informations Générales
                 </div>
-
-                <div class="tab-pane" id="entreprise-legal">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label>Numéro d'immatriculation *</label>
-                            <input type="text" class="form-control" >
-                        </div>
-                        <div class="col-md-4">
-                            <label>Numéro d'identification fiscale (NIF) </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                        <div class="col-md-4">
-                            <label>Registre du commerce (RCCM) </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="">Capital social</label>
-                            <input type="number" class="form-control" >
-                        </div>
-                        <div class="col-md-6">
-                            <label for="">Numéro d'agrément</label>
-                            <input type="text" class="form-control" >
-                        </div>
-                    </div>
+                <div class="tab-link" data-tab="entreprise-legal">
+                <i class="fas fa-gavel"></i> Informations Juridiques
                 </div>
-
-                <div class="tab-pane" id="entreprise-contact">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label>Code postale</label>
-                            <input type="text" class="form-control" >
-                        </div>
-                        <div class="col-md-4">
-                            <label>Adresse postale </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                        <div class="col-md-4">
-                            <label>Adresse Siège </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label>Représentant légal</label>
-                            <lookup-select name="repLegal" id="repLegal">
-                                <option value="">Sélectionnez...</option>
-                            </lookup-select>
-                        </div>
-                        <div class="col-md-3">
-                            <label>Email </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                        <div class="col-md-3">
-                            <label>Téléphone 1 </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                        <div class="col-md-3">
-                            <label>Téléphone 2 </label>
-                            <input type="text" class="form-control" >
-                        </div>
-                    </div>
-                    <div class="row align-items-end">
-                        <div class="col-md-3">
-                            <label>Personne de contact</label>
-                            <lookup-multiselect name="persContact" id="persContact">
-                                <option value="">Sélectionnez...</option>
-                            </lookup-multiselect>
-                        </div>
-                        <!-- Conteneur pour afficher dynamiquement les champs -->
-                        <div class="col-md-9 d-flex flex-wrap" id="contactContainer"></div>
-                    </div>
-                        <br> <br>
-                    <div class="row">
-                        <div class="col-md-12 text-end"><button id="btnEnregistrerMo" class="btn-primary">Enregistrer</button></div>
-                    </div>
+                <div class="tab-link" data-tab="entreprise-contact">
+                <i class="fas fa-address-book"></i> Contact
                 </div>
-            </div>
-        </div>
-
-        <!-- Formulaire pour Individu -->
-        <div id="individuFields" class="formulaire hidden">
-            <h3>Détails pour l’Individu</h3>
-            <div class="tabs">
-                <button class="tab-link active" data-tab="individu-general">Informations Personnelles</button>
-                <button class="tab-link" data-tab="individu-contact">Informations de Contact</button>
-                <button class="tab-link" data-tab="individu-admin">Informations Administratives</button>
             </div>
 
             <div class="tab-content">
-                <div class="tab-pane active" id="individu-general">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label>Nom complet *</label>
-                            <input type="text" class="form-control" placeholder="Nom complet de l'entreprise">
-                        </div>
-                        <div class="col-md-4">
-                            <label>Nom abrégé *</label>
-                            <input type="text" class="form-control" placeholder="Nom abrégé de l'entreprise">
-                        </div>
-                        <div class="col-md-4">
-                            <label>Date de création *</label>
-                            <input type="date" class="form-control">
-                        </div>
+                <div id="entreprise-general" class="tab-pane active">
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                    <label>Nom complet (Raison sociale) *</label>
+                    <input type="text" class="form-control" placeholder="Nom complet de l'entreprise">
                     </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label>Genre *</label>
-                            <select class="form-control" name="genre" id="genre">
-                                <option value=""></option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label>Situation matrimoniale </label>
-                            <select class="form-control" name="sitMat" id="sitMat">
-                                <option value=""></option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label>Pays d'origine *</label>
-                            <lookup-select name="nationnalite" id="nationnalite">
-                                <option value="">Sélectionnez...</option>
-
-                            </lookup-select>
-                        </div>
+                    <div class="col-md-6 form-group">
+                    <label>Nom abrégé</label>
+                    <input type="text" class="form-control" placeholder="Nom abrégé de l'entreprise">
                     </div>
                 </div>
-
-                <div class="tab-pane" id="individu-contact">
-                    <div class="col">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label>Email *</label>
-                                <input type="email" class="form-control" placeholder="Email de l'entreprise">
-                            </div>
-                            <div class="col-md-4">
-                                <label>Code postal </label>
-                                <input type="text" class="form-control" >
-                            </div>
-                            <div class="col-md-4">
-                                <label>Adresse postal </label>
-                                <input type="text" class="form-control" >
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label>Adresse *</label>
-                                <input type="email" class="form-control" placeholder="Email de l'entreprise">
-                            </div>
-                            <div class="col-md-4">
-                                <label>Téléphone bureau</label>
-                                <input type="text" class="form-control" >
-                            </div>
-                            <div class="col-md-4">
-                                <label>Téléphone mobile * </label>
-                                <input type="text" class="form-control" >
-                            </div>
-                        </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                    <label>Date de création *</label>
+                    <input type="date" class="form-control">
+                    </div>
+                    <div class="col-md-6 form-group">
+                    <label>Forme juridique</label>
+                    <select class="form-control" name="formJuri" id="formJuri">
+                        <option value=""></option>
+                    </select>
                     </div>
                 </div>
+                </div>
 
-                <div class="tab-pane" id="individu-admin">
+                <div id="entreprise-legal" class="tab-pane">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Numéro d'immatriculation *</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Numéro d'identification fiscale (NIF)</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Registre du commerce (RCCM)</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                    <label>Capital social</label>
+                    <input type="number" class="form-control">
+                    </div>
+                    <div class="col-md-6 form-group">
+                    <label>Numéro d'agrément</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                </div>
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label>Pièce d'identité </label>
-                                <input type="email" class="form-control" placeholder="Email de l'entreprise">
-                            </div>
-                            <div class="col-md-4">
-                                <label>Numéro pièce </label>
-                                <input type="text" class="form-control" >
-                            </div>
-                            <div class="col-md-4">
-                                <label>Date d'établissement</label>
-                                <input type="date" class="form-control" >
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label>Date d'expiration</label>
-                                <input type="email" class="form-control" placeholder="Email de l'entreprise">
-                            </div>
-                            <div class="col-md-6">
-                                <label>Numéro fiscal</label>
-                                <input type="text" class="form-control" >
-                            </div>
-                        </div> <br> <br>
-                        <div class="row">
-                            <div class="col-md-12 text-end"><button id="btnEnregistrerPhy" class="btn-primary">Enregistrer</button></div>
-                        </div>
+                <div id="entreprise-contact" class="tab-pane">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Code postal</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Adresse postale</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Adresse Siège</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 form-group">
+                    <label>Représentant légal</label>
+                    <lookup-select name="repLegal" id="repLegal">
+                        <option value="">Sélectionnez...</option>
+                    </lookup-select>
+                    </div>
+                    <div class="col-md-3 form-group">
+                    <label>Email</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-3 form-group">
+                    <label>Téléphone 1</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-3 form-group">
+                    <label>Téléphone 2</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                <div class="row align-items-end">
+                    <div class="col-md-3 form-group">
+                    <label>Personne de contact</label>
+                    <lookup-multiselect name="persContact" id="persContact">
+                        <option value="">Sélectionnez...</option>
+                    </lookup-multiselect>
+                    </div>
+                    <div class="col-md-9 d-flex flex-wrap" id="contactContainer"></div>
+                </div>
+                <div class="text-end" style="margin-top: 20px;">
+                    <button id="btnEnregistrerMo" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> Envoyer la demande
+                    </button>
+                </div>
                 </div>
             </div>
+            </div>
+
+            <!-- Formulaire Individu -->
+            <div id="individuFields" class="hidden">
+            <div class="tabs">
+                <div class="tab-link active" data-tab="individu-general">
+                <i class="fas fa-user-circle"></i> Informations Personnelles
+                </div>
+                <div class="tab-link" data-tab="individu-contact">
+                <i class="fas fa-address-card"></i> Contact
+                </div>
+                <div class="tab-link" data-tab="individu-admin">
+                <i class="fas fa-file-alt"></i> Documents
+                </div>
+            </div>
+
+            <div class="tab-content">
+                <div id="individu-general" class="tab-pane active">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Nom complet *</label>
+                    <input type="text" class="form-control" placeholder="Votre nom complet">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Date de naissance *</label>
+                    <input type="date" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Genre *</label>
+                    <select class="form-control" name="genre" id="genre">
+                        <option value=""></option>
+                    </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Situation matrimoniale</label>
+                    <select class="form-control" name="sitMat" id="sitMat">
+                        <option value=""></option>
+                    </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Pays d'origine *</label>
+                    <lookup-select name="nationnalite" id="nationnalite">
+                        <option value="">Sélectionnez...</option>
+                    </lookup-select>
+                    </div>
+                </div>
+                </div>
+
+                <div id="individu-contact" class="tab-pane">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Email *</label>
+                    <input type="email" class="form-control" placeholder="Votre email">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Code postal</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Adresse postale</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Adresse *</label>
+                    <input type="text" class="form-control" placeholder="Votre adresse">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Téléphone bureau</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Téléphone mobile *</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                </div>
+
+                <div id="individu-admin" class="tab-pane">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                    <label>Type de pièce d'identité</label>
+                    <select class="form-control">
+                        <option value="">Sélectionnez...</option>
+                        <option value="cni">Carte Nationale d'Identité</option>
+                        <option value="passeport">Passeport</option>
+                        <option value="permis">Permis de conduire</option>
+                    </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Numéro pièce</label>
+                    <input type="text" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Date d'établissement</label>
+                    <input type="date" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                    <label>Date d'expiration</label>
+                    <input type="date" class="form-control">
+                    </div>
+                    <div class="col-md-6 form-group">
+                    <label>Numéro fiscal</label>
+                    <input type="text" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Télécharger une copie de votre pièce d'identité</label>
+                    <input type="file" class="form-control">
+                </div>
+                <div class="text-end" style="margin-top: 20px;">
+                    <button id="btnEnregistrerPhy" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> Envoyer la demande
+                    </button>
+                </div>
+                </div>
+            </div>
+            </div>
         </div>
+        </div>
+    </center>
+  </div>
 
+  <!-- Notification -->
+  <div id="notification" class="notification hidden"></div>
 
-    </div>
-</div>
+  <!-- Scripts -->
+  <script src="{{ asset('betsa/assets/js/jquery.js')}}"></script>
+  <script src="{{ asset('assets/compiled/js/lookup-multiselect.js')}}"></script>
+  <script src="{{ asset('assets/compiled/js/lookup-select.js')}}"></script>
 
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Gestion du menu mobile
+      const navbarToggle = document.getElementById('navbar-toggle');
+      const navbarCollapse = document.getElementById('navbar-collapse');
+      
+      navbarToggle.addEventListener('click', function() {
+        navbarCollapse.classList.toggle('show');
+      });
 
-
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const navbarToggle = document.getElementById('navbar-toggle');
-    const navbarMenu = document.getElementById('navbar-menu');
-
-    // Ouvrir et fermer le menu hamburger
-    navbarToggle.addEventListener('click', function (event) {
-        event.stopPropagation(); // Empêche le clic de se propager et de fermer immédiatement le menu
-        navbarMenu.classList.toggle('active');
-
-        // Fix: Gérer l'affichage du menu
-        if (navbarMenu.classList.contains('active')) {
-            navbarMenu.style.display = "flex";
-        } else {
-            navbarMenu.style.display = "";
+      // Fermer le menu quand on clique ailleurs
+      document.addEventListener('click', function(e) {
+        if (!navbarToggle.contains(e.target) && !navbarCollapse.contains(e.target)) {
+          navbarCollapse.classList.remove('show');
         }
-    });
+      });
 
-    // Fermer le menu lorsqu'on clique en dehors
-    document.addEventListener("click", function (event) {
-        if (!navbarToggle.contains(event.target) && !navbarMenu.contains(event.target)) {
-            navbarMenu.classList.remove('active');
-            navbarMenu.style.display = "";
+      // Gestion du modal
+      const modal = document.getElementById('modalAjouter');
+      const btnOpen = document.getElementById('btnOuvrirModal');
+      const btnClose = document.querySelector('.close');
+      
+      function openModal() {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+      
+      function closeModal() {
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+      }
+      
+      btnOpen.addEventListener('click', openModal);
+      btnClose.addEventListener('click', closeModal);
+      
+      // Fermer le modal quand on clique en dehors
+      window.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          closeModal();
         }
-    });
-});
-</script>
-<script>
-document.getElementById("btnOuvrirModal").addEventListener("click", function () {
-    document.getElementById("modalAjouter").style.display = "flex";
-});
+      });
 
-document.querySelector(".close").addEventListener("click", function () {
-    document.getElementById("modalAjouter").style.display = "none";
-});
-
-document.querySelectorAll(".tab-link").forEach(tab => {
-    tab.addEventListener("click", function () {
-        document.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
-        document.getElementById(this.dataset.tab).classList.add("active");
-        document.querySelectorAll(".tab-link").forEach(btn => btn.classList.remove("active"));
-        this.classList.add("active");
-    });
-});
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    // Références des éléments
-    const btnOuvrirModal = document.getElementById("btnOuvrirModal");
-    const modalAjouter = document.getElementById("modalAjouter");
-    const btnFermerModal = document.querySelector(".close");
-    const radioPhysique = document.getElementById("radioPhysique");
-    const radioMorale = document.getElementById("radioMorale");
-    const formPhysique = document.getElementById("individuFields");
-    const formMorale = document.getElementById("entrepriseFields");
-
-    // Assurer que le modal est bien caché au départ
-    modalAjouter.style.display = "none";
-
-    // Ouvrir le modal
-    btnOuvrirModal.addEventListener("click", function () {
-        modalAjouter.style.display = "flex";
-    });
-
-    // Fermer le modal sur clic de la croix
-    btnFermerModal.addEventListener("click", function () {
-        modalAjouter.style.display = "none";
-    });
-
-    // Fermer le modal
-    btnFermerModal.addEventListener("click", function () {
-        modalAjouter.style.display = "none";
-    });
-
-    // Fermer le modal si on clique en dehors
-    window.addEventListener("click", function (event) {
-        if (event.target === modalAjouter) {
-            modalAjouter.style.display = "none";
-        }
-    });
-
-    // Fonction pour afficher le bon formulaire
-    function togglePersonneFields() {
-        if (radioPhysique.checked) {
-            formPhysique.classList.remove("hidden");
-            formMorale.classList.add("hidden");
-        } else if (radioMorale.checked) {
-            formMorale.classList.remove("hidden");
-            formPhysique.classList.add("hidden");
-        }
-    }
-
-    // Écouteurs pour les boutons radio
-    radioPhysique.addEventListener("change", togglePersonneFields);
-    radioMorale.addEventListener("change", togglePersonneFields);
-
-    // Gestion des onglets
-    document.querySelectorAll(".tab-link").forEach(tab => {
-        tab.addEventListener("click", function () {
-            const parentContainer = this.closest(".formulaire");
-
-            // Désactiver tous les onglets et panes du même formulaire
-            parentContainer.querySelectorAll(".tab-link").forEach(link => link.classList.remove("active"));
-            parentContainer.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
-
-            // Activer l'onglet et le contenu associé
-            this.classList.add("active");
-            document.getElementById(this.dataset.tab).classList.add("active");
+      // Gestion des onglets
+      function setupTabs(container) {
+        const tabs = container.querySelectorAll('.tab-link');
+        const panes = container.querySelectorAll('.tab-pane');
+        
+        tabs.forEach(tab => {
+          tab.addEventListener('click', function() {
+            // Désactiver tous les onglets
+            tabs.forEach(t => t.classList.remove('active'));
+            panes.forEach(p => p.classList.remove('active'));
+            
+            // Activer l'onglet sélectionné
+            this.classList.add('active');
+            const paneId = this.getAttribute('data-tab');
+            document.getElementById(paneId).classList.add('active');
+          });
         });
-    });
-});
-</script>
+      }
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const lookup = document.getElementById("nomPC"); // Sélection du lookup-multiselect
-        const contactContainer = document.getElementById("contactContainer");
-        const acteurs = '';{{--//@json($acteurRepres);--}} // Récupération des contacts depuis Laravel
-
-        function updateContacts() {
-            contactContainer.innerHTML = ""; // Vider le contenu
-
-            let selectedValues = lookup.value; // Récupère les valeurs sélectionnées
-
-            if (selectedValues.length === 0) {
-                return; // Si aucune sélection, ne rien afficher
-            }
-
-            selectedValues.forEach(code => {
-                let acteur = acteurs.find(a => a.code_acteur == code);
-            // console.log('acteur :',acteur);
-                if (acteur) {
-                    let row = document.createElement("div");
-                    row.classList.add("d-flex", "align-items-center", "me-3");
-
-                    row.innerHTML = `
-                        <div class="me-3">
-                            <label>Nom</label>
-                            <input type="text" class="form-control" value="${acteur.libelle_court} ${acteur.libelle_long}" readonly>
-                        </div>
-                        <div class="me-3">
-                            <label>Email</label>
-                            <input type="email" class="form-control" name="emailPC" value="${acteur.email || ''}">
-                        </div>
-                        <div class="me-3">
-                            <label>Téléphone 1</label>
-                            <input type="text" class="form-control" name="Tel1Pc" value="${acteur.telephone_mobile || ''}">
-                        </div>
-                        <div class="me-3">
-                            <label>Téléphone 2</label>
-                            <input type="text" class="form-control" name="Tel2PC" value="${acteur.telephone_bureau || ''}">
-                        </div>
-                    `;
-
-                    contactContainer.appendChild(row);
-                }
-            });
+      // Gestion des formulaires (entreprise/individu)
+      const radioMorale = document.getElementById('radioMorale');
+      const radioPhysique = document.getElementById('radioPhysique');
+      const formMorale = document.getElementById('entrepriseFields');
+      const formPhysique = document.getElementById('individuFields');
+      
+      function toggleForms() {
+        if (radioMorale.checked) {
+          formMorale.classList.remove('hidden');
+          formPhysique.classList.add('hidden');
+          setupTabs(formMorale);
+        } else if (radioPhysique.checked) {
+          formPhysique.classList.remove('hidden');
+          formMorale.classList.add('hidden');
+          setupTabs(formPhysique);
         }
+      }
+      
+      radioMorale.addEventListener('change', toggleForms);
+      radioPhysique.addEventListener('change', toggleForms);
+      
+      // Initialiser avec un formulaire par défaut
+      radioMorale.checked = true;
+      toggleForms();
 
-        // Écouter le changement de sélection sur `lookup-multiselect`
-        lookup.addEventListener("change", updateContacts);
+      // Gestion des notifications
+      function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+        
+        setTimeout(() => {
+          notification.classList.add('hidden');
+        }, 3000);
+      }
 
-        // Optionnel : Afficher les données au chargement si des valeurs sont déjà sélectionnées
-        setTimeout(updateContacts, 500);
-    });
+      // Simulation d'envoi de formulaire
+      document.getElementById('btnEnregistrerMo').addEventListener('click', function() {
+        showNotification('Votre demande d\'adhésion a été envoyée avec succès !', 'success');
+        closeModal();
+      });
+      
+      document.getElementById('btnEnregistrerPhy').addEventListener('click', function() {
+        showNotification('Votre demande d\'adhésion a été envoyée avec succès !', 'success');
+        closeModal();
+      });
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const lookupRL = document.getElementById("nomRL"); // Sélecteur du lookup-select
-        const emailRL = document.querySelector("input[name='emailRL']");
-        const telephone1RL = document.querySelector("input[name='telephone1RL']");
-        const telephone2RL = document.querySelector("input[name='telephone2RL']");
-
-        const acteurs =''; {{--//@json($acteurRepres);--}} // Récupération des acteurs depuis Laravel Blade
-
-        function updateRepresentantLegal() {
-            let selectedValue = lookupRL.value; // Récupérer l'ID sélectionné
-
-            // Trouver les données du représentant légal
-            let acteur = acteurs.find(a => a.code_acteur == selectedValue);
-
-            if (acteur) {
-                emailRL.value = acteur.email || ""; // Mettre à jour l'email
-                telephone1RL.value = acteur.telephone_mobile || ""; // Mettre à jour Téléphone 1
-                telephone2RL.value = acteur.telephone_bureau || ""; // Mettre à jour Téléphone 2
-            } else {
-                emailRL.value = ""; // Vider si aucun représentant légal trouvé
-                telephone1RL.value = "";
-                telephone2RL.value = "";
-            }
-        }
-
-        // Écouter les changements sur le `lookup-select`
-        lookupRL.addEventListener("change", updateRepresentantLegal);
-
-        // Optionnel : Remplir les champs au chargement si une valeur est déjà sélectionnée
-        setTimeout(updateRepresentantLegal, 500);
-
-        // Ajouter les champs cachés dynamiques pour conserver les modifications lors du submit
-        const form = document.querySelector("form");
-        form.addEventListener("submit", function () {
-            // Ajouter des champs cachés pour les valeurs modifiées
-            let hiddenEmail = document.createElement("input");
-            hiddenEmail.type = "hidden";
-            hiddenEmail.name = "emailRL_modified";
-            hiddenEmail.value = emailRL.value;
-            form.appendChild(hiddenEmail);
-
-            let hiddenTel1 = document.createElement("input");
-            hiddenTel1.type = "hidden";
-            hiddenTel1.name = "telephone1RL_modified";
-            hiddenTel1.value = telephone1RL.value;
-            form.appendChild(hiddenTel1);
-
-            let hiddenTel2 = document.createElement("input");
-            hiddenTel2.type = "hidden";
-            hiddenTel2.name = "telephone2RL_modified";
-            hiddenTel2.value = telephone2RL.value;
-            form.appendChild(hiddenTel2);
+      // Gestion des contacts (exemple)
+      const lookup = document.getElementById('persContact');
+      const contactContainer = document.getElementById('contactContainer');
+      
+      if (lookup) {
+        lookup.addEventListener('change', function() {
+          const selectedValues = this.value;
+          contactContainer.innerHTML = '';
+          
+          selectedValues.forEach(value => {
+            // Simuler des données de contact
+            const contactDiv = document.createElement('div');
+            contactDiv.className = 'col-md-12 form-group';
+            contactDiv.innerHTML = `
+              <div class="row">
+                <div class="col-md-3">
+                  <label>Nom</label>
+                  <input type="text" class="form-control" value="Contact ${value}" readonly>
+                </div>
+                <div class="col-md-3">
+                  <label>Email</label>
+                  <input type="email" class="form-control" name="emailPC">
+                </div>
+                <div class="col-md-3">
+                  <label>Téléphone 1</label>
+                  <input type="text" class="form-control" name="Tel1Pc">
+                </div>
+                <div class="col-md-3">
+                  <label>Téléphone 2</label>
+                  <input type="text" class="form-control" name="Tel2PC">
+                </div>
+              </div>
+            `;
+            contactContainer.appendChild(contactDiv);
+          });
         });
+      }
     });
-</script>
+  </script>
+</body>
+</html>

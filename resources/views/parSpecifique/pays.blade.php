@@ -296,7 +296,7 @@ document.getElementById('paysForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
-    const url =  currentEditId ? `/pays/${currentEditId}` : '/pays';
+    const url =  currentEditId ? `{{ url("/") }}/pays/${currentEditId}` : '{{ url("/") }}/pays';
     const method = currentEditId ? 'PUT' : 'POST';
     
     // Ajouter la méthode HTTP correcte pour Laravel

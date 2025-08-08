@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTP-Project</title>
-
+    <title>GESPRO-INFRAS</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+    <meta name="description" content="GESPRO-INFRAS - Spécialiste en gestion de projet et infrastructure de pays">
+  
     <meta name="csrf-token" content="{{ csrf_token() }}">
-
+   
     {{-- CSS First --}}
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/bootstrap.min.css')}}">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
@@ -64,7 +66,7 @@
          <!-- Multiple select -->
     <link rel="stylesheet" href="{{ asset('assets/multiSelect/filter_multi_select.css') }}">
     <!-- Multiple select -->
-    <link rel="shortcut icon" href="{{ asset('assets/compiled/svg/favicon.svg')}}" type="image/x-icon">
+   
 </head>
 
 

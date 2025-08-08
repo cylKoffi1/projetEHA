@@ -2,7 +2,8 @@
 
 		<link href="https://fonts.googleapis.com/css?family=Rufina:400,700" rel="stylesheet">
         <meta charset="UTF-8">
-    <title>BTP-Project</title>
+        <title>GESPRO-INFRAS</title>
+        <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
 
 
 

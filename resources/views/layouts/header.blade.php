@@ -6,7 +6,9 @@
     <title>GESPRO-INFRAS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+    <meta name="description" content="GESPRO-INFRAS - Spécialiste en gestion de projet et infrastructure de pays">
+  
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Bootstrap JS (avec Popper.js inclus) -->
     <script src="{{ asset('assets/compiled/js/bootstrap.bundle.min.js') }}"></script>
@@ -298,7 +300,7 @@ function confirmDelete(url, onSuccess, messages = {}) {
             <button class="sidebar-toggle" onclick="toggleSidebar()" style="margin: 2px;">☰</button>
 
             <a class="navbar-brand d-flex align-items-center" href="#" style="color: white; flex-direction: column;">
-                <img src="{{ asset(auth()->user()?->paysSelectionne()?->armoirie) }}" style="width: 40px; height: auto; " class="logo-img" alt="Logo" />
+                <img src="{{ asset( auth()->user()?->paysSelectionne()?->armoirie) }}" alt="Armoirie">
                 <span class="project-title">GESPRO-INFRAS</span>
             </a>
         </div>

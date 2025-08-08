@@ -18,6 +18,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\EtatController;
 use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
+use App\Http\Controllers\GestionFinanciereController;
 use App\Http\Controllers\InfrastructureController;
 use App\Http\Controllers\InfrastructureMapController;
 use App\Http\Controllers\PaysController;
@@ -44,6 +45,7 @@ use App\Models\LocalitesPays;
 use App\Models\Renforcement;
 use App\Models\SousDomaine;
 use App\Models\Utilisateur;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ui\Presets\React;
@@ -88,6 +90,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     /**************************** PROFIL UTILISATEUR **********************************/
     Route::get('/profil', [ProfilController::class, 'index'])->name('profil.index');
     Route::post('/profil', [ProfilController::class, 'update'])->name('profil.update');
+
 
     
     // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
@@ -618,7 +621,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                 LocalitesPays::getFullLocaliteData($codeLocalite)
             );
         });
-    
+
 });
 
     /**************************** GESTION DES HABILITATIONS **********************************/

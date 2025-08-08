@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
         $(document).ready(function() {
             initDataTable('{{ auth()->user()->acteur?->lieblle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des familles d\'infrastructures');
-            //initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'caracteristiquesTableBody', 'Liste des caractéristiques');
+            
         });
 </script>
 
