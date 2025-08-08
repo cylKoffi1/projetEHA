@@ -72,3 +72,6 @@ Route::get('/filter-map', [sigAdminController::class, 'filterMap'])
 Route::get('/projects/all', [sigAdminController::class, 'getAllProjects']);
 Route::get('/legende/{groupe}', [sigAdminController::class, 'getByGroupe']);
 Route::get('/filtrer-projets', [sigAdminController::class, 'getFiltreOptionsEtProjets']);
+
+// Nouveau: Détails projets pour un code/niveau donné
+Route::get('/project-details', [sigAdminController::class, 'getProjectDetails']);

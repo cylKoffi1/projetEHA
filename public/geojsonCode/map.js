@@ -13,7 +13,7 @@ const normalized = str => {
 };
 // Constantes pour les noms de propriétés dans les GeoJSON
 const PROPERTIES = {
-    
+
     COD: { // Structure pour la RDC
         1: { name: 'NAME_1', type: 'TYPE_1' }, // Provinces
         2: { name: 'NAME_2', type: 'TYPE_2' }, // Territoires
@@ -43,7 +43,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     });
 
     window.currentMapMode = 'count';
-    
+
     // Ajustement pour centrer la carte
     map.panBy([20, 0]);
 
@@ -83,7 +83,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
 
     info.update = function(domaines = [], niveau = []) {
         const levelRows = [];
-    
+
         if (isRDC) {
             levelRows.push(
                 `<tr><th style="text-align: right;">Province:</th><td>${selectedLevels["Province"] || '—'}</td></tr>`,
@@ -106,7 +106,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 );
             }
         }
-    
+
         // 🧠 Obtenir les données de chaque niveau sélectionné
         const localityDataByLevel = (() => {
             const data = {};
@@ -114,7 +114,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 const entry = selectedLevels[l];
                 const name = typeof entry === 'object' ? entry.name : entry;
                 if (!name) continue;
-    
+
                 const key = normalized(name);
                 if (window.projectData[key]) {
                     data[l] = window.projectData[key];
@@ -122,19 +122,19 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             }
             return data;
         })();
-    
+
         // 🧮 Total global = niveau le plus bas sélectionné
         const totalProjects = (() => {
             const last = Object.values(localityDataByLevel).pop();
             if (!last) return 0;
-        
+
             if (window.currentMapMetric === 'cost') {
                 const total = (last.public || 0) + (last.private || 0);
                 if (window.currentMapFilter === 'private') return (last.cost * ((last.private || 0) / (total || 1))) / 1_000_000_000;
                 else if (window.currentMapFilter === 'public') return (last.cost * ((last.public || 0) / (total || 1))) / 1_000_000_000;
                 else return last.cost / 1_000_000_000;
             }
-        
+
             if (window.currentMapFilter === 'private') return last.private || 0;
             if (window.currentMapFilter === 'public') return last.public || 0;
             return last.count || 0;
@@ -142,10 +142,10 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         const totalCostPublic = Object.values(localityDataByLevel).reduce((sum, d) => sum + (d?.public_cost || 0), 0);
         const totalCostPrivate = Object.values(localityDataByLevel).reduce((sum, d) => sum + (d?.private_cost || 0), 0);
         const totalCost = totalCostPublic + totalCostPrivate;
-        
+
         const domainRows = domaines.map(domaine => {
             const domainCode = domaine.code.substring(0, 2);
-    
+
             return `
                 <tr>
                     <th style="border: 1px solid black; text-align: right;">${domaine.libelle}</th>
@@ -183,19 +183,19 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
 
                             return `
                                 <td style="border: 1px solid black; text-align: center;">
-                                    ${window.currentMapFilter === 'private' ? '-' : (pubCost / 1_000_000_000).toFixed(2) + ''}
+                                    <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="public" data-domain="${domainCode}">${window.currentMapFilter === 'private' ? '-' : (pubCost / 1_000_000_000).toFixed(2) + ''}</span>
                                 </td>
                                 <td style="border: 1px solid black; text-align: center;">
-                                    ${window.currentMapFilter === 'public' ? '-' : (privCost / 1_000_000_000).toFixed(2) + ''}
+                                    <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="private" data-domain="${domainCode}">${window.currentMapFilter === 'public' ? '-' : (privCost / 1_000_000_000).toFixed(2) + ''}</span>
                                 </td>
                             `;
                         } else {
                             return `
                                 <td style="border: 1px solid black; text-align: center;">
-                                    ${window.currentMapFilter === 'private' ? '-' : (stats.public ?? 0)}
+                                    <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="public" data-domain="${domainCode}">${window.currentMapFilter === 'private' ? '-' : (stats.public ?? 0)}</span>
                                 </td>
                                 <td style="border: 1px solid black; text-align: center;">
-                                    ${window.currentMapFilter === 'public' ? '-' : (stats.private ?? 0)}
+                                    <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="private" data-domain="${domainCode}">${window.currentMapFilter === 'public' ? '-' : (stats.private ?? 0)}</span>
                                 </td>
                             `;
                         }
@@ -203,7 +203,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 </tr>
             `;
         }).join('');
-    
+
         this._div.innerHTML = `
             <div class="title">Informations sur la zone</div>
             <table class="level-info">
@@ -222,8 +222,8 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                     <tr>
                         ${Array.from({ length: maxLevels }, (_, i) => `
                             <th colspan="2" style="border: 1px solid black; text-align: center;">
-                                ${isRDC ? ['Province', 'Territoire', 'Ville'][i] || `Niveau ${i + 1}` : 
-                                  isMLI ? ['Région', 'Cercle', 'Arrondissement'][i] : 
+                                ${isRDC ? ['Province', 'Territoire', 'Ville'][i] || `Niveau ${i + 1}` :
+                                  isMLI ? ['Région', 'Cercle', 'Arrondissement'][i] :
                                   (niveau[i]?.libelle_decoupage) || `Niveau ${i + 1}`}
                             </th>
                         `).join('')}
@@ -259,69 +259,86 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                                 const privCost = privCosts / 1000000000;
                                 return `
                                     <td style="border: 1px solid black; text-align: center;">
-                                        ${window.currentMapFilter === 'private' ? '-' : pubCost.toFixed(2) + ' '}
+                                        <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="public">${window.currentMapFilter === 'private' ? '-' : pubCost.toFixed(2) + ' '}</span>
                                     </td>
                                     <td style="border: 1px solid black; text-align: center;">
-                                        ${window.currentMapFilter === 'public' ? '-' : privCost.toFixed(2) + ' '}
+                                        <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="private">${window.currentMapFilter === 'public' ? '-' : privCost.toFixed(2) + ' '}</span>
                                     </td>
                                 `;
                             } else {
                                 return `
                                     <td style="border: 1px solid black; text-align: center;">
-                                        ${window.currentMapFilter === 'private' ? '-' : (levelData?.public ?? 0)}
+                                        <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="public">${window.currentMapFilter === 'private' ? '-' : (levelData?.public ?? 0)}</span>
                                     </td>
                                     <td style="border: 1px solid black; text-align: center;">
-                                        ${window.currentMapFilter === 'public' ? '-' : (levelData?.private ?? 0)}
+                                        <span class="project-cell" data-code="${levelData?.code || ''}" data-level="${i+1}" data-filter="private">${window.currentMapFilter === 'public' ? '-' : (levelData?.private ?? 0)}</span>
                                     </td>
                                 `;
                             }
                         }).join('')}
-                        
+
                 </tbody>
             </table>
         `;
+
+        // Binder les clics sur les cellules du tableau pour ouvrir le drawer
+        const cells = this._div.querySelectorAll('.project-cell');
+        cells.forEach(el => {
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', () => {
+                const code = el.dataset.code;
+                const domain = el.dataset.domain || '';
+                const filter = el.dataset.filter || 'cumul';
+                const level = parseInt(el.dataset.level || '0', 10) || undefined;
+                const valueText = (el.textContent || '').trim();
+                if (!code || valueText === '-' || valueText === '—') return;
+                if (typeof window.openProjectDrawer === 'function') {
+                    window.openProjectDrawer({ code, domain, filter, level });
+                }
+            });
+        });
     };
-    
+
 
     info.addTo(map);
 
     function createDynamicLegend(map, groupeCode) {
         // La légende dépend uniquement du type de métrique (coût ou nombre)
         const metric = window.currentMapMetric || 'count';
-    
+
         let typeFin;
         if (metric === 'cost') {
             typeFin = 2; // 2 = légende pour le financement
         } else {
             typeFin = 1; // 1 = légende pour le nombre de projets
         }
-    
+
         fetch(`/api/legende/${groupeCode}?typeFin=${typeFin}`)
             .then(response => response.json())
             .then(data => {
                 window.customLegend = data.seuils;
-    
+
                 // Supprimer l'ancienne légende si elle existe
                 if (window.currentLegendControl) {
                     map.removeControl(window.currentLegendControl);
                 }
-    
+
                 const legend = L.control({ position: 'bottomright' });
-    
+
                 legend.onAdd = function (map) {
                     const div = L.DomUtil.create('div', 'info legend');
                     const labels = [`<h4>LÉGENDE</h4><p>${data.label}</p>`];
-    
+
                     data.seuils.forEach(({ borneInf, borneSup, couleur }) => {
                         labels.push(
                             `<i style="background:${couleur}; opacity: 0.7;"></i> ${borneInf}${borneSup ? `–${borneSup}` : '+'}`
                         );
                     });
-    
+
                     div.innerHTML = labels.join('<br>');
                     return div;
                 };
-    
+
                 legend.addTo(map);
                 window.currentLegendControl = legend;
             })
@@ -329,9 +346,9 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 console.error('Erreur chargement légende dynamique :', err);
             });
     }
-    
-    
-    
+
+
+
     createDynamicLegend(map, codeGroupeProjet);
     // Légende
     /*var legend = L.control({ position: 'bottomright' });
@@ -340,12 +357,12 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         var div = L.DomUtil.create('div', 'info legend');
         var grades = [0, 50, 100, 150, 200, 250, 300, 350];
         var labels = ['<h4>LEGENDE</h4><p>Nombre de projets</p>'];
-        
+
         for (var i = 0; i < grades.length; i++) {
             const from = grades[i];
             const to = grades[i + 1];
             const color = colorScale(from + 1).hex();
-            
+
             labels.push(
                 `<i style="background:${color}; opacity: 0.7;"></i> ${from}${to ? `–${to}` : '+'}`
             );
@@ -379,19 +396,19 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         if (code.length === 4) return code.substring(0, 2); // niveau 2 → 1
         return null;
     }
-    
+
     function findParentKey(parentCode, data) {
         if (!parentCode) return null;
-    
+
         return Object.keys(data).find(key => {
             return data[key].code === parentCode;
         });
     }
-    
+
     // Traitement des données des projets
     function processProjectData(projects) {
         const data = {};
-    
+
         projects.forEach(project => {
             const key = normalized(project.name);
             data[key] = {
@@ -404,18 +421,12 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 byDomain: project.byDomain
             };
         });
-    
+
         window.projectData = data; // ✅ mise à jour directe
         return data;
     }
-    
+
     window.processProjectData = processProjectData;
-
-
-    
-    
-    
-    
 
     // Obtenir les données de la localité actuellement sélectionnée
     function getCurrentLocalityData() {
@@ -424,7 +435,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             const entry = selectedLevels[l];
             const name = typeof entry === 'object' ? entry.name : entry;
             if (!name) continue;
-    
+
             const key = normalized(name);
             if (window.projectData[key]) {
                 dataByLevel[l] = window.projectData[key];
@@ -432,27 +443,22 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         }
         return dataByLevel;
     }
-    
-    
-
- 
-    
 
     // Chargement d'un niveau GeoJSON
     function loadGeoJsonLevel(level, parentName = null) {
         const scriptName = `statesDataLevel${level}`;
         const geojsonPath = `${window.location.origin}/geojson/gadm41_${countryAlpha3Code}_${level}.json.js`;
-    
+
         return new Promise((resolve, reject) => {
             // Vérifier si le script est déjà chargé
             if (window[scriptName]) {
                 resolve(window[scriptName]);
                 return;
             }
-    
+
             const script = document.createElement('script');
             script.src = geojsonPath;
-            
+
             script.onload = () => {
                 if (window[scriptName]) {
                     resolve(window[scriptName]);
@@ -460,18 +466,18 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                     reject(new Error(`Variable ${scriptName} not found after script load`));
                 }
             };
-            
+
             script.onerror = () => {
                 reject(new Error(`Failed to load script: ${geojsonPath}`));
             };
-    
+
             document.head.appendChild(script);
         })
         .then(data => {
-            const filteredData = parentName 
+            const filteredData = parentName
                 ? filterGeoJsonByParent(data, level - 1, parentName)
                 : data;
-            
+
             createGeoJsonLayer(filteredData, level);
         })
         .catch(error => {
@@ -482,10 +488,10 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     // Filtrer le GeoJSON par parent
     function filterGeoJsonByParent(data, parentLevel, parentName) {
         const parentProp = countryProps[parentLevel]?.name || `NAME_${parentLevel}`;
-        
+
         return {
             ...data,
-            features: data.features.filter(feature => 
+            features: data.features.filter(feature =>
                 feature.properties[parentProp] === parentName
             )
         };
@@ -500,7 +506,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             }
         }
     }
-    
+
 
     // Créer une couche GeoJSON
     function createGeoJsonLayer(data, level) {
@@ -508,10 +514,10 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             style: feature => getFeatureStyle(feature, level),
             onEachFeature: (feature, layer) => onEachFeature(feature, layer, level)
         });
-        
+
         layer.addTo(map);
         currentLayers[level] = layer;
-        
+
         // Ajuster la vue pour le premier niveau
         if (level === 1) {
             map.fitBounds(layer.getBounds());
@@ -522,15 +528,15 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
 
     function getFeatureStyle(feature, level) {
         const regionName = feature.properties[countryProps[level]?.name];
-        
+
         // Utilisation du double paramètre (métrique + filtre)
         const metric = window.currentMapMetric || 'count';   // 'count' ou 'cost'
         const filter = window.currentMapFilter || 'cumul';   // 'public', 'private', 'cumul'
-    
+
         const value = findProjectStatByRegionName(regionName, metric, filter);
-    
+
         let fillColor = '#c7bda3'; // Couleur par défaut si aucun match
-    
+
         if (value > 0 && customLegend.length > 0) {
             const found = customLegend.find(({ borneInf, borneSup }) => {
                 if (borneInf !== null && borneInf !== undefined &&
@@ -541,14 +547,14 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                 }
                 return false;
             });
-    
+
             if (found) {
                 fillColor = found.couleur;
             } else {
                 fillColor = '#ff0000'; // fallback rouge si aucun seuil trouvé
             }
         }
-    
+
         return {
             weight: 1,
             opacity: 1,
@@ -557,36 +563,36 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             fillColor: fillColor
         };
     }
-    
-    
 
-    
-    
+
+
+
+
     // Modifiez findProjectCountByRegionName pour plus de robustesse
     function findProjectStatByRegionName(regionName, metric = 'count', filter = 'cumul') {
         if (!window.projectData || !regionName) return 0;
-    
+
         const normName = normalized(regionName);
         const stats = window.projectData[normName];
         if (!stats) return 0;
-    
+
         const source = filter === 'public' ? stats.public :
                       filter === 'private' ? stats.private :
                       (stats.public || 0) + (stats.private || 0); // cumul
-    
+
         if (metric === 'count') return source || 0;
         if (metric === 'cost') return ((stats.cost || 0) * (source / stats.count || 1)) / 1_000_000_000;
-    
+
         return 0;
     }
-    
+
     function formatWithSpaces(number) {
         return Number(number).toLocaleString('fr-FR');
     }
-        
-    
-    
-    
+
+
+
+
     function reloadMapWithNewStyle() {
         if (!window.projectData || Object.keys(window.projectData).length === 0) {
             console.warn("❗ Aucun projet à afficher.");
@@ -598,7 +604,7 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                     const feature = layer.feature;
                     const newStyle = getFeatureStyle(feature, l);
                     layer.setStyle(newStyle);
-    
+
                     const regionName = feature.properties[countryProps[l]?.name];
                     const statValue =  findProjectStatByRegionName(regionName, window.currentMapMetric, window.currentMapFilter);
 
@@ -609,19 +615,17 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
                     layer.bindTooltip(`
                         <b>${regionName}</b><br>
                         ${window.currentMapMode === 'count' ? 'Projets' : 'Montant'} : ${value}
-                    `);         
+                    `);
                 });
             }
         }
-    
+
         createDynamicLegend(map, window.codeGroupeProjet); // ✅ Ajout ici
         info.update(domainesAssocie, niveau);
     }
-    
+
     window.reloadMapWithNewStyle = reloadMapWithNewStyle;
     console.log(window.window.projectData)
-
-    
 
     // Gestion des événements sur chaque feature
     function onEachFeature(feature, layer, level) {
@@ -630,7 +634,6 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         const statValue = findProjectStatByRegionName(regionName, window.currentMapMetric, window.currentMapFilter);
 
 
-    
         layer.on({
             click: e => {
                 onFeatureClick(e, level);
@@ -640,19 +643,18 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             mouseover: highlightFeature,
             mouseout: resetHighlight
         });
-        
+
         const value = window.currentMapMode === 'cost'
         ? `${formatWithSpaces(statValue * 1_000_000_000)}`
         : statValue;
-    
+
         layer.bindTooltip(`
             <b>${regionName}</b><br>
             ${window.currentMapMode === 'count' ? 'Projets' : 'Montant'}: ${value}
         `);
-    
-        
+
+
     }
-    
 
     // Gestion du clic sur une feature
     function onFeatureClick(e, level) {
@@ -665,13 +667,13 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
         const feature = e.target.feature;
         const nameProp = countryProps[level]?.name || `NAME_${level}`;
         const typeProp = countryProps[level]?.type || `TYPE_${level}`;
-        
+
         const featureName = feature.properties[nameProp];
         const featureType = feature.properties[typeProp] || `Niveau ${level}`;
-        
+
         // Supprimer tous les niveaux inférieurs du niveau actuel
         clearLayersAbove(level + 1);
-    
+
         // Mise à jour des niveaux sélectionnés
         if (isRDC) {
             if (featureType === "Province") {
@@ -688,32 +690,32 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
             }
         } else if (isMLI) {
             selectedLevels[level] = { type: featureType, name: featureName };
-    
+
             // Réinitialiser uniquement les niveaux inférieurs
             for (let l = level + 1; l <= maxLevels; l++) {
-                selectedLevels[l] = { 
-                    type: ["Région", "Cercle", "Arrondissement"][l-1] || `Niveau ${l}`, 
-                    name: "Cliquez sur une zone" 
+                selectedLevels[l] = {
+                    type: ["Région", "Cercle", "Arrondissement"][l-1] || `Niveau ${l}`,
+                    name: "Cliquez sur une zone"
                 };
             }
         } else {
             selectedLevels[level] = featureName;
-    
+
             // Supprimer les niveaux inférieurs
             for (let l = level + 1; l <= maxLevels; l++) {
                 delete selectedLevels[l];
             }
         }
-    
+
         // Mettre à jour le panneau d'infos
         info.update(domainesAssocie, niveau);
-    
+
         // Charger uniquement le niveau suivant
         if (level < maxLevels) {
             loadGeoJsonLevel(level + 1, featureName);
         }
     }
-    
+
 
     // Mise en surbrillance au survol
     function highlightFeature(e) {
@@ -730,20 +732,12 @@ function initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesA
     function resetHighlight(e) {
         const layer = e.target;
         const level = layer.feature.properties.level;
-        
+
         if (currentLayers[level]) {
             currentLayers[level].resetStyle(layer);
         }
     }
 }
-
-
-
-
-
-
-
-
 
 // initAfricaMap.js - Carte interactive pour l'Afrique avec rendu similaire à initCountryMap
 function initAfricaMap() {

@@ -151,6 +151,57 @@ svg.leaflet-image-layer.leaflet-interactive path {
     margin-top: -10px !important;
 }
 
+/* Drawer */
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.35);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s ease, visibility .25s ease;
+    z-index: 1049;
+}
+.drawer {
+    position: fixed;
+    top: 0;
+    right: -50vw; /* caché hors écran */
+    width: 50vw; /* moitié de l'écran */
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -8px 0 24px rgba(0,0,0,.18);
+    transition: right .3s ease;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+.drawer.open { right: 0; }
+.drawer-overlay.open { opacity: 1; visibility: visible; }
+.drawer-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    display:flex; flex-direction:column; gap:8px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+.drawer-header .row-top{display:flex; align-items:center; justify-content:space-between;}
+.drawer-title{font-weight:700; font-size:16px; color:#0f172a;}
+.badge { display:inline-block; padding:4px 10px; font-size:12px; border-radius:14px; background:#eef2ff; color:#3730a3; margin-right:6px; border:1px solid #e0e7ff; }
+.badge.gray{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+.badge.green{ background:#ecfdf5; color:#065f46; border-color:#d1fae5; }
+.breadcrumb { font-weight:600; color:#111827; letter-spacing:.2px; }
+.breadcrumb small{ color:#6b7280; font-weight:500; }
+.drawer-body { padding: 14px 18px; overflow: auto; }
+.drawer-close { border: none; background: #ffffff; font-size: 22px; cursor:pointer; width:32px; height:32px; border-radius:8px; line-height: 1; }
+.drawer-close:hover{ background:#f3f4f6; }
+
+/* Table styling */
+.table thead th{ position: sticky; top: 0; background:#f8fafc; z-index: 1; }
+.table tbody tr:hover{ background:#fafafa; }
+.table td, .table th{ vertical-align: middle; }
+.table a.project-link{ color:#1d4ed8; text-decoration:none; font-weight:600; }
+.table a.project-link:hover{ text-decoration:underline; }
 </style>
 <!-- Inclure le CSS de Toastify -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -289,13 +340,150 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </div>
 </section>
 
+<!-- Drawer Overlay and Panel -->
+<div id="drawerOverlay" class="drawer-overlay"></div>
+<div id="projectDrawer" class="drawer" role="dialog" aria-modal="true">
+    <div class="drawer-header">
+        <div class="row-top">
+            <span id="drawerTitle" class="drawer-title">Détails des projets</span>
+            <button class="drawer-close" type="button" onclick="window.closeProjectDrawer()" aria-label="Fermer">×</button>
+        </div>
+        <div class="breadcrumb" id="drawerBreadcrumb">—</div>
+        <div>
+            <span class="badge gray" id="drawerLevel">Niveau —</span>
+            <span class="badge" id="drawerFilter">Filtre: cumul</span>
+            <span class="badge green" id="drawerDomain">Domaine: Tous</span>
+        </div>
+    </div>
+    <div class="drawer-body">
+        <div class="mb-2 small text-muted" id="drawerMeta"></div>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:18%">Code projet</th>
+                        <th>Libellé</th>
+                        <th style="width:12%">Type</th>
+                        <th style="width:15%">Coût</th>
+                        <th style="width:15%">Domaine</th>
+                    </tr>
+                </thead>
+                <tbody id="drawerTableBody">
+                    <tr><td colspan="5" class="text-center">Sélectionnez une cellule du tableau pour voir les détails…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <script>
-    
+
     // Coche cumul et nombre par défaut
     document.getElementById('cumulLayer').checked = true;
     document.getElementById('nombreLayer').checked = true;
     window.currentMapFilter = 'cumul'; // cumul, public ou private
     window.currentMapMetric = 'count'; // count ou cost
+
+    // Elements du drawer
+    const drawer = document.getElementById('projectDrawer');
+    const overlay = document.getElementById('drawerOverlay');
+    const drawerTitle = document.getElementById('drawerTitle');
+    const drawerMeta = document.getElementById('drawerMeta');
+    const drawerTableBody = document.getElementById('drawerTableBody');
+    const drawerBreadcrumb = document.getElementById('drawerBreadcrumb');
+    const drawerLevel = document.getElementById('drawerLevel');
+    const drawerFilter = document.getElementById('drawerFilter');
+    const drawerDomain = document.getElementById('drawerDomain');
+
+    function libelleDomaine(code2){
+        if(!window.domainesAssocieArr) return 'Tous';
+        const found = window.domainesAssocieArr.find(d=> String(d.code).startsWith(String(code2||'')));
+        return found ? (found.libelle || code2) : 'Tous';
+    }
+
+    function libelleNiveau(level){
+        if(!window.niveauArr || !Array.isArray(window.niveauArr)) return `Niveau ${level||''}`;
+        const item = window.niveauArr[(level||1)-1];
+        return item?.libelle_decoupage || `Niveau ${level}`;
+    }
+
+    function breadcrumbFromCode(code){
+        // code localisation 2/4/6 chars
+        if(!code) return '—';
+        const parts = [];
+        const mapNames = window.localiteNamesByCode || {};
+        const L1 = code.substring(0,2);
+        const L2 = code.length >=4 ? code.substring(0,4) : null;
+        const L3 = code.length >=6 ? code.substring(0,6) : null;
+        if(L1) parts.push(mapNames[L1]||L1);
+        if(L2) parts.push(mapNames[L2]||L2);
+        if(L3) parts.push(mapNames[L3]||L3);
+        return parts.join(' › ');
+    }
+
+    async function ensureLocaliteNames(){
+        // Construit un dictionnaire code->libelle à partir des données déjà chargées côté carte (window.projectData)
+        if(window.localiteNamesByCode) return;
+        const map = {};
+        try{
+            // On peut dériver depuis window.projectData qui contient name+code
+            if(window.projectData){
+                Object.values(window.projectData).forEach(v=>{ if(v?.code && v?.name){ map[String(v.code)] = String(v.name);} });
+            }
+        }catch(e){}
+        window.localiteNamesByCode = map;
+    }
+
+    window.openProjectDrawer = async function(params) {
+        const { code, domain = '', filter = 'cumul', level } = params || {};
+        await ensureLocaliteNames();
+
+        const breadcrumb = breadcrumbFromCode(code);
+        const domainLabel = domain ? libelleDomaine(domain) : 'Tous';
+        const levelLabel = libelleNiveau(level);
+
+        drawerTitle.textContent = 'Détails des projets';
+        drawerBreadcrumb.innerHTML = `${breadcrumb ? breadcrumb : '—'} <small>(${code})</small>`;
+        drawerLevel.textContent = levelLabel;
+        drawerFilter.textContent = `Filtre: ${filter}`;
+        drawerDomain.textContent = `Domaine: ${domainLabel}`;
+        drawerMeta.textContent = 'Chargement…';
+        drawerTableBody.innerHTML = '<tr><td colspan="5" class="text-center">Chargement…</td></tr>';
+
+        const qs = new URLSearchParams({ code, filter, domain, _: Date.now() }).toString();
+        fetch(`/api/project-details?${qs}`)
+            .then(r => r.json())
+            .then(data => {
+                const rows = (data.projects || []).map(p => {
+                    const url = `${window.location.origin}/projets/${encodeURIComponent(p.code_projet)}`;
+                    return `
+                    <tr>
+                        <td><a href="${url}" target="_blank" rel="noopener" class="project-link">${p.code_projet}</a></td>
+                        <td>${p.libelle_projet ? p.libelle_projet.replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''}</td>
+                        <td>${p.is_public ? 'Public' : 'Privé'}</td>
+                        <td>${(p.cout_projet || 0).toLocaleString('fr-FR')}</td>
+                        <td>${p.code_sous_domaine || ''}</td>
+                    </tr>`;
+                }).join('');
+
+                drawerMeta.textContent = `${data.count || 0} projet(s)`;
+                drawerTableBody.innerHTML = rows || '<tr><td colspan="5" class="text-center">Aucun projet</td></tr>';
+            })
+            .catch(err => {
+                console.error('Erreur chargement détails projets', err);
+                drawerMeta.textContent = 'Erreur de chargement';
+                drawerTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors du chargement</td></tr>';
+            });
+
+        overlay.classList.add('open');
+        drawer.classList.add('open');
+    }
+
+    window.closeProjectDrawer = function() {
+        overlay.classList.remove('open');
+        drawer.classList.remove('open');
+    }
+    overlay.addEventListener('click', window.closeProjectDrawer);
 
     // Récuprez les él7U%éments d'entrée
     var startDateInput = document.getElementById('start_date');
@@ -309,7 +497,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         // Assurez-vous que la date de fin ne peut pas être antérieure à la date de début
         if (endDateInput.value < startDateInput.value) {
             alert('La date de fin ne peut pas être antérieure à la date de début.');
-            
+
             endDateInput.value = startDateInput.value; // Réinitialisez la date de fin à la date de début
         }
     });
@@ -485,7 +673,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 window.currentMapFilter = 'cumul'; // Retour au cumul par défaut
                 document.getElementById('cumulLayer').checked = true;
             }
-            
+
             window.reloadMapWithNewStyle?.();
             return;
         }
@@ -529,17 +717,18 @@ svg.leaflet-image-layer.leaflet-interactive path {
         var codeGroupeProjet = '{{ $codeGroupeProjet }}';
         window.codeGroupeProjet = '{{ $codeGroupeProjet }}';
 
-
         var domainesAssocie = @json($domainesAssocie);
         var niveau = @json($niveau);
         var codeZoom = @json($codeZoom);
-        // Soit tu appelles un seul selon la logique métier
-if (countryAlpha3Code === "AFQ") {
-    initAfricaMap(codeZoom); // Pour l’Afrique entière
-} else {
-    initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesAssocie, niveau); // Pays individuels
-}
+        // Exposition globale pour le drawer
+        window.domainesAssocieArr = domainesAssocie;
+        window.niveauArr = niveau;
 
+        if (countryAlpha3Code === "AFQ") {
+            initAfricaMap(codeZoom); // Pour l’Afrique entière
+        } else {
+            initCountryMap(countryAlpha3Code, codeZoom, codeGroupeProjet, domainesAssocie, niveau); // Pays individuels
+        }
     });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"></script>

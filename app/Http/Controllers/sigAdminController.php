@@ -30,7 +30,7 @@ class sigAdminController extends Controller
     {
         $ecran = Ecran::find($request->input('ecran_id'));
         $user = Auth::user();
-        
+
         $Bailleurs = Acteur::whereHas('bailleurs')->get();
 
         $TypesStatuts = TypeStatut::all();
@@ -95,7 +95,7 @@ class sigAdminController extends Controller
                 $query->orderBy('borneInf');
             }])
             ->first();
-            
+
         if (!$legende) {
             return response()->json([
                 'debug' => [
@@ -107,7 +107,7 @@ class sigAdminController extends Controller
                 'seuils' => []
             ]);
         }
-    
+
         return response()->json([
             'groupe_projet' => $legende->groupe_projet,
             'label' => $legende->label,
@@ -120,8 +120,8 @@ class sigAdminController extends Controller
             })->values()
         ]);
     }
-    
-    
+
+
     public function Autrecarte(Request $request){
         $ecran = Ecran::find($request->input('ecran_id'));
         $user = Auth::user();
@@ -180,18 +180,18 @@ class sigAdminController extends Controller
     private function reconstruireCodeProjet($project)
     {
         $country = $project->code_alpha3_pays ?? 'CIV';
-    
+
         $group = session('projet_selectionne') ?? 'TIC';
         $typeFinancement = '1'; // par défaut public
-    
+
         // Tu peux déterminer le type de financement ici si stocké ailleurs
         // Exemple : $typeFinancement = $project->type_financement ?? '1';
-    
+
         $groupeEtType = $group . $typeFinancement; // "TIC" + "2" = "TIC2"
-    
+
         $locCode = $project->code_localisation ?? '0101';
         $sousDomaine = $project->code_sous_domaine ?? '0000';
-    
+
         $annee = $project->date_demarrage_prevue
         ? \Carbon\Carbon::parse($project->date_demarrage_prevue)->format('Y')
         : '0000';
@@ -206,24 +206,24 @@ class sigAdminController extends Controller
     {
         $groupeProjetId = session('projet_selectionne');
         $countryAlpha3 = session('pays_selectionne');
-    
+
         if (!$groupeProjetId || !$countryAlpha3) {
             return response()->json(['error' => 'Session data missing'], 400);
         }
-    
+
         // Récupérer les projets
         $projets = Projet::where('code_alpha3_pays', $countryAlpha3)
             ->where('code_projet', 'like', $countryAlpha3 . $groupeProjetId . '%')
             ->get();
-    
+
         // Charger le GeoJSON
         $geoJsonPath = storage_path("geojson/gadm41_{$countryAlpha3}_1.json");
         if (!file_exists($geoJsonPath)) {
             return response()->json(['error' => 'GeoJSON not found'], 404);
         }
-    
+
         $geoJson = json_decode(file_get_contents($geoJsonPath), true);
-    
+
         // Compter les projets par région
         $counts = [];
         foreach ($projets as $projet) {
@@ -232,13 +232,13 @@ class sigAdminController extends Controller
                 $counts[$regionName] = ($counts[$regionName] ?? 0) + 1;
             }
         }
-    
+
         // Ajouter les comptes au GeoJSON
         foreach ($geoJson['features'] as &$feature) {
             $regionName = $feature['properties']['NAME_1'];
             $feature['properties']['projectCount'] = $counts[$regionName] ?? 0;
         }
-    
+
         return response()->json($geoJson);
     }
 
@@ -246,15 +246,15 @@ class sigAdminController extends Controller
     {
         $country = session('pays_selectionne');
         $group = session('projet_selectionne');
-    
+
         if (!$country || !$group) {
             return response()->json([
                 'error' => 'Les paramètres country et group sont obligatoires'
             ], 400);
         }
-    
+
         $codePattern = $country . $group . '%';
-    
+
         try {
             // Localités indexées
             $localites = LocalitesPays::where('id_pays', $country)->get();
@@ -262,11 +262,11 @@ class sigAdminController extends Controller
             foreach ($localites as $loc) {
                 $indexedLocalites[$loc->id_niveau][$loc->code_rattachement] = $loc->libelle;
             }
-    
+
             $projects = Projet::where('code_projet', 'like', $codePattern)->get();
-    
+
             $results = [];
-    
+
             foreach ($projects as $project) {
                 $cost = $project->cout_projet ?? 0;
                 $codeProjet = $project->code_projet ?: $this->reconstruireCodeProjet($project);
@@ -274,19 +274,19 @@ class sigAdminController extends Controller
                 $locCode = $components['code_localisation'];
                 $domainCode = substr($components['code_sous_domaine'], 0, 2);
                 $isPublic = $components['type_financement'] === '1';
-    
+
                 // Générer les codes par niveau
                 $niv1 = substr($locCode, 0, 2);
                 $niv2 = substr($locCode, 0, 4);
                 $niv3 = $locCode;
-    
+
                 // Préparer les niveaux
                 $levels = [
                     1 => ['code' => $niv1, 'name' => $indexedLocalites[1][$niv1] ?? null],
                     2 => ['code' => $niv2, 'name' => $indexedLocalites[2][$niv2] ?? null],
                     3 => ['code' => $niv3, 'name' => $indexedLocalites[3][$niv3] ?? null],
                 ];
-    
+
                 foreach ($levels as $level => $info) {
                     if (!$info['name']) continue;
                     $normName = $this->normalizeName($info['name']);
@@ -324,27 +324,27 @@ class sigAdminController extends Controller
                         : $results[$normName]['byDomain'][$domainCode]['private']++;
                 }
             }
-    
+
             // Agrégation ascendante (niveau 3 -> 2 -> 1)
             foreach ($results as $normName => &$data) {
                 $level = $data['level'];
                 $parentCode = null;
-    
+
                 if ($level === 3) $parentCode = substr($data['code'], 0, 4);
                 elseif ($level === 2) $parentCode = substr($data['code'], 0, 2);
                 else continue;
-    
+
                 $parent = collect($results)->first(function ($v) use ($parentCode) {
                     return $v['code'] === $parentCode;
                 });
-    
+
                 if ($parent) {
                     $parentNorm = $this->normalizeName($parent['name']);
-    
+
                     $results[$parentNorm]['count'] += $data['count'];
                     $results[$parentNorm]['public'] += $data['public'];
                     $results[$parentNorm]['private'] += $data['private'];
-    
+
                     foreach ($data['byDomain'] as $dom => $stat) {
                         if (!isset($results[$parentNorm]['byDomain'][$dom])) {
                             $results[$parentNorm]['byDomain'][$dom] = ['count' => 0, 'public' => 0, 'private' => 0];
@@ -355,9 +355,9 @@ class sigAdminController extends Controller
                     }
                 }
             }
-    
+
             return response()->json(array_values($results)); // on envoie un tableau simple
-    
+
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Erreur lors de la récupération des projets',
@@ -365,7 +365,7 @@ class sigAdminController extends Controller
             ], 500);
         }
     }
-    
+
     private function normalizeName($str)
     {
         if (!$str) return '';
@@ -379,7 +379,7 @@ class sigAdminController extends Controller
     {
         // Format: CIVTIC2_0101_0000_2024_01
         $parts = explode('_', $codeProjet);
-        
+
         return [
             'pays' => substr($codeProjet, 0, 3), // CIV
             'groupe_projet' => substr($codeProjet, 3, 3), // TIC
@@ -398,10 +398,10 @@ class sigAdminController extends Controller
         $typeDate = $request->input('date_type');
         $start = $request->input('start_date');
         $end = $request->input('end_date');
-    
+
         $query = Projet::where('code_alpha3_pays', $country)
             ->where('code_projet', 'like', $country . $group . '%');
-    
+
         // Appliquer le filtre de date
         if ($typeDate === 'prévisionnelles') {
             if ($start) $query->where('date_demarrage_prevue', '>=', $start);
@@ -413,9 +413,9 @@ class sigAdminController extends Controller
                 if ($end) $q->where('date_fin_effective', '<=', $end);
             });
         }
-    
+
         $filteredProjects = $query->pluck('code_projet');
-    
+
         // Statuts liés à ces projets
         $statuts = ProjetStatut::whereIn('code_projet', $filteredProjects)->with('statut')->get()
             ->map(fn($ps) => [
@@ -424,7 +424,7 @@ class sigAdminController extends Controller
             ])
             ->unique('id')
             ->values();
-    
+
         // Bailleurs liés
         $bailleurs = Financer::whereIn('code_projet', $filteredProjects)->with('acteur')->get()
             ->map(fn($f) => [
@@ -433,13 +433,13 @@ class sigAdminController extends Controller
             ])
             ->unique('code_acteur')
             ->values();
-    
+
         return response()->json([
             'bailleurs' => $bailleurs,
             'statuts' => $statuts
         ]);
     }
-     
+
     public function getFiltreOptionsEtProjets(Request $request)
     {
         $country = session('pays_selectionne');
@@ -448,10 +448,10 @@ class sigAdminController extends Controller
         $end = $request->input('end_date');
         $type = $request->input('date_type');
         $bailleur = $request->input('bailleur');
-    
+
         $query = Projet::where('code_alpha3_pays', $country)
             ->where('code_projet', 'like', $country . $group . '%');
-    
+
         if ($type === 'prévisionnelles') {
             if ($start) $query->where('date_demarrage_prevue', '>=', $start);
             if ($end) $query->where('date_fin_prevue', '<=', $end);
@@ -461,21 +461,21 @@ class sigAdminController extends Controller
                 if ($end) $q->where('date_fin_effective', '<=', $end);
             });
         }
-    
+
         if ($request->filled('bailleur')) {
             $query->whereHas('financements', function ($q) use ($request) {
                 $q->where('code_acteur', $bailleur);
             });
         }
-    
+
         if ($request->filled('status')) {
             $query->whereHas('statuts', function ($q) use ($request) {
                 $q->where('type_statut', $request->status);
             });
         }
-    
+
         $filteredProjects = $query->get();
-    
+
         $codes = $filteredProjects->pluck('code_projet');
 
         // 🔢 Calcul des coûts publics / privés
@@ -502,7 +502,7 @@ class sigAdminController extends Controller
             ])
             ->unique('code_acteur')
             ->values();
-    
+
         // STATUTS
         $statuts = ProjetStatut::whereIn('code_projet', $codes)
             ->with('statut')
@@ -513,7 +513,7 @@ class sigAdminController extends Controller
             ])
             ->unique('id')
             ->values();
-    
+
         return response()->json([
             'projets' => $filteredProjects,
             'bailleurs' => $bailleurs,
@@ -523,7 +523,7 @@ class sigAdminController extends Controller
             'total_cost' => $publicCost + $privateCost
         ]);
     }
-    
+
     public function getAllProjects()
     {
         $projects = Projet::with('pays')->get()->map(function ($project) {
@@ -537,4 +537,77 @@ class sigAdminController extends Controller
         return response()->json($projects);
     }
 
+    /**
+     * Détails des projets pour un code de localisation donné (préfixe),
+     * avec filtre public/privé/cumul et domaine optionnel.
+     */
+    public function getProjectDetails(Request $request)
+    {
+        $country = session('pays_selectionne');
+        $group = session('projet_selectionne');
+
+        if (!$country || !$group) {
+            return response()->json([
+                'error' => 'Contexte pays/groupe manquant dans la session.'
+            ], 400);
+        }
+
+        $locPrefix = $request->input('code'); // ex: 01, 0101, 010101
+        $financeFilter = $request->input('filter', 'cumul'); // cumul|public|private
+        $domainPrefix = $request->input('domain'); // ex: "01"
+        $limit = (int) $request->input('limit', 1000);
+
+        if (!$locPrefix) {
+            return response()->json(['error' => 'Paramètre code (localisation) requis.'], 422);
+        }
+
+        $codePattern = $country . $group . '%';
+
+        try {
+            $query = Projet::where('code_projet', 'like', $codePattern);
+
+            if ($domainPrefix) {
+                $query->where('code_sous_domaine', 'like', $domainPrefix . '%');
+            }
+
+            $projects = $query->limit($limit)->get();
+
+            $results = [];
+
+            foreach ($projects as $project) {
+                $codeProjet = $project->code_projet ?: $this->reconstruireCodeProjet($project);
+                $components = $this->decomposerCodeProjet($codeProjet);
+                $locCode = $components['code_localisation'];
+
+                if (strpos($locCode, $locPrefix) !== 0) {
+                    continue; // ne correspond pas au préfixe demandé
+                }
+
+                $isPublic = $components['type_financement'] === '1';
+                if ($financeFilter === 'public' && !$isPublic) continue;
+                if ($financeFilter === 'private' && $isPublic) continue;
+
+                $results[] = [
+                    'code_projet' => $codeProjet,
+                    'libelle_projet' => $project->libelle_projet,
+                    'cout_projet' => $project->cout_projet ?? 0,
+                    'is_public' => $isPublic,
+                    'code_sous_domaine' => $project->code_sous_domaine,
+                    'code_localisation' => $locCode,
+                    'date_demarrage_prevue' => $project->date_demarrage_prevue,
+                    'date_fin_prevue' => $project->date_fin_prevue,
+                ];
+            }
+
+            return response()->json([
+                'count' => count($results),
+                'projects' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erreur lors de la récupération des détails des projets',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
