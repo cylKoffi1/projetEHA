@@ -29,6 +29,20 @@ class AvancementProjet extends Model
         'quantite' => 'decimal:2',
         'pourcentage' => 'decimal:2',
     ];
+    protected $appends = ['photos_list','photos_urls'];
+
+    public function getPhotosListAttribute()
+    {
+        $val = $this->attributes['photos'] ?? '';
+        $arr = array_filter(array_map('trim', explode(',', (string)$val)));
+        // ne garder que les ID numériques (si fichiers.id est BIGINT)
+        return array_values(array_filter($arr, fn($x) => ctype_digit((string)$x)));
+    }
+
+    public function getPhotosUrlsAttribute()
+    {
+        return array_map(fn($id) => url('/fichiers/'.$id), $this->photos_list);
+    }
 
     /**
      * Relation avec le projet (via code_projet)
@@ -57,10 +71,7 @@ class AvancementProjet extends Model
     /**
      * Photos séparées par virgules => tableau
      */
-    public function getPhotosListAttribute()
-    {
-        return $this->photos ? explode(',', $this->photos) : [];
-    }
+
 
     public function setPhotosListAttribute($array)
     {

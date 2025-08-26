@@ -648,8 +648,8 @@ tr[data-parent-id] {
                                                 @foreach($infrastructure->InfrastructureImage as $image)
                                                     <div class="col-md-3 mb-3" id="image_{{ $image->id }}">
                                                         <div class="position-relative">
-                                                            <a href="{{ asset($image->chemin_image) }}" class="glightbox" data-gallery="gallery1" data-title="{{ $infrastructure->libelle }}"  onclick="event.preventDefault();">
-                                                                <img src="{{ asset($image->chemin_image) }}" class="img-thumbnail" style="width: 100%; height: 180px; object-fit: cover;">
+                                                            <a href="{{ $image->url}}" class="glightbox" data-gallery="gallery1" data-title="{{ $infrastructure->libelle }}"  onclick="event.preventDefault();">
+                                                                <img src="{{ $image->url }}" class="img-thumbnail" style="width: 100%; height: 180px; object-fit: cover;">
                                                             </a>
                                                             <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeExistingImage({{ $image->id }}, '{{ $image->infrastructure_code }}')">
                                                                 &times;

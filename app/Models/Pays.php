@@ -28,7 +28,29 @@ class Pays extends Model
         'minZoom',
         'maxZoom'
     ];
+    protected $appends = ['armoirie_url','flag_url']; // ✅
 
+    public function getArmoirieUrlAttribute(): ?string
+    {
+        if (!empty($this->armoirie) && ctype_digit((string)$this->armoirie)) {
+            return url('/api/fichiers/'.$this->armoirie);
+        }
+        if (!empty($this->armoirie)) {
+            return str_starts_with($this->armoirie, 'http') ? $this->armoirie : url($this->armoirie);
+        }
+        return null;
+    }
+
+    public function getFlagUrlAttribute(): ?string
+    {
+        if (!empty($this->flag) && ctype_digit((string)$this->flag)) {
+            return url('/api/fichiers/'.$this->flag);
+        }
+        if (!empty($this->flag)) {
+            return str_starts_with($this->flag, 'http') ? $this->flag : url($this->flag);
+        }
+        return null;
+    }
 
     /**
      * Récupère les groupes projets associés à ce pays.

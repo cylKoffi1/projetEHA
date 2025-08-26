@@ -1,4 +1,6 @@
 <div class="step" id="step-6">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <h5 class="text-secondary">💰 Ressources Financières</h5>
 
     <div class="col-2 mb-3">
@@ -55,11 +57,14 @@
         </div>
 
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-secondary" id="addFinancementBtn">Ajouter</button>
+            @endcan
         </div>
     </div>
 
     <div class="mt-4">
+        @can("consulter_ecran_" . $ecran->id)
         <table class="table table-bordered" id="tableFinancements">
             <thead>
                 <tr>
@@ -75,16 +80,21 @@
             </thead>
             <tbody></tbody>
         </table>
+        @endcan
     </div>
     <div class="row">
         <div class="col">
             <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
         </div>
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-primary" onclick="saveStep6(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
+            @endcan
         </div>
     </div>
 </div>
+@endcan
+    @endisset
 
 <script>
     let financementIndex = 0;

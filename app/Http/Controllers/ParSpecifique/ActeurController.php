@@ -22,6 +22,7 @@ use App\Models\SecteurActiviteActeur;
 use App\Models\SituationMatrimonial;
 use App\Models\TypeActeur;
 use App\Models\TypeFinancement;
+use App\Services\FileProcService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -107,13 +108,15 @@ class ActeurController extends Controller
             $acteur->type_financement = $request->type_financement;
             $acteur->save();
     
-            // 📷 Photo
+            // 📷PHOTO via GridFS — Photo = ID fichier
             if ($request->hasFile('photo')) {
-                $file = $request->file('photo');
-                $filename = 'acteur_' . time() . '.' . $file->getClientOriginalExtension();
-                $path = 'Data/acteur/';
-                $file->move(public_path($path), $filename);
-                $acteur->photo = $path . $filename;
+                $res = app(FileProcService::class)->storeActeurPhoto(
+                    $acteur->code_acteur,
+                    $request->file('photo'),
+                    optional($request->user())->id
+                );
+                // On stocke l'ID dans Acteur.Photo
+                $acteur->Photo = (string)$res['id'];  // <= ID (fichiers.id)
                 $acteur->save();
             }
     
@@ -246,18 +249,17 @@ class ActeurController extends Controller
         try {
             $acteur = Acteur::with(['personnePhysique', 'personneMorale'])->findOrFail($id);
     
-            // 🔄 Mise à jour de la photo
-            if ($request->hasFile('photo')) {
-                if ($acteur->photo && file_exists(public_path($acteur->photo))) {
-                    unlink(public_path($acteur->photo));
+            // Mise à jour de la photo via GridFS — Photo = ID fichier
+                if ($request->hasFile('photo')) {
+                    $res = app(FileProcService::class)->storeActeurPhoto(
+                        $acteur->code_acteur,
+                        $request->file('photo'),
+                        optional($request->user())->id
+                    );
+                    $acteur->Photo = (string)$res['id'];  // <= remplacer par le nouvel ID
                 }
-                $file = $request->file('photo');
-                $filename = 'acteur_' . time() . '.' . $file->getClientOriginalExtension();
-                $path = 'Data/acteur/';
-                $file->move(public_path($path), $filename);
-                $acteur->photo = $path . $filename;
-            }
-    
+                $acteur->save();
+
             // 🔁 Mise à jour des champs généraux
             $acteur->libelle_long = $request->libelle_long ?? $acteur->libelle_long;
             $acteur->libelle_court = $request->libelle_court ?? $acteur->libelle_court;

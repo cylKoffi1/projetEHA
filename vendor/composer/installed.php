@@ -3,7 +3,7 @@
         'name' => 'laravel/laravel',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '46af05dca1dbe91adad7dd0a3889952ab9ea597c',
+        'reference' => '694d53780aae9b49d1e921e075e78b09748c46ae',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -85,19 +85,10 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'doctrine/cache' => array(
-            'pretty_version' => '2.2.0',
-            'version' => '2.2.0.0',
-            'reference' => '1ca8f21980e770095a31456042471a57bc4c68fb',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../doctrine/cache',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
         'doctrine/dbal' => array(
-            'pretty_version' => '3.9.3',
-            'version' => '3.9.3.0',
-            'reference' => '61446f07fcb522414d6cfd8b1c3e5f9e18c579ba',
+            'pretty_version' => '3.10.1',
+            'version' => '3.10.1.0',
+            'reference' => '3626601014388095d3af9de7e9e958623b7ef005',
             'type' => 'library',
             'install_path' => __DIR__ . '/../doctrine/dbal',
             'aliases' => array(),
@@ -472,6 +463,15 @@
                 0 => 'v10.48.25',
             ),
         ),
+        'jean85/pretty-package-versions' => array(
+            'pretty_version' => '2.1.1',
+            'version' => '2.1.1.0',
+            'reference' => '4d7aa5dab42e2a76d99559706022885de0e18e1a',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../jean85/pretty-package-versions',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'kodova/hamcrest-php' => array(
             'dev_requirement' => true,
             'replaced' => array(
@@ -499,7 +499,7 @@
         'laravel/laravel' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '46af05dca1dbe91adad7dd0a3889952ab9ea597c',
+            'reference' => '694d53780aae9b49d1e921e075e78b09748c46ae',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -639,6 +639,15 @@
             'install_path' => __DIR__ . '/../mockery/mockery',
             'aliases' => array(),
             'dev_requirement' => true,
+        ),
+        'mongodb/mongodb' => array(
+            'pretty_version' => '1.15.0',
+            'version' => '1.15.0.0',
+            'reference' => '3a681a3b2f2c0ebac227a3b86bb9057d0e6eb8f8',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../mongodb/mongodb',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'monolog/monolog' => array(
             'pretty_version' => '3.8.0',
@@ -928,8 +937,8 @@
         'psr/log-implementation' => array(
             'dev_requirement' => false,
             'provided' => array(
-                0 => '1.0|2.0|3.0',
-                1 => '3.0.0',
+                0 => '3.0.0',
+                1 => '1.0|2.0|3.0',
             ),
         ),
         'psr/simple-cache' => array(

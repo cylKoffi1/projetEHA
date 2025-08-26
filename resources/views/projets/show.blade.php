@@ -126,7 +126,7 @@
                     <div class="mb-2">
                         <strong>{{ $infra->infra->libelle ?? '—' }}</strong>
                         <ul class="list-group list-group-flush">
-                            @foreach($infra->valeursCaracteristiques as $carac)
+                            @foreach($infra?->valeursCaracteristiques as $carac)
                                 <li class="list-group-item">
                                     {{ $carac->caracteristique->libelle ?? '—' }} : {{ $carac->valeur }} {{ $carac->unite?->symbole }}
                                 </li>

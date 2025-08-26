@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+@isset($ecran)
+@can("consulter_ecran_" . $ecran->id)
 <div class="container mt-5">
 <div class="page-heading">
         <div class="page-title">
@@ -47,6 +49,7 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
+    @can("consulter_ecran_" . $ecran->id)
     <table class="table table-bordered">
         <thead class="thead-dark">
             <tr>
@@ -62,6 +65,7 @@
             <!-- Les demandes seront chargées dynamiquement ici -->
         </tbody>
     </table>
+    @endcan
 </div>
 
 <!-- Modal de Validation -->
@@ -80,8 +84,12 @@
                 <textarea id="commentaire" class="form-control" rows="3"></textarea>
             </div>
             <div class="modal-footer">
+                @can("supprmer_ecran_" . $ecran->id)
                 <button type="button" class="btn btn-danger" id="btnRejeter">Rejeter</button>
+                @endcan
+                @can("ajouter_ecran_" . $ecran->id)
                 <button type="button" class="btn btn-success" id="btnValider">Valider</button>
+                @endcan
             </div>
         </div>
     </div>
@@ -150,4 +158,6 @@
         .catch(error => console.error("Erreur:", error));
     }
 </script>
+@endcan
+@endisset
 @endsection

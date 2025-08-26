@@ -7,8 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <!-- SEO Meta Tags -->
-  <meta name="description" content="GESPRO-INFRAS - Spécialiste en gestion de projet et infrastructure de pays. Découvrez nos services professionnels.">
-  <meta property="og:title" content="GESPRO-INFRAS - Gestion de projet et infrastructure">
+  <meta name="description" content="GP-INFRAS - Spécialiste en gestion de projet et infrastructure de pays. Découvrez nos services professionnels.">
+  <meta property="og:title" content="GP-INFRAS - Gestion de projet et infrastructure">
   <meta property="og:description" content="Experts en gestion de projet et infrastructure de pays.">
   <meta property="og:image" content="{{ asset('social-image.jpg') }}">
   <meta property="og:url" content="{{ url()->current() }}">
@@ -24,7 +24,7 @@
   <link href="{{ asset('betsa/assets/css/bootstrap.min.css') }}" rel="stylesheet">
   
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -100,51 +100,54 @@
     }
 
     .overlay-title {
-      font-size: clamp(2.5rem, 8vw, 4.5rem);
-      font-weight: 700;
-      margin-bottom: 0.5rem;
+      font-size: clamp(3rem, 1vw, -1rem);
+      font-weight: 900;
+      margin-bottom: 0.6rem;
       opacity: 0;
       transform: translateY(20px);
       animation: fadeInUp 1s forwards;
       animation-delay: 0.3s;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-      line-height: 1.2;
+      text-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
     .overlay-subtitle {
-      font-size: clamp(1rem, 3vw, 1.8rem);
-      font-weight: 500;
-      margin-bottom: 2rem;
+      font-size: clamp(1.25rem, 3.5vw, 9.2rem);
+      font-weight: 600;
+      margin-bottom: 2.2rem;
       opacity: 0;
       transform: translateY(20px);
       animation: fadeInUp 1s forwards;
       animation-delay: 0.8s;
       color: var(--text-muted);
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-      max-width: 800px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      max-width: 1000px;
       margin-left: auto;
       margin-right: auto;
+      letter-spacing: 0.01em;
     }
 
     .cta-button {
-      display: inline-block;
-      background: var(--primary-color);
-      color: var(--text-light);
-      padding: 15px 35px;
-      border-radius: 50px;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all var(--transition-speed) ease;
-      font-size: 1.1rem;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: fadeInUp 1s forwards;
-      animation-delay: 1.2s;
-      position: relative;
-      overflow: hidden;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3);
+        display: inline-block;
+        background: var(--primary-color);
+        color: var(--text-light);
+        padding: 15px 35px;
+        border-radius: 50px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all var(--transition-speed) ease;
+        font-size: 1.1rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 1s forwards;
+        animation-delay: 1.2s;
+        position: relative;
+        overflow: hidden;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3);
     }
 
     .cta-button:hover {
@@ -290,12 +293,12 @@
 
     @media (max-height: 600px) {
       .overlay-title {
-        font-size: 2.5rem;
+        font-size: 2.8rem;
         margin-bottom: 0.3rem;
       }
       
       .overlay-subtitle {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         margin-bottom: 1rem;
       }
       
@@ -332,9 +335,9 @@
         <div class="overlay"></div>
 
         <div id="title" class="overlay-wrapper" aria-live="polite" aria-atomic="true">
-          <h1 class="overlay-title" tabindex="0">GESPRO-INFRAS</h1>
+          <h1 class="overlay-title" tabindex="0">GP-INFRAS</h1>
           <p class="overlay-subtitle" tabindex="0">Gestion de projet et infrastructure de pays</p>
-          <a href="{{ url('/login') }}" class="cta-button" aria-label="Connexion">Connexion</a>
+          {{--<a href="{{ url('/login') }}" class="cta-button" aria-label="Connexion">Connexion</a>--}}
         </div>
 
         {{-- <a href="#services" class="scroll-indicator" aria-label="Aller à la section suivante">

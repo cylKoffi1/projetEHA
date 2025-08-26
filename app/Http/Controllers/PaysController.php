@@ -13,6 +13,7 @@ use App\Models\Region;
 use App\Models\Departement;
 use App\Models\Sous_prefecture;
 use App\Models\Localite;
+use App\Services\FileProcService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -56,22 +57,30 @@ class PaysController extends Controller
         $pays->code_devise = $request->input('code_devise');
         $pays->minZoom = $request->input('zoomMi');
         $pays->maxZoom = $request->input('zoomMa');
-        // Gestion de l'armoirie
-        if ($request->hasFile('armoirie')) {
-            $file = $request->file('armoirie');
-            $filename = 'armoirie_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = 'Data/armoiries/';
-            $file->move(public_path($path), $filename);
-            $pays->armoirie = $path . $filename;
+          // ✅ Armoirie -> GridFS (armoirie = ID fichiers)
+          if ($request->hasFile('armoirie')) {
+            $res = app(FileProcService::class)->handle([
+                'owner_type'        => 'Pays',
+                'owner_id'          => (int)$pays->id,
+                'categorie'         => 'ARMOIRIE',
+                'file'              => $request->file('armoirie'),
+                'uploaded_by'       => optional($request->user())->id,
+                'uniquePerCategory' => true,
+            ]);
+            $pays->armoirie = (string)$res['id'];
         }
 
-        // Gestion du drapeau
+        // ✅ Drapeau -> GridFS (flag = ID fichiers)
         if ($request->hasFile('flag')) {
-            $file = $request->file('flag');
-            $filename = 'flag_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = 'Data/drapeaux/';
-            $file->move(public_path($path), $filename);
-            $pays->flag = $path . $filename;
+            $res = app(FileProcService::class)->handle([
+                'owner_type'        => 'Pays',
+                'owner_id'          => (int)$pays->id,
+                'categorie'         => 'DRAPEAU',
+                'file'              => $request->file('flag'),
+                'uploaded_by'       => optional($request->user())->id,
+                'uniquePerCategory' => true,
+            ]);
+            $pays->flag = (string)$res['id'];
         }
 
 
@@ -79,15 +88,6 @@ class PaysController extends Controller
         $pays->save();
         $ecran_id = $request->input('ecran_id');
     }
-    public function edit($id)
-    {
-        $pays = Pays::find($id);
-        if (!$pays) {
-            return response()->json(['error' => 'Pays non trouvé'], 404);
-        }
-        return response()->json($pays);
-    }
-    
     public function update(Request $request, $id)
     {
         try {
@@ -117,28 +117,27 @@ class PaysController extends Controller
     
             // Gestion des fichiers
             if ($request->hasFile('armoirie')) {
-                // Supprimer l'ancienne image si elle existe
-                if ($pays->armoirie && file_exists(public_path($pays->armoirie))) {
-                    unlink(public_path($pays->armoirie));
-                }
-    
-                $file = $request->file('armoirie');
-                $filename = 'armoirie_'.time().'.'.$file->getClientOriginalExtension();
-                $path = 'Data/armoiries/';
-                $file->move(public_path($path), $filename);
-                $pays->armoirie = $path.$filename;
+                $res = app(FileProcService::class)->handle([
+                    'owner_type'        => 'Pays',
+                    'owner_id'          => (int)$pays->id,
+                    'categorie'         => 'ARMOIRIE',
+                    'file'              => $request->file('armoirie'),
+                    'uploaded_by'       => optional($request->user())->id,
+                    'uniquePerCategory' => true,
+                ]);
+                $pays->armoirie = (string)$res['id'];
             }
     
             if ($request->hasFile('flag')) {
-                if ($pays->flag && file_exists(public_path($pays->flag))) {
-                    unlink(public_path($pays->flag));
-                }
-    
-                $file = $request->file('flag');
-                $filename = 'flag_'.time().'.'.$file->getClientOriginalExtension();
-                $path = 'Data/drapeaux/';
-                $file->move(public_path($path), $filename);
-                $pays->flag = $path.$filename;
+                $res = app(FileProcService::class)->handle([
+                    'owner_type'        => 'Pays',
+                    'owner_id'          => (int)$pays->id,
+                    'categorie'         => 'DRAPEAU',
+                    'file'              => $request->file('flag'),
+                    'uploaded_by'       => optional($request->user())->id,
+                    'uniquePerCategory' => true,
+                ]);
+                $pays->flag = (string)$res['id'];
             }
     
             $pays->save();
@@ -148,6 +147,16 @@ class PaysController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    public function edit($id)
+    {
+        $pays = Pays::find($id);
+        if (!$pays) {
+            return response()->json(['error' => 'Pays non trouvé'], 404);
+        }
+        return response()->json($pays);
+    }
+    
+
 
 
     public function deletePays($id)

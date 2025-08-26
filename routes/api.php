@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\EtudeProjet;
+use App\Http\Controllers\FichierController;
 use App\Http\Controllers\GanttController;
 use App\Http\Controllers\ParSpecifique\ActeurController;
 use App\Http\Controllers\WorkflowValidationController;
@@ -75,3 +76,10 @@ Route::get('/filtrer-projets', [sigAdminController::class, 'getFiltreOptionsEtPr
 
 // Nouveau: Détails projets pour un code/niveau donné
 Route::get('/project-details', [sigAdminController::class, 'getProjectDetails']);
+
+Route::middleware('auth')->group(function () {
+    Route::post('/fichiers', [FichierController::class, 'upload']);
+    Route::get('/fichiers/{id}', [FichierController::class, 'download']);
+    Route::delete('/fichiers/{id}', [FichierController::class, 'destroy']);
+
+});

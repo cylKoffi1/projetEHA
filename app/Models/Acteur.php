@@ -27,7 +27,20 @@ class Acteur extends Model
         'is_user',
         'type_financement'
     ];
+    protected $appends = ['photo_url'];
 
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (!empty($this->Photo) && ctype_digit((string)$this->Photo)) {
+            return url('/fichiers/'.$this->Photo);
+        }
+        if (!empty($this->Photo)) {
+            if (str_starts_with($this->Photo, 'http')) return $this->Photo;
+            return url($this->Photo);
+        }
+        return null;
+    }
+    
     public function pays()
     {
         return $this->belongsTo(Pays::class, 'code_pays', 'alpha3');

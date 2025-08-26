@@ -914,173 +914,180 @@ class PlateformeController extends Controller
     }
 
     //*****************Approbation***************/
+    // Page Commission d'approbation
     public function approbation(Request $request)
     {
-        $pays = session('pays_selectionne');
-        $projet = session('projet_selectionne'); // corrigé ici
-    
+        $pays   = session('pays_selectionne');
+        $projet = session('projet_selectionne');
+
         if (!$pays || !$projet) {
-            return redirect()->back()->withErrors(['Session invalide : pays ou projet non défini.']);
+            return back()->withErrors(['Session invalide : pays ou projet non défini.']);
         }
-    
+
         $ecran = Ecran::find($request->input('ecran_id'));
-    
+
         $acteurs = Acteur::where('type_acteur', 'etp')
             ->where('code_pays', $pays)
             ->get();
-    
-        $lastOrder = Approbateur::where('codePays', $pays)
-            ->where('groupeProjetId', $projet)
+
+        $lastOrder = Approbateur::scoped($pays, $projet)
             ->orderByDesc('numOrdre')
             ->first();
-    
-        $nextOrder = $lastOrder ? $lastOrder->numOrdre + 1 : 1;
-    
-        $approbateurs = Approbateur::with('acteur')
-            ->where('codePays', $pays)
-            ->where('groupeProjetId', $projet)
+
+        $nextOrder = $lastOrder ? ($lastOrder->numOrdre + 1) : 1;
+
+        $approbateurs = Approbateur::with('Acteur')
+            ->scoped($pays, $projet)
+            ->orderBy('numOrdre')
             ->get();
-    
+
         return view('parGeneraux.approbateur', compact('nextOrder', 'ecran', 'acteurs', 'approbateurs'));
     }
-    
+
+    // Enregistrer une liste d’approbateurs
     public function storeApprobation(Request $request)
     {
         $request->validate([
             'approbateurs' => 'required|json'
         ]);
-    
-        $pays = session('pays_selectionne');
+
+        $pays   = session('pays_selectionne');
         $projet = session('projet_selectionne');
-    
+
         if (!$pays || !$projet) {
-            return redirect()->back()->withErrors(['Session invalide : pays ou projet non défini.']);
+            return back()->withErrors(['Session invalide : pays ou projet non défini.']);
         }
-    
-        $approbateurs = json_decode($request->input('approbateurs'), true);
-        $errors = [];
+
+        $payload = json_decode($request->input('approbateurs'), true) ?: [];
+        $errors  = [];
+
+        // Doublons intra-payload
         $userCodes = [];
-        $orderNumbers = [];
-    
-        // Vérifier les doublons dans la requête elle-même
-        foreach ($approbateurs as $item) {
-            if (in_array($item['userCode'], $userCodes)) {
-                $errors[] = "L'utilisateur avec le code {$item['userCode']} est en double dans la requête.";
+        $orders    = [];
+        foreach ($payload as $item) {
+            if (in_array($item['userCode'], $userCodes, true)) {
+                $errors[] = "L'utilisateur {$item['userCode']} est en double dans la requête.";
             } else {
                 $userCodes[] = $item['userCode'];
             }
-    
-            if (in_array($item['nordre'], $orderNumbers)) {
+            if (in_array((int)$item['nordre'], $orders, true)) {
                 $errors[] = "Le numéro d'ordre {$item['nordre']} est en double dans la requête.";
             } else {
-                $orderNumbers[] = $item['nordre'];
+                $orders[] = (int)$item['nordre'];
             }
         }
-    
-        if (!empty($errors)) {
-            return redirect()->back()->withErrors($errors)->withInput();
-        }
-    
+        if ($errors) return back()->withErrors($errors)->withInput();
+
         DB::beginTransaction();
         try {
-            foreach ($approbateurs as $approbateur) {
-                $user = Acteur::where('code_acteur', $approbateur['userCode'])->first();
-    
-                if (!$user) {
-                    $errors[] = "L'utilisateur avec le code {$approbateur['userCode']} n'existe pas.";
+            foreach ($payload as $row) {
+                $userCode = $row['userCode'];
+                $nordre   = (int)$row['nordre'];
+
+                // Unicités côté DB (scope pays/projet)
+                $existsUser = Approbateur::scoped($pays, $projet)->where('code_acteur', $userCode)->exists();
+                if ($existsUser) {
+                    $errors[] = "L'utilisateur $userCode est déjà un approbateur.";
                     continue;
                 }
-    
-                // Vérifie si l'approbateur existe déjà
-                $exists = Approbateur::where('code_acteur', $user->code_acteur)
-                    ->where('codePays', $pays)
-                    ->where('groupeProjetId', $projet)
-                    ->first();
-    
-                if ($exists) {
-                    $errors[] = "L'utilisateur {$user->libelle_court} {$user->libelle_long} est déjà un approbateur.";
+
+                $existsOrder = Approbateur::scoped($pays, $projet)->where('numOrdre', $nordre)->exists();
+                if ($existsOrder) {
+                    $errors[] = "Le numéro d'ordre $nordre est déjà utilisé.";
                     continue;
                 }
-    
-                // Vérifie si le numéro d'ordre est déjà utilisé
-                $orderExists = Approbateur::where('numOrdre', $approbateur['nordre'])
-                    ->where('codePays', $pays)
-                    ->where('groupeProjetId', $projet)
-                    ->first();
-    
-                if ($orderExists) {
-                    $errors[] = "Le numéro d'ordre {$approbateur['nordre']} est déjà utilisé.";
-                    continue;
-                }
-    
-                // Enregistrement
+
                 Approbateur::create([
-                    'code_acteur' => $user->code_acteur,
-                    'numOrdre' => $approbateur['nordre'],
+                    'code_acteur'    => $userCode,
+                    'numOrdre'       => $nordre,
                     'groupeProjetId' => $projet,
-                    'codePays' => $pays,
+                    'codePays'       => $pays,
                 ]);
             }
-    
-            if (!empty($errors)) {
+
+            if ($errors) {
                 DB::rollBack();
-                return redirect()->back()->withErrors($errors)->withInput();
+                return back()->withErrors($errors)->withInput();
             }
-    
+
             DB::commit();
-            return redirect()->back()->with('success', 'Approbateurs enregistrés avec succès.');
-    
-        } catch (\Exception $e) {
+            return back()->with('success', 'Approbateurs enregistrés avec succès.');
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Erreur lors de l\'enregistrement des approbateurs', ['exception' => $e]);
-            return redirect()->back()->withErrors(['error' => "Une erreur est survenue : {$e->getMessage()}"])->withInput();
+            Log::error('Erreur enregistrement approbateurs', ['err' => $e->getMessage()]);
+            return back()->withErrors(['error' => "Une erreur est survenue : {$e->getMessage()}"])->withInput();
         }
     }
-    
 
+    // Modifier un approbateur
     public function updateApprobateur(Request $request)
     {
-        // Rechercher l'approbateur par le numéro d'ordre
-        $approbateur = Approbateur::where('numOrdre', $request->input('numOrdreId'))->first();
+        $pays   = session('pays_selectionne');
+        $projet = session('projet_selectionne');
 
-        // Vérifier si l'approbateur existe
+        $request->validate([
+            'numOrdreId'  => 'required|integer|min:1',
+            'editNordre'  => 'required|integer|min:1',
+            'editUserapp' => 'required|string',
+        ]);
+
+        $approbateur = Approbateur::scoped($pays, $projet)
+            ->where('numOrdre', (int)$request->input('numOrdreId'))
+            ->first();
+
         if (!$approbateur) {
-            return redirect()->back()->with('error', 'Approbateur non trouvé.');
+            return back()->with('error', 'Approbateur non trouvé.');
         }
 
-        // Mettre à jour les champs
-        $approbateur->numOrdre = $request->input('editNordre'); // Assurez-vous de mettre à jour le numéro d'ordre si nécessaire
-        $approbateur->code_acteur = $request->input('editUserapp');
-        // Sauvegarder les modifications
-        $approbateur->save();
+        $newOrder = (int)$request->input('editNordre');
+        $newUser  = $request->input('editUserapp');
 
-        // Rediriger avec un message de succès
-        return redirect()->back()->with('success', 'Approbateur modifié avec succès.');
+        // Vérifier conflits
+        if ($newOrder !== (int)$approbateur->numOrdre) {
+            $orderTaken = Approbateur::scoped($pays, $projet)->where('numOrdre', $newOrder)->exists();
+            if ($orderTaken) return back()->with('error', "Le niveau $newOrder est déjà utilisé.");
+        }
+        if ($newUser !== $approbateur->code_acteur) {
+            $userTaken = Approbateur::scoped($pays, $projet)->where('code_acteur', $newUser)->exists();
+            if ($userTaken) return back()->with('error', "Cet utilisateur est déjà approbateur.");
+        }
+
+        $approbateur->update([
+            'numOrdre'   => $newOrder,
+            'code_acteur'=> $newUser,
+        ]);
+
+        return back()->with('success', 'Approbateur modifié avec succès.');
     }
 
+    // Supprimer un approbateur (et re-numeroter dans le scope)
     public function deleteApprobation($id)
     {
         $approbateur = Approbateur::find($id);
-
         if (!$approbateur) {
-            return response()->json(['error' => 'L\'approbateur que vous essayez de supprimer n\'existe pas.'], 404);
+            return response()->json(['error' => "L'approbateur n'existe pas."], 404);
         }
-
-        $numOrdreToDelete = $approbateur->numOrdre; // Récupérer le numOrdre de l'approbateur à supprimer
 
         try {
-            // Supprimer l'approbateur
-            $approbateur->delete();
+            DB::transaction(function () use ($approbateur) {
+                $pays   = $approbateur->codePays;
+                $projet = $approbateur->groupeProjetId;
+                $num    = $approbateur->numOrdre;
 
-            // Mettre à jour les numOrdre des approbateurs restants
-            Approbateur::where('numOrdre', '>', $numOrdreToDelete)
-                ->decrement('numOrdre');
+                $approbateur->delete();
+
+                Approbateur::scoped($pays, $projet)
+                    ->where('numOrdre', '>', $num)
+                    ->decrement('numOrdre');
+            });
 
             return response()->json(['success' => 'Approbateur supprimé avec succès'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la suppression de l\'approbateur.'], 500);
+        } catch (\Throwable $e) {
+            Log::error('Erreur suppression approbateur', ['err' => $e->getMessage()]);
+            return response()->json(['error' => "Erreur lors de la suppression."], 500);
         }
     }
+
 
    
 

@@ -8,6 +8,8 @@ use App\Models\Infrastructure;
 use App\Models\Projet;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Exception;
+use Illuminate\Support\Facades\Log;
 
 class AnnexeController extends Controller
 {
@@ -114,18 +116,30 @@ class AnnexeController extends Controller
     }
     
     
-
-    public function show($code_projet)
-{
-    $projet = Projet::with([
-        'financements.bailleur',
-        'localisations.localite',
-        'maitreOuvrage.acteur',
-        'maitresOeuvre.acteur',
-        'statuts.statut'
-    ])->where('code_projet', $code_projet)->firstOrFail();
-
-    return view('projets.show', compact('projet'));
-}
+    public function show($codeProjet)
+    {
+        try {
+            $etude = Projet::with([
+                
+                'localisations.localite.decoupage',
+                'infrastructures.infra.valeursCaracteristiques', // Charger les caractéristiques ici
+                'actions',
+                'maitreOuvrage',
+                'maitresOeuvre',
+                'financements',
+                'documents',
+                'statuts',
+                'beneficiairesActeurs.acteur',
+                'beneficiairesLocalites.localite',
+                'beneficiairesInfrastructures.infrastructure',
+            ])->where('code_projet', $codeProjet)->firstOrFail();
+    
+            return view('projets.show', compact('projet'));
+        } catch (Exception $e) {
+            Log::error("Erreur affichage projet [{$codeProjet}] : " . $e->getMessage());
+            return back()->with('error', 'Impossible de charger les détails du projet.');
+        }
+    }
+    
 }
 

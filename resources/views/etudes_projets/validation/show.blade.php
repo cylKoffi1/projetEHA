@@ -191,7 +191,7 @@
                 </thead>
                 <tbody>
                     @foreach($etude->projet->infrastructures as $projetInfra)
-                        @foreach($projetInfra->infra->valeursCaracteristiques as $val)
+                        @foreach($projetInfra->infra->valeursCaracteristiques ?? [] as $val)
                             @php
                                 $carac = $val->caracteristique;
                                 $type = strtolower($carac?->type?->libelleTypeCaracteristique ?? '');
@@ -321,23 +321,33 @@
         <div class="tab-pane fade" id="tab-docs">
             <h5 class="mb-3">Documents joints</h5>
             <div class="row">
-                @foreach($etude->projet->documents as $doc)
+                @forelse($etude->projet->documents as $doc)
                 <div class="col-md-4 mb-3">
                     <div class="border rounded p-3 text-center">
-                        <i class="bi bi-file-earmark-text fs-1 text-primary"></i>
-                        <p class="mt-2 mb-1 text-truncate">{{ $doc->file_name }}</p>
+                    <i class="bi bi-file-earmark-text fs-1 text-primary"></i>
+                    <p class="mt-2 mb-1 text-truncate">{{ $doc->file_name }}</p>
+
+                    @if($doc->fichier_id)
+                        <p class="text-muted small">{{ number_format(($doc->file_size ?? 0)/1024, 2, ',', ' ') }} KB</p>
+                        <a href="{{ $doc->url }}" target="_blank" class="btn btn-sm btn-outline-primary">Ouvrir</a>
+                    @else
+                        {{-- Fallback legacy --}}
                         @php $path = public_path($doc->file_path); @endphp
-                        @if(file_exists($path))
-                            <p class="text-muted small">{{ round(filesize($path)/1024, 2) }} KB</p>
-                            <a href="{{ asset($doc->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">Télécharger</a>
+                        @if($doc->file_path && file_exists($path))
+                        <p class="text-muted small">{{ number_format(filesize($path)/1024, 2, ',', ' ') }} KB</p>
+                        <a href="{{ $doc->url }}" target="_blank" class="btn btn-sm btn-outline-primary">Ouvrir</a>
                         @else
-                            <p class="text-danger small">Fichier introuvable</p>
+                        <p class="text-danger small">Fichier introuvable</p>
                         @endif
+                    @endif
                     </div>
                 </div>
-                @endforeach
+                @empty
+                <p class="text-muted">Aucun document joint.</p>
+                @endforelse
             </div>
         </div>
+
     </div>
 </div>
 

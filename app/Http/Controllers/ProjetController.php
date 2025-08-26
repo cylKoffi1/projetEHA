@@ -15,7 +15,13 @@ use Exception;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
+use App\Models\Project;     // si tu as un modèle Projet
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
+
 class ProjetController extends Controller
 {
     //////////////////////////////////////DEFINITION DE PROJET////////////////////////////////
@@ -51,8 +57,143 @@ class ProjetController extends Controller
             ->get(); 
         
 
-        return view('projet', compact('chefs', 'projets', 'contrats'));
+        return view('projets.projet', compact('chefs', 'projets', 'contrats'));
     }
+
+    
+    public function store(Request $request)
+    {
+        try {
+            // --- 1) Validation "de base" ---
+            $validator = Validator::make(
+                $request->all(),
+                [
+                    'projet_id'      => ['required', 'string', Rule::exists('projets', 'id')], // adapte table/colonne
+                    'chef_projet_id' => ['required', 'string', Rule::exists('acteur', 'code_acteur')],    // adapte table/colonne
+                    'date_debut'     => ['required', 'date', 'before_or_equal:date_fin'],
+                    'date_fin'       => ['required', 'date', 'after_or_equal:date_debut'],
+                ],
+                [
+                    'projet_id.required'      => 'Le projet est obligatoire.',
+                    'projet_id.exists'        => 'Le projet sélectionné est introuvable.',
+                    'chef_projet_id.required' => "Le chef de projet est obligatoire.",
+                    'chef_projet_id.exists'   => "Le chef de projet sélectionné est introuvable.",
+                    'date_debut.required'     => 'La date de début est obligatoire.',
+                    'date_debut.date'         => 'La date de début n’est pas valide.',
+                    'date_debut.before_or_equal' => 'La date de début doit être antérieure ou égale à la date de fin.',
+                    'date_fin.required'       => 'La date de fin est obligatoire.',
+                    'date_fin.date'           => 'La date de fin n’est pas valide.',
+                    'date_fin.after_or_equal' => 'La date de fin doit être postérieure ou égale à la date de début.',
+                ]
+            );
+    
+            // --- 2) Règles de gestion supplémentaires ---
+            $validator->after(function ($validator) use ($request) {
+    
+                $start = Carbon::parse($request->input('date_debut'));
+                $end   = Carbon::parse($request->input('date_fin'));
+    
+                // (A) Fin pas avant aujourd'hui
+                if ($end->lt(today())) {
+                    $validator->errors()->add('date_fin', "La date de fin ne peut pas être antérieure à aujourd'hui.");
+                }
+    
+                // (B) Durée minimale (ex. 1 mois)
+                $minMonths = 1;
+                if ($start->diffInMonths($end) < $minMonths) {
+                    $validator->errors()->add('date_fin', "La durée d’un contrat ne peut pas être inférieure à $minMonths mois.");
+                }
+    
+                // (C) Pas de chevauchement pour le même acteur (sur contrats actifs)
+                $overlap = controler::query()
+                    ->where('code_acteur', $request->input('chef_projet_id'))
+                    ->when(schema()->hasColumn((new controler)->getTable(), 'is_active'), function ($q) {
+                        $q->where('is_active', true);
+                    })
+                    ->where(function ($q) use ($start, $end) {
+                        $q->whereBetween('date_debut', [$start, $end])
+                          ->orWhereBetween('date_fin', [$start, $end])
+                          ->orWhere(function ($q2) use ($start, $end) {
+                              $q2->where('date_debut', '<=', $start)
+                                 ->where('date_fin', '>=', $end);
+                          });
+                    })
+                    ->exists();
+    
+                if ($overlap) {
+                    $validator->errors()->add('date_debut', "Ce chef de projet a déjà un contrat actif qui chevauche ces dates.");
+                    $validator->errors()->add('date_fin',   "Ce chef de projet a déjà un contrat actif qui chevauche ces dates.");
+                }
+    
+                // (D) Le contrat commence au plus tôt à la date de démarrage prévue du projet
+                if (class_exists(Projet::class)) {
+                    $projet = Projet::query()->find($request->input('projet_id'));
+                    if ($projet) {
+                        $pStart = $projet->date_demarrage_prevue ? Carbon::parse($projet->date_demarrage_prevue) : null;
+                        if ($pStart && $start->lt($pStart)) {
+                            $validator->errors()->add('date_debut', "La date de début du contrat doit être ≥ à la date de début du projet ({$pStart->toDateString()}).");
+                        }
+                    }
+                }
+    
+                // (E) Période non nulle
+                if ($start->equalTo($end)) {
+                    $validator->errors()->add('date_fin', "La période doit couvrir au moins une journée (dates strictement différentes).");
+                }
+            });
+    
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => "Des erreurs ont été détectées.",
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+    
+            $validated = $validator->validated();
+    
+            // --- 3) Création (transaction + statut 201) ---
+            return DB::transaction(function () use ($validated, $request) {
+    
+                $contrat = controler::create([
+                    'code_projet' => $validated['projet_id'],
+                    'code_acteur' => $validated['chef_projet_id'],
+                    'date_debut'  => $validated['date_debut'],
+                    'date_fin'    => $validated['date_fin'],
+                    'is_active'   => true,
+                ]);
+    
+                Log::info('Contrat créé', [
+                    'user_id' => auth()->id(),
+                    'payload' => [
+                        'projet_id'      => $validated['projet_id'],
+                        'chef_projet_id' => $validated['chef_projet_id'],
+                        'date_debut'     => $validated['date_debut'],
+                        'date_fin'       => $validated['date_fin'],
+                    ],
+                    'contrat_id' => $contrat->id,
+                ]);
+    
+                return response()->json([
+                    'success' => 'Contrat enregistré avec succès.',
+                    'data'    => $contrat,
+                ], 201);
+            });
+    
+        } catch (\Throwable $e) {
+            Log::error('Erreur création contrat', [
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+    
+            return response()->json([
+                'error' => 'Erreur lors de l\'enregistrement du contrat.',
+            ], 500);
+        }
+    }
+    
+
+
     public function reatributionProjet(Request $request)
     {
         $paysSelectionne = session('pays_selectionne');
@@ -228,112 +369,134 @@ class ProjetController extends Controller
         
     }
 
-    /*
-        public function store(Request $request)
-        {
-            try {
-                $data = $request->validate([
-                    'chef_projet_id' => 'required|exists:acteur,code_acteur',
-                    'projet_id' => 'required|exists:projets,code_projet',
-                    'date_debut' => 'required|date',
-                    'date_fin' => 'required|date|after_or_equal:date_debut',
-                ]);
-        
-                // Récupère le projet concerné
-                $projet = Projet::where('code_projet', $data['projet_id'])->first();
-        
-                if (!$projet) {
-                    return redirect()->back()->with('error', 'Projet introuvable.');
-                }
-        
-                $dateDebutContrat = $data['date_debut'];
-                $dateFinContrat = $data['date_fin'];
-                $dateDemarragePrevue = $projet->date_demarrage_prevue;
-                $dateFinPrevue = $projet->date_fin_prevue;
-        
-                // Vérification des dates du contrat par rapport à celles du projet
-                if ($dateDebutContrat < $dateDemarragePrevue || $dateFinContrat > $dateFinPrevue) {
-                    return redirect()->back()->with('error', "La période du contrat doit être comprise entre le {$dateDemarragePrevue} et le {$dateFinPrevue}.");
-                }
-        
-                // Création du contrat
-                $contrat = controler::create([
-                    'code_projet' => $data['projet_id'],
-                    'code_acteur' => $data['chef_projet_id'],
-                    'date_debut' => $dateDebutContrat,
-                    'date_fin' => $dateFinContrat,
-                    'is_active' => true,
-                ]);
-        
-                return redirect()->route('contrats.fiche', $contrat->id)
-                                ->with('success', 'Contrat enregistré avec succès.');
-            
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                // Erreurs de validation
-                return redirect()->back()->withErrors($e->validator)->withInput();
-        
-            } catch (\Exception $e) {
-                // Toute autre erreur (base de données, logique, etc.)
-                Log::error('Erreur lors de la création du contrat : ' . $e->getMessage());
-                return redirect()->back()->with('error', 'Une erreur est survenue. Veuillez réessayer.');
-            }
-        }
-    */
 
-    public function store(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'projet_id' => 'required|string',
-                'chef_projet_id' => 'required|string',
-                'date_debut' => 'required|date',
-                'date_fin' => 'required|date|after_or_equal:date_debut',
-            ]);
 
-            $contrat = controler::create([
-                'code_projet' => $validated['projet_id'],
-                'code_acteur' => $validated['chef_projet_id'],
-                'date_debut' => $validated['date_debut'],
-                'date_fin' => $validated['date_fin'],
-                'is_active' => true,
-            ]);
-            Log::info('Contrat créé', ['user_id' => auth()->id(), 'contrat' => $contrat]);
-
-            return response()->json(['success' => 'Contrat enregistré avec succès.', 'data' => $contrat]);
-
-        } catch (\Throwable $e) {
-            Log::error('Erreur création contrat', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Erreur lors de l\'enregistrement du contrat.'], 500);
-        }
-    }
-
+    
     public function update(Request $request, $id)
     {
         try {
-            $validated = $request->validate([
-                'projet_id' => 'required|string',
-                'chef_projet_id' => 'required|string',
-                'date_debut' => 'required|date',
-                'date_fin' => 'required|date|after_or_equal:date_debut',
-            ]);
-
+            // --- 1) Validation "de base" ---
+            $validator = Validator::make(
+                $request->all(),
+                [
+                    'projet_id'      => ['required', 'string', Rule::exists('projets', 'id')], // adapte la table/colonne
+                    'chef_projet_id' => ['required', 'string', Rule::exists('users', 'id')],    // adapte la table/colonne
+                    'date_debut'     => ['required', 'date', 'before_or_equal:date_fin'],
+                    'date_fin'       => ['required', 'date', 'after_or_equal:date_debut'],
+                ],
+                [
+                    'projet_id.required'      => 'Le projet est obligatoire.',
+                    'projet_id.exists'        => 'Le projet sélectionné est introuvable.',
+                    'chef_projet_id.required' => "Le chef de projet est obligatoire.",
+                    'chef_projet_id.exists'   => "Le chef de projet sélectionné est introuvable.",
+                    'date_debut.required'     => 'La date de début est obligatoire.',
+                    'date_debut.date'         => 'La date de début n’est pas valide.',
+                    'date_debut.before_or_equal' => 'La date de début doit être antérieure ou égale à la date de fin.',
+                    'date_fin.required'       => 'La date de fin est obligatoire.',
+                    'date_fin.date'           => 'La date de fin n’est pas valide.',
+                    'date_fin.after_or_equal' => 'La date de fin doit être postérieure ou égale à la date de début.',
+                ]
+            );
+    
+            // --- 2) Règles de gestion "métier" supplémentaires ---
+            $validator->after(function ($validator) use ($request, $id) {
+    
+                $start = Carbon::parse($request->input('date_debut'));
+                $end   = Carbon::parse($request->input('date_fin'));
+    
+                // (A) Interdire un contrat qui se termine avant aujourd'hui ? -> décommente si voulu
+                if ($end->lt(today())) {
+                     $validator->errors()->add('date_fin', "La date de fin ne peut pas être antérieure à aujourd'hui.");
+                 }
+    
+                // (B) Durée minimale (ex: 1 mois) -> optionnel
+                $maxMonths = 1; // adapte ou supprime
+                if ($start->diffInMonths($end) < $maxMonths) {
+                    $validator->errors()->add('date_fin', "La durée d’un contrat ne peut être inférrieur $maxMonths mois.");
+                }
+    
+                // (C) Chevauchement de périodes pour le même acteur (chef_projet_id)
+                $overlap = controler::query()
+                    ->where('code_acteur', $request->input('chef_projet_id'))
+                    ->where('id', '!=', $id)
+                    ->where(function ($q) use ($start, $end) {
+                        $q->whereBetween('date_debut', [$start, $end])
+                          ->orWhereBetween('date_fin', [$start, $end])
+                          ->orWhere(function ($q2) use ($start, $end) {
+                              $q2->where('date_debut', '<=', $start)
+                                 ->where('date_fin', '>=', $end);
+                          });
+                    })
+                    ->exists();
+    
+                if ($overlap) {
+                    $validator->errors()->add('date_debut', "Ce chef de projet a déjà un contrat qui chevauche ces dates.");
+                    $validator->errors()->add('date_fin',   "Ce chef de projet a déjà un contrat qui chevauche ces dates.");
+                }
+    
+                // (D) Vérifier que le contrat est dans la fenêtre du projet (si le projet a des dates)
+                if (class_exists(Projet::class)) {
+                    $projet = Projet::query()->find($request->input('projet_id'));
+                    if ($projet) {
+                        // Adapte les noms de colonnes si nécessaire
+                        $pStart = optional($projet->date_demarrage_prevue) ? Carbon::parse($projet->date_demarrage_prevue) : null;
+                      
+                        if ($pStart && $start->lt($pStart)) {
+                            $validator->errors()->add('date_debut', "La date de début du contrat doit être ≥ à la date de début du projet ({$pStart->toDateString()}).");
+                        }
+                    }
+                }
+    
+                // (E) Interdire d’affecter un chef de projet à un autre projet simultanément ? (déjà couvert par chevauchement)
+                // (F) Empêcher date_debut == date_fin si tu veux au moins 1 jour
+                if ($start->equalTo($end)) {
+                    $validator->errors()->add('date_fin', "La période doit couvrir au moins une journée (dates strictement différentes).");
+                }
+            });
+    
+            if ($validator->fails()) {
+                // 422 = Unprocessable Entity avec détails des erreurs
+                return response()->json([
+                    'message' => "Des erreurs ont été détectées.",
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+    
+            $validated = $validator->validated();
+    
+            // --- 3) Mise à jour ---
             $contrat = controler::findOrFail($id);
+    
             $contrat->update([
                 'code_projet' => $validated['projet_id'],
                 'code_acteur' => $validated['chef_projet_id'],
-                'date_debut' => $validated['date_debut'],
-                'date_fin' => $validated['date_fin'],
+                'date_debut'  => $validated['date_debut'],
+                'date_fin'    => $validated['date_fin'],
             ]);
-
-            Log::info('Contrat modifié', ['user_id' => auth()->id(), 'contrat' => $contrat]);
-
-            return response()->json(['success' => 'Contrat modifié avec succès.', 'data' => $contrat]);
-
+    
+            Log::info('Contrat modifié', [
+                'user_id' => auth()->id(),
+                'contrat' => $contrat,
+            ]);
+    
+            return response()->json([
+                'success' => 'Contrat modifié avec succès.',
+                'data'    => $contrat,
+            ]);
+    
         } catch (\Throwable $e) {
-            Log::error('Erreur mise à jour contrat', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Erreur lors de la mise à jour du contrat.'], 500);
+            Log::error('Erreur mise à jour contrat', [
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
+    
+            return response()->json([
+                'error' => 'Erreur lors de la mise à jour du contrat.',
+            ], 500);
         }
     }
+    
 
     public function destroy($id)
     {

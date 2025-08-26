@@ -51,6 +51,9 @@
 
 @section('content')
 
+@isset($ecran)
+@can("consulter_ecran_" . $ecran->id)
+
 
 <section id="multiple-column-form">
     <div class="page-heading">
@@ -245,8 +248,9 @@
             Liste des Renforcements de Capacité
             </h5>
         </div>
-        <div class="card-content">
+         <div class="card-content">
             <div class="col-12">
+                @can("consulter_ecran_" . $ecran->id)
                 <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table">
                     <thead>
                         <tr>
@@ -304,18 +308,19 @@
                                         @can("modifier_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#"
-                                            onclick="editRenforcement('{{ $renforcement->code_renforcement }}',
-                                            '{{ $renforcement->titre }}',
-                                            '{{ $renforcement->description }}',
-                                            '{{ $renforcement->date_debut }}',
-                                            '{{ $renforcement->date_fin }}',
-                                            {{ json_encode($renforcement->beneficiaires->pluck('code_acteur')->toArray()) }},
-                                            {{ json_encode($renforcement->projets->pluck('code_projet')->toArray()) }})">
-                                            <i class="bi bi-pencil-fill me-3"></i> Modifier
+                                               onclick="editRenforcement(this)"
+                                               data-code="{{ $renforcement->code_renforcement }}"
+                                               data-titre="{{ $renforcement->titre }}"
+                                               data-description="{{ $renforcement->description }}"
+                                               data-date-debut="{{ $renforcement->date_debut }}"
+                                               data-date-fin="{{ $renforcement->date_fin }}"
+                                               data-beneficiaires='@json($renforcement->beneficiaires->pluck("code_acteur"))'
+                                               data-projets='@json($renforcement->projets->pluck("code_projet"))'>
+                                                <i class="bi bi-pencil-fill me-3"></i> Modifier
                                             </a>
                                         </li>
                                         @endcan
-                                        @can("supprimer_ecran_" . $ecran->id)
+                                        @can("supprmer_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="deleteRenforcement('{{ $renforcement->code_renforcement }}')">
                                                 <i class="bi bi-trash3-fill me-3"></i> Supprimer
@@ -330,6 +335,7 @@
                     </tbody>
 
                 </table>
+                @endcan
 
             </div>
         </div>
@@ -337,17 +343,20 @@
 
 
 </section>
+@endcan
+@endisset
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        @if(session('success'))
-            alert("✅ Succès : {{ session('success') }}");
-            console.log("✅ Succès : {{ session('success') }}");
-        @endif
-
-        @if(session('error'))
-            alert("❌ Erreur : {{ session('error') }}");
-            console.error("❌ Erreur : {{ session('error') }}");
-        @endif
+        const successMsg = @json(session('success'));
+        const errorMsg = @json(session('error'));
+        if (successMsg) {
+            alert('✅ Succès : ' + successMsg);
+            console.log('✅ Succès : ' + successMsg);
+        }
+        if (errorMsg) {
+            alert('❌ Erreur : ' + errorMsg);
+            console.error('❌ Erreur : ' + errorMsg);
+        }
     });
 </script>
 
@@ -409,7 +418,14 @@
         }
     }
 
-    function editRenforcement(code, titre, description, date, date_fin, beneficiaires, projets) {
+    function editRenforcement(anchorEl) {
+        const code = anchorEl.getAttribute('data-code');
+        const titre = anchorEl.getAttribute('data-titre');
+        const description = anchorEl.getAttribute('data-description');
+        const date = anchorEl.getAttribute('data-date-debut');
+        const date_fin = anchorEl.getAttribute('data-date-fin');
+        const beneficiaires = JSON.parse(anchorEl.getAttribute('data-beneficiaires') || '[]');
+        const projets = JSON.parse(anchorEl.getAttribute('data-projets') || '[]');
         document.getElementById('addForm').style.display = 'none';
 
         document.getElementById('code').value = code;
@@ -429,8 +445,10 @@
             option.selected = projets.map(String).includes(String(option.value));
         }
 
-        $('#beneficiaires').trigger('change');
-        $('#projets').trigger('change');
+        if (window.$) {
+            $('#beneficiaires').trigger('change');
+            $('#projets').trigger('change');
+        }
 
         document.getElementById('formAction').action = "{{ url('/renforcementProjet/update') }}/" + code;
         document.getElementById('editFormContainer').style.display = 'block';

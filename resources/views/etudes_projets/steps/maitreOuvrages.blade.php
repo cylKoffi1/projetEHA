@@ -1,5 +1,7 @@
 
 <div class="step" id="step-4">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <h5 class="text-secondary">👷 Informations / Maître d’ouvrage</h5>
 
     <div class="row">
@@ -58,12 +60,15 @@
                 <input type="checkbox" class="form-check-input" id="isAssistantMoe">
                 <label class="form-check-label" for="isAssistantMoe">Assistant Maître d’Ouvrage</label>
             </div>
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-secondary" id="addMoeBtn" style="height: 34px">
                 <i class="fas fa-plus"></i> Ajouter 
             </button>
+            @endcan
         </div>
     </div>
     <div class="row mt-3">
+        @can("consulter_ecran_" . $ecran->id)
         <table class="table table-bordered" id="moeTable">
             <thead>
                 <tr>
@@ -78,6 +83,7 @@
                 <!-- Ligne ajoutée dynamiquement -->
             </tbody>
         </table>
+        @endcan
     </div>
     <br>
     <div class="row">
@@ -86,11 +92,15 @@
             <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
         </div>
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-primary " onclick="saveStep4(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
+            @endcan
         </div>
     </div>
 
 </div>
+@endcan
+    @endisset
 <!--Sauvegarde temporaire -->
 <script>
     function saveStep4(callback = null) {

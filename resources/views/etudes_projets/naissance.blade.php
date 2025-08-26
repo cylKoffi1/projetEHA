@@ -265,7 +265,7 @@
             <div class="card-content">
                 <div class="col-12">
                     <div class="container mt-5">
-                        <h2 class="text-center mb-4 text-primary">📌 Demande de Projet - BTP-PROJECT</h2>
+                        <h2 class="text-center mb-4 text-primary">📌 Demande de Projet - GP-INFRAS</h2>
 
                         <!-- Barre de progression -->
                         <div class="progress mb-4">

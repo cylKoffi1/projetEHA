@@ -182,16 +182,16 @@
                             <td>{{ $p->code_devise }}</td>
                             <td>{{ $p->codeTel }}</td>
                             <td>
-                                @if ($p->armoirie)
+                                @if ($p->armoirie_url)
                                     <img style="width: 30px; height: 30px;"
-                                        src="{{ asset($p->armoirie) }}"
+                                        src="{{ $p->armoirie_url  }}"
                                         alt="Armoirie du pays">
                                 @endif
                             </td>
                             <td>
-                                @if ($p->flag)
+                                @if ($p->flag_url)
                                     <img style="width: 30px; height: 30px;"
-                                        src="{{ asset($p->flag) }}"
+                                        src="{{ $p->flag_url }}"
                                         alt="Drapeau du pays">
                                 @endif
                             </td>

@@ -1,4 +1,6 @@
 <div class="step " id="step-5">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <h5 class="text-secondary">🏗️ Informations / Maître d'œuvre</h5>
 
     <!-- ✅ Sélection du Type -->
@@ -56,13 +58,16 @@
             <textarea class="form-control" id="descriptionInd" rows="3" placeholder="Ajoutez des précisions sur le Maître d’Ouvrage (ex: Budget, contraintes, accords...)"></textarea>
         </div>
         <div class="col-2 mt-4">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-secondary" id="addMoeuvreBtn" style="height: 34px">
                 <i class="fas fa-plus"></i> Ajouter
             </button>
+            @endcan
 
         </div>
     </div>
     <div class="row mt-3">
+        @can("consulter_ecran_" . $ecran->id)
         <table class="table table-bordered" id="moeuvreTable">
             <thead>
                 <tr>
@@ -76,6 +81,7 @@
                 <!-- Rempli dynamiquement -->
             </tbody>
         </table>
+        @endcan
     </div>
 
     <br>
@@ -85,11 +91,15 @@
             <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
         </div>
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-primary " onclick="saveStep5(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
+            @endcan
         </div>
     </div>
 
 </div>
+@endcan
+    @endisset
 <!--Sauvegarde temporaire -->
 <script>
     function saveStep5(callback = null) {

@@ -1,4 +1,6 @@
 <div class="step active" id="step-1">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <h5 class="text-secondary">📋 Informations Générales</h5>
     <div class="row">
         <div class="col-4">
@@ -80,10 +82,14 @@
 
     <div class="row">
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-primary" onclick="saveStep1(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
+            @endcan
         </div>
     </div>
 </div>
+@endcan
+    @endisset
 <!--Sauvegarde temporaire -->
 <script>
     function saveStep1(callback = null) {
@@ -97,7 +103,7 @@
             code_devise: $('#deviseCout').val(),
             commentaire: $('#commentaireProjet').val(),
             code_nature: $('#natureTraveaux').val(),
-            code_pays: '{{ session('pays_selectionne') }}', // ajustable selon ton contexte
+            code_pays: '{{ session("pays_selectionne") }}', // ajustable selon ton contexte
         };
 
         $.ajax({

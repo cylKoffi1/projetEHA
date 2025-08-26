@@ -1,4 +1,6 @@
 <div class="step" id="step-2">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <div class="tab-content mt-3" id="tabContent">
         <!-- Infrastructure Form -->
         <div class="tab-pane fade show active" id="infrastructures" role="tabpanel">
@@ -55,9 +57,11 @@
 
                     <div class="col-md-3">
                         <div class="d-flex align-items-end h-100">
+                            @can("ajouter_ecran_" . $ecran->id)
                             <button type="button" class="btn btn-outline-success me-2" id="addInfrastructureBtn">
                                 <i class="fas fa-plus"></i> Ajouter Infrastructure
                             </button>
+                            @endcan
                         </div>
                     </div>
                     
@@ -91,6 +95,7 @@
                 <div class="col">
                     <h6>Infrastructures ajoutées :</h6>
                     <div class="table-container">
+                        @can("consulter_ecran_" . $ecran->id)
                         <table class="table table-bordered">
                             <thead class="table-dark">
                                 <tr>
@@ -113,6 +118,7 @@
                                 <!-- Dynamically added rows -->
                             </tbody>
                         </table>
+                        @endcan
                     </div>
                     <div id="emptyTableMessage" class="text-center text-muted p-3">
                         Aucune infrastructure ajoutée pour le moment.
@@ -129,12 +135,16 @@
             </button>
         </div>
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-primary" onclick="saveStep2(nextStep)">
                 Suivant <i class="fas fa-arrow-right"></i>
             </button>
+            @endcan
         </div>
     </div>
 </div>
+@endcan
+    @endisset
 <!--Sauvegarde temporaire -->
 <script>
 function saveStep2(callback = null) {
@@ -260,9 +270,11 @@ function saveStep2(callback = null) {
     });
 }
 </script>
+<script id="unitesSIData" type="application/json">{!! json_encode(\App\Models\Unite::all()) !!}</script>
+<script id="unitesDeriveesData" type="application/json">{!! json_encode($unitesDerivees) !!}</script>
 <script>
-    window.unitesSI = @json(\App\Models\Unite::all()); // pour le mapping
-    window.unitesDerivees = @json($unitesDerivees);     // pour les rollers
+    window.unitesSI = JSON.parse(document.getElementById('unitesSIData')?.textContent || '[]');
+    window.unitesDerivees = JSON.parse(document.getElementById('unitesDeriveesData')?.textContent || '[]');
 </script>
 
 
@@ -384,7 +396,7 @@ function saveStep2(callback = null) {
                 });
         });
 
-        const infrastructureList = @json($infrastructures); // Laravel injecte la liste des infrastructures disponibles
+        // const infrastructureList = JSON.parse(document.getElementById('infraListData')?.textContent || '[]'); // Liste des infrastructures disponibles
 
 
 
@@ -877,9 +889,11 @@ function saveStep2(callback = null) {
                         ${caracHidden}
                     </td>
                     <td>
+                        @can("supprmer_ecran_" . $ecran->id)
                         <button type="button" class="btn btn-danger btn-sm deleteRowBtn">
                             <i class="fas fa-trash"></i>
                         </button>
+                        @endcan
                     </td>
                     <td hidden>${localite.niveau}</td>
                 </tr>

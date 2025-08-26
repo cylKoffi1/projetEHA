@@ -63,6 +63,7 @@ use App\Models\projets_natureTravaux;
 use App\Models\ProjetStatut;
 use App\Models\TypeFinancement;
 use App\Models\UniteDerivee;
+use App\Services\FileProcService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
@@ -79,6 +80,7 @@ class EtudeProjet extends Controller
         //////////////////////////////////ETUDE DE PROJET///////////////////////////////////
         public function createNaissance(Request $request)
         {
+            $ecran   = Ecran::find($request->input('ecran_id'));
             // Générer le code par défaut pour Public (1)
             $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA', 1); // 1 pour Public
             $paysSelectionne = session('pays_selectionne');
@@ -144,7 +146,8 @@ class EtudeProjet extends Controller
             $unitesDerivees = UniteDerivee::with('uniteBase')
             ->get()
             ->groupBy('id_unite_base');
-            return view('etudes_projets.naissance', compact('unitesDerivees', 'familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            
+            return view('etudes_projets.naissance', compact('ecran','unitesDerivees', 'familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
 
         public function getInfrastructures($domaine, $sousDomaine, $pays)
@@ -662,308 +665,418 @@ class EtudeProjet extends Controller
                 ], 500);
             }
         }
-        
         public function saveStep7(Request $request)
         {
             try {
+                // 1) Validation + journalisation d’entrée
+                Log::info('[Step7] Début upload', [
+                    'has_files' => $request->hasFile('fichiers'),
+                    'count'     => $request->hasFile('fichiers') ? count($request->file('fichiers')) : 0,
+                ]);
+        
                 $request->validate([
-                    'fichiers.*' => 'required|file|max:102400|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar,dwg,dxf,ifc'
+                    'fichiers'   => 'required|array|min:1',
+                    'fichiers.*' => 'required|file|max:102400|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar,dwg,dxf,ifc',
                 ]);
         
                 $uploadedFiles = [];
-                foreach ($request->file('fichiers') as $file) {
-                    if (!$file->isValid()) continue;
-                    
-                    // Stockage temporaire dans storage/app/temp
-                    $path = $file->store('temp/projet', 'local');
-                    
-                    $uploadedFiles[] = [
-                        'original_name' => $file->getClientOriginalName(),
-                        'extension' => $file->getClientOriginalExtension(),
-                        'mime_type' => $file->getClientMimeType(),
-                        'size' => $file->getSize(),
-                        'storage_path' => $path // Chemin dans le storage
-                    ];
+                if ($request->hasFile('fichiers')) {
+                    foreach ($request->file('fichiers') as $idx => $file) {
+                        if (!$file->isValid()) {
+                            Log::warning('[Step7] Fichier invalide, on saute', [
+                                'index' => $idx,
+                                'name'  => $file->getClientOriginalName(),
+                                'error' => $file->getError(),
+                            ]);
+                            continue;
+                        }
+        
+                        try {
+                            // Stockage temporaire
+                            $path = $file->store('temp/projet', 'local');
+        
+                            $uploadedFiles[] = [
+                                'original_name' => $file->getClientOriginalName(),
+                                'extension'     => $file->getClientOriginalExtension(),
+                                'mime_type'     => $file->getClientMimeType(),
+                                'size'          => $file->getSize(),
+                                'storage_path'  => $path,
+                            ];
+        
+                            Log::info('[Step7] Fichier stocké temporairement', [
+                                'index' => $idx,
+                                'path'  => $path,
+                                'name'  => $file->getClientOriginalName(),
+                                'size'  => $file->getSize(),
+                                'mime'  => $file->getClientMimeType(),
+                            ]);
+                        } catch (Throwable $th) {
+                            Log::error('[Step7] Échec stockage fichier', [
+                                'index' => $idx,
+                                'name'  => $file->getClientOriginalName(),
+                                'ex'    => $th->getMessage(),
+                            ]);
+                        }
+                    }
                 }
         
                 session(['form_step7' => ['fichiers' => $uploadedFiles]]);
         
-                \Log::info('Fichiers stockés temporairement', [
+                Log::info('[Step7] Fichiers stockés en session', [
                     'count' => count($uploadedFiles),
-                    'files' => $uploadedFiles
+                    'files' => $uploadedFiles,
                 ]);
         
                 return response()->json([
                     'success' => true,
-                    'message' => count($uploadedFiles) . ' fichier(s) enregistré(s)'
+                    'message' => count($uploadedFiles) . ' fichier(s) enregistré(s)',
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('[Step7] Erreur globale', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
         
-            } catch (\Exception $e) {
-                \Log::error('Erreur étape 7', [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage(),
+                    'message' => "Une erreur s'est produite lors de l’upload.",
                 ], 500);
             }
         }
+        
         
         public function finaliserProjet()
         {
-            DB::beginTransaction();
-            try {
-                $step1 = session('form_step1');
-                $step2 = session('form_step2');
-                $step3 = session('form_step3');
-                $step4 = session('form_step4');
-                $step5 = session('form_step5');
-                $step6 = session('form_step6');
-                $step7 = session('form_step7');
+            // 👉 Tout se passe dans une transaction : rollback automatique en cas d’exception
+            return DB::transaction(function () {
         
-                $codeLocalisation = collect($step2['localites'] ?? [])
-                    ->pluck('code_rattachement')
-                    ->filter()
-                    ->first();
-
-
+                try {
+                    Log::info('[Finaliser] Début finalisation');
         
-                // Générer le code projet
-                $codeProjet = $this->genererCodeProjet(
-                    $step1['code_sous_domaine'],
-                    $step6['type_financement'],
-                    $codeLocalisation,
-                    $step1['date_demarrage_prevue']
-                );
+                    // 0) Récup sessions + garde-fous + logs
+                    $step1 = session('form_step1', []);
+                    $step2 = session('form_step2', []);
+                    $step3 = session('form_step3', []);
+                    $step4 = session('form_step4', []);
+                    $step5 = session('form_step5', []);
+                    $step6 = session('form_step6', []);
+                    $step7 = session('form_step7', []);
         
-                // Enregistrer projet principal
-                $projet = Projet::create([
-                    'code_projet' => $codeProjet,
-                    'libelle_projet' => $step1['libelle_projet'],
-                    'commentaire' => $step1['commentaire'],
-                    'code_sous_domaine' => $step1['code_sous_domaine'],
-                    'date_demarrage_prevue' => $step1['date_demarrage_prevue'],
-                    'date_fin_prevue' => $step1['date_fin_prevue'],
-                    'cout_projet' => $step1['cout_projet'],
-                    'code_devise' => $step1['code_devise'],
-                    'code_alpha3_pays' => $step1['code_pays']
-                ]);
-
-                projets_natureTravaux::create([
-                    'code_projet' => $codeProjet,
-                    'code_nature' => $step1['code_nature'],
-                    'date' => now()
-                ]);                
-
-                ProjetStatut::create([
-                    'code_projet' => $codeProjet, 
-                    'type_statut' => 1, 
-                    'date_statut' => now(),
-                ]);
-                $codePays = session('pays_selectionne');
-               
-                // Enregistrer localisations
-                foreach ($step2['localites'] as $loc) {
-                    log::error('données de localité', $loc);
-                    ProjetLocalisation::create([
-                        'code_projet' => $codeProjet,
-                        'code_localite' => $loc['code_rattachement'],
-                        'niveau' => $loc['niveau'] ?? null,
-                        'decoupage' => $loc['code_decoupage'] ?? null,
-                        'pays_code' => $step1['code_pays'],
+                    Log::info('[Finaliser] États de session', [
+                        'has_step1' => !empty($step1),
+                        'has_step2' => !empty($step2),
+                        'has_step3' => !empty($step3),
+                        'has_step4' => !empty($step4),
+                        'has_step5' => !empty($step5),
+                        'has_step6' => !empty($step6),
+                        'has_step7' => !empty($step7),
                     ]);
-                }
         
-                // Infrastructures
-                foreach ($step2['infrastructures'] ?? [] as $infra) {
-                    $codeFamille = $infra['famille_code'] ?? null; 
-
-                    if (!$codeFamille) {
-                        throw new \Exception("Famille d'infrastructure manquante pour l'infrastructure.");
-                    }
-                  
-                    // Vérifier si l'infrastructure existe si non, créer un nouveau 
-                    $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
-                        ->where('libelle', $infra['libelle'] ?? '')
-                        ->first();
-
-                    if (!$infraDB) {
-                        $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->firstOrFail();
-                        $familleId = $famille->idFamille;
-                        Log::info("Famille trouvée", ['famille_id' => $familleId]);
-
-                        $prefix = $codePays . $codeFamille;
-
-                        $last = Infrastructure::where('code', 'like', $prefix . '%')->orderByDesc('code')->first();
-                        $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
-                        $codeInfra = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
-
-                        $infraDB = Infrastructure::create([
-                            'code' => $codeInfra,
-                            'libelle' => $infra['libelle'],
-                            'code_Ssys' => $codeFamille,
-                            'code_groupe_projet' => session('projet_selectionne'),
-                            'code_pays' => $codePays,
-                            'code_localite' => $infra['localisation_id'] ?? null,
-                            'date_operation' => now(),
-                            'IsOver' => false
-                        ]);
-                    }
-
-        
-                    $projetInfra = ProjetInfrastructure::create([
-                        'idInfrastructure' => $infraDB->id,
-                        'code_projet' => $codeProjet,
-                        'localisation_id' => $infra['localisation_id'] ?? $codeLocalisation,
-                    ]);
-                    
-        
-                    foreach ($infra['caracteristiques'] ?? [] as $index => $carac) {
-                        if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') {
-                            Log::warning("Caractéristique manquante ou vide", ['carac' => $carac]);
-                            continue;
+                    // Checks essentiels
+                    foreach ([
+                        'form_step1' => $step1,
+                        'form_step2' => $step2,
+                        'form_step6' => $step6,
+                    ] as $k => $v) {
+                        if (empty($v)) {
+                            Log::error('[Finaliser] Session manquante', ['step' => $k]);
+                            throw new \Exception("Données manquantes ($k).");
                         }
-
-                        ValeurCaracteristique::create([
-                            'infrastructure_code' => $infraDB->code,
-                            'idCaracteristique' => $carac['id'],
-                            'idUnite' => $carac['unite_id'] ?? null,
-                            'valeur' => $carac['valeur'],
-                            'ordre' => $index + 1,
+                    }
+        
+                    $codeLocalisation = collect($step2['localites'] ?? [])
+                        ->pluck('code_rattachement')->filter()->first();
+        
+                    Log::info('[Finaliser] Code localisation', [
+                        'codeLocalisation' => $codeLocalisation,
+                    ]);
+        
+                    // 1) Générer code projet
+                    $codeProjet = $this->genererCodeProjet(
+                        $step1['code_sous_domaine'] ?? null,
+                        $step6['type_financement'] ?? null,
+                        $codeLocalisation,
+                        $step1['date_demarrage_prevue'] ?? null,
+                    );
+        
+                    if (!$codeProjet) {
+                        throw new \Exception('Échec génération code projet');
+                    }
+        
+                    Log::info('[Finaliser] Code projet généré', ['code_projet' => $codeProjet]);
+        
+                    // 2) Projet principal
+                    $projet = Projet::create([
+                        'code_projet'           => $codeProjet,
+                        'libelle_projet'        => $step1['libelle_projet'] ?? null,
+                        'commentaire'           => $step1['commentaire'] ?? null,
+                        'code_sous_domaine'     => $step1['code_sous_domaine'] ?? null,
+                        'date_demarrage_prevue' => $step1['date_demarrage_prevue'] ?? null,
+                        'date_fin_prevue'       => $step1['date_fin_prevue'] ?? null,
+                        'cout_projet'           => $step1['cout_projet'] ?? null,
+                        'code_devise'           => $step1['code_devise'] ?? null,
+                        'code_alpha3_pays'      => $step1['code_pays'] ?? null,
+                    ]);
+        
+                    Log::info('[Finaliser] Projet créé', ['id' => $projet->id, 'code' => $codeProjet]);
+        
+                    projets_natureTravaux::create([
+                        'code_projet' => $codeProjet,
+                        'code_nature' => $step1['code_nature'] ?? null,
+                        'date'        => now(),
+                    ]);
+        
+                    ProjetStatut::create([
+                        'code_projet' => $codeProjet,
+                        'type_statut' => 1,
+                        'date_statut' => now(),
+                    ]);
+        
+                    $codePays = session('pays_selectionne');
+        
+                    // 3) Localisations
+                    foreach (($step2['localites'] ?? []) as $idx => $loc) {
+                        Log::info('[Finaliser] Localisation', ['index' => $idx, 'loc' => $loc]);
+        
+                        ProjetLocalisation::create([
+                            'code_projet'  => $codeProjet,
+                            'code_localite'=> $loc['code_rattachement'] ?? null,
+                            'niveau'       => $loc['niveau'] ?? null,
+                            'decoupage'    => $loc['code_decoupage'] ?? null,
+                            'pays_code'    => $step1['code_pays'] ?? null,
                         ]);
                     }
-
-                    
-                }
         
-                // Actions à mener
-                foreach ($step3['actions'] ?? [] as $action) {
-                    ProjetActionAMener::create([
-                        'code_projet' => $codeProjet,
-                        'Num_ordre' => $action['ordre'],
-                        'Action_mener' => $action['action_code'],
-                        'Quantite' => $action['quantite'],
-                        'Infrastrucrues_id' => $action['infrastructure_code'] ?? $infraDB->code ?? 0,
-                    ]);
+                    // 4) Infrastructures (+ caractéristiques)
+                    if (!empty($step2['infrastructures'])) {
+                        foreach ($step2['infrastructures'] as $i => $infra) {
+                            Log::info('[Finaliser] Infra entrée', ['i' => $i, 'infra' => $infra]);
         
-                    foreach ($action['beneficiaires'] ?? [] as $b) {
-                        match ($b['type']) {
-                            'acteur' => Beneficier::create(
-                                [
-                                'code_projet' => $codeProjet,
-                                'code_acteur' => $b['code'],
-                                'is_active' => true
-                            ]),
-                            'localite' => Profiter::create([
-                                'code_projet' => $codeProjet,
-                                'code_pays' => $b['codePays'],
-                                'code_rattachement' => $b['codeRattachement'],
-                            ]),
-                            'infrastructure' => Jouir::create([
-                                'code_projet' => $codeProjet,
-                                'code_Infrastructure' => $b['code'],
-                            ])
-                        };
+                            $codeFamille = $infra['famille_code'] ?? null;
+                            if (!$codeFamille) {
+                                throw new \Exception("Famille d'infrastructure manquante (infra #$i).");
+                            }
+        
+                            $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
+                                ->where('libelle', $infra['libelle'] ?? '')
+                                ->first();
+        
+                            if (!$infraDB) {
+                                $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->first();
+                                if (!$famille) {
+                                    throw new \Exception("Famille introuvable ($codeFamille) pour infra #$i.");
+                                }
+        
+                                $familleId = $famille->idFamille;
+                                Log::info('[Finaliser] Famille trouvée', ['famille_id' => $familleId]);
+        
+                                $prefix = ($codePays ?? '') . $codeFamille;
+                                $last   = Infrastructure::where('code', 'like', $prefix.'%')->orderByDesc('code')->first();
+                                $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
+                                $codeInfra  = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        
+                                $infraDB = Infrastructure::create([
+                                    'code'               => $codeInfra,
+                                    'libelle'            => $infra['libelle'] ?? ("Infra_$codeInfra"),
+                                    'code_Ssys'          => $codeFamille,
+                                    'code_groupe_projet' => session('projet_selectionne'),
+                                    'code_pays'          => $codePays,
+                                    'code_localite'      => $infra['localisation_id'] ?? null,
+                                    'date_operation'     => now(),
+                                    'IsOver'             => false,
+                                ]);
+        
+                                Log::info('[Finaliser] Infra créée', ['code' => $infraDB->code, 'id' => $infraDB->id]);
+                            } else {
+                                Log::info('[Finaliser] Infra existante', ['code' => $infraDB->code, 'id' => $infraDB->id]);
+                            }
+        
+                            $projetInfra = ProjetInfrastructure::create([
+                                'idInfrastructure' => $infraDB->id,
+                                'code_projet'      => $codeProjet,
+                                'localisation_id'  => $infra['localisation_id'] ?? $codeLocalisation,
+                            ]);
+        
+                            Log::info('[Finaliser] Lien Projet-Infrastructure créé', ['pi_id' => $projetInfra->id]);
+        
+                            foreach (($infra['caracteristiques'] ?? []) as $index => $carac) {
+                                if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') {
+                                    Log::warning('[Finaliser] Caractéristique ignorée', ['i' => $i, 'carac' => $carac]);
+                                    continue;
+                                }
+        
+                                ValeurCaracteristique::create([
+                                    'infrastructure_code' => $infraDB->code,
+                                    'idCaracteristique'   => $carac['id'],
+                                    'idUnite'             => $carac['unite_id'] ?? null,
+                                    'valeur'              => $carac['valeur'],
+                                    'ordre'               => $index + 1,
+                                ]);
+                            }
+                        }
                     }
-                }
         
-                // Maître d’Ouvrage
-                foreach ($step4['acteurs'] ?? [] as $acteur) {
-                    Posseder::create([
-                        'code_projet' => $codeProjet,
-                        'code_acteur' => $acteur['code_acteur'],
-                        'secteur_id' => $acteur['secteur_code'] ?? null,
-                        'isAssistant' => $acteur['is_assistant'] ? true : false,
-                        'date' => now(),
-                        'is_active' => true,
+                    // 5) Actions à mener
+                    foreach (($step3['actions'] ?? []) as $k => $action) {
+                        Log::info('[Finaliser] Action', ['k' => $k, 'action' => $action]);
+        
+                        $created = ProjetActionAMener::create([
+                            'code_projet'       => $codeProjet,
+                            'Num_ordre'         => $action['ordre'] ?? ($k+1),
+                            'Action_mener'      => $action['action_code'] ?? null,
+                            'Quantite'          => $action['quantite'] ?? null,
+                            'Infrastrucrues_id' => $action['infrastructure_code'] ?? 0,
+                        ]);
+        
+                        foreach (($action['beneficiaires'] ?? []) as $b) {
+                            $type = $b['type'] ?? '';
+                            Log::info('[Finaliser] Bénéficiaire', ['type' => $type, 'b' => $b]);
+        
+                            match ($type) {
+                                'acteur' => Beneficier::create([
+                                    'code_projet' => $codeProjet,
+                                    'code_acteur' => $b['code'] ?? null,
+                                    'is_active'   => true,
+                                ]),
+                                'localite' => Profiter::create([
+                                    'code_projet'     => $codeProjet,
+                                    'code_pays'       => $b['codePays'] ?? null,
+                                    'code_rattachement'=> $b['codeRattachement'] ?? null,
+                                ]),
+                                'infrastructure' => Jouir::create([
+                                    'code_projet'       => $codeProjet,
+                                    'code_Infrastructure'=> $b['code'] ?? null,
+                                ]),
+                                default => Log::warning('[Finaliser] Type bénéficiaire inconnu', ['b' => $b]),
+                            };
+                        }
+                    }
+        
+                    // 6) Maîtres d’Ouvrage
+                    foreach (($step4['acteurs'] ?? []) as $idx => $acteur) {
+                        Log::info('[Finaliser] MOA', ['idx' => $idx, 'acteur' => $acteur]);
+        
+                        Posseder::create([
+                            'code_projet' => $codeProjet,
+                            'code_acteur' => $acteur['code_acteur'] ?? null,
+                            'secteur_id'  => $acteur['secteur_code'] ?? null,
+                            'isAssistant' => !empty($acteur['is_assistant']),
+                            'date'        => now(),
+                            'is_active'   => true,
+                        ]);
+                    }
+        
+                    // 7) Maîtres d’œuvre
+                    foreach (($step5['acteurs'] ?? []) as $idx => $acteur) {
+                        Log::info('[Finaliser] MOE', ['idx' => $idx, 'acteur' => $acteur]);
+        
+                        Executer::create([
+                            'code_projet' => $codeProjet,
+                            'code_acteur' => $acteur['code_acteur'] ?? null,
+                            'secteur_id'  => $acteur['secteur_id'] ?? null,
+                            'is_active'   => true,
+                        ]);
+                    }
+        
+                    // 8) Financements
+                    foreach (($step6['financements'] ?? []) as $idx => $fin) {
+                        Log::info('[Finaliser] Financement', ['idx' => $idx, 'fin' => $fin]);
+        
+                        Financer::create([
+                            'code_projet'       => $codeProjet,
+                            'code_acteur'       => $fin['bailleur'] ?? null,
+                            'montant_finance'   => $fin['montant'] ?? null,
+                            'devise'            => $fin['devise'] ?? null,
+                            'financement_local' => in_array(strtolower((string)($fin['local'] ?? '')), ['oui','1','true'], true),
+                            'commentaire'       => $fin['commentaire'] ?? null,
+                            'FinancementType'   => $step6['type_financement'] ?? null,
+                            'is_active'         => true,
+                        ]);
+                    }
+        
+                    // 9) Documents
+                    $uploadPath = public_path('data/documentProjet/' . $codeProjet);
+                    File::ensureDirectoryExists($uploadPath);
+                    Log::info('[Finaliser] Répertoire documents prêt', ['path' => $uploadPath]);
+        
+                    foreach ((($step7['fichiers'] ?? [])) as $i => $f) {
+                        Log::info('[Finaliser] Doc entrée', ['i' => $i, 'file' => $f]);
+        
+                        $rel = ltrim($f['storage_path'] ?? '', '/');
+                        $absPath = storage_path('app/' . $rel);
+                        if (!File::exists($absPath)) {
+                            Log::error('[Finaliser] Fichier introuvable sur disque', ['i' => $i, 'abs' => $absPath]);
+                            throw new \Exception("Fichier temporaire introuvable ($absPath).");
+                        }
+        
+                        $res = app(FileProcService::class)->handlePath([
+                            'owner_type'    => 'Projet',
+                            'owner_id'      => $codeProjet,
+                            'categorie'     => 'DOC_PROJET',
+                            'path'          => $absPath,
+                            'original_name' => $f['original_name'] ?? ('document_'.Str::random(6)),
+                            'uploaded_by'   => optional(request()->user())->id,
+                        ]);
+        
+                        Log::info('[Finaliser] Stockage fichier OK', ['gridfs_id' => $res['id'] ?? null, 'res' => $res]);
+        
+                        ProjetDocument::create([
+                            'file_name'     => $f['original_name'] ?? ($res['filename'] ?? null),
+                            'file_path'     => null,
+                            'file_type'     => $f['mime_type'] ?? ($res['mime'] ?? null),
+                            'file_size'     => $f['size'] ?? ($res['size'] ?? null),
+                            'file_category' => 'DOC_PROJET',
+                            'code_projet'   => $codeProjet,
+                            'uploaded_at'   => now(),
+                            'fichier_id'    => $res['id'] ?? null,
+                        ]);
+        
+                        try {
+                            @unlink($absPath);
+                            Log::info('[Finaliser] Temp supprimé', ['abs' => $absPath]);
+                        } catch (\Throwable $th) {
+                            Log::warning('[Finaliser] Échec suppression temp', ['abs' => $absPath, 'ex' => $th->getMessage()]);
+                        }
+                    }
+        
+                    // 10) Étude
+                    $codeEtude = $this->genererCodeEtude(session('pays_selectionne'), session('projet_selectionne'));
+                    if (!$codeEtude) {
+                        throw new \Exception('Échec génération code étude');
+                    }
+        
+                    EtudeProject::create([
+                        'codeEtudeProjets' => $codeEtude,
+                        'code_projet'      => $codeProjet,
+                        'valider'          => false,
+                        'is_deleted'       => false,
                     ]);
-                }
-                
         
-                // Maîtres d’œuvre
-                foreach ($step5['acteurs'] as $acteur) {
-                    Executer::create([
+                    Log::info('[Finaliser] Étude créée', ['code_etude' => $codeEtude]);
+        
+                    // 🔁 Nettoyage
+                    $this->nettoyerSessionsEtFichiers();
+                    Log::info('[Finaliser] Nettoyage sessions OK');
+        
+                    return response()->json([
+                        'success'     => true,
                         'code_projet' => $codeProjet,
-                        'code_acteur' => $acteur['code_acteur'],
-                        'secteur_id' => $acteur['secteur_id'] ?? null,
-                        'is_active' => true,
+                        'code_etude'  => $codeEtude,
+                        'message'     => 'Demande effectuée avec succès.',
                     ]);
-                }
-        
-                // Financements
-                foreach ($step6['financements'] as $fin) {
-                    Financer::create([
-                        'code_projet' => $codeProjet,
-                        'code_acteur' => $fin['bailleur'],
-                        'montant_finance' => $fin['montant'],
-                        'devise' => $fin['devise'],
-                        'financement_local' => in_array(strtolower($fin['local']), ['oui', '1', 'true']),
-                        'commentaire' => $fin['commentaire'] ?? null,
-                        'FinancementType' => $step6['type_financement'],
-                        'is_active' => true,
+                } catch (\Throwable $e) {
+                    // 👉 Toute exception = rollback automatique (DB::transaction)
+                    Log::error('[Finaliser] ERREUR — rollback', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
+        
+                    // On relance l’exception pour que la transaction sache qu’il faut annuler
+                    throw $e;
                 }
-        
-                // Documents
-                $uploadPath = public_path('data/documentProjet/' . $codeProjet);
-                File::ensureDirectoryExists($uploadPath);
-        
-                foreach ($step7['fichiers'] ?? [] as $file) {
-                    $filename = Str::slug(pathinfo($file['original_name'], PATHINFO_FILENAME)) . '_' . time() . '.' . $file['extension'];
-                    File::copy(storage_path('app/' . $file['storage_path']), $uploadPath . '/' . $filename);
-        
-                    ProjetDocument::create([
-                        'file_name' => $file['original_name'],
-                        'file_path' => 'data/documentProjet/' . $codeProjet . '/' . $filename,
-                        'file_type' => $file['mime_type'],
-                        'file_size' => $file['size'],
-                        'uploaded_at' => now(),
-                        'code_projet' => $codeProjet,
-                    ]);
-                }
-        
-                // Création étude
-                $codeEtude = $this->genererCodeEtude(
-                    session('pays_selectionne'),
-                    session('projet_selectionne')
-                );
-        
-                EtudeProject::create([
-                    'codeEtudeProjets' => $codeEtude,
-                    'code_projet' => $codeProjet,
-                    'valider' => false,
-                    'is_deleted' => false,
-                ]);
-        
-                DB::commit();
-        
-                // 🔁 Nettoyage
-                $this->nettoyerSessionsEtFichiers();
-        
-                return response()->json([
-                    'success' => true,
-                    'code_projet' => $codeProjet,
-                    'code_etude' => $codeEtude,
-                    'message' => 'Demande effectuée avec succes.',
-                ]);
-        
-            } catch (\Exception $e) {
-                DB::rollBack();
-        
-                \Log::error('Erreur lors de la finalisation du projet', [
-                    'exception' => $e->getMessage(),
-                    
-                    'trace' => $e->getTraceAsString()
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erreur lors de la finalisation du projet.'
-                ], 500);
-            }
+            }, 3 /* tentatives en cas de deadlock */);
         }
+        
         
         private function nettoyerSessionsEtFichiers()
         {
@@ -1079,6 +1192,7 @@ class EtudeProjet extends Controller
                 ->get();
             return view('etudes_projets.suivreApp', compact('ecran',  'approvedProjects'));
         }
+        
         public function historiqueApp(Request $request)
         {
             try {

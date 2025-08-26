@@ -72,7 +72,7 @@
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="">Paramètre généraux</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Approbateur</li>
+                            <li class="breadcrumb-item active" aria-current="page">Commission d'approbation</li>
                         </ol>
                     </nav>
                     <div class="row">
@@ -409,25 +409,17 @@ $(document).ready(function () {
 
 
     function deleteApprobateur(id) {
-        if (confirm("Êtes-vous sûr de vouloir supprimer cet approbateur ?")) {
-            $.ajax({
-                url: '/approbation/' + id,
-                type: 'DELETE',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(result) {
-                    $('#alertMessage').text("Approbateur supprimé avec succès.");
-                    $('#alertModal').modal('show');
-                    window.location.reload(true);
-                },
-                error: function(xhr, status, error) {
-                    $('#alertMessage').text('Erreur lors de la suppression de l\'approbateur : ' + error);
-                    $('#alertModal').modal('show');
-                }
-            });
-        }
+    if(confirm("Êtes-vous sûr de vouloir supprimer cet approbateur ?")) {
+        $.ajax({
+        url: '{{ route("approbateur.delete", ["id" => "REPLACE_ID"]) }}'.replace('REPLACE_ID', id),
+        type: 'DELETE',
+        data: { _token: '{{ csrf_token() }}' },
+        success: function() { location.reload(); },
+        error: function(xhr) { $('#alertMessage').text('Erreur : ' + xhr.responseJSON?.error ?? ''); $('#alertModal').modal('show'); }
+        });
     }
+    }
+
     $(document).on('click', '.edit-approbateur', function() {
         var nordre = $(this).data('nordre');
         var name = $(this).data('name');

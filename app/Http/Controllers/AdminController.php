@@ -21,142 +21,120 @@ class AdminController extends Controller
     {
         $ecran = Ecran::find(29);
         $ecrans = Ecran::all();
-        $groupeProjet = session('projet_selectionne'); 
-        $CodePays = session('pays_selectionne');
-
-        // Projets
+    
+        $groupeProjet = session('projet_selectionne');   // ex: EHA
+        $CodePays     = session('pays_selectionne');     // ex: CIV
+        $prefix       = $CodePays . $groupeProjet . '%'; // ex: CIVEHA%
+    
+        // ---------- Projets (compteur simple)
         $totalProjects = DB::table('projets')
             ->whereNotNull('code_projet')
-            ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
-            ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+            ->where('code_projet', 'like', $prefix)
             ->count();
-
-        $projectStatusCounts = DB::table('projet_statut')
-            ->join('type_statut', 'projet_statut.type_statut', '=', 'type_statut.id')
-            ->join('projets', 'projets.code_projet', '=', 'projet_statut.code_projet')
-            ->whereNotNull('projets.code_projet')
-            ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
-            ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
-            ->select('type_statut.libelle', DB::raw('count(*) as total'))
-            ->groupBy('type_statut.libelle')
+    
+        // ---------- Dernier statut par projet
+        // latest = (code_projet, max(date_statut))
+        $latest = DB::table('projet_statut')
+            ->select('code_projet', DB::raw('MAX(date_statut) AS max_date'))
+            ->groupBy('code_projet');
+    
+        // ps_latest = lignes projet_statut correspondant au dernier enregistrement
+        $psLatest = DB::table('projet_statut AS ps')
+            ->joinSub($latest, 'last', function ($join) {
+                $join->on('ps.code_projet', '=', 'last.code_projet')
+                     ->on('ps.date_statut', '=', 'last.max_date');
+            })
+            ->join('type_statut AS ts', 'ps.type_statut', '=', 'ts.id')
+            ->join('projets AS p', 'p.code_projet', '=', 'ps.code_projet')
+            ->where('p.code_projet', 'like', $prefix);
+    
+        // ---------- Répartition des statuts (du dernier statut)
+        $projectStatusCounts = $psLatest
+            ->select('ts.libelle', DB::raw('COUNT(*) AS total'))
+            ->groupBy('ts.libelle')
             ->pluck('total', 'libelle')
             ->toArray();
-        
     
-        if (empty($projectStatusCounts)) {
-            $projectStatusCounts = [
-                'Prévu' => 0,
-                'En cours' => 0,
-                'Clôturés' => 0,
-                'Suspendu' => 0,
-                'Annulé' => 0,
-                'Terminé' => 0,
-            ];
-        }
+        // Valeurs par défaut si rien
+        $projectStatusCounts = array_merge([
+            'Prévu'     => 0,
+            'En cours'  => 0,
+            'Clôturés'  => 0,
+            'Suspendu'  => 0,
+            'Annulé'    => 0,
+            'Terminé'   => 0,
+        ], $projectStatusCounts);
     
-        // Acteurs
+        // ---------- Acteurs (compteurs)
+        // NB: on filtre toujours via projets.code_projet LIKE $prefix
         $actorsCounts = [
-            'Maîtres d’Ouvrage' => DB::table('posseder')
-                ->join('projets', 'posseder.code_projet', '=', 'projets.code_projet')
-                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
-                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+            'Maîtres d’Ouvrage' => DB::table('posseder AS mo')
+                ->join('projets AS p', 'mo.code_projet', '=', 'p.code_projet')
+                ->where('p.code_projet', 'like', $prefix)
                 ->count(),
-        
-            'Maîtres d’Œuvre' => DB::table('executer') // ancienne table "controler" => tu peux adapter
-                ->join('projets', 'executer.code_projet', '=', 'projets.code_projet')
-                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
-                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+    
+            'Maîtres d’Œuvre' => DB::table('executer AS ex')
+                ->join('projets AS p', 'ex.code_projet', '=', 'p.code_projet')
+                ->where('p.code_projet', 'like', $prefix)
                 ->count(),
-        
-            'Bailleurs' => DB::table('financer')
-                ->join('projets', 'financer.code_projet', '=', 'projets.code_projet')
-                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
-                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+    
+            'Bailleurs' => DB::table('financer AS f')
+                ->join('projets AS p', 'f.code_projet', '=', 'p.code_projet')
+                ->where('p.code_projet', 'like', $prefix)
                 ->count(),
-        
-            'Chefs de Projet' => DB::table('controler') // si tu as une table spécifique
-                ->join('projets', 'controler.code_projet', '=', 'projets.code_projet')
-                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
-                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+    
+            'Chefs de Projet' => DB::table('controler AS cp')
+                ->join('projets AS p', 'cp.code_projet', '=', 'p.code_projet')
+                ->where('p.code_projet', 'like', $prefix)
                 ->count(),
-        
-            'Bénéficiaires' => DB::table('beneficier')
-                ->join('projets', 'beneficier.code_projet', '=', 'projets.code_projet')
-                ->whereRaw("SUBSTRING(projets.code_projet, 4, 3) = ?", [$groupeProjet])
-                ->whereRaw("SUBSTRING(projets.code_projet, 1, 3) = ?", [$CodePays])
+    
+            'Bénéficiaires' => DB::table('beneficier AS b')
+                ->join('projets AS p', 'b.code_projet', '=', 'p.code_projet')
+                ->where('p.code_projet', 'like', $prefix)
                 ->count(),
         ];
-        
     
-        if (array_sum($actorsCounts) === 0) {
-            $actorsCounts = [
-                'Maîtres d’Ouvrage' => 0,
-                'Maîtres d’Œuvre' => 0,
-                'Bailleurs' => 0,
-                'Chefs de Projet' => 0,
-                'Bénéficiaires' => 0,
-            ];
-        }
-    
-        // Financement
-        $results = DB::table('projets')
-            ->selectRaw('SUBSTRING(code_projet, 7, 1) AS type_financement')
-            ->whereNotNull('code_projet')
-            ->whereRaw('LENGTH(code_projet) >= 7')
-            ->get()
-            ->groupBy('type_financement')
-            ->map(function ($group) {
-                return count($group);
-            });
-
-        // Ensuite on joint avec la table type_financement
-        $financements = DB::table('type_financement')
-            ->select('type_financement.code_type_financement', 'type_financement.libelle', DB::raw('COUNT(p.code_projet) as total_projets'))
-            ->join(DB::raw("(
-                SELECT code_projet, SUBSTRING(code_projet, 7, 1) AS type_financement
-                FROM projets
-                WHERE code_projet IS NOT NULL
-                AND LENGTH(code_projet) >= 7
-                AND SUBSTRING(code_projet, 4, 3) = '{$groupeProjet}'
-                AND SUBSTRING(code_projet, 1, 3) = '{$CodePays}'
-            ) as p"), 'p.type_financement', '=', 'type_financement.code_type_financement')
-            ->groupBy('type_financement.code_type_financement', 'type_financement.libelle')
-            ->orderBy('type_financement.code_type_financement')
+        // ---------- Financements (par type)
+        // On extrait le code type financement = SUBSTRING(code_projet, 7, 1)
+        $financements = DB::table('type_financement AS tf')
+            ->leftJoin(DB::raw("
+                (
+                    SELECT code_projet,
+                           SUBSTRING(code_projet, 7, 1) AS type_financement
+                    FROM projets
+                    WHERE code_projet IS NOT NULL
+                      AND LENGTH(code_projet) >= 7
+                      AND code_projet LIKE '{$prefix}'
+                ) AS p
+            "), 'p.type_financement', '=', 'tf.code_type_financement')
+            ->select('tf.code_type_financement', 'tf.libelle', DB::raw('COUNT(p.code_projet) AS total_projets'))
+            ->groupBy('tf.code_type_financement', 'tf.libelle')
+            ->orderBy('tf.code_type_financement')
             ->get();
-
     
-        // Projets par année
+        // ---------- Projets par année (à partir du code)
+        // Exemple de code: CIVEHA2_1402_0402_2025_...
+        // L'année est la 4e section séparée par "_"
         $projectsParAnnee = DB::table('projets')
-            ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) as annee, COUNT(*) as total")
+            ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) AS annee, COUNT(*) AS total")
             ->whereNotNull('code_projet')
-            ->where('code_projet', 'like', '%\_%\_%\_%\_%')
-            ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
-            ->whereRaw("SUBSTRING(code_projet, 1, 3) = ?", [$CodePays])
+            ->where('code_projet', 'like', $prefix)
+            ->where('code_projet', 'like', '%\_%\_%\_%\_%') // s'assure d'avoir au moins 4 underscores
             ->groupBy('annee')
             ->orderBy('annee')
             ->pluck('total', 'annee')
             ->toArray();
-
     
-    
-        
-    
-        // Budget mensuel
+        // ---------- Budget par année (somme cout_projet)
         $budgetsParAnnee = DB::table('projets')
-                ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) as annee, SUM(cout_projet)/1000000000 as total")
-                ->whereNotNull('code_projet')
-                ->where('code_projet', 'like', '%\_%\_%\_%\_%')
-                ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
-                ->whereRaw("SUBSTRING(code_projet, 1, 3) = ?", [$CodePays])
-                ->groupBy('annee')
-                ->orderBy('annee')
-                ->pluck('total', 'annee')
-                ->toArray();
-    
-
-
-    
-       
+            ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) AS annee, SUM(cout_projet)/1000000000 AS total")
+            ->whereNotNull('code_projet')
+            ->where('code_projet', 'like', $prefix)
+            ->where('code_projet', 'like', '%\_%\_%\_%\_%')
+            ->groupBy('annee')
+            ->orderBy('annee')
+            ->pluck('total', 'annee')
+            ->toArray();
     
         return view('dash', compact(
             'ecran', 'ecrans',
@@ -168,6 +146,7 @@ class AdminController extends Controller
             'budgetsParAnnee'
         ));
     }
+    
     
     
 

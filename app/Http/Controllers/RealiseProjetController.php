@@ -840,11 +840,11 @@ class RealiseProjetController extends Controller
         {
             try {
                 $request->validate([
-                    'code_projet' => 'required',
-                    'num_ordre' => 'required|integer',
-                    'quantite_reel' => 'required|numeric|min:0',
-                    'date_avancement' => 'required|date',
-                    'photos_avancement.*' => 'nullable|image|max:2048',
+                    'code_projet'        => 'required',
+                    'num_ordre'          => 'required|integer',
+                    'quantite_reel'      => 'required|numeric|min:0',
+                    'date_avancement'    => 'required|date',
+                    'photos_avancement.*'=> 'nullable|image|max:5120', // 5MB/photo
                     'date_fin_effective' => 'nullable|date',
                     'description_finale' => 'nullable|string|max:500'
                 ]);
@@ -853,43 +853,54 @@ class RealiseProjetController extends Controller
                     ->where('Num_ordre', $request->num_ordre)
                     ->first();
         
-                if (!$action || $action->Quantite == 0) {
+                if (!$action || (float)$action->Quantite <= 0) {
                     return response()->json([
                         'success' => false,
                         'message' => 'La quantité prévue est introuvable ou égale à zéro.'
                     ], 400);
                 }
         
-                $pourcentage = ($request->quantite_reel / $action->Quantite) * 100;
+                $quantiteReelle = (float)$request->quantite_reel;
+                $pourcentage    = min(100, ($quantiteReelle / (float)$action->Quantite) * 100); // clamp à 100%
         
-                // Gestion des photos
-                $photoPaths = [];
+                // 1) Créer l’avancement SANS les photos (pour avoir l’ID si besoin)
+                $avancement = AvancementProjet::create([
+                    'code_projet'        => $request->code_projet,
+                    'num_ordre'          => $request->num_ordre,
+                    'quantite'           => $action->Quantite,
+                    'pourcentage'        => $pourcentage,
+                    'date_avancement'    => $request->date_avancement,
+                    'photos'             => null, // rempli après upload
+                    'date_fin_effective' => ($pourcentage >= 100) ? $request->date_fin_effective : null,
+                    'description_finale' => ($pourcentage >= 100) ? $request->description_finale : null,
+                    'code_acteur'        => auth()->user()->acteur_id
+                ]);
+        
+                // 2) Upload des photos dans GridFS (facultatif)
+                $photoIds = [];
                 if ($request->hasFile('photos_avancement')) {
                     foreach ($request->file('photos_avancement') as $photo) {
-                        if ($photo->isValid()) {
-                            $filename = 'avancement_' . time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
-                            $path = 'Data/avancement/';
-                            $photo->move(public_path($path), $filename);
-                            $photoPaths[] = $path . $filename;
-                        }
+                        if (!$photo || !$photo->isValid()) continue;
+        
+                        $res = app(FileProcService::class)->handle([
+                            'owner_type'  => 'Projet',            // ou 'Avancement'
+                            'owner_id'    => (string)$request->code_projet, // ok si owner_id est VARCHAR
+                            'categorie'   => 'AVANCEMENT_PHOTO', // ajoute cette catégorie à ta whitelist
+                            'file'        => $photo,
+                            'uploaded_by' => optional($request->user())->id,
+                        ]);
+        
+                        $photoIds[] = (string)$res['id']; // on stocke l’ID fichiers
                     }
                 }
         
-                // Enregistrement du suivi
-                $avancement = AvancementProjet::create([
-                    'code_projet' => $request->code_projet,
-                    'num_ordre' => $request->num_ordre,
-                    'quantite' => $action->Quantite,
-                    'pourcentage' => $pourcentage,
-                    'date_avancement' => $request->date_avancement,
-                    'photos' => implode(',', $photoPaths),
-                    'date_fin_effective' => ($pourcentage >= 100) ? $request->date_fin_effective : null,
-                    'description_finale' => ($pourcentage >= 100) ? $request->description_finale : null,
-                    'code_acteur' => auth()->user()->acteur_id
-                ]);
+                if (!empty($photoIds)) {
+                    $avancement->photos = implode(',', $photoIds); // colonne existante "photos"
+                    $avancement->save();
+                }
         
-                // Si finalisation
-                if ($pourcentage >= 100 && $request->date_fin_effective) {
+                // 3) Si finalisation
+                if ($pourcentage >= 100 && $request->filled('date_fin_effective')) {
                     ProjetStatut::create([
                         'code_projet' => $request->code_projet,
                         'type_statut' => 7,
@@ -901,7 +912,7 @@ class RealiseProjetController extends Controller
                         ['date_fin_effective' => $request->date_fin_effective]
                     );
         
-                    if ($action->infrastructure_idCode) {
+                    if (!empty($action->infrastructure_idCode)) {
                         Infrastructure::where('code', $action->infrastructure_idCode)
                             ->update(['isOver' => true]);
                     }
@@ -916,15 +927,16 @@ class RealiseProjetController extends Controller
         
             } catch (\Throwable $e) {
                 Log::error('Erreur lors de l’enregistrement de l’avancement', [
-                    'exception' => $e,
-                    'code_projet' => $request->code_projet,
-                    'num_ordre' => $request->num_ordre
+                    'exception'    => $e->getMessage(),
+                    'code_projet'  => $request->code_projet ?? null,
+                    'num_ordre'    => $request->num_ordre ?? null,
+                    'trace'        => $e->getTraceAsString(),
                 ]);
         
                 return response()->json([
                     'success' => false,
                     'message' => 'Une erreur est survenue lors de l’enregistrement.',
-                    'error' => $e->getMessage()
+                    'error'   => $e->getMessage()
                 ], 500);
             }
         }

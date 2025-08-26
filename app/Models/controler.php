@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class controler extends Model
+class Controler extends Model
 {
     use HasFactory;
-    protected $table = 'controler';
+
+    protected $table = 'controler'; // table inchangée
     protected $primaryKey = 'id';
+
     protected $fillable = [
         'code_projet',
         'code_acteur',
@@ -28,8 +30,8 @@ class controler extends Model
         return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
     }
 
-    public function projet(){
+    public function projet()
+    {
         return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
     }
-
 }

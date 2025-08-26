@@ -13,6 +13,7 @@ use App\Mail\ProjetRefuseNotification;
 use App\Models\Approbateur;
 use App\Models\Projet;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class ProjetValidationController extends Controller
 {
@@ -20,8 +21,7 @@ class ProjetValidationController extends Controller
     {
         try {
             $code_acteur = auth()->user()->acteur_id;
-            $country = session('pays_sel
-            ectionne');
+            $country = session('pays_selectionne');
             $group = session('projet_selectionne');
 
 
@@ -49,7 +49,7 @@ class ProjetValidationController extends Controller
             $etude = EtudeProject::with([
                 'projet',
                 'projet.localisations.localite.decoupage',
-                'projet.infrastructures.infra',
+                'projet.infrastructures.infra.valeursCaracteristiques', // Charger les caractéristiques ici
                 'projet.actions',
                 'projet.maitreOuvrage',
                 'projet.maitresOeuvre',
@@ -62,23 +62,24 @@ class ProjetValidationController extends Controller
                 'projet.beneficiairesLocalites.localite',
                 'projet.beneficiairesInfrastructures.infrastructure',
             ])->where('codeEtudeProjets', $codeProjet)->firstOrFail();
-
+    
             if (ProjetApprobation::where('codeEtudeProjets', $codeProjet)->count() === 0) {
                 $this->genererApprobations($codeProjet);
                 $etude->load('approbations.approbateur.acteur', 'approbations.statutValidation');
             }
-
+    
             $approbations = ProjetApprobation::with(['approbateur.acteur', 'statutValidation'])
                 ->where('codeEtudeProjets', $codeProjet)
                 ->orderBy('num_ordre')
                 ->get();
-
+    
             return view('etudes_projets.validation.show', compact('etude', 'approbations'));
         } catch (Exception $e) {
             Log::error("Erreur affichage projet [{$codeProjet}] : " . $e->getMessage());
             return back()->with('error', 'Impossible de charger les détails du projet.');
         }
     }
+    
 
     private function genererApprobations($codeEtudeProjets)
     {
@@ -102,68 +103,87 @@ class ProjetValidationController extends Controller
 
     public function valider(Request $request, $codeProjet)
     {
-        try {
-            $approbation = ProjetApprobation::where('codeEtudeProjets', $codeProjet)
-                ->where('code_acteur', auth()->user()->acteur_id)
-                ->first();
-    
-            if (!$approbation) {
-                $this->genererApprobations($codeProjet);
-    
+        return DB::transaction(function () use ($codeProjet) {
+            try {
+                $acteurId = auth()->user()->acteur_id ?? null;
+                Log::info('[VALIDATION] Début', ['codeEtudeProjets' => $codeProjet, 'acteur_id' => $acteurId]);
+
                 $approbation = ProjetApprobation::where('codeEtudeProjets', $codeProjet)
-                    ->where('code_acteur', auth()->user()->acteur_id)
+                    ->where('code_acteur', $acteurId)
                     ->first();
-    
+
                 if (!$approbation) {
-                    return back()->with('error', 'Aucune approbation trouvée même après génération.');
+                    Log::warning('[VALIDATION] Aucune approbation pour cet acteur, génération…');
+                    $this->genererApprobations($codeProjet);
+
+                    $approbation = ProjetApprobation::where('codeEtudeProjets', $codeProjet)
+                        ->where('code_acteur', $acteurId)
+                        ->first();
+
+                    if (!$approbation) {
+                        return back()->with('error', 'Aucune approbation trouvée même après génération.');
+                    }
                 }
+
+                $precedents = ProjetApprobation::where('codeEtudeProjets', $codeProjet)
+                    ->where('num_ordre', '<', $approbation->num_ordre)
+                    ->where('statut_validation_id', '!=', 2) // 2=validé
+                    ->exists();
+
+                if ($precedents) {
+                    return back()->with('error', 'Les approbateurs précédents doivent valider d’abord.');
+                }
+
+                $approbation->update([
+                    'statut_validation_id' => 2,
+                    'approved_at'          => now(),
+                    'is_approved'          => 1,
+                ]);
+
+                // Charger l'étude/projet pour mail & état
+                $etude = EtudeProject::with('projet')
+                    ->where('codeEtudeProjets', $codeProjet)->firstOrFail();
+
+                // approbateur suivant
+                $suivant = ProjetApprobation::with('approbateur.acteur')
+                    ->where('codeEtudeProjets', $codeProjet)
+                    ->where('num_ordre', '>', $approbation->num_ordre)
+                    ->orderBy('num_ordre')
+                    ->first();
+
+                if ($suivant && $suivant->approbateur && $suivant->approbateur->acteur && $suivant->approbateur->acteur->email) {
+                    $dest = $suivant->approbateur->acteur->email;
+                    Log::info('[VALIDATION] Notification au suivant', [
+                        'dest' => $dest,
+                        'num_ordre' => $suivant->num_ordre
+                    ]);
+
+                    Mail::to($dest)->send(
+                        new NotificationValidationProjet(
+                            $codeProjet,
+                            $etude->projet->libelle_projet ?? 'Projet',
+                            auth()->user()->acteur?->libelle_long ?? 'Un approbateur'
+                        )
+                    );
+                } else {
+                    // Tous validés → marquer l’étude
+                    $etude->valider = true; // grâce à la clé primaire correcte, WHERE codeEtudeProjets=...
+                    $etude->save();
+                    Log::info('[VALIDATION] Tous validés — étude marquée validée', ['codeEtudeProjets' => $codeProjet]);
+                }
+
+                return redirect()->route('projets.validation.index')->with('success', 'Projet validé.');
+            } catch (\Throwable $e) {
+                Log::error('[VALIDATION] ERREUR — rollback', [
+                    'codeEtudeProjets' => $codeProjet,
+                    'err' => $e->getMessage()
+                ]);
+                throw $e; // rollback automatique
             }
-    
-            $precedents = ProjetApprobation::where('codeEtudeProjets', $codeProjet)
-                ->where('num_ordre', '<', $approbation->num_ordre)
-                ->where('statut_validation_id', '!=', 2)
-                ->exists();
-    
-            if ($precedents) {
-                return back()->with('error', 'Les approbateurs précédents doivent valider d’abord.');
-            }
-    
-            $approbation->update([
-                'statut_validation_id' => 2,
-                'approved_at' => now(),
-                'is_approved' => 1,
-            ]);
-    
-            // Chercher l'approbateur suivant
-            $suivant = ProjetApprobation::with('approbateur.acteur')
-                ->where('codeEtudeProjets', $codeProjet)
-                ->where('num_ordre', '>', $approbation->num_ordre)
-                ->orderBy('num_ordre')
-                ->first();
-    
-            if ($suivant && $suivant->approbateur && $suivant->approbateur->acteur) {
-                // Envoyer email au suivant
-                Mail::to($suivant->approbateur->acteur->email)->send(
-                    new NotificationValidationProjet(
-                        $codeProjet,
-                        $etude->projet->libelle_projet ?? 'Projet',
-                        auth()->user()->acteur?->libelle_long ?? 'Un approbateur'
-                    )
-                );
-                
-            } else {
-                // ✅ TOUS ont validé
-                $etude = EtudeProject::where('codeEtudeProjets', $codeProjet)->firstOrFail();
-                $etude->valider = true;
-                $etude->save();
-            }
-    
-            return redirect()->route('projets.validation.index')->with('success', 'Projet validé.');
-        } catch (Exception $e) {
-            Log::error("Erreur validation projet [{$codeProjet}] : " . $e->getMessage());
-            return back()->with('error', 'Une erreur est survenue pendant la validation.');
-        }
+        });
     }
+
+    
     
 
     public function refuser(Request $request, $codeProjet)
@@ -172,49 +192,61 @@ class ProjetValidationController extends Controller
             $request->validate([
                 'commentaire_refus' => 'required|string|max:1000',
             ]);
-
+    
             $approbation = ProjetApprobation::where('codeEtudeProjets', $codeProjet)
                 ->where('code_acteur', auth()->user()->acteur_id)
                 ->firstOrFail();
-
+    
             $approbation->update([
                 'statut_validation_id' => 3,
-                'commentaire_refus' => $request->commentaire_refus,
+                'commentaire_refus'    => $request->commentaire_refus,
             ]);
-
+    
             $emails = ProjetApprobation::with('approbateur.acteur')
                 ->where('codeEtudeProjets', $codeProjet)
                 ->get()
                 ->pluck('approbateur.acteur.email')
                 ->filter()
+                ->values()
                 ->toArray();
-
-            $etude = EtudeProject::with('projet.maitreOuvrage', 'projet.maitresOeuvre')->where('codeEtudeProjets', $codeProjet)->first();
-
-            if ($etude->projet->maitreOuvrage?->email) {
+    
+            $etude = EtudeProject::with('projet.maitreOuvrage', 'projet.maitresOeuvre')
+                ->where('codeEtudeProjets', $codeProjet)->first();
+    
+            if ($etude?->projet?->maitreOuvrage?->email) {
                 $emails[] = $etude->projet->maitreOuvrage->email;
             }
-
             foreach ($etude->projet->maitresOeuvre ?? [] as $moe) {
-                if ($moe->email) {
-                    $emails[] = $moe->email;
-                }
+                if (!empty($moe->email)) $emails[] = $moe->email;
             }
-
-            Mail::to($emails)->send(
-                new ProjetRefuseNotification(
-                    $codeProjet,
-                    $etude->projet->libelle_projet ?? 'Projet',
-                    $request->commentaire_refus,
-                    auth()->user()->acteur?->libelle_long ?? 'Un approbateur'
-                )
-            );
-            
-
+            $emails = array_values(array_unique(array_filter($emails)));
+    
+            Log::info('[REFUS] Envoi notification refus', [
+                'codeEtudeProjets' => $codeProjet,
+                'nb_dest' => count($emails),
+                'dest' => $emails,
+            ]);
+    
+            if (!empty($emails)) {
+                Mail::to($emails)->send(
+                    new ProjetRefuseNotification(
+                        $codeProjet,
+                        $etude->projet->libelle_projet ?? 'Projet',
+                        $request->commentaire_refus,
+                        auth()->user()->acteur?->libelle_long ?? 'Un approbateur'
+                    )
+                );
+            } else {
+                Log::warning('[REFUS] Aucun destinataire email trouvé', ['codeEtudeProjets' => $codeProjet]);
+            }
+    
             return redirect()->route('projets.validation.index')->with('error', 'Projet refusé.');
         } catch (Exception $e) {
-            Log::error("Erreur refus projet [{$codeProjet}] : " . $e->getMessage());
+            Log::error("[REFUS] Erreur refus projet [{$codeProjet}] : " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
             return back()->with('error', 'Erreur lors du refus du projet.');
         }
     }
+    
 }

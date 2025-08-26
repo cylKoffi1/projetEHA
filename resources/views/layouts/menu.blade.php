@@ -8,7 +8,7 @@
   <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
 
   <!-- SEO Meta Tags -->
-  <meta name="description" content="GESPRO-INFRAS - Spécialiste en gestion de projet et infrastructure de pays">
+  <meta name="description" content="GP-INFRAS - Spécialiste en gestion de projet et infrastructure de pays">
   
   @include('layouts.lurl')
 
@@ -363,7 +363,7 @@
   <!-- Header -->
   <header>
     <nav class="navbar">
-      <a class="navbar-brand" href="{{ url('/') }}">GESPRO-INFRAS <span>version.β</span></a>
+      <a class="navbar-brand" href="{{ url('/') }}">GP-INFRAS <span>version.β</span></a>
       <button class="navbar-toggle" id="navbar-toggle">
         <i class="fas fa-bars"></i>
       </button>

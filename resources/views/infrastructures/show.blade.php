@@ -144,8 +144,8 @@
                         <div class="row mt-3">
                             @foreach($infrastructure->InfrastructureImage as $img)
                                 <div class="col-md-3 mb-3">
-                                    <a href="{{ asset($img->chemin_image) }}" class="glightbox" data-gallery="gallery-view">
-                                        <img src="{{ asset($img->chemin_image) }}" class="img-fluid rounded" style="width: 100%; height: 180px; object-fit: cover;" alt="Photo">
+                                    <a href="{{ $img->url }}" class="glightbox" data-gallery="gallery-view">
+                                        <img src="{{ $img->url }}" class="img-fluid rounded" style="width: 100%; height: 180px; object-fit: cover;" alt="Photo">
                                     </a>
                                 </div>
                             @endforeach
@@ -170,11 +170,7 @@
                     <div class="tab-content">
                         <!-- Vue des caractéristiques -->
                         <div class="tab-pane fade show active" id="view">
-                            @php
-                                $caracsFamille = $infrastructure->familleInfrastructure->caracteristiques ?? collect();
-                                $valeurs = $infrastructure->valeursCaracteristiques->keyBy('idCaracteristique');
-                                $groupedCaracs = $caracsFamille->groupBy('groupe');
-                            @endphp
+                           
 
                             @if($caracsFamille->isEmpty())
                                 <div class="alert alert-light">
@@ -341,7 +337,6 @@
 </section>
 
 <!-- QR Code Library -->
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <!-- Leaflet for Maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>

@@ -21,5 +21,20 @@ class InfrastructureImage extends Model
     {
         return $this->belongsTo(Infrastructure::class, 'infrastructure_code', 'code');
     }
-    
+    protected $appends = ['url'];
+
+    public function getUrlAttribute(): ?string
+    {
+        $v = $this->chemin_image;
+        if (!$v) return null;
+
+        // Si c’est un ID en base (entier) -> route de stream
+        if (ctype_digit((string)$v)) {
+            return url('/api/fichiers/'.$v);
+        }
+
+        // Sinon, fallback legacy (chemin disque ou URL)
+        if (str_starts_with($v, 'http')) return $v;
+        return asset($v);
+    }
 }

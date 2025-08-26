@@ -82,7 +82,7 @@ class sigAdminController extends Controller
                 'decoupage_administratif.libelle_decoupage'
             )
             ->get();
-        return view('sigAdmin', compact('ecran', 'codeZoom', 'niveau', 'codeAlpha3', 'codeGroupeProjet', 'domainesAssocie', 'Bailleurs', 'TypesStatuts'));
+        return view('GestionSig.sigAdmin', compact('ecran', 'codeZoom', 'niveau', 'codeAlpha3', 'codeGroupeProjet', 'domainesAssocie', 'Bailleurs', 'TypesStatuts'));
     }
     public function getByGroupe($groupe)
     {
@@ -245,119 +245,87 @@ class sigAdminController extends Controller
     public function getProjects(Request $request)
     {
         $country = session('pays_selectionne');
-        $group = session('projet_selectionne');
-
+        $group   = session('projet_selectionne');
+    
         if (!$country || !$group) {
-            return response()->json([
-                'error' => 'Les paramètres country et group sont obligatoires'
-            ], 400);
+            return response()->json(['error' => 'Les paramètres country et group sont obligatoires'], 400);
         }
-
+    
         $codePattern = $country . $group . '%';
-
+    
         try {
-            // Localités indexées
+            // Localités indexées : id_niveau -> code -> libelle
+            // ⚠️ si LocalitesPays::id_pays attend l'ID numérique du pays, remplace $country par l’ID.
             $localites = LocalitesPays::where('id_pays', $country)->get();
             $indexedLocalites = [];
             foreach ($localites as $loc) {
                 $indexedLocalites[$loc->id_niveau][$loc->code_rattachement] = $loc->libelle;
             }
-
+    
             $projects = Projet::where('code_projet', 'like', $codePattern)->get();
-
+    
+            // 🔑 Indexer par CODE (pas par nom) pour éviter les collisions de libellés
             $results = [];
-
+    
             foreach ($projects as $project) {
-                $cost = $project->cout_projet ?? 0;
+                $cost       = $project->cout_projet ?? 0;
                 $codeProjet = $project->code_projet ?: $this->reconstruireCodeProjet($project);
                 $components = $this->decomposerCodeProjet($codeProjet);
-                $locCode = $components['code_localisation'];
-                $domainCode = substr($components['code_sous_domaine'], 0, 2);
-                $isPublic = $components['type_financement'] === '1';
-
-                // Générer les codes par niveau
+    
+                $locCode    = $components['code_localisation'];
+                $domainCode = substr($components['code_sous_domaine'] ?? '00', 0, 2);
+                $isPublic   = ($components['type_financement'] ?? '1') === '1';
+    
+                // Codes par niveau
                 $niv1 = substr($locCode, 0, 2);
                 $niv2 = substr($locCode, 0, 4);
-                $niv3 = $locCode;
-
-                // Préparer les niveaux
+                $niv3 = substr($locCode, 0, 6);
+    
                 $levels = [
                     1 => ['code' => $niv1, 'name' => $indexedLocalites[1][$niv1] ?? null],
                     2 => ['code' => $niv2, 'name' => $indexedLocalites[2][$niv2] ?? null],
                     3 => ['code' => $niv3, 'name' => $indexedLocalites[3][$niv3] ?? null],
                 ];
-
+    
+                // ➜ On incrémente EXACTEMENT UNE FOIS par niveau (pas d’agrégation après)
                 foreach ($levels as $level => $info) {
-                    if (!$info['name']) continue;
-                    $normName = $this->normalizeName($info['name']);
-
-                    if (!isset($results[$normName])) {
-                        $results[$normName] = [
-                            'name' => $info['name'],
-                            'level' => $level,
-                            'code' => $info['code'],
-                            'count' => 0,
-                            'public' => 0,
-                            'private' => 0,
-                            'cost' => 0,
+                    if (!$info['name'] || !$info['code']) continue;
+    
+                    $key = $info['code']; // << clé stable et unique
+                    if (!isset($results[$key])) {
+                        $results[$key] = [
+                            'name'     => $info['name'],
+                            'level'    => $level,
+                            'code'     => $info['code'],
+                            'count'    => 0,
+                            'public'   => 0,
+                            'private'  => 0,
+                            'cost'     => 0,
                             'byDomain' => []
                         ];
                     }
-
-                    $results[$normName]['count']++;
-                    $results[$normName]['cost'] += $cost;
-                    $isPublic ? $results[$normName]['public']++ : $results[$normName]['private']++;
-
-                    if (!isset($results[$normName]['byDomain'][$domainCode])) {
-                        $results[$normName]['byDomain'][$domainCode] = [
-                            'count' => 0,
-                            'cost' => 0,
-                            'public' => 0,
-                            'private' => 0
+    
+                    $results[$key]['count'] += 1;
+                    $results[$key]['cost']  += $cost;
+                    $isPublic ? $results[$key]['public']++ : $results[$key]['private']++;
+    
+                    if (!isset($results[$key]['byDomain'][$domainCode])) {
+                        $results[$key]['byDomain'][$domainCode] = [
+                            'count' => 0, 'cost' => 0, 'public' => 0, 'private' => 0
                         ];
                     }
-
-                    $results[$normName]['byDomain'][$domainCode]['count']++;
-                    $results[$normName]['byDomain'][$domainCode]['cost'] += $cost;
+                    $results[$key]['byDomain'][$domainCode]['count']   += 1;
+                    $results[$key]['byDomain'][$domainCode]['cost']    += $cost;
                     $isPublic
-                        ? $results[$normName]['byDomain'][$domainCode]['public']++
-                        : $results[$normName]['byDomain'][$domainCode]['private']++;
+                        ? $results[$key]['byDomain'][$domainCode]['public']++
+                        : $results[$key]['byDomain'][$domainCode]['private']++;
                 }
             }
-
-            // Agrégation ascendante (niveau 3 -> 2 -> 1)
-            foreach ($results as $normName => &$data) {
-                $level = $data['level'];
-                $parentCode = null;
-
-                if ($level === 3) $parentCode = substr($data['code'], 0, 4);
-                elseif ($level === 2) $parentCode = substr($data['code'], 0, 2);
-                else continue;
-
-                $parent = collect($results)->first(function ($v) use ($parentCode) {
-                    return $v['code'] === $parentCode;
-                });
-
-                if ($parent) {
-                    $parentNorm = $this->normalizeName($parent['name']);
-
-                    $results[$parentNorm]['count'] += $data['count'];
-                    $results[$parentNorm]['public'] += $data['public'];
-                    $results[$parentNorm]['private'] += $data['private'];
-
-                    foreach ($data['byDomain'] as $dom => $stat) {
-                        if (!isset($results[$parentNorm]['byDomain'][$dom])) {
-                            $results[$parentNorm]['byDomain'][$dom] = ['count' => 0, 'public' => 0, 'private' => 0];
-                        }
-                        $results[$parentNorm]['byDomain'][$dom]['count'] += $stat['count'];
-                        $results[$parentNorm]['byDomain'][$dom]['public'] += $stat['public'];
-                        $results[$parentNorm]['byDomain'][$dom]['private'] += $stat['private'];
-                    }
-                }
-            }
-
-            return response()->json(array_values($results)); // on envoie un tableau simple
-
+    
+            // ❌ IMPORTANT : ne PAS faire d’agrégation ascendante ici (sinon double comptage)
+    
+            return response()->json(array_values($results));
+    
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Erreur lors de la récupération des projets',
@@ -365,6 +333,7 @@ class sigAdminController extends Controller
             ], 500);
         }
     }
+    
 
     private function normalizeName($str)
     {
@@ -393,136 +362,197 @@ class sigAdminController extends Controller
     }
     public function getFiltreOptions(Request $request)
     {
-        $country = session('pays_selectionne');
-        $group = session('projet_selectionne');
+        $country  = session('pays_selectionne');
+        $group    = session('projet_selectionne');
         $typeDate = $request->input('date_type');
-        $start = $request->input('start_date');
-        $end = $request->input('end_date');
-
+        $start    = $request->input('start_date');
+        $end      = $request->input('end_date');
+    
         $query = Projet::where('code_alpha3_pays', $country)
-            ->where('code_projet', 'like', $country . $group . '%');
-
-        // Appliquer le filtre de date
+            ->where('code_projet', 'like', $country.$group.'%');
+    
         if ($typeDate === 'prévisionnelles') {
             if ($start) $query->where('date_demarrage_prevue', '>=', $start);
-            if ($end) $query->where('date_fin_prevue', '<=', $end);
+            if ($end)   $query->where('date_fin_prevue',      '<=', $end);
         } else {
-            // Jointure avec les dates effectives
             $query->whereHas('dateEffective', function ($q) use ($start, $end) {
                 if ($start) $q->where('date_debut_effective', '>=', $start);
-                if ($end) $q->where('date_fin_effective', '<=', $end);
+                if ($end)   $q->where('date_fin_effective',   '<=', $end);
             });
         }
-
+    
         $filteredProjects = $query->pluck('code_projet');
-
-        // Statuts liés à ces projets
-        $statuts = ProjetStatut::whereIn('code_projet', $filteredProjects)->with('statut')->get()
+    
+        $statuts = ProjetStatut::whereIn('code_projet', $filteredProjects)
+            ->with('statut')
+            ->get()
             ->map(fn($ps) => [
-                'id' => $ps->type_statut,
-                'libelle' => $ps->statut->libelle ?? 'Statut inconnu'
+                'id'      => $ps->type_statut,
+                'libelle' => $ps->statut->libelle ?? 'Statut inconnu',
             ])
             ->unique('id')
             ->values();
-
-        // Bailleurs liés
-        $bailleurs = Financer::whereIn('code_projet', $filteredProjects)->with('acteur')->get()
-            ->map(fn($f) => [
-                'code_acteur' => $f->code_acteur,
-                'nom' => $f->acteur->libelle_court ?? 'Bailleur'
-            ])
-            ->unique('code_acteur')
-            ->values();
-
-        return response()->json([
-            'bailleurs' => $bailleurs,
-            'statuts' => $statuts
-        ]);
-    }
-
-    public function getFiltreOptionsEtProjets(Request $request)
-    {
-        $country = session('pays_selectionne');
-        $group = session('projet_selectionne');
-        $start = $request->input('start_date');
-        $end = $request->input('end_date');
-        $type = $request->input('date_type');
-        $bailleur = $request->input('bailleur');
-
-        $query = Projet::where('code_alpha3_pays', $country)
-            ->where('code_projet', 'like', $country . $group . '%');
-
-        if ($type === 'prévisionnelles') {
-            if ($start) $query->where('date_demarrage_prevue', '>=', $start);
-            if ($end) $query->where('date_fin_prevue', '<=', $end);
-        } elseif ($type === 'effectives') {
-            $query->whereHas('dateEffective', function ($q) use ($start, $end) {
-                if ($start) $q->where('date_debut_effective', '>=', $start);
-                if ($end) $q->where('date_fin_effective', '<=', $end);
-            });
-        }
-
-        if ($request->filled('bailleur')) {
-            $query->whereHas('financements', function ($q) use ($request) {
-                $q->where('code_acteur', $bailleur);
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->whereHas('statuts', function ($q) use ($request) {
-                $q->where('type_statut', $request->status);
-            });
-        }
-
-        $filteredProjects = $query->get();
-
-        $codes = $filteredProjects->pluck('code_projet');
-
-        // 🔢 Calcul des coûts publics / privés
-        $publicCost = 0;
-        $privateCost = 0;
-        foreach ($filteredProjects as $project) {
-            $code = $project->code_projet ?? '';
-            $isPublic = substr($code, 6, 1) === '1';
-            $cost = $project->cout_projet ?? 0;
-
-            if ($isPublic) {
-                $publicCost += $cost;
-            } else {
-                $privateCost += $cost;
-            }
-        }
-        // BAILLEURS
-        $bailleurs = Financer::whereIn('code_projet', $codes)
-            ->with('acteur')
+    
+        // ⚠️ ICI : relation = bailleur (pas acteur)
+        $bailleurs = Financer::whereIn('code_projet', $filteredProjects)
+            ->with('bailleur')
             ->get()
             ->map(fn($f) => [
                 'code_acteur' => $f->code_acteur,
-                'nom' => $f->acteur->libelle_court ?? 'Bailleur'
+                'nom'         => $f->bailleur->libelle_court ?? 'Bailleur',
+            ])
+            ->unique('code_acteur')
+            ->values();
+    
+        return response()->json([
+            'bailleurs' => $bailleurs,
+            'statuts'   => $statuts,
+        ]);
+    }
+    
+    public function getFiltreOptionsEtProjets(Request $request)
+    {
+        $country = session('pays_selectionne');   // ex: "CIV"
+        $group   = session('projet_selectionne'); // ex: "EHA"
+        if (!$country || !$group) {
+            return response()->json(['error' => 'Contexte pays/groupe manquant'], 400);
+        }
+
+        // Pour indexer les libellés des localités, on a besoin de l'ID du pays
+        $pays = Pays::where('alpha3', $country)->first();
+        if (!$pays) return response()->json(['error' => 'Pays inconnu'], 404);
+
+        $start    = $request->input('start_date');   // optionnel
+        $end      = $request->input('end_date');     // optionnel
+        $type     = $request->input('date_type');    // 'prévisionnelles' | 'effectives' | null
+        $statut   = $request->input('status');       // optionnel
+        $bailleur = $request->input('bailleur');     // optionnel
+
+        $q = Projet::where('code_projet', 'like', $country.$group.'%');
+
+        // --- DATES (toutes optionnelles) ---
+        // Si au moins un des champs de date est fourni, on applique le type (prévisionnelles par défaut)
+        if ($start || $end) {
+            $type = $type ?: 'prévisionnelles';
+        }
+
+        if ($type === 'prévisionnelles') {
+            if ($start) $q->where('date_demarrage_prevue', '>=', $start);
+            if ($end)   $q->where('date_fin_prevue',      '<=', $end);
+        } elseif ($type === 'effectives') {
+            $q->whereHas('dateEffective', function ($qq) use ($start, $end) {
+                if ($start) $qq->where('date_debut_effective', '>=', $start);
+                if ($end)   $qq->where('date_fin_effective',   '<=', $end);
+            });
+        }
+        // Si aucun start/end n’est fourni → aucune contrainte de date
+
+        // --- BAILLEUR (optionnel) ---
+        if (!empty($bailleur)) {
+            $q->whereHas('financements', fn($qq) => $qq->where('code_acteur', $bailleur));
+        }
+
+        // --- STATUT (optionnel) ---
+        if (!empty($statut)) {
+            $q->whereHas('statuts', fn($qq) => $qq->where('type_statut', $statut));
+        }
+
+        $filtered = $q->get();
+
+        // --- AGRÉGATION identique à /api/projects ---
+        $localites = LocalitesPays::where('id_pays', $pays->id)->get();
+        $idx = [];
+        foreach ($localites as $loc) {
+            $idx[$loc->id_niveau][$loc->code_rattachement] = $loc->libelle;
+        }
+
+        $agg = [];
+        $publicCost = 0; $privateCost = 0;
+
+        foreach ($filtered as $p) {
+            $codeProjet = $p->code_projet ?: $this->reconstruireCodeProjet($p);
+            $c = $this->decomposerCodeProjet($codeProjet);
+
+            $loc       = $c['code_localisation'];
+            $dom2      = substr($c['code_sous_domaine'] ?? '00', 0, 2);
+            $isPublic  = ($c['type_financement'] ?? '1') === '1';
+            $cost      = $p->cout_projet ?? 0;
+
+            // coûts globaux
+            $isPublic ? $publicCost += $cost : $privateCost += $cost;
+
+            // 3 niveaux : incrément exactement une fois par niveau
+            $codes = [
+                1 => substr($loc, 0, 2),
+                2 => substr($loc, 0, 4),
+                3 => substr($loc, 0, 6),
+            ];
+            foreach ($codes as $level => $code) {
+                if (!$code) continue;
+                $name = $idx[$level][$code] ?? null;
+                if (!$name) continue;
+
+                if (!isset($agg[$code])) {
+                    $agg[$code] = [
+                        'name'     => $name,
+                        'level'    => $level,
+                        'code'     => $code,
+                        'count'    => 0,
+                        'public'   => 0,
+                        'private'  => 0,
+                        'cost'     => 0,
+                        'byDomain' => [],
+                    ];
+                }
+                $agg[$code]['count']++;
+                $agg[$code]['cost'] += $cost;
+                $isPublic ? $agg[$code]['public']++ : $agg[$code]['private']++;
+
+                if (!isset($agg[$code]['byDomain'][$dom2])) {
+                    $agg[$code]['byDomain'][$dom2] = ['count'=>0,'cost'=>0,'public'=>0,'private'=>0];
+                }
+                $agg[$code]['byDomain'][$dom2]['count']++;
+                $agg[$code]['byDomain'][$dom2]['cost'] += $cost;
+                $isPublic
+                    ? $agg[$code]['byDomain'][$dom2]['public']++
+                    : $agg[$code]['byDomain'][$dom2]['private']++;
+            }
+        }
+
+        $codes = $filtered->pluck('code_projet');
+
+        // LISTES pour les selects (non destructives)
+        $bailleursList = Financer::whereIn('code_projet', $codes)
+            ->with('bailleur')
+            ->get()
+            ->map(fn($f) => [
+                'code_acteur' => $f->code_acteur,
+                'nom'         => $f->bailleur->libelle_court ?? 'Bailleur',
             ])
             ->unique('code_acteur')
             ->values();
 
-        // STATUTS
-        $statuts = ProjetStatut::whereIn('code_projet', $codes)
+        $statutsList = ProjetStatut::whereIn('code_projet', $codes)
             ->with('statut')
             ->get()
             ->map(fn($s) => [
-                'id' => $s->type_statut,
-                'libelle' => $s->statut->libelle ?? 'Statut inconnu'
+                'id'      => $s->type_statut,
+                'libelle' => $s->statut->libelle ?? 'Statut',
             ])
             ->unique('id')
             ->values();
 
         return response()->json([
-            'projets' => $filteredProjects,
-            'bailleurs' => $bailleurs,
-            'statuts' => $statuts,
-            'public_cost' => $publicCost,
+            'projets'      => array_values($agg),     // <-- EXACTEMENT comme /api/projects
+            'bailleurs'    => $bailleursList,
+            'statuts'      => $statutsList,
+            'public_cost'  => $publicCost,
             'private_cost' => $privateCost,
-            'total_cost' => $publicCost + $privateCost
+            'total_cost'   => $publicCost + $privateCost,
         ]);
     }
+
+
 
     public function getAllProjects()
     {
@@ -596,6 +626,7 @@ class sigAdminController extends Controller
                     'code_localisation' => $locCode,
                     'date_demarrage_prevue' => $project->date_demarrage_prevue,
                     'date_fin_prevue' => $project->date_fin_prevue,
+                    'code_devise' => $project->code_devise
                 ];
             }
 

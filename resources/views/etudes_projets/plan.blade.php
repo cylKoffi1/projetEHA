@@ -88,6 +88,8 @@
         .gantt_task_progress { background-color: rgba(33, 33, 33, 0.17); }
     </style>
 @section('content')
+@isset($ecran)
+@can("consulter_ecran_" . $ecran->id)
 
 @if (session('success'))
 <script>
@@ -176,19 +178,24 @@
                     </div>
 
                     <!-- Conteneur du Scheduler -->
+                    @can("consulter_ecran_" . $ecran->id)
                     <div id="scheduler_here" ></div>
 
                     <!-- Conteneur du Gantt -->
                     <div id="gantt_here" class="active-view"></div>
                     <div class="zoom-controls">
+                        @can("modifier_ecran_" . $ecran->id)
                         <button onclick="zoomIn()" class="btn btn-sm btn-outline-primary">🔍 Zoom +</button>
                         <button onclick="zoomOut()" class="btn btn-sm btn-outline-secondary">🔎 Zoom -</button>
                         <button onclick="zoomToFit()" class="btn btn-sm btn-outline-warning">🧭 Ajuster la vue</button>
                         <button onclick="resetZoom()" class="btn btn-sm btn-outline-dark">↺ Réinitialiser</button>
-                  
+                        @endcan
+                    
                     </div>
+                    @endcan
                    
                     <div id="task_table_view" class="mt-3" style="display: none;">
+                        @can("consulter_ecran_" . $ecran->id)
                         <table class="table table-bordered">
                             <thead class="thead-light">
                                 <tr>
@@ -201,6 +208,7 @@
                             </thead>
                             <tbody id="task_table_body"></tbody>
                         </table>
+                        @endcan
                     </div>
 
                     <!-- Modal Explicatif -->
@@ -274,6 +282,8 @@
             </div>
         </div>
     </div>
+@endcan
+@endisset
 </section>
 <script>
 $(document).ready(function() {

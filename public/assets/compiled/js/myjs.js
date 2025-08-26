@@ -1,9 +1,10 @@
-function initDataTable(userNameReplace, table, title) {
-    let imagePath;
+async function initDataTable(userNameReplace, table, title) {
+    let imagePath = null; // data URL pour jsPDF
 
-    // Charger l'image base64 de manière synchrone
-    loadImage();
+    // 1) Charger le logo en base64 (avec cache navigateur)
+    await loadImage();
 
+    // 2) Init DataTable
     const now = new Date();
     const dateTime = formatDate(now);
     const userName = userNameReplace;
@@ -11,18 +12,19 @@ function initDataTable(userNameReplace, table, title) {
 
     initializeDataTable(table, title, dateTime, userName, actionColumns);
 
-    function loadImage() {
-        $.ajax({
-            url: 'http://127.0.0.1:8000/getBase64Image',
-            type: 'GET',
-            async: false,
-            success: function (response) {
-                imagePath = "data:image/png;base64," + response.base64Image;
-            },
-            error: function (xhr, status, error) {
-                console.error("Erreur lors du chargement de l'image :", error);
-            }
-        });
+    async function loadImage() {
+        try {
+            const cached = sessionStorage.getItem('arm_b64');
+            if (cached) { imagePath = cached; return; }
+
+            const resp = await $.getJSON('/pays/armoirie/base64');
+            const mime = resp.mime || 'image/png';
+            imagePath = `data:${mime};base64,${resp.base64Image}`;
+            sessionStorage.setItem('arm_b64', imagePath);
+        } catch (e) {
+            console.warn("Logo non chargé, on continue sans image.", e);
+            imagePath = null; // pas de logo
+        }
     }
 
     function formatDate(date) {
@@ -115,112 +117,56 @@ function initDataTable(userNameReplace, table, title) {
             }
         ];
     }
-    
-
-    function showPrintOptions(title, dateTime, userName, actionColumns) {
-        // Créer une boîte de dialogue avec les options d'impression
-        const dialog = $('<div>').css({
-            'padding': '20px',
-            'border-radius': '5px',
-            'background': 'white',
-            'box-shadow': '0 0 10px rgba(0,0,0,0.5)'
-        });
-
-        // Titre
-        dialog.append($('<h4>').css({
-            'margin-top': '0',
-            'color': '#333'
-        }).text('Options d\'impression'));
-
-        // Sélecteur d'orientation
-        dialog.append($('<label>').text('Orientation: '));
-        const orientationSelect = $('<select>').css({
-            'margin': '0 10px 15px 0',
-            'padding': '5px'
-        }).append(
-            $('<option>').val('portrait').text('Portrait'),
-            $('<option>').val('landscape').text('Paysage')
-        );
-        dialog.append(orientationSelect);
-        dialog.append($('<br>'));
-
-        // Boutons
-        const printBtn = $('<button>').addClass('btn btn-primary').text('Imprimer').click(function() {
-            generatePDF(title, dateTime, userName, actionColumns, orientationSelect.val());
-            $(this).closest('.ui-dialog').remove();
-        });
-        
-        const cancelBtn = $('<button>').addClass('btn btn-secondary').css('margin-left', '10px').text('Annuler').click(function() {
-            $(this).closest('.ui-dialog').remove();
-        });
-
-        dialog.append(printBtn, cancelBtn);
-
-        // Afficher la boîte de dialogue
-        $('<div>').append(dialog).dialog({
-            modal: true,
-            title: 'Options d\'impression',
-            width: 400,
-            close: function() {
-                $(this).remove();
-            }
-        });
-    }
 
     function generatePDF(title, dateTime, userName, actionColumns, orientation = 'portrait') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF(orientation, 'pt', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-    
+
         const marginX = 40;
         const logoWidth = 40;
         const logoHeight = 35;
         const headerHeight = 90;
-    
-        // Fonction pour dessiner l'en-tête (réutilisable sur chaque page)
+
         const drawHeader = () => {
-            // === 💠 FOND BLEU HEADER ===
             doc.setFillColor(0, 0, 70);
             doc.rect(0, 0, pageWidth, headerHeight, 'F');
-    
-            // === 📝 TEXTE DU HEADER SUR LE FOND BLEU ===
-            doc.setTextColor(255, 255, 255); // texte blanc
+
+            doc.setTextColor(255, 255, 255);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
-            
-            // Logo à gauche
-            doc.addImage(imagePath, 'PNG', marginX, 20, logoWidth, logoHeight);
+
+            if (imagePath) {
+                try {
+                    // jsPDF détecte le format via la dataURL (png/jpeg)
+                    doc.addImage(imagePath, 'AUTO', marginX, 20, logoWidth, logoHeight);
+                } catch (e) {
+                    console.warn('addImage a échoué:', e);
+                }
+            }
+
             doc.text(`Impression le : ${dateTime}`, pageWidth - marginX, 20, { align: "right" });
-    
-            // Titre centré
             doc.setFontSize(13);
             doc.text(title.toUpperCase(), pageWidth / 2, 40, { align: "center" });
-    
-            doc.text("BTP-PROJECT", marginX, 70);
-            
-            // "Imprimé par" à droite
-            doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
+            doc.text("BTP-PROJECT", marginX, 70);
             doc.setFont("helvetica", "normal");
             doc.text(`Imprimé par : ${$('<div>').html(userName).text()}`, pageWidth - marginX, 70, { align: "right" });
         };
-    
-        // Dessiner l'en-tête sur la première page
+
         drawHeader();
-    
-        // === 🔢 TABLEAU ===
+
         const columns = getColumns(table, actionColumns);
         const rows = getRows(table, columns, actionColumns);
-    
-        // Ajuster la largeur des colonnes pour le paysage
+
         const columnStyles = {};
         if (orientation === 'landscape') {
             columns.forEach((col, index) => {
                 columnStyles[index] = { cellWidth: 'auto' };
             });
         }
-    
+
         doc.autoTable({
             startY: headerHeight + 20,
             head: [columns.map(col => col.header)],
@@ -238,19 +184,16 @@ function initDataTable(userNameReplace, table, title) {
             margin: { top: headerHeight + 20, left: marginX, right: marginX },
             columnStyles: columnStyles,
             didDrawPage: function (data) {
-                // Réafficher l'en-tête sur chaque nouvelle page
                 if (data.pageNumber > 1) {
                     drawHeader();
                 }
-    
-                // Pied de page avec numéro de page
                 const pageCount = doc.internal.getNumberOfPages();
                 doc.setFontSize(8);
                 doc.setTextColor(100);
                 doc.text(`Page ${data.pageNumber} sur ${pageCount}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
             }
         });
-    
+
         doc.save(title + '.pdf');
     }
 
@@ -259,11 +202,7 @@ function initDataTable(userNameReplace, table, title) {
         $("#" + table + " thead th").each(function (index) {
             if (actionColumns.indexOf(index) === -1) {
                 const text = $(this).text().trim();
-                columns.push({ 
-                    header: text, 
-                    dataKey: text,
-                    originalIndex: index
-                });
+                columns.push({ header: text, dataKey: text, originalIndex: index });
             }
         });
         return columns;
@@ -276,9 +215,7 @@ function initDataTable(userNameReplace, table, title) {
             $(this).find("td").each(function (index) {
                 if (actionColumns.indexOf(index) === -1) {
                     const col = columns.find(c => c.originalIndex === index);
-                    if (col) {
-                        row[col.dataKey] = $(this).text().trim();
-                    }
+                    if (col) row[col.dataKey] = $(this).text().trim();
                 }
             });
             rows.push(row);

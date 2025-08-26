@@ -18,6 +18,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\EtatController;
 use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
+use App\Http\Controllers\GeojsonController;
+use App\Http\Controllers\GestionDemographieController;
 use App\Http\Controllers\GestionFinanciereController;
 use App\Http\Controllers\InfrastructureController;
 use App\Http\Controllers\InfrastructureMapController;
@@ -45,6 +47,7 @@ use App\Models\LocalitesPays;
 use App\Models\Renforcement;
 use App\Models\SousDomaine;
 use App\Models\Utilisateur;
+use App\Services\GridFsService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -136,8 +139,22 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('admin/get-departements/{regionId}', [PaysController::class, 'getDepartements']);
     Route::get('admin/get-sous_prefecture/{departementId}', [PaysController::class, 'getSous_prefectures']);
 
+    /**************************** GESTION DE DEMOGRAPHIE **********************************/
+    /** Page principale */
+    Route::get('admin/nombreHabitants', [GestionDemographieController::class, 'habitantIndex'])
+        ->name('habitants.index');
 
+    /** APIs AJAX */
+    Route::get('admin/demographie/schema',    [GestionDemographieController::class, 'schema']);
+    Route::get('admin/demographie/localites', [GestionDemographieController::class, 'localites']);
 
+    /** Enregistrement */
+    Route::post('admin/demographie', [GestionDemographieController::class, 'storeHabitants'])->name('habitants.store');
+    
+    // 👉 Nouveau : stats et liste
+    Route::get('stats', [GestionDemographieController::class, 'stats'])->name('habitants.stats');
+    Route::get('entries', [GestionDemographieController::class, 'entries'])->name('habitants.entries');
+    
     /* ***********************  Paramètre généraux *******************************/
     Route::get('admin/statutProjet', [PlateformeController::class, 'statutProjet'])->name('statutProjet');
     Route::get('admin/typeBailleur', [PlateformeController::class, 'typeBailleur'])->name('typeBailleur');
@@ -287,9 +304,9 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::post('/check-bassin-code', [PlateformeController::class, 'checkBassinCode']);
 
     //***************** approbation ************* */
-    Route::get('admin/approbation', [PlateformeController::class, 'approbation'])->name('approbation');
+    Route::get('admin/commissionValidation', [PlateformeController::class, 'approbation'])->name('approbation');
     Route::post('/storeApprobation', [PlateformeController::class, 'storeApprobation'])->name('approbateur.store');
-    Route::delete('/approbation/{id}', [PlateformeController::class, 'deleteApprobation']);
+    Route::delete('/approbation/{id}', [PlateformeController::class, 'deleteApprobation'])->name('approbateur.delete');
     Route::put('/approbateur/update', [PlateformeController::class, 'updateApprobateur'])->name('approbateur.update');
     Route::get('/get-structure/{code_personnel}', [PlateformeController::class, 'getStructure'])->name('getStructure');
 
@@ -516,11 +533,15 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
 
     /**************************** GESTION DES STATISTIQUES **********************************/
-    Route::get('admin/stat_nombre_projet', [StatController::class, 'statNombreProjet']);
-    Route::get('admin/stat-finance', [StatController::class, 'statFinance']);
 
-    Route::get('/nombreProjetLien', [StatController::class, 'statNombreData'])->name('nombre.data');
-    Route::get('/stat-finance_projet/data', [StatController::class, 'statFinanceData'])->name('finance.data');
+    Route::prefix('admin')->group(function () {
+        Route::get('stat_nombre_projet', [StatController::class, 'statNombreProjet'])->name('tb.nombre.vue');
+        Route::get('stat-finance',       [StatController::class, 'statFinance'])->name('tb.finance.vue');
+    });
+    
+    Route::get('/nombreProjetLien',            [StatController::class, 'statNombreData'])->name('nombre.data');
+    Route::get('/stat-finance_projet/data',    [StatController::class, 'statFinanceData'])->name('finance.data');
+    
     /**************************** GESTION DES UTILISATEURS **********************************/
     Route::get('admin/personnel', [UserController::class, 'personnel'])->name('users.personnel');
     Route::get('admin/personnel/create', [UserController::class, 'createPersonnel'])->name('personnel.create');
@@ -673,7 +694,16 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
         return view('notifications');
     })->name('notifications');
 
+     /*************************GEOJSON */
 
+     Route::post('/geojson', [GeojsonController::class, 'store'])->name('geojson.store');
+
+     // Servir aux cartes (accepte 0..4 : tu as L0 et L4 en base)
+     Route::get('/geojson/{alpha3}/{level}.json.js', [GeojsonController::class, 'serveJs'])
+         ->where(['alpha3' => '[A-Z]{3}', 'level' => '[0-4]']);
+     
+     Route::get('/geojson/{alpha3}/{level}.json', [GeojsonController::class, 'serveJson'])
+         ->where(['alpha3' => '[A-Z]{3}', 'level' => '[0-4]']);
 
     /*************************TYPE ACTEURS */
     Route::get('admin/type-acteurs', [TypeActeurController::class, 'index'])->name('type-acteurs.index');
@@ -756,7 +786,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 Route::get('/map', function () {
     return view('map');
 });
-Route::get('/getBase64Image', function () {
+Route::get('/pays/armoirie/base64', function () {
     $user = Auth::user();
     $pays = $user?->paysSelectionne();
     $armoirie = $pays?->armoirie;
@@ -765,16 +795,40 @@ Route::get('/getBase64Image', function () {
         return response()->json(['error' => 'Image non disponible.'], 404);
     }
 
-    $imagePath = public_path($armoirie);
-
-    if (!file_exists($imagePath)) {
-        return response()->json(['error' => 'Fichier non trouvé.'], 404);
+    // Nouveau : ID fichiers => GridFS
+    if (ctype_digit((string)$armoirie)) {
+        $row = DB::table('fichiers')->where('id', (int)$armoirie)->first();
+        if (!$row) {
+            return response()->json(['error' => 'Métadonnées fichier introuvables.'], 404);
+        }
+        $bytes = app(GridFsService::class)->downloadToString($row->gridfs_id);
+        if ($bytes === '') {
+            return response()->json(['error' => 'Contenu vide.'], 404);
+        }
+        $mime = $row->mime_type ?: 'image/png';
+        return response()->json([
+            'base64Image' => base64_encode($bytes),
+            'mime'        => $mime,
+        ]);
     }
 
-    $imageData = file_get_contents($imagePath);
-    $base64Image = base64_encode($imageData);
+    // Legacy : chemin local (public/)
+    if (!str_starts_with($armoirie, 'http')) {
+        $imagePath = public_path($armoirie);
+        if (!is_file($imagePath)) {
+            return response()->json(['error' => 'Fichier non trouvé.'], 404);
+        }
+        $bytes = file_get_contents($imagePath);
+        $mime  = \Illuminate\Support\Facades\File::mimeType($imagePath) ?: 'image/png';
+        return response()->json([
+            'base64Image' => base64_encode($bytes),
+            'mime'        => $mime,
+        ]);
+    }
 
-    return response()->json(['base64Image' => $base64Image]);
+    // (Optionnel) Si c’est une URL http/https, soit on refuse (pas de fetch serveur),
+    // soit on renvoie un placeholder
+    return response()->json(['error' => 'Source distante non supportée.'], 422);
 });
 
 route::get('/geojson', function () {

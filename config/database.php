@@ -32,7 +32,10 @@ return [
     | choice installed on your machine before you begin development.
     |
     */
-
+    'mongodb' => [
+        'uri' => env('MONGODB_URI'),
+      ],
+      
     'connections' => [
 
         'sqlite' => [

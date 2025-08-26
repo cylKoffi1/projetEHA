@@ -20,6 +20,8 @@
 </div>
 <!-- 🟡 Étape  : Documents -->
 <div class="step " id="step-7">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <div class="document-upload-section">
         <h5 class="text-secondary">📎 Documents et Pièces Justificatives</h5>
         
@@ -29,9 +31,11 @@
                 <i class="fas fa-cloud-upload-alt"></i>
                 <p>Glissez-déposez vos fichiers ici</p>
                 <p class="small">ou</p>
+                @can("ajouter_ecran_" . $ecran->id)
                 <button type="button" class="btn btn-outline-primary" id="browseFilesBtn">
                     Parcourir vos fichiers
                 </button>
+                @endcan
                 <p class="file-limits">
                     Formats acceptés: .pdf, .dwg, .jpg, .docx, .xlsx<br>
                     Taille max: 100MB par fichier
@@ -53,6 +57,7 @@
             </div>
             
             <!-- Fichiers sélectionnés -->
+            @can("consulter_ecran_" . $ecran->id)
             <div class="uploaded-files-list mt-3" id="uploadedFilesList">
                 <div class="list-header">
                     <span>Fichiers à uploader (<span id="fileCount">0</span>)</span>
@@ -62,6 +67,7 @@
                     <!-- Les fichiers apparaîtront ici -->
                 </div>
             </div>
+            @endcan
         </div>
         <br><br>
         <div class="row upload-actions">
@@ -71,13 +77,17 @@
             </button>
             </div>
             <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-success" id="submitDocumentsBtn" disabled>
                 <i class="fas fa-check"></i> Valider les documents
             </button>
+            @endcan
             </div>
         </div>
     </div>
 </div>
+@endcan
+    @endisset
 <script>
     // Configuration
     const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -297,7 +307,7 @@
 
                 setTimeout(() => {
                     finaliserCodeProjet();
-                    window.location.href = '{{ route("project.create") }}';
+                 window.location.href = '{{ route("project.create", ["ecran_id" => $ecran->id]) }}';
                 }, 1500);
             } else {
                 throw new Error(data.message || 'Erreur serveur');

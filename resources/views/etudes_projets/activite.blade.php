@@ -45,6 +45,9 @@
 
 @section('content')
 
+@isset($ecran)
+@can("consulter_ecran_" . $ecran->id)
+
 @if (session('success'))
 <script>
     $('#alertMessage').text("{{ session('success') }}");
@@ -265,6 +268,7 @@
         </div>
         <div class="card-content">
             <div class="col-12">
+                @can("consulter_ecran_" . $ecran->id)
                 <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table">
                     <thead>
                         <tr>
@@ -315,7 +319,7 @@
 
                                         </li>
                                     @endcan
-                                    @can("supprimer_ecran_" . $ecran->id)
+                                    @can("supprmer_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="deleteActivite('{{ $travail->codeActivite }}')">
                                                 <i class="bi bi-trash3-fill me-3"></i> Supprimer
@@ -329,6 +333,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                @endcan
 
             </div>
         </div>
@@ -336,6 +341,8 @@
 
 
 </section>
+@endcan
+@endisset
 <script>
 
     $(document).ready(function() {

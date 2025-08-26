@@ -19,4 +19,5 @@ class ProjetStatut extends Model
     {
         return $this->hasOne(TypeStatut::class, 'id', 'type_statut');
     }
+
 }

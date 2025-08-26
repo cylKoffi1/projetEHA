@@ -15,25 +15,36 @@ class ProjetDocument extends Model
         'file_size',
         'file_category',
         'code_projet',
-        'uploaded_at'
+        'uploaded_at',
+        'fichier_id'
     ];
     
     protected $casts = [
         'uploaded_at' => 'datetime',
     ];
-    
-    public function projet()
+    protected $appends = ['url'];
+    // URL unique (GridFS si fichier_id, sinon legacy asset)
+    public function getUrlAttribute(): ?string
     {
-        return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
+        if ($this->fichier_id) {
+            return url('/api/fichiers/'.$this->fichier_id);
+        }
+        return $this->file_path ? asset($this->file_path) : null;
     }
+
+    
+    // (facultatif) compat :
+        public function getFileUrlAttribute() { return $this->url; }
+
+        public function projet()
+        {
+            return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
+        }
+    
     
     public function getFullPathAttribute()
     {
         return public_path($this->file_path);
     }
-    
-    public function getFileUrlAttribute()
-    {
-        return asset($this->file_path);
-    }
+     
 }

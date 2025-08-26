@@ -1,4 +1,6 @@
 <div class="step" id="step-3">
+    @isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
     <h5 class="text-secondary">🌍 Infrastructures</h5>
     <div class="row">
         <br>
@@ -42,10 +44,12 @@
 
 
 
-                            <button type="button" style="margin-top: 7px; float: right;" class="btn btn-secondary" id="addAction">
+                             @can("ajouter_ecran_" . $ecran->id)
+                             <button type="button" style="margin-top: 7px; float: right;" class="btn btn-secondary" id="addAction">
                                 <i class="fas fa-plus"></i>
                                 Action
                             </button>
+                             @endcan
                     </div>
             </fieldset>
             <div class="row mt-3 d-none" id="infrastructureField">
@@ -90,16 +94,20 @@
                         </div>
 
                         <div class="col">
+                            @can("ajouter_ecran_" . $ecran->id)
                             <button type="button" class="btn btn-secondary" id="addBtnBene">
                                 <i class="fas fa-plus"></i>
                                 Ajouter
                             </button>
+                            @endcan
                         </div>
                         <div class="col">
+                            @can("supprmer_ecran_" . $ecran->id)
                             <button type="button" class="btn btn-danger" style="width: 121px" id="deleteBtn">
                                 <i class="fas fa-trash"></i>
                                 Supprimer
                             </button>
+                            @endcan
                         </div>
                     </div>
                     <br><br>
@@ -108,6 +116,7 @@
                 <div class="row" style="align-items: center;">
                     <div class="col">
                         <div class="table-container">
+                            @can("consulter_ecran_" . $ecran->id)
                             <table id="beneficiaireTable">
                                 <thead>
                                     <tr>
@@ -122,6 +131,7 @@
 
                                 </tbody>
                             </table>
+                            @endcan
                         </div>
                     </div>
                 </div>
@@ -130,6 +140,7 @@
         <div>
 
         <div class="table table-bordered" >
+            @can("consulter_ecran_" . $ecran->id)
             <table id="tableActionMener" style="width: 100%">
                 <thead>
                     <tr>
@@ -149,6 +160,7 @@
                     <!-- Le corps du tableau sera géré dynamiquement via JavaScript -->
                 </tbody>
             </table>
+            @endcan
         </div>
     </div>
     <br>
@@ -157,11 +169,15 @@
             <button type="button" class="btn btn-secondary" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Précédent</button>
         </div>
         <div class="col text-end">
+            @can("ajouter_ecran_" . $ecran->id)
             <button type="button" class="btn btn-primary" onclick="saveStep3(nextStep)">Suivant <i class="fas fa-arrow-right"></i> </button>
+            @endcan
         </div>
         
     </div>
 </div>
+@endcan
+    @endisset
 <!--Sauvegarde temporaire -->
 <script>
     function saveStep3(callback = null) {

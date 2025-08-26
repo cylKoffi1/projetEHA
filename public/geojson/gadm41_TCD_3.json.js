@@ -1,4 +1,4 @@
-var statesDataLevel3 = {
+var statesDataLevel3 ={
   type: "FeatureCollection",
   name: "gadm41_TCD_3",
   crs: { type: "name", properties: { name: "urn:ogc:def:crs:OGC:1.3:CRS84" } },

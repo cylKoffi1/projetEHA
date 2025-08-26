@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+@isset($ecran)
+@can("consulter_ecran_" . $ecran->id)
 
 @if (session('success'))
 <script>
@@ -78,6 +80,7 @@
                             @endif
 
                             <div class="table">
+                                @can("consulter_ecran_" . $ecran->id)
                                 <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                                     <thead >
                                         <tr>
@@ -109,6 +112,7 @@
                                         @endforeach
                                     </tbody>
                                 </table>
+                                @endcan
                             </div>
 
                         </div>
@@ -118,6 +122,8 @@
 
         </div>
     </div>
+@endcan
+@endisset
 </section>
 
 <script>

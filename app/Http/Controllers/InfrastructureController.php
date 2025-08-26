@@ -17,6 +17,8 @@ use App\Models\ProjetInfrastructure;
 use App\Models\TypeCaracteristique;
 use App\Models\UniteDerivee;
 use App\Models\ValeurCaracteristique;
+use App\Services\FileProcService;
+use App\Services\GridFsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,9 @@ use Endroid\QrCode\Writer\PngWriter;
 
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\Color\Color;
+use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
 class InfrastructureController extends Controller
 {
 
@@ -249,20 +254,29 @@ class InfrastructureController extends Controller
      
              if ($request->hasFile('gallery')) {
                 foreach ($request->file('gallery') as $file) {
-                    if ($file->isValid()) {
-                        $filename = $infrastructure->code . '_Infras_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                        $path = 'Data/Infrastructure/';
-                        $file->move(public_path($path), $filename);
-                        Log::info("Image enregistrée", [
-                            'chemin' => $path . $filename,
-                            'infra_code' => $infrastructure->code
-                        ]);
-                        
-                        InfrastructureImage::create([
-                            'infrastructure_code' => $infrastructure->code,
-                            'chemin_image' => $path . $filename
-                        ]);
-                    }
+                    if (!$file || !$file->isValid()) continue;
+            
+                    // Envoi direct dans GridFS + enregistrement en MySQL (fichiers)
+                    $res = app(FileProcService::class)->handle([
+                        'owner_type'  => 'Infrastructure',
+                        'owner_id'    => (string)$infrastructure->code, 
+                        'categorie'   => 'INFRA_IMAGE',
+                        'file'        => $file,
+                        'uploaded_by' => optional($request->user())->id,
+                    ]);
+            
+                    // On ne remplit plus chemin_image (legacy) : on met l’ID du fichier
+                    InfrastructureImage::create([
+                        'infrastructure_code' => $infrastructure->code,
+                        'chemin_image'        => $res['id'],  
+                    ]);
+            
+                    Log::info("Image infra enregistrée", [
+                        'infra_code' => $infrastructure->code,
+                        'fichier_id' => $res['id'],
+                        'mime'       => $res['mime'] ?? null,
+                        'size'       => $res['size'] ?? null,
+                    ]);
                 }
             }
             
@@ -381,29 +395,38 @@ class InfrastructureController extends Controller
      
      
 
-    // Afficher les détails d'une infrastructure
-    public function show($id)
-    {
-        $infrastructure = Infrastructure::with([
-            'familleInfrastructure.caracteristiques.valeursPossibles',
-            'valeursCaracteristiques.caracteristique.type',
-            'valeursCaracteristiques.caracteristique.valeursPossibles',
-            'valeursCaracteristiques.unite',
-            'valeursCaracteristiques.uniteDerivee',
-            'localisation',
-        ])->findOrFail($id);
-        
-        
-       
-        $unitesDerivees = UniteDerivee::with('uniteBase')
-            ->get()
-            ->groupBy('id_unite_base');
-
-
-        $typeCaracteristiques = TypeCaracteristique::all();
-            
-        return view('infrastructures.show', compact('infrastructure', 'typeCaracteristiques', 'unitesDerivees'));
-    }
+     private function buildCaracData(Infrastructure $infra): array
+     {
+         $caracsFamille = optional($infra->familleInfrastructure)->caracteristiques ?? collect();
+         $valeurs       = $infra->valeursCaracteristiques->keyBy('idCaracteristique');
+         $groupedCaracs = $caracsFamille->groupBy('groupe');
+     
+         return compact('caracsFamille','valeurs','groupedCaracs');
+     }
+     
+     public function show($id)
+     {
+         $infrastructure = Infrastructure::with([
+             'familleInfrastructure.caracteristiques.valeursPossibles',
+             'valeursCaracteristiques.caracteristique.type',
+             'valeursCaracteristiques.caracteristique.valeursPossibles',
+             'valeursCaracteristiques.unite',
+             'valeursCaracteristiques.uniteDerivee',
+             'localisation',
+         ])->findOrFail($id);
+     
+         ['caracsFamille'=>$caracsFamille,'valeurs'=>$valeurs,'groupedCaracs'=>$groupedCaracs]
+             = $this->buildCaracData($infrastructure);
+     
+         $unitesDerivees       = UniteDerivee::with('uniteBase')->get()->groupBy('id_unite_base');
+         $typeCaracteristiques = TypeCaracteristique::all();
+     
+         return view('infrastructures.show', compact(
+             'infrastructure','typeCaracteristiques','unitesDerivees',
+             'caracsFamille','valeurs','groupedCaracs'
+         ));
+     }
+     
 
     // Afficher le formulaire d'édition
     public function edit($id)
@@ -485,25 +508,40 @@ class InfrastructureController extends Controller
         try {
             $image = InfrastructureImage::findOrFail($id);
     
+            // Vérifie que l'image appartient bien à cette infra
             if ($image->infrastructure_code !== $code) {
                 return response()->json(['error' => 'Code infrastructure non valide.'], 403);
             }
     
-            $imagePath = public_path($image->chemin_image);
-    
-            if (file_exists($imagePath)) {
-                unlink($imagePath);
+            // Cas 1 : stockage GridFS (chemin_image = id fichiers)
+            if ($image->chemin_image && ctype_digit((string)$image->chemin_image)) {
+                $row = DB::table('fichiers')->where('id', (int)$image->chemin_image)->first();
+                if ($row) {
+                    // Supprimer dans GridFS
+                    app(GridFsService::class)->delete($row->gridfs_id);
+                    // Supprimer la ligne MySQL
+                    DB::table('fichiers')->where('id', $row->id)->delete();
+                }
+            } 
+            // Cas 2 : fallback legacy (ancien fichier physique dans public/)
+            else {
+                $imagePath = public_path($image->chemin_image);
+                if ($image->chemin_image && file_exists($imagePath)) {
+                    unlink($imagePath);
+                }
             }
     
+            // Supprime l'enregistrement InfrastructureImage
             $image->delete();
     
             return response()->json(['success' => 'Image supprimée.']);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Image non trouvée.'], 404);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json(['error' => 'Erreur lors de la suppression : ' . $e->getMessage()], 500);
         }
     }
+    
     
  
      public function getByPays(Request $request)
