@@ -641,4 +641,326 @@ class sigAdminController extends Controller
             ], 500);
         }
     }
+
+
+
+
+
+        // -----------------------------
+    // Page
+    // -----------------------------
+    public function page(Request $request)
+    {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $user  = Auth::user();
+
+        $alpha3 = session('pays_selectionne');
+        if (!$alpha3) {
+            return redirect()->route('projets.index')
+                ->with('error', 'Vous n\'avez pas de pays.');
+        }
+
+        $pays = Pays::where('alpha3', $alpha3)->first();
+        if (!$pays) {
+            return redirect()->route('projets.index')
+                ->with('error', 'Le pays sélectionné est introuvable.');
+        }
+
+        $codeAlpha3 = $pays->alpha3;
+        $codeZoom   = Pays::select('minZoom', 'maxZoom')->where('alpha3', $codeAlpha3)->first();
+
+        // Niveaux admin (libellés)
+        $niveau = DB::table('decoupage_admin_pays')
+            ->join('decoupage_administratif', 'decoupage_admin_pays.code_decoupage', '=', 'decoupage_administratif.code_decoupage')
+            ->where('id_pays', $pays->id)
+            ->select('decoupage_admin_pays.code_decoupage','decoupage_admin_pays.num_niveau_decoupage','decoupage_administratif.libelle_decoupage')
+            ->orderBy('num_niveau_decoupage')
+            ->get();
+
+        return view('GestionSig.sigInfra', compact('ecran','codeZoom','niveau','codeAlpha3'));
+    }
+
+    // -----------------------------
+    // Filtres (Groupes, Domaines, Sous-domaines) — sans session projet
+    // -----------------------------
+    public function filters(Request $request)
+    {
+        $alpha3 = session('pays_selectionne');
+        if (!$alpha3) return response()->json(['error' => 'pays_selectionne manquant'], 400);
+
+        // Groupes projets présents soit dans infrastructures, soit dans projets liés à des infrastructures
+        $groupes = DB::table('groupe_projet as g')
+            ->select('g.code','g.libelle')
+            ->whereIn('g.code', function($q){
+                $q->from('infrastructures')->select('code_groupe_projet')->whereNotNull('code_groupe_projet');
+            })
+            ->orWhereIn('g.code', function($q){
+                $q->from('projets')->select(DB::raw('SUBSTRING(code_projet,4,3)'));
+            })
+            ->orderBy('g.libelle')
+            ->get();
+
+        // Domaines/Sous-domaines (tous — on filtrera côté front)
+        $domaines = Domaine::select('code','libelle','groupe_projet_code')->orderBy('libelle')->get();
+        $sous = SousDomaine::select('code_sous_domaine','lib_sous_domaine','code_domaine','code_groupe_projet')->orderBy('lib_sous_domaine')->get();
+
+        return response()->json([
+            'groupes'   => $groupes,
+            'domaines'  => $domaines,
+            'sous'      => $sous,
+        ]);
+    }
+
+    // -----------------------------
+    // Agrégat pour la carte
+    //   - Unité = INFRASTRUCTURE bénéficiaire (via table jouir)
+    //   - Métriques:
+    //       * count = nb d'infras bénéficiaires
+    //       * cost  = somme des coûts de projets répartis entre les infras concernées
+    //   - Découpage par niveaux = préfixes de code_localite (2 / 4 / 6)
+    //   - byDomain = basé sur code_sous_domaine du PROJET (prefix 2 = domaine)
+    // -----------------------------
+    public function aggregate(Request $request)
+    {
+        $alpha3  = session('pays_selectionne');
+        if (!$alpha3) return response()->json(['error'=>'pays_selectionne manquant'], 400);
+
+        $group   = $request->input('groupe');        // optionnel (code groupe)
+        $domaine = $request->input('domaine');       // optionnel (2 chars)
+        $sous    = $request->input('sous');          // optionnel (code_sous_domaine)
+        $dateDeb = $request->input('start_date');    // optionnel
+        $dateFin = $request->input('end_date');      // optionnel
+        $finance = $request->input('finance');       // 'public' | 'private' | 'cumul' (par défaut)
+
+        // Récupérer les couples Projet-Infrastructure via JOUIR
+        // -> Jointure pour compter le nb d'infras par projet afin de répartir le coût sans surévaluer
+        $sub = DB::table('jouir as j')
+            ->join('projets as p', 'p.code_projet', '=', 'j.code_projet')
+            ->join('infrastructures as i', 'i.code', '=', 'j.code_Infrastructure')
+            ->where('i.code_pays', $alpha3)
+            ->when($group, function($q) use ($group) {
+                // filtre soit sur groupe du projet (dans code_projet) soit sur l’infra
+                $q->where(function($x) use ($group){
+                    $x->where(DB::raw('SUBSTRING(p.code_projet,4,3)'), $group)
+                      ->orWhere('i.code_groupe_projet', $group);
+                });
+            })
+            ->when($domaine, function($q) use ($domaine){
+                $q->where(DB::raw('LEFT(p.code_sous_domaine,2)'), $domaine);
+            })
+            ->when($sous, function($q) use ($sous){
+                $q->where('p.code_sous_domaine', 'like', $sous.'%');
+            })
+            ->when($dateDeb, function($q) use ($dateDeb){
+                $q->whereDate('p.date_demarrage_prevue', '>=', $dateDeb);
+            })
+            ->when($dateFin, function($q) use ($dateFin){
+                $q->whereDate('p.date_fin_prevue', '<=', $dateFin);
+            })
+            ->select([
+                'p.code_projet',
+                'p.libelle_projet',
+                'p.cout_projet',
+                'p.code_sous_domaine',
+                'p.code_devise',
+                DB::raw("SUBSTRING(p.code_projet,7,1) as type_fin"), // '1' public / '2' privé
+                'i.code as infra_code',
+                'i.libelle as infra_lib',
+                'i.code_localite',
+            ]);
+
+        $rows = $sub->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json(['projets'=>[]]);
+        }
+
+        // Comptage des infras par projet pour répartir le coût
+        $infrasParProjet = [];
+        foreach ($rows as $r) {
+            $infrasParProjet[$r->code_projet] = ($infrasParProjet[$r->code_projet] ?? 0) + 1;
+        }
+
+        // Agrégation
+        $agg = [];
+        $indexNames = [];
+        foreach ($rows as $r) {
+            // allocation coût au prorata des infras
+            $alloc = 0;
+            if (!empty($r->cout_projet) && $infrasParProjet[$r->code_projet] > 0) {
+                $alloc = (float)$r->cout_projet / $infrasParProjet[$r->code_projet];
+            }
+
+            $domain2 = substr($r->code_sous_domaine ?? '00', 0, 2);
+            $isPublic = ((string)$r->type_fin) === '1';
+
+            // codes par niveau (préfixes)
+            $niv1 = substr($r->code_localite ?? '', 0, 2);
+            $niv2 = substr($r->code_localite ?? '', 0, 4);
+            $niv3 = substr($r->code_localite ?? '', 0, 6);
+
+            foreach ([
+                1 => $niv1,
+                2 => $niv2,
+                3 => $niv3,
+            ] as $level => $code) {
+                if (!$code) continue;
+
+                $key = $code;
+                if (!isset($agg[$key])) {
+                    $agg[$key] = [
+                        'name'     => null, // complété ensuite depuis LocalitesPays
+                        'level'    => $level,
+                        'code'     => $code,
+                        // métriques
+                        'count'    => 0,      // nb d'infras
+                        'public'   => 0,      // nb d'infras (classées selon type projet)
+                        'private'  => 0,
+                        'cost'     => 0.0,    // coût réparti
+                        'byDomain' => [],     // domaine-> {count, cost, public, private}
+                    ];
+                }
+
+                // filtre finance à la volée (pour cohérence avec carte)
+                $okFinance = ($finance === 'public' && $isPublic)
+                          || ($finance === 'private' && !$isPublic)
+                          || ($finance === 'cumul' || empty($finance));
+
+                if ($okFinance) {
+                    // NB: on compte l'INFRA (clé infra_code) une seule fois par niveau+code
+                    //    → on peut dédoublonner par infra_code+code de niveau
+                    $uniqKey = $key.'|'.$r->infra_code;
+                    static $seen = [];
+                    if (!isset($seen[$uniqKey])) {
+                        $agg[$key]['count'] += 1;
+                        $isPublic ? $agg[$key]['public']++ : $agg[$key]['private']++;
+                        $seen[$uniqKey] = true;
+                    }
+                    $agg[$key]['cost']  += $alloc;
+
+                    if (!isset($agg[$key]['byDomain'][$domain2])) {
+                        $agg[$key]['byDomain'][$domain2] = ['count'=>0,'cost'=>0.0,'public'=>0,'private'=>0];
+                    }
+                    // Dédoublonnage aussi par domaine pour la même infra
+                    $uniqDomKey = $key.'|'.$domain2.'|'.$r->infra_code;
+                    static $seenDom = [];
+                    if (!isset($seenDom[$uniqDomKey])) {
+                        $agg[$key]['byDomain'][$domain2]['count'] += 1;
+                        $isPublic
+                            ? $agg[$key]['byDomain'][$domain2]['public']++
+                            : $agg[$key]['byDomain'][$domain2]['private']++;
+                        $seenDom[$uniqDomKey] = true;
+                    }
+                    $agg[$key]['byDomain'][$domain2]['cost'] += $alloc;
+                }
+            }
+        }
+
+        // Libellés de localités
+        $pays = Pays::where('alpha3', $alpha3)->first();
+        $locs = LocalitesPays::where('id_pays', $pays->id)->get(['id_niveau','code_rattachement','libelle']);
+        $idxNames = [];
+        foreach ($locs as $l) $idxNames[$l->code_rattachement] = $l->libelle;
+
+        foreach ($agg as $k => $v) {
+            $agg[$k]['name'] = $idxNames[$v['code']] ?? $v['code'];
+        }
+
+        return response()->json([
+            'projets' => array_values($agg)
+        ]);
+    }
+
+    // -----------------------------
+    // Détails pour le drawer
+    // -----------------------------
+    public function details(Request $request)
+    {
+        $alpha3 = session('pays_selectionne');
+        if (!$alpha3) return response()->json(['error'=>'pays_selectionne manquant'], 400);
+
+        $codePrefix = $request->input('code');     // ex: 01 / 0101 / 010101
+        $finance    = $request->input('filter','cumul'); // 'public'|'private'|'cumul'
+        $domaine2   = $request->input('domain');   // ex: '01' (optionnel)
+        $limit      = (int) $request->input('limit', 1000);
+
+        if (!$codePrefix) return response()->json(['error'=>'Paramètre code requis'], 422);
+
+        $rows = DB::table('jouir as j')
+            ->join('projets as p', 'p.code_projet', '=', 'j.code_projet')
+            ->join('infrastructures as i', 'i.code', '=', 'j.code_Infrastructure')
+            ->where('i.code_pays', $alpha3)
+            ->where('i.code_localite', 'like', $codePrefix.'%')
+            ->when($domaine2, fn($q) => $q->where(DB::raw('LEFT(p.code_sous_domaine,2)'), $domaine2))
+            ->select([
+                'p.code_projet','p.libelle_projet','p.cout_projet','p.code_devise',
+                DB::raw("SUBSTRING(p.code_projet,7,1) as type_fin"),
+                'i.code as infra_code','i.libelle as infra_lib','i.latitude','i.longitude'
+            ])
+            ->limit($limit)
+            ->get();
+
+        // Finance filter
+        $filtered = $rows->filter(function($r) use ($finance) {
+            if ($finance === 'public')  return ((string)$r->type_fin) === '1';
+            if ($finance === 'private') return ((string)$r->type_fin) !== '1';
+            return true;
+        })->values();
+
+        // Réponse structurée (projets + infras distinctes)
+        $projects = $filtered->map(fn($r) => [
+            'code_projet'    => $r->code_projet,
+            'libelle_projet' => $r->libelle_projet,
+            'cout_projet'    => (float)($r->cout_projet ?? 0),
+            'code_devise'    => $r->code_devise,
+            'is_public'      => ((string)$r->type_fin) === '1',
+            'infra_code'     => $r->infra_code,
+            'infra_lib'      => $r->infra_lib,
+        ]);
+
+        $infras = $filtered->map(fn($r) => [
+            'code'      => $r->infra_code,
+            'libelle'   => $r->infra_lib,
+            'lat'       => $r->latitude,
+            'lng'       => $r->longitude,
+        ])->unique('code')->values();
+
+        return response()->json([
+            'count'     => $projects->count(),
+            'projects'  => $projects,
+            'infras'    => $infras,
+        ]);
+    }
+
+    // -----------------------------
+    // Légende dynamique
+    //  - metric=count → seuils en nb d’infras
+    //  - metric=cost  → seuils en montant (unité brute; l’affichage divisera en G si besoin)
+    // -----------------------------
+    public function legend(Request $request)
+    {
+        $metric = $request->input('metric', 'count'); // 'count' | 'cost'
+
+        // Exemple simple : 5 classes
+        $seuils = ($metric === 'count')
+            ? [
+                ['borneInf'=>0,'borneSup'=>0,  'couleur'=>'#f1f5f9'],
+                ['borneInf'=>1,'borneSup'=>2,  'couleur'=>'#c7d2fe'],
+                ['borneInf'=>3,'borneSup'=>5,  'couleur'=>'#93c5fd'],
+                ['borneInf'=>6,'borneSup'=>10, 'couleur'=>'#60a5fa'],
+                ['borneInf'=>11,'borneSup'=>null,'couleur'=>'#2563eb'],
+              ]
+            : [
+                ['borneInf'=>0,            'borneSup'=>0,             'couleur'=>'#f1f5f9'],
+                ['borneInf'=>1_000_000,    'borneSup'=>500_000_000,   'couleur'=>'#fde68a'],
+                ['borneInf'=>500_000_000,  'borneSup'=>2_000_000_000, 'couleur'=>'#fbbf24'],
+                ['borneInf'=>2_000_000_000,'borneSup'=>5_000_000_000, 'couleur'=>'#f59e0b'],
+                ['borneInf'=>5_000_000_000,'borneSup'=>null,          'couleur'=>'#d97706'],
+              ];
+
+        return response()->json([
+            'label'  => $metric === 'count' ? 'Nombre d’infrastructures bénéficiaires' : 'Montant réparti des projets',
+            'seuils' => $seuils,
+        ]);
+    }
 }

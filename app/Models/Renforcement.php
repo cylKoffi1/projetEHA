@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,57 +10,103 @@ class Renforcement extends Model
     use HasFactory;
 
     protected $table = 'renforcement_capacites';
-
     protected $primaryKey = 'code_renforcement';
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['code_renforcement', 'titre', 'description', 'date_debut', 'date_fin'];
-
-    // ✅ Bénéficiaires via table pivot
-    public function beneficiaires()
+    protected $fillable = [
+        'code_renforcement',
+        'titre',
+        'description',
+        'actionTypeId',
+        'thematique',
+        'organisme',
+        'lieu',
+        'modaliteId',
+        'nb_participants_prev',
+        'nb_participants_effectif',
+        'cout_previsionnel',
+        'cout_reel',
+        'source_financement',
+        'pretest_moy',
+        'posttest_moy',
+        'statutId',
+        'motif_annulation',
+        'date_debut',
+        'date_fin',
+    ];
+    public function fichiers()
     {
-        return $this->belongsToMany(Acteur::class, 'renforcement_beneficiaire', 'renforcement_capacite', 'code_acteur');
-    }
-
-    // ✅ Projets via table pivot
-    public function projets()
-    {
-        return $this->belongsToMany(Projet::class, 'renforcement_projet', 'renforcement_capacite', 'code_projet');
+        // owner_id est une string (code_renforcement)
+        return $this->hasMany(Fichier::class, 'owner_id', 'code_renforcement')
+            ->where('owner_type', 'Renforcement')
+            ->orderByDesc('uploaded_at');
     }
     
+    /* ================= Relations ================= */
+
+public function beneficiaires()
+{
+    return $this->belongsToMany(
+        Acteur::class,
+        'renforcement_beneficiaire',
+        'code_renforcement',
+        'code_acteur'
+    )->withTimestamps(); // <-- important si ta table possède created_at/updated_at
+}
+
+public function projets()
+{
+    return $this->belongsToMany(
+        Projet::class,
+        'renforcement_projet',
+        'code_renforcement',
+        'code_projet'
+    )->withTimestamps();
+}
+
+    public function actionType()
+    {
+        return $this->belongsTo(ActionType::class, 'actionTypeId', 'id');
+    }
+    public function modalite()
+    {
+        return $this->belongsTo(Modalite::class, 'modaliteId', 'id');
+    }
+    
+    public function statut()
+    {
+        return $this->belongsTo(StatutOperation::class, 'statutId', 'Id');
+    }
+    
+    /* ================= Utilitaires ================= */
+
+    // Générer un code unique type CIV_BTP_RF_2025_08_001
     public static function generateCodeRenforcement($country, $group)
     {
         $month = now()->format('m');
-        $year = now()->format('Y');
-        $base = "{$country}_{$group}_RF_{$year}_{$month}_";
-    
-        // Cherche le dernier code avec cette racine
-        $last = self::where('code_renforcement', 'like', $base . '%')
+        $year  = now()->format('Y');
+        $base  = "{$country}_{$group}_RF_{$year}_{$month}_";
+
+        $last = self::where('code_renforcement', 'like', $base.'%')
                     ->orderByDesc('code_renforcement')
                     ->first();
-    
+
         if ($last) {
             $lastNumber = intval(substr($last->code_renforcement, -3));
-            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+            $newNumber  = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
         } else {
             $newNumber = '001';
         }
-    
-        return $base . $newNumber;
+
+        return $base.$newNumber;
     }
-    
-    // Cette méthode est appelée lorsque l'événement 'deleting' est déclenché
-    public static function boot()
+
+    // Supprimer automatiquement les relations pivot lors de la suppression
+    protected static function booted()
     {
-        parent::boot();
-
-        // Supprimer les relations avec les tables pivot lors de la suppression d'un renforcement
         static::deleting(function ($renforcement) {
-            // Détacher les bénéficiaires liés
             $renforcement->beneficiaires()->detach();
-
-            // Détacher les projets liés
             $renforcement->projets()->detach();
         });
     }

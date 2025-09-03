@@ -77,9 +77,21 @@ Route::get('/filtrer-projets', [sigAdminController::class, 'getFiltreOptionsEtPr
 // Nouveau: Détails projets pour un code/niveau donné
 Route::get('/project-details', [sigAdminController::class, 'getProjectDetails']);
 
-Route::middleware('auth')->group(function () {
-    Route::post('/fichiers', [FichierController::class, 'upload']);
-    Route::get('/fichiers/{id}', [FichierController::class, 'download']);
-    Route::delete('/fichiers/{id}', [FichierController::class, 'destroy']);
 
+Route::middleware('auth')->group(function () {
+    Route::post('/fichiers',        [FichierController::class, 'upload'])->name('fichiers.upload');
+    Route::get('/fichiers/{id}',    [FichierController::class, 'download'])->name('fichiers.download');
+    Route::delete('/fichiers/{id}', [FichierController::class, 'destroy'])->name('fichiers.destroy');
+});
+
+// APIs carte Infras
+Route::prefix('api/infras')->group(function () {
+    // Agrégat pour la carte (par localité & niveaux)
+    Route::get('aggregate', [sigAdminController::class, 'aggregate']);
+    // Détails (drawer) — projets & infras pour une localité donnée
+    Route::get('details',   [sigAdminController::class, 'details']);
+    // Légende dynamique (cohérente avec métrique)
+    Route::get('legend',    [sigAdminController::class, 'legend']);
+    // Listes pour filtres (groupes, domaines, sous-domaines)
+    Route::get('filters',   [sigAdminController::class, 'filters']);
 });

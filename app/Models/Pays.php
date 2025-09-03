@@ -13,7 +13,7 @@ class Pays extends Model
 
     protected $table = 'pays';
     protected $primaryKey = 'id';
-    protected $keyType = 'string';
+    protected $keyType = 'int';
     // Définir les colonnes qui peuvent être remplies
     protected $fillable = [
         'code',
@@ -51,7 +51,9 @@ class Pays extends Model
         }
         return null;
     }
-
+    public static function idFromAlpha3(string $alpha3): ?int {
+        return self::where('alpha3', $alpha3)->value('id');
+    }
     /**
      * Récupère les groupes projets associés à ce pays.
      */

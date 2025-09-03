@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class FileProcService
 {
-    private const ALLOWED_CATEGORIES = ['PHOTO','PLAN','BDC','RECEPTION','FACTURE','OP','DOC_PROJET','REGLEMENT','ATTESTATION','ARMOIRIE','DRAPEAU','AUTRE',
+    private const ALLOWED_CATEGORIES = ['DOC_RENFO', 'PHOTO','PLAN','BDC','RECEPTION','FACTURE','OP','DOC_PROJET','REGLEMENT','ATTESTATION','ARMOIRIE','DRAPEAU','AUTRE',
     'AVANCEMENT_PHOTO','INFRA_IMAGE'];
     private const BLOCKED_MIME = ['application/x-msdownload','application/x-dosexec','application/x-sh','application/x-executable'];
 

@@ -9,7 +9,6 @@ class RenforcementBeneficiaire extends Model
 {
     use HasFactory;
     protected $table = 'renforcement_beneficiaire';
-    public $timestamps = false;
-    protected $fillable = ['renforcement_capacite', 'code_acteur'];
+    protected $fillable = ['renforcement_capacite', 'code_acteur','created_at', 'updated_at'];
     
 }

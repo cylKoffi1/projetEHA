@@ -39,7 +39,15 @@ class Projet extends Model
     {
         return $this->hasMany(Profiter::class, 'code_projet', 'code_projet');
     }
-    
+    public function renforcements()
+    {
+        return $this->belongsToMany(
+            Renforcement::class,
+            'renforcement_projet',
+            'code_projet',
+            'code_renforcement'
+        );
+    }
     public function beneficiairesInfrastructures()
     {
         return $this->hasMany(Jouir::class, 'code_projet', 'code_projet');

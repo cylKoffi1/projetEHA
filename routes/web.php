@@ -154,7 +154,13 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     // 👉 Nouveau : stats et liste
     Route::get('stats', [GestionDemographieController::class, 'stats'])->name('habitants.stats');
     Route::get('entries', [GestionDemographieController::class, 'entries'])->name('habitants.entries');
-    
+    /****************************LOCALITE PAYS  ************************************************/
+    Route::get('admin/localites',         [GestionDemographieController::class, 'indexLocalite'])->name('localites.index');
+    Route::get('admin/localites/schema',   [GestionDemographieController::class, 'schemaLocalite']);
+    Route::get('admin/localites/children', [GestionDemographieController::class, 'localitesPays']);
+    Route::post('admin/localites',        [GestionDemographieController::class, 'storeLocalite'])->name('localites.store');
+    Route::post('admin/localites/import',  [GestionDemographieController::class, 'importLocalite'])->name('localites.import');
+    Route::get('admin/localites/template', [GestionDemographieController::class, 'templateLocalite'])->name('localites.template');
     /* ***********************  Paramètre généraux *******************************/
     Route::get('admin/statutProjet', [PlateformeController::class, 'statutProjet'])->name('statutProjet');
     Route::get('admin/typeBailleur', [PlateformeController::class, 'typeBailleur'])->name('typeBailleur');
@@ -429,221 +435,228 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::get('admin/planifierProjet', [GanttController::class, 'index']);
             Route::get('/data', [GanttController::class ,'get']);
         /********************RENFORCEMENT***************** */
-            Route::get('admin/renforcementProjet', [EtudeProjet::class, 'renfo'])->name('renforcements.index');
-            Route::post('/renforcementProjet/store', [EtudeProjet::class, 'storerenfo'])->name('renforcements.store');
-            Route::put('/renforcementProjet/update/{code}', [EtudeProjet::class, 'updaterenfo'])->name('renforcements.update');
-            Route::delete('/renforcementProjet/delete/{code}', [EtudeProjet::class, 'destroyrenfo'])->name('renforcements.destroy');
-        /****************************ACTIVITE CONNEXE******************** */
-            Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
-            Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
-            Route::delete('/activiteDelete/{id}', [EtudeProjet::class, 'deleteActivite']);
-            Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('tavaux_connexes.update');
+         // LISTE / FORMULAIRE écran
+        Route::get('admin/renforcementProjet', [EtudeProjet::class, 'indexRenfo'])->name('renforcements.index');
+        // changer le statut (démarrer, achever, reporter, annuler)
+        Route::put('/renforcementProjet/status/{code}', [EtudeProjet::class, 'updateRenfoStatus'])->name('renforcements.status');
 
-        /**************************** REATTRIBUTION DE PROJET ******************************/
-            Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('maitre_ouvrage.index');
-            Route::get('/get-execution-by-projet/{code_projet}', [ProjetController::class, 'getExecutionByProjet']);
-            Route::get('/getProjetADeleted/{code_projet}', [ProjetController::class, 'getProjetSupprimer']);
-            Route::prefix('reatributionProjet')->group(function () {
-               Route::post('/', [ProjetController::class, 'storeReatt'])->name('maitre_ouvrage.store');
-                Route::put('/{id}', [ProjetController::class, 'updateReatt'])->name('maitre_ouvrage.update');
-                Route::delete('/{id}', [ProjetController::class, 'destroyReatt'])->name('maitre_ouvrage.destroy');
+        // CRUD
+        Route::post('/renforcementProjet/store', [EtudeProjet::class, 'storeRenfo'])->name('renforcements.store');
+
+        Route::put('/renforcementProjet/update/{code}', [EtudeProjet::class, 'updateRenfo'])->name('renforcements.update');
+
+        Route::delete('/renforcementProjet/delete/{code}', [EtudeProjet::class, 'destroyRenfo'])->name('renforcements.destroy');
+                /****************************ACTIVITE CONNEXE******************** */
+                    Route::get('admin/activiteConnexeProjet',[EtudeProjet::class, 'activite'])->name('activite.index');
+                    Route::post('admin/activiteConnexeProjet', [EtudeProjet::class, 'storeConnexe'])->name('travaux_connexes.store');
+                    Route::delete('/activiteDelete/{id}', [EtudeProjet::class, 'deleteActivite'])->name('travaux_connexes.destroy');
+                    Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('travaux_connexes.update');
+                /**************************** REATTRIBUTION DE PROJET ******************************/
+                    Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('maitre_ouvrage.index');
+                    Route::get('/get-execution-by-projet/{code_projet}', [ProjetController::class, 'getExecutionByProjet']);
+                    Route::get('/getProjetADeleted/{code_projet}', [ProjetController::class, 'getProjetSupprimer']);
+                    Route::prefix('reatributionProjet')->group(function () {
+                    Route::post('/', [ProjetController::class, 'storeReatt'])->name('maitre_ouvrage.store');
+                        Route::put('/{id}', [ProjetController::class, 'updateReatt'])->name('maitre_ouvrage.update');
+                        Route::delete('/{id}', [ProjetController::class, 'destroyReatt'])->name('maitre_ouvrage.destroy');
+                    });
+                /**************************** ANNULER DE PROJET ******************************/
+                Route::get('admin/annulProjet', [ProjetController::class, 'formAnnulation'])->name('projets.annulation.form');
+                Route::post('/projets/annulation', [ProjetController::class, 'annulerProjet'])->name('projets.annulation.store');
+                Route::post('/projets/redemarrer', [ProjetController::class, 'redemarrerProjet'])->name('projets.redemarrer');
+
+                /*******************************SUSPENDRE PROJET ***************************** */
+                Route::get('admin/attenteProjet', [ProjetController::class, 'formSuspension'])->name('projets.suspension.form');
+                Route::post('/projets/suspendre', [ProjetController::class, 'suspendreProjet'])->name('projets.suspension.store');
+
+
+
+            /**************************** GESTION DES EDITIONS **********************************/
+            
+            Route::get('admin/editionProjet', [AnnexeController::class, 'index'])->name('admin.edition.projet');
+            // Routes pour les exports PDF
+                Route::get('/pdf/projet/{code}', [AnnexeController::class, 'exportProjet'])->name('pdf.projet');
+                Route::get('/pdf/acteur/{code}', [AnnexeController::class, 'exportActeur'])->name('pdf.acteur');
+                Route::get('/pdf/contrat/{code}', [AnnexeController::class, 'exportContrat'])->name('pdf.contrat');
+                Route::get('/pdf/infrastructure/{code}', [AnnexeController::class, 'exportInfrastructure'])->name('pdf.infrastructure');
+                
+                // Route pour l'export multiple
+                Route::post('/pdf/export-multiple', [AnnexeController::class, 'exportMultiple'])->name('pdf.export.multiple');
+        
+            Route::get('/projets/{projet}', [AnnexeController::class, 'show'])
+            ->name('projets.show');
+            //***************** REALISATION ************* */
+            Route::get('admin/realise/PramatreRealise', [RealiseProjetController::class, 'PramatreRealise']);
+            Route::get('admin/realise', [RealiseProjetController::class, 'realise']);
+            Route::post('/get-project-details', [RealiseProjetController::class, 'getProjectDetails'])->name('get.project.details');
+            Route::post('/fetch-project-details', [RealiseProjetController::class, 'fetchDetails'])->name('fetch.project.details');
+            Route::get('/admin/realise', [RealiseProjetController::class, 'VoirListe'])->name('projet.realise');
+            Route::get('/fetchProjectDetails', [RealiseProjetController::class, 'fetchProjectDetails']);
+            Route::get('/getProjetData', [RealiseProjetController::class, 'getProjetData']);
+            Route::get('/getBeneficiaires', [RealiseProjetController::class, 'getBeneficiaires']);
+            Route::get('/getNumeroOrdre', [RealiseProjetController::class, 'getNumeroOrdre']);
+            Route::get('/getFamilleInfrastructure', [RealiseProjetController::class, 'getFamilleInfrastructure']);
+            Route::get('/getInfrastructuresByProjet', [RealiseProjetController::class, 'getInfrastructuresByProjet']);
+            Route::get('/get-familles-by-projet', [RealiseProjetController::class, 'getFamillesByProjet']);
+            Route::get('/recuperer-caracteristiques', [RealiseProjetController::class, 'recupererCaracteristiques'])
+            ->name('projets.recuperer.caracteristiques');
+
+            //Route::get('/getDataDateEffective', [RealiseProjetController::class, 'obtenirDonneesProjet'])->name('obtenir-donnees-projet');
+            Route::get('admin/etatAvancement', [RealiseProjetController::class, 'etatAvancement']);
+            Route::post('/admin/realise', [RealiseProjetController::class,'enregistrerBeneficiaires'])->name('enregistrer.beneficiaires');
+            Route::get('/recuperer-beneficiaires', [RealiseProjetController::class, 'recupererBeneficiaires'])->name('recuperer-beneficiaires');
+            Route::post('/enregistrer-dates-effectives', [RealiseProjetController::class, 'enregistrerDatesEffectives'])->name('enregistrer-dates-effectives');
+            Route::get('/check-code-projet', [RealiseProjetController::class, 'checkCodeProjet']);
+            Route::post('/enregistrer-niveau-avancement', [RealiseProjetController::class, 'enregistrerNiveauAvancement'])->name('enregistrer.niveauAvancement');
+            Route::post('/enregistrer-dateseffectives', [RealiseProjetController::class, 'enregistrerDateFinEffective'])->name('enregistrer.dateFinEffective');
+            Route::get('/get-historique-avancement', [RealiseProjetController::class, 'getHistorique'])->name('get.historique.avancement');
+            Route::post('/save-avancement', [RealiseProjetController::class, 'saveAvancement'])->name('save.avancement');
+            Route::delete('/delete-suivi/{id}', [RealiseProjetController::class, 'deleteSuivi'])->name('delete.suivi');
+            Route::post('/caracteristiques/store', [RealiseProjetController::class, 'storeCaracteristiques'])->name('caracteristique.store');
+            Route::get('/get-donnees-suivi', [RealiseProjetController::class, 'getDonneesFormulaireSimplifie'])->name('get.donnees.suivi');
+
+            Route::get('/verifier-projet-finalisable', [RealiseProjetController::class, 'verifierProjetFinalisable'])->name('verifier.projet.finalisable');
+
+            Route::get('/get-project-status/{id}', [ProjectStatusController::class, 'getProjectStatus']);    //***************** GESTION FINANCIERE ************* */
+            Route::get('admin/graphique', [representationGraphique::class, 'graphique']);
+            Route::get('admin/pib', [pibController::class, 'pib']);
+            Route::post('admin/pib/store', [pibController::class, 'store'])->name('pib.store');
+            Route::put('admin/pib/update/{id}', [pibController::class, 'update'])->name('pib.update');
+            Route::delete('admin/pib/destroy/{id}', [pibController::class, 'destroy'])->name('pib.destroy');
+
+
+            //********************CLOTURER **************************//
+            Route::get('admin/cloture', [cloturerProjetController::class, 'cloturer']);
+            Route::post('/cloturer-projet', [cloturerProjetController::class, 'cloturerProjet'])->name('cloturer_projet');
+            //***************** GESTION SIG ************* */
+            Route::get('admin/carte', [sigAdminController::class, 'carte']);
+            Route::get('admin/autresRequetes', [InfrastructureMapController::class, 'showMap'])->name('infrastructures.map');
+            Route::get('/api/infrastructures/geojson', [InfrastructureMapController::class, 'getInfrastructuresGeoJson']);
+            Route::get('/api/infrastructures/familles-colors', [InfrastructureMapController::class, 'getFamillesColors']);
+            
+            //Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
+            Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
+            Route::get('admin/autresRequetes', [sigAdminController::class, 'page'])->name('sig.infras.page');
+
+            Route::get('/get-projet-data', 'ProjetController@getProjetData');
+
+            Route::get('/dash', function () {
+                return view('dash');
+            })->name('dash');
+
+
+            /**************************** GESTION DES STATISTIQUES **********************************/
+
+            Route::prefix('admin')->group(function () {
+                Route::get('stat_nombre_projet', [StatController::class, 'statNombreProjet'])->name('tb.nombre.vue');
+                Route::get('stat-finance',       [StatController::class, 'statFinance'])->name('tb.finance.vue');
             });
-        /**************************** ANNULER DE PROJET ******************************/
-        Route::get('admin/annulProjet', [ProjetController::class, 'formAnnulation'])->name('projets.annulation.form');
-        Route::post('/projets/annulation', [ProjetController::class, 'annulerProjet'])->name('projets.annulation.store');
-        Route::post('/projets/redemarrer', [ProjetController::class, 'redemarrerProjet'])->name('projets.redemarrer');
+            
+            Route::get('/nombreProjetLien',            [StatController::class, 'statNombreData'])->name('nombre.data');
+            Route::get('/stat-finance_projet/data',    [StatController::class, 'statFinanceData'])->name('finance.data');
+            
+            /**************************** GESTION DES UTILISATEURS **********************************/
+            Route::get('admin/personnel', [UserController::class, 'personnel'])->name('users.personnel');
+            Route::get('admin/personnel/create', [UserController::class, 'createPersonnel'])->name('personnel.create');
+            Route::post('admin/personnel/store', [UserController::class, 'storePersonnel'])->name('personnel.store');
+            Route::delete('/admin/personnel/{code_personnel}', [UserController::class, 'destroy'])->name('utilisateurs.destroy');
+            Route::get('/domaines/{groupeProjet}', [UserController::class, 'getDomainesByGroupeProjet']);
+            Route::get('/sous-domaines/{domaine}/{groupeProjet}', [UserController::class, 'getSousDomaines']);
+            
+            Route::get('admin/personnel/details-personne/{personneId}', [UserController::class, 'detailsPersonne'])->name('personnel.details');
+            Route::get('admin/personnel/get-personne/{personneId}', [UserController::class, 'getPersonne'])->name('personne.updateForm');
+            Route::post('admin/personnel/update/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
+            Route::get('/check-email-personne', [UserController::class, 'checkEmail_personne']);
+            Route::get('admin/get-personne-email/{personnelId}', [UserController::class, 'getPersonneInfos'])->name('personne.get');
+            Route::post('/SousDomaine_Domaine-ajax', [UserController::class, 'getDomaines']);
+            Route::post('/changer-mot-de-passe', [UtilisateurController::class, 'changePassword'])->name('password.change');
 
-        /*******************************SUSPENDRE PROJET ***************************** */
-        Route::get('admin/attenteProjet', [ProjetController::class, 'formSuspension'])->name('projets.suspension.form');
-        Route::post('/projets/suspendre', [ProjetController::class, 'suspendreProjet'])->name('projets.suspension.store');
+            Route::get('admin/users', [UserController::class, 'users'])->name('users.users');
+            Route::get('admin/users/create', [UserController::class, 'create'])->name('users.create');
+            Route::post('/fetch-sous-domaine', [UserController::class, 'fetchSousDomaine'])->name('fetch.sous_domaine');
+            Route::post('/admin/users/store', [UserController::class, 'store'])->name('users.store');
+            Route::get('/check-username', [UserController::class, 'checkUsername']);
+            Route::get('/check-email', [UserController::class, 'checkEmail']);
+            Route::get('admin/users/get-user/{userId}', [UserController::class, 'getUser'])->name('users.get');
+            Route::get('/admin/users/details-user/{userId}', [UtilisateurController::class, 'detailsUser'])->name('users.details');
+            Route::post('/admin/users/update/{userId}', [UserController::class, 'update'])->name('users.update');
+            Route::post('/admin/users/details-user/{userId}', [UserController::class, 'update_auth'])->name('users.update_auth');
+            Route::post('/change-password', [UserController::class, 'changePassword'])->name('password.change');
+            Route::delete('/admin/delete-user/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
+            Route::get('/getIndicatif/{paysId}', [UserController::class, 'getIndicatif'])->name('getIndicatif');
+            Route::post('/admin/utilisateurs/debloquer/{id}', [UtilisateurController::class, 'debloquer'])->name('utilisateurs.debloquer');
 
+            Route::get('RecupererDonneesUser/{userId}', [ProjetController::class, 'getDonneUser'])->name('GetDonneeUser');
+            // Routes principales pour les infrastructures
+            Route::get('/familles/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
+            Route::get('/familles-by-domaine/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
+            Route::get('/familles/{idFamille}/caracteristiques', [InfrastructureController::class, 'getCaracteristiques']);
+            Route::get('/famillesCaracteristiquess/{idFamille}/', [InfrastructureController::class, 'getCaracteristiques']);
 
+            Route::prefix('admin/infrastructures')->group(function () {
+            Route::get('/{id}/impression', [InfrastructureController::class, 'print'])->name('infrastructures.print');
+            Route::get('/infrastructures/print', [InfrastructureController::class, 'imprimer'])->name('infrastructures.imprimer');
+            // Historique
+            Route::get('/{id}/historique', [InfrastructureController::class, 'historique'])
+            ->name('infrastructures.historique');
+            
+            Route::put('/infrastructures/{infrastructure}/caracteristiques', [InfrastructureController::class, 'updateCaracteristiques'])
+            ->name('infrastructures.caracteristiques.updateMultiple');
 
-    /**************************** GESTION DES EDITIONS **********************************/
-    
-    Route::get('admin/editionProjet', [AnnexeController::class, 'index'])->name('admin.edition.projet');
-    // Routes pour les exports PDF
-        Route::get('/pdf/projet/{code}', [AnnexeController::class, 'exportProjet'])->name('pdf.projet');
-        Route::get('/pdf/acteur/{code}', [AnnexeController::class, 'exportActeur'])->name('pdf.acteur');
-        Route::get('/pdf/contrat/{code}', [AnnexeController::class, 'exportContrat'])->name('pdf.contrat');
-        Route::get('/pdf/infrastructure/{code}', [AnnexeController::class, 'exportInfrastructure'])->name('pdf.infrastructure');
-        
-        // Route pour l'export multiple
-        Route::post('/pdf/export-multiple', [AnnexeController::class, 'exportMultiple'])->name('pdf.export.multiple');
-   
-    Route::get('/projets/{projet}', [AnnexeController::class, 'show'])
-    ->name('projets.show');
-    //***************** REALISATION ************* */
-    Route::get('admin/realise/PramatreRealise', [RealiseProjetController::class, 'PramatreRealise']);
-    Route::get('admin/realise', [RealiseProjetController::class, 'realise']);
-    Route::post('/get-project-details', [RealiseProjetController::class, 'getProjectDetails'])->name('get.project.details');
-    Route::post('/fetch-project-details', [RealiseProjetController::class, 'fetchDetails'])->name('fetch.project.details');
-    Route::get('/admin/realise', [RealiseProjetController::class, 'VoirListe'])->name('projet.realise');
-    Route::get('/fetchProjectDetails', [RealiseProjetController::class, 'fetchProjectDetails']);
-    Route::get('/getProjetData', [RealiseProjetController::class, 'getProjetData']);
-    Route::get('/getBeneficiaires', [RealiseProjetController::class, 'getBeneficiaires']);
-    Route::get('/getNumeroOrdre', [RealiseProjetController::class, 'getNumeroOrdre']);
-    Route::get('/getFamilleInfrastructure', [RealiseProjetController::class, 'getFamilleInfrastructure']);
-    Route::get('/getInfrastructuresByProjet', [RealiseProjetController::class, 'getInfrastructuresByProjet']);
-    Route::get('/get-familles-by-projet', [RealiseProjetController::class, 'getFamillesByProjet']);
-    Route::get('/recuperer-caracteristiques', [RealiseProjetController::class, 'recupererCaracteristiques'])
-    ->name('projets.recuperer.caracteristiques');
+            Route::delete('admin/infrastructure/image/{id}/{code}', [InfrastructureController::class, 'deleteImage'])->name('infrastructure.image.delete');
 
-    //Route::get('/getDataDateEffective', [RealiseProjetController::class, 'obtenirDonneesProjet'])->name('obtenir-donnees-projet');
-    Route::get('admin/etatAvancement', [RealiseProjetController::class, 'etatAvancement']);
-    Route::post('/admin/realise', [RealiseProjetController::class,'enregistrerBeneficiaires'])->name('enregistrer.beneficiaires');
-    Route::get('/recuperer-beneficiaires', [RealiseProjetController::class, 'recupererBeneficiaires'])->name('recuperer-beneficiaires');
-    Route::post('/enregistrer-dates-effectives', [RealiseProjetController::class, 'enregistrerDatesEffectives'])->name('enregistrer-dates-effectives');
-    Route::get('/check-code-projet', [RealiseProjetController::class, 'checkCodeProjet']);
-    Route::post('/enregistrer-niveau-avancement', [RealiseProjetController::class, 'enregistrerNiveauAvancement'])->name('enregistrer.niveauAvancement');
-    Route::post('/enregistrer-dateseffectives', [RealiseProjetController::class, 'enregistrerDateFinEffective'])->name('enregistrer.dateFinEffective');
-    Route::get('/get-historique-avancement', [RealiseProjetController::class, 'getHistorique'])->name('get.historique.avancement');
-    Route::post('/save-avancement', [RealiseProjetController::class, 'saveAvancement'])->name('save.avancement');
-    Route::delete('/delete-suivi/{id}', [RealiseProjetController::class, 'deleteSuivi'])->name('delete.suivi');
-    Route::post('/caracteristiques/store', [RealiseProjetController::class, 'storeCaracteristiques'])->name('caracteristique.store');
-    Route::get('/get-donnees-suivi', [RealiseProjetController::class, 'getDonneesFormulaireSimplifie'])->name('get.donnees.suivi');
+            // Liste des infrastructures
+            Route::get('/', [InfrastructureController::class, 'index'])
+                ->name('infrastructures.index');
+            
+            // Formulaire de création
+            Route::get('/create', [InfrastructureController::class, 'create'])
+                ->name('infrastructures.create');
+            
+            // Enregistrement
+            Route::post('/', [InfrastructureController::class, 'store'])
+                ->name('infrastructures.store');
+            
+            // Détails d'une infrastructure
+            Route::get('/{id}', [InfrastructureController::class, 'show'])
+                ->name('infrastructures.show');
+            
+            // Formulaire d'édition
+            Route::get('/{id}/edit', [InfrastructureController::class, 'edit'])
+                ->name('infrastructures.edit');
+            
+            // Mise à jour
+            Route::put('/{id}', [InfrastructureController::class, 'update'])
+                ->name('infrastructures.update');
+            
+            // Suppression
+            Route::delete('/{id}', [InfrastructureController::class, 'destroy'])
+                ->name('infrastructures.destroy');
+            
+            // Gestion des caractéristiques
+            Route::post('/{id}/caracteristiques', [InfrastructureController::class, 'storeCaracteristique'])
+                ->name('infrastructures.caracteristiques.store');
+            
+            Route::delete('/caracteristiques/{id}', [InfrastructureController::class, 'destroyCaracteristique'])
+                ->name('infrastructures.caracteristiques.destroy');
+            Route::get('/localites/by-pays', [InfrastructureController::class, 'getByPays'])
+            ->name('localites.byPays');
 
-    Route::get('/verifier-projet-finalisable', [RealiseProjetController::class, 'verifierProjetFinalisable'])->name('verifier.projet.finalisable');
+            Route::get('/localites/niveaux', [InfrastructureController::class, 'getNiveaux'])
+                ->name('localites.niveaux');
+                Route::get('/localites/by-pays/{paysCode}', function ($paysCode) {
+                    return response()->json(
+                        LocalitesPays::getByPaysCode($paysCode)
+                    );
+                });
+                
+                Route::get('/localites/{codeLocalite}/details', function ($codeLocalite) {
+                    return response()->json(
+                        LocalitesPays::getFullLocaliteData($codeLocalite)
+                    );
+                });
 
-    Route::get('/get-project-status/{id}', [ProjectStatusController::class, 'getProjectStatus']);    //***************** GESTION FINANCIERE ************* */
-    Route::get('admin/graphique', [representationGraphique::class, 'graphique']);
-    Route::get('admin/pib', [pibController::class, 'pib']);
-    Route::post('admin/pib/store', [pibController::class, 'store'])->name('pib.store');
-    Route::put('admin/pib/update/{id}', [pibController::class, 'update'])->name('pib.update');
-    Route::delete('admin/pib/destroy/{id}', [pibController::class, 'destroy'])->name('pib.destroy');
-
-
-    //********************CLOTURER **************************//
-    Route::get('admin/cloture', [cloturerProjetController::class, 'cloturer']);
-    Route::post('/cloturer-projet', [cloturerProjetController::class, 'cloturerProjet'])->name('cloturer_projet');
-    //***************** GESTION SIG ************* */
-    Route::get('admin/carte', [sigAdminController::class, 'carte']);
-    Route::get('admin/autresRequetes', [InfrastructureMapController::class, 'showMap'])->name('infrastructures.map');
-    Route::get('/api/infrastructures/geojson', [InfrastructureMapController::class, 'getInfrastructuresGeoJson']);
-    Route::get('/api/infrastructures/familles-colors', [InfrastructureMapController::class, 'getFamillesColors']);
-    
-    //Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
-    Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
-
-    Route::get('/get-projet-data', 'ProjetController@getProjetData');
-
-    Route::get('/dash', function () {
-        return view('dash');
-    })->name('dash');
-
-
-    /**************************** GESTION DES STATISTIQUES **********************************/
-
-    Route::prefix('admin')->group(function () {
-        Route::get('stat_nombre_projet', [StatController::class, 'statNombreProjet'])->name('tb.nombre.vue');
-        Route::get('stat-finance',       [StatController::class, 'statFinance'])->name('tb.finance.vue');
-    });
-    
-    Route::get('/nombreProjetLien',            [StatController::class, 'statNombreData'])->name('nombre.data');
-    Route::get('/stat-finance_projet/data',    [StatController::class, 'statFinanceData'])->name('finance.data');
-    
-    /**************************** GESTION DES UTILISATEURS **********************************/
-    Route::get('admin/personnel', [UserController::class, 'personnel'])->name('users.personnel');
-    Route::get('admin/personnel/create', [UserController::class, 'createPersonnel'])->name('personnel.create');
-    Route::post('admin/personnel/store', [UserController::class, 'storePersonnel'])->name('personnel.store');
-    Route::delete('/admin/personnel/{code_personnel}', [UserController::class, 'destroy'])->name('utilisateurs.destroy');
-    Route::get('/domaines/{groupeProjet}', [UserController::class, 'getDomainesByGroupeProjet']);
-    Route::get('/sous-domaines/{domaine}/{groupeProjet}', [UserController::class, 'getSousDomaines']);
-    
-    Route::get('admin/personnel/details-personne/{personneId}', [UserController::class, 'detailsPersonne'])->name('personnel.details');
-    Route::get('admin/personnel/get-personne/{personneId}', [UserController::class, 'getPersonne'])->name('personne.updateForm');
-    Route::post('admin/personnel/update/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
-    Route::get('/check-email-personne', [UserController::class, 'checkEmail_personne']);
-    Route::get('admin/get-personne-email/{personnelId}', [UserController::class, 'getPersonneInfos'])->name('personne.get');
-    Route::post('/SousDomaine_Domaine-ajax', [UserController::class, 'getDomaines']);
-    Route::post('/changer-mot-de-passe', [UtilisateurController::class, 'changePassword'])->name('password.change');
-
-    Route::get('admin/users', [UserController::class, 'users'])->name('users.users');
-    Route::get('admin/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/fetch-sous-domaine', [UserController::class, 'fetchSousDomaine'])->name('fetch.sous_domaine');
-    Route::post('/admin/users/store', [UserController::class, 'store'])->name('users.store');
-    Route::get('/check-username', [UserController::class, 'checkUsername']);
-    Route::get('/check-email', [UserController::class, 'checkEmail']);
-    Route::get('admin/users/get-user/{userId}', [UserController::class, 'getUser'])->name('users.get');
-    Route::get('/admin/users/details-user/{userId}', [UtilisateurController::class, 'detailsUser'])->name('users.details');
-    Route::post('/admin/users/update/{userId}', [UserController::class, 'update'])->name('users.update');
-    Route::post('/admin/users/details-user/{userId}', [UserController::class, 'update_auth'])->name('users.update_auth');
-    Route::post('/change-password', [UserController::class, 'changePassword'])->name('password.change');
-    Route::delete('/admin/delete-user/{id}', [UserController::class, 'deleteUser'])->name('users.delete');
-    Route::get('/getIndicatif/{paysId}', [UserController::class, 'getIndicatif'])->name('getIndicatif');
-    Route::post('/admin/utilisateurs/debloquer/{id}', [UtilisateurController::class, 'debloquer'])->name('utilisateurs.debloquer');
-
-    Route::get('RecupererDonneesUser/{userId}', [ProjetController::class, 'getDonneUser'])->name('GetDonneeUser');
-    // Routes principales pour les infrastructures
-    Route::get('/familles/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
-    Route::get('/familles-by-domaine/{codeDomaine}', [InfrastructureController::class, 'getFamillesByDomaine']);
-    Route::get('/familles/{idFamille}/caracteristiques', [InfrastructureController::class, 'getCaracteristiques']);
-    Route::get('/famillesCaracteristiquess/{idFamille}/', [InfrastructureController::class, 'getCaracteristiques']);
-
-    Route::prefix('admin/infrastructures')->group(function () {
-    Route::get('/{id}/impression', [InfrastructureController::class, 'print'])->name('infrastructures.print');
-    Route::get('/infrastructures/print', [InfrastructureController::class, 'imprimer'])->name('infrastructures.imprimer');
-    // Historique
-    Route::get('/{id}/historique', [InfrastructureController::class, 'historique'])
-    ->name('infrastructures.historique');
-    
-    Route::put('/infrastructures/{infrastructure}/caracteristiques', [InfrastructureController::class, 'updateCaracteristiques'])
-    ->name('infrastructures.caracteristiques.updateMultiple');
-
-    Route::delete('admin/infrastructure/image/{id}/{code}', [InfrastructureController::class, 'deleteImage'])->name('infrastructure.image.delete');
-
-    // Liste des infrastructures
-    Route::get('/', [InfrastructureController::class, 'index'])
-        ->name('infrastructures.index');
-    
-    // Formulaire de création
-    Route::get('/create', [InfrastructureController::class, 'create'])
-        ->name('infrastructures.create');
-    
-    // Enregistrement
-    Route::post('/', [InfrastructureController::class, 'store'])
-        ->name('infrastructures.store');
-    
-    // Détails d'une infrastructure
-    Route::get('/{id}', [InfrastructureController::class, 'show'])
-        ->name('infrastructures.show');
-    
-    // Formulaire d'édition
-    Route::get('/{id}/edit', [InfrastructureController::class, 'edit'])
-        ->name('infrastructures.edit');
-    
-    // Mise à jour
-    Route::put('/{id}', [InfrastructureController::class, 'update'])
-        ->name('infrastructures.update');
-    
-    // Suppression
-    Route::delete('/{id}', [InfrastructureController::class, 'destroy'])
-        ->name('infrastructures.destroy');
-    
-    // Gestion des caractéristiques
-    Route::post('/{id}/caracteristiques', [InfrastructureController::class, 'storeCaracteristique'])
-        ->name('infrastructures.caracteristiques.store');
-    
-    Route::delete('/caracteristiques/{id}', [InfrastructureController::class, 'destroyCaracteristique'])
-        ->name('infrastructures.caracteristiques.destroy');
-    Route::get('/localites/by-pays', [InfrastructureController::class, 'getByPays'])
-    ->name('localites.byPays');
-
-    Route::get('/localites/niveaux', [InfrastructureController::class, 'getNiveaux'])
-        ->name('localites.niveaux');
-        Route::get('/localites/by-pays/{paysCode}', function ($paysCode) {
-            return response()->json(
-                LocalitesPays::getByPaysCode($paysCode)
-            );
         });
-        
-        Route::get('/localites/{codeLocalite}/details', function ($codeLocalite) {
-            return response()->json(
-                LocalitesPays::getFullLocaliteData($codeLocalite)
-            );
-        });
-
-});
 
     /**************************** GESTION DES HABILITATIONS **********************************/
      Route::get('/admin/habilitations', [RoleAssignmentController::class, 'habilitations'])->name('habilitations.index');

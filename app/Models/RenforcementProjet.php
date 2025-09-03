@@ -11,7 +11,7 @@ class RenforcementProjet  extends Model
     
     protected $table = 'renforcement_projet';
     public $timestamps = false;
-    protected $fillable = ['renforcement_capacite', 'code_projet'];
+    protected $fillable = ['renforcement_capacite', 'code_projet','created_at', 'updated_at'];
     
 
 

@@ -16,56 +16,56 @@
             color: #dc3545;
         }
 
-    /* --- Harmonisation select2 avec Bootstrap --- */
-    .select2-container--default .select2-selection--multiple {
-        background-color: #fff;
-        border: 1px solid #ced4da;
-        border-radius: 0.375rem;
-        min-height: 38px;
-        height: auto;
-        padding: 0.25rem 0.5rem;
-        font-size: 13px;
-        font-family: inherit;
-        box-shadow: none;
-        line-height: 1.5;
-    }
+        /* --- Harmonisation select2 avec Bootstrap --- */
+        .select2-container--default .select2-selection--multiple {
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            min-height: 38px;
+            height: auto;
+            padding: 0.25rem 0.5rem;
+            font-size: 13px;
+            font-family: inherit;
+            box-shadow: none;
+            line-height: 1.5;
+        }
 
-    /* Evite l'affichage des mini "cards" trop grossiers */
-    .select2-container--default .select2-selection--multiple .select2-selection__choice {
-        background-color: #dee2e6;
-        color: #212529;
-        border: none;
-        border-radius: 0.25rem;
-        padding: 2px 6px;
-        margin: 3px 3px 0 0;
-        font-size: 0.85rem;
-    }
+        /* Evite l'affichage des mini "cards" trop grossiers */
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #dee2e6;
+            color: #212529;
+            border: none;
+            border-radius: 0.25rem;
+            padding: 2px 6px;
+            margin: 3px 3px 0 0;
+            font-size: 0.85rem;
+        }
 
-    /* Focus harmonieux */
-    .select2-container--default.select2-container--focus .select2-selection--multiple {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
-    }
+        /* Focus harmonieux */
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
+        }
 
-    /* Supprime croix trop imposante */
-    .select2-container--default .select2-selection__choice__remove {
-        color: #6c757d;
-        margin-right: 3px;
-        font-size: 0.85rem;
-    }
+        /* Supprime croix trop imposante */
+        .select2-container--default .select2-selection__choice__remove {
+            color: #6c757d;
+            margin-right: 3px;
+            font-size: 0.85rem;
+        }
 
-    /* Placeholder style */
-    .select2-container--default .select2-search--inline .select2-search__field {
-        font-size: 13px;
-        font-family: inherit;
-        margin-top: 0.25rem;
-    }
+        /* Placeholder style */
+        .select2-container--default .select2-search--inline .select2-search__field {
+            font-size: 13px;
+            font-family: inherit;
+            margin-top: 0.25rem;
+        }
 
-    .offcanvas.offcanvas-end {
-        top: 87px !important;
-        width: 90% !important; 
-        height: calc(100vh - 90px) !important;
-    }
+        .offcanvas.offcanvas-end {
+            top: 87px !important;
+            width: 90% !important; 
+            height: calc(100vh - 90px) !important;
+        }
     </style>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 

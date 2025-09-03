@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Ecran;
+use App\Models\LocalitesPays;
 use App\Models\Pays;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class GestionDemographieController extends Controller
 {
@@ -246,5 +249,238 @@ public function entries(Request $request)
 
     return response()->json($rows);
 }
+
+
+
+
+
+
+
+
+
+
+
+    /***************LOCALITE PAYS */
+    public function indexLocalite(Request $request) {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        return view('GestionDemographie.localitePays', compact('ecran'));
+    }
+
+    /** Schéma par niveaux : on a besoin de l’ID numérique UNIQUEMENT ici */
+    public function schemaLocalite(Request $request) {
+        $alpha3 = session('pays_selectionne');              // ex: CIV
+        abort_if(!$alpha3, 400, 'Aucun pays sélectionné.');
+        $paysId = Pays::idFromAlpha3($alpha3);              // id numérique pour decoupage_admin_pays
+        abort_if(!$paysId, 404, 'Pays introuvable.');
+
+        $rows = DB::table('decoupage_admin_pays as dap')
+            ->join('decoupage_administratif as da','da.code_decoupage','=','dap.code_decoupage')
+            ->where('dap.id_pays', $paysId)
+            ->orderBy('dap.num_niveau_decoupage')
+            ->get(['dap.num_niveau_decoupage as niveau','dap.code_decoupage','da.libelle_decoupage']);
+
+        $schema = $rows->groupBy('niveau')->map(fn($g)=>$g->map(fn($r)=>[
+            'code_decoupage'=>$r->code_decoupage, 'libelle'=>$r->libelle_decoupage
+        ])->values())->toArray();
+
+        return response()->json([
+            'alpha3'     => $alpha3,
+            'schema'     => $schema,
+            'niveau_min' => $rows->min('niveau'),
+            'niveau_max' => $rows->max('niveau'),
+        ]);
+    }
+
+    /** Liste des localités (alpha3 partout) */
+    public function localitesPays(Request $request) {
+        $data = $request->validate([
+            'niveau'         => 'required|integer',
+            'code_decoupage' => 'required|string|max:10',
+            'parent_code'    => 'nullable|string|max:100',
+        ]);
+
+        $alpha3 = session('pays_selectionne');
+        abort_if(!$alpha3, 400, 'Aucun pays sélectionné.');
+
+        $niveau   = (int)$data['niveau'];
+        $type     = $data['code_decoupage'];
+        $parent   = $data['parent_code'] ?? null;
+        $expected = 2 * $niveau;
+        $length   = $parent ? strlen($parent) + 2 : $expected;
+
+        $rows = DB::table('localites_pays')
+            ->where('id_pays', $alpha3)                      // ← alpha3
+            ->where('code_decoupage', $type)
+            ->when($parent, fn($q)=>$q->where('code_rattachement','LIKE',$parent.'%'))
+            ->whereRaw('CHAR_LENGTH(code_rattachement)=?', [$length])
+            ->orderBy('libelle')
+            ->get(['id','libelle','code_rattachement','code_decoupage','id_niveau']);
+
+        return response()->json($rows);
+    }
+
+    /** Saisie unitaire (alpha3 stocké) */
+    public function storeLocalite(Request $request) {
+        $alpha3 = session('pays_selectionne');              // ← alpha3 conservé
+        abort_if(!$alpha3, 400, 'Aucun pays sélectionné.');
+
+        $data = $request->validate([
+            'id_niveau'        => 'required|integer|min:1',
+            'code_decoupage'   => 'required|string|max:10',
+            'libelle'          => 'required|string|max:255',
+            'parent_code'      => 'nullable|string|max:100',
+            'code_rattachement'=> 'nullable|string|max:100',
+            'auto_code'        => 'nullable|boolean',
+        ]);
+
+        $code = $data['code_rattachement'];
+        if ($data['auto_code'] ?? true) {
+            $parent = $data['parent_code'] ?? '';
+            if ($parent === '' && $data['id_niveau'] > 1) {
+                return response()->json(['success'=>false,'message'=>'Parent requis pour un niveau > 1.'], 422);
+            }
+            $code = $parent ? LocalitesPays::nextChildCode($alpha3, $parent) : null;
+        }
+
+        $expectedLen = 2 * (int)$data['id_niveau'];
+        if (!$code || strlen($code) !== $expectedLen) {
+            return response()->json(['success'=>false,'message'=>"Longueur du code attendue = $expectedLen"], 422);
+        }
+
+        $row = LocalitesPays::updateOrCreate(
+            ['id_pays'=>$alpha3, 'code_rattachement'=>$code],  // ← alpha3
+            [
+                'id_niveau'      => (int)$data['id_niveau'],
+                'libelle'        => trim($data['libelle']),
+                'code_decoupage' => $data['code_decoupage'],
+            ]
+        );
+
+        return response()->json(['success'=>true,'id'=>$row->id,'code'=>$code]);
+    }
+
+    /** Import XLSX (alpha3 forcé) */
+    
+public function importLocalite(Request $request)
+{
+    // Accepter XLSX et XLS
+    $request->validate(['fichier' => 'required|file|mimes:xlsx,xls']);
+
+    $alpha3 = session('pays_selectionne');
+    abort_if(!$alpha3, 400, 'Aucun pays sélectionné.');
+
+    $path = $request->file('fichier')->getRealPath();
+    $spreadsheet = IOFactory::load($path);
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Tableau des lignes, indexées par lettres A,B,C...
+    $rows = $sheet->toArray(null, true, true, true);
+    if (empty($rows)) {
+        return response()->json(['success'=>false,'message'=>'Feuille vide.'], 422);
+    }
+
+    // --- Map en-têtes -> lettres de colonnes (ligne 1)
+    //    ex: "id_niveau" => "B"
+    $headerRow = $rows[1] ?? [];
+    $map = [];
+    foreach ($headerRow as $colLetter => $label) {
+        $key = strtolower(trim((string)$label));
+        if ($key !== '') $map[$key] = $colLetter;   // 'id_niveau' => 'B'
+    }
+
+    // Colonnes requises
+    $required = ['id_pays','id_niveau','libelle','code_rattachement','code_decoupage'];
+    foreach ($required as $colName) {
+        if (!isset($map[$colName])) {
+            return response()->json([
+                'success'=>false,
+                'message'=>"Colonne manquante dans l'en-tête : {$colName}"
+            ], 422);
+        }
+    }
+
+    // Helpers
+    $paysId = \App\Models\Pays::where('alpha3',$alpha3)->value('id');
+
+    $getAllowedTypes = function (int $niv) use ($paysId) {
+        return DB::table('decoupage_admin_pays')
+            ->where('id_pays', $paysId)
+            ->where('num_niveau_decoupage', $niv)
+            ->pluck('code_decoupage')
+            ->toArray();
+    };
+
+    $normalizeCode = function (?string $code, int $expectedLen) {
+        $code = trim((string)$code);
+        $digits = preg_replace('/\D+/', '', $code);     // garde que les chiffres
+        if ($digits === '') return null;
+        if (strlen($digits) < $expectedLen) {
+            $digits = str_pad($digits, $expectedLen, '0', STR_PAD_LEFT);
+        }
+        return $digits;
+    };
+
+    $ok=0; $fail=0; $errs=[];
+    DB::beginTransaction();
+    try {
+        $last = $sheet->getHighestRow();
+        for ($r=2; $r <= $last; $r++) {
+            $row = $rows[$r] ?? [];
+
+            // Lire via la LETTRE de colonne
+            $niv  = (int)($row[$map['id_niveau']] ?? 0);
+            $lib  = trim((string)($row[$map['libelle']] ?? ''));
+            $code = (string)($row[$map['code_rattachement']] ?? '');
+            $type = trim((string)($row[$map['code_decoupage']] ?? ''));
+
+            // Ligne vide ? on saute
+            if ($lib === '' && $code === '' && $type === '' && $niv === 0) { continue; }
+
+            if ($lib === '' || $niv < 1 || $type === '') {
+                $fail++; $errs[] = "L$r : champs obligatoires manquants"; continue;
+            }
+
+            $expected = 2 * $niv;
+            $codeNorm = $normalizeCode($code, $expected);
+            if (!$codeNorm || strlen($codeNorm) !== $expected) {
+                $fail++; $errs[] = "L$r : code_rattachement invalide (longueur attendue $expected)"; continue;
+            }
+
+            $allowed = $getAllowedTypes($niv);
+            if (!in_array($type, $allowed, true)) {
+                $fail++; $errs[] = "L$r : type $type non autorisé pour niveau $niv"; continue;
+            }
+
+            \App\Models\LocalitesPays::updateOrCreate(
+                ['id_pays' => $alpha3, 'code_rattachement' => $codeNorm],
+                ['id_niveau' => $niv, 'libelle' => $lib, 'code_decoupage' => $type]
+            );
+            $ok++;
+        }
+        DB::commit();
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        return response()->json(['success'=>false,'message'=>$e->getMessage()], 500);
+    }
+
+    return response()->json(['success'=>true,'insertes'=>$ok,'echoues'=>$fail,'erreurs'=>$errs]);
+}
+    /** Téléchargement direct du template depuis storage/app */
+    public function templateLocalite()
+    {
+        // chemin relatif sur le disk "local" (storage/app)
+        $path = 'templates/template_localites.xlsx';
+
+        if (!Storage::disk('local')->exists($path)) {
+            abort(404, 'Template non trouvé dans storage/app/templates/');
+        }
+
+        // Pas de ->header() ici (évite l’erreur BinaryFileResponse::header)
+        return Storage::disk('local')->download(
+            $path,
+            'template_localites.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
+    }
 
 }

@@ -28,7 +28,16 @@ class LocalitesPays extends Model
             ->first()
             ->toArray();
     }
+    public static function nextChildCode(string $alpha3, string $parentCode): string {
+        $len = strlen($parentCode) + 2;
+        $max = self::where('id_pays', $alpha3)
+            ->where('code_rattachement', 'LIKE', $parentCode.'%')
+            ->whereRaw('CHAR_LENGTH(code_rattachement) = ?', [$len])
+            ->max('code_rattachement');
 
+        $next2 = $max ? (int)substr($max, -2) + 1 : 1;
+        return $parentCode . str_pad((string)$next2, 2, '0', STR_PAD_LEFT);
+    }
     /**
      * Récupère les localités par pays
      * @param string $paysCode

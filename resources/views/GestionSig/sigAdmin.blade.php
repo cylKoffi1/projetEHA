@@ -485,6 +485,14 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  window.APP = {
+    BASE_URL:  "{{ url('/') }}",
+    API_URL:   "{{ url('/api') }}",
+    GEOJSON:   "{{ url('/geojson') }}"
+  };
+</script>
+
 <script src="{{ asset('geojsonCode/map.js') }}"></script>
 
 <script>

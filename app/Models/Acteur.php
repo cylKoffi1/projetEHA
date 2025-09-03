@@ -55,6 +55,16 @@ class Acteur extends Model
     }
 
 
+    // ✅ Renforcements dont l’acteur est bénéficiaire
+    public function renforcements()
+    {
+        return $this->belongsToMany(
+            Renforcement::class,
+            'renforcement_beneficiaire',
+            'code_acteur',
+            'code_renforcement'
+        );
+    }
      /**
      * Relation avec `personne_physique`
      */

@@ -26,7 +26,7 @@ class GanttController extends Controller
 
         $projects = Projet::where('code_projet', 'like', $pays . $groupe . '%')
             ->whereHas('statuts', function ($query) {
-                $query->where('type_statut', 2); 
+                $query->whereIn('type_statut', [1, 2]);
             })
             ->get();  // Obtenez tous les projets
         return view('etudes_projets.plan', compact('projects', 'ecran'));

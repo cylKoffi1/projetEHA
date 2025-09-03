@@ -24,7 +24,21 @@ class TravauxConnexes extends Model
         'date_fin_effective',
         'commentaire',
     ];
-
+    protected $casts = [
+        'cout_projet' => 'decimal:2',
+        'date_debut_previsionnelle' => 'date',
+        'date_fin_previsionnelle'   => 'date',
+        'date_debut_effective'      => 'date',
+        'date_fin_effective'        => 'date',
+      ];
+      
+      // Normaliser automatiquement
+      public function setCoutProjetAttribute($value)
+      {
+          $raw = preg_replace('/[^\d.]/', '', str_replace(' ', '', (string)$value));
+          $this->attributes['cout_projet'] = $raw === '' ? 0 : (float)$raw;
+      }
+      
     // Relation avec le type de travaux
     public function typeTravaux()
     {

@@ -6,7 +6,6 @@
     <!-- DHTMLX Scheduler -->
 <link rel="stylesheet" href="https://cdn.dhtmlx.com/scheduler/edge/dhtmlxscheduler.css">
 <script src="https://cdn.dhtmlx.com/scheduler/edge/dhtmlxscheduler.js"></script>
-<script src="https://cdn.dhtmlx.com/scheduler/edge/dataprocessor.js"></script>
 
 <!-- jQuery (nécessaire pour Bootstrap) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

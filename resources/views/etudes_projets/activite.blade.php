@@ -1,442 +1,344 @@
+{{-- resources/views/etudes_projets/activite.blade.php --}}
 @extends('layouts.app')
-<style>
-    .file-card {
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        margin-bottom: 15px;
-        position: relative;
-        width: 150px;
-        height: 150px;
-    }
-    .file-card img {
-        max-width: 100px;
-        max-height: 100px;
-    }
-    .file-card .file-name {
-        margin-top: 100px;
-        font-size: 12px;
-    }
-    .file-card .upload-icon {
-        position: absolute;
-        top: 10px;
-        right: 22px;
-        font-size: 24px;
-        cursor: pointer;
-    }
-    #file-display {
-        display: flex;
-        flex-wrap: wrap;
-    }
-    .select2-selection__choice {
-        font-size: 12px;
-    }
-    .select2-selection__rendered{
-        width: 300.663px !important;
-    }
-     .select2-container--default{
-        width: 300.663px !important;
-    }
-</style>
 
-<!-- JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<style>
+  .invalid-feedback{display:block}
+  .select2-container{width:100%!important}
+</style>
+@endpush
 
 @section('content')
-
 @isset($ecran)
 @can("consulter_ecran_" . $ecran->id)
 
-@if (session('success'))
-<script>
-    $('#alertMessage').text("{{ session('success') }}");
-    $('#alertModal').modal('show');
-</script>
-@endif
-<section id="multiple-column-form">
-    <div class="page-heading">
-        <div class="page-title">
-            <div class="row">
-                <div class="col-sm-12">
-                    <li class="breadcrumb-item" style="list-style: none; text-align: right; padding: 5px; font-family: Arial, Helvetica, sans-serif;"><span id="date-now" style="color: #34495E; font-family: Verdana, Geneva, Tahoma, sans-serif; margin-left: 15px;"></span></li>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-12 col-md-6 order-md-1 order-last">
-                    <h3><i class="bi bi-arrow-return-left return" onclick="goBack()"></i>Projet </h3>
-                </div>
-                <div class="col-12 col-md-6 order-md-2 order-first">
-                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="">Etudes projets</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Activité connexe</li>
-                        </ol>
-                        <div class="row">
-                            <script>
-                                setInterval(function() {
-                                    document.getElementById('date-now').textContent = getCurrentDate();
-                                }, 1000);
+<div class="container-fluid py-3">
+  <div class="row mb-3">
+    <div class="col"><h3>Activités connexes</h3></div>
+    <div class="col-auto"><span id="date-now" class="text-muted"></span></div>
+  </div>
 
-                                function getCurrentDate() {
-                                    var currentDate = new Date();
-                                    return currentDate.toLocaleString();
-                                }
-                            </script>
-                        </div>
-                    </nav>
-                </div>
-            </div>
-        </div>
+  {{-- Flash -> modal --}}
+  @if (session('success'))
+    <script>window.addEventListener('DOMContentLoaded',()=>{showAlert(`{{ session('success') }}`);});</script>
+  @endif
+  @if (session('error'))
+    <script>window.addEventListener('DOMContentLoaded',()=>{showAlert(`{{ session('error') }}`);});</script>
+  @endif
+  @if ($errors->any())
+    <div class="alert alert-danger">
+      <div class="fw-semibold mb-1">Veuillez corriger :</div>
+      <ul class="mb-0">
+        @foreach ($errors->all() as $err) <li>{{ $err }}</li> @endforeach
+      </ul>
     </div>
-    <div class="row ">
-        <div class="col" style="justify-content: center;">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">Activité connexe</h5>
+  @endif
 
-                    @if (session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
+  <div class="card mb-4">
+    <div class="card-header"><strong id="formTitle">Enregistrer une activité</strong></div>
+    <div class="card-body">
+      {{-- CREATE --}}
+      <form id="addForm" action="{{ route('travaux_connexes.store') }}" method="POST" novalidate>
+        @csrf
+        <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
 
-                    @if (session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
-                    @endif
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Projet <span class="text-danger">*</span></label>
+            <select name="code_projet" id="code_projet" class="form-select" required>
+              <option value="">—</option>
+              @foreach($projets as $projet)
+                <option value="{{ $projet->code_projet }}">{{ $projet->code_projet }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Type de travaux <span class="text-danger">*</span></label>
+            <select name="type_travaux_id" id="type_travaux_id" class="form-select" required>
+              <option value="">—</option>
+              @foreach($typesTravaux as $t)
+                <option value="{{ $t->id }}">{{ $t->libelle }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Coût (XOF) <span class="text-danger">*</span></label>
+            <input type="text" name="cout_projet" id="cout_projet" class="form-control text-end" required oninput="formatNumber(this)">
+          </div>
+          <div class="col-md-3"></div>
 
-                </div>
-                <div class="card-content">
-                    <div class="col">
-                        <form id="addForm" action="{{ route('travaux_connexes.store') }}" method="POST">
+          <div class="col-md-3">
+            <label class="form-label">Début prévisionnel <span class="text-danger">*</span></label>
+            <input type="date" name="date_debut_previsionnelle" id="date_debut_previsionnelle" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Fin prévisionnelle <span class="text-danger">*</span></label>
+            <input type="date" name="date_fin_previsionnelle" id="date_fin_previsionnelle" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Début effectif</label>
+            <input type="date" name="date_debut_effective" id="date_debut_effective" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Fin effective</label>
+            <input type="date" name="date_fin_effective" id="date_fin_effective" class="form-control">
+          </div>
 
-                            @csrf
-                            <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id" required>
+          <div class="col-12">
+            <label class="form-label">Commentaire</label>
+            <textarea name="commentaire" id="commentaire" class="form-control" rows="2"></textarea>
+          </div>
 
-                            <div class="row">
-                                <div class="col-3">
-                                    <label for="code_projet">Code Projet :</label>
-                                    <select name="code_projet" id="code_projet" class="form-select" required>
-                                        <option value=""></option>
-                                        @foreach($projets as $projet)
-                                            <option value="{{ $projet->code_projet }}">{{ $projet->code_projet }}</option>
-                                        @endforeach
-                                    </select>
-                                </div><div class="col-7 d-flex justify-content-end align-items-end">
-                                <label for="dates">Dates</label>
-                            </div>
+          <div class="col-12 text-end">
+            @can("ajouter_ecran_" . $ecran->id)
+              <button type="submit" class="btn btn-primary">Enregistrer</button>
+            @endcan
+          </div>
+        </div>
+      </form>
 
+      {{-- EDIT --}}
+      <div id="editFormContainer" class="mt-4 d-none">
+        <hr>
+        <form id="formAction" action="" method="POST">
+          @csrf
+          @method('PUT')
+          <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
+          <input type="hidden" id="edit_codeActivite" name="codeActivite">
 
-                            </div>
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Projet</label>
+              <input type="text" id="edit_code_projet" name="code_projet" class="form-control" readonly>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Type de travaux <span class="text-danger">*</span></label>
+              <select id="edit_type_travaux_id" name="type_travaux_id" class="form-select" required>
+                @foreach($typesTravaux as $t)
+                  <option value="{{ $t->id }}">{{ $t->libelle }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Coût (XOF) <span class="text-danger">*</span></label>
+              <input type="text" id="edit_cout_projet" name="cout_projet" class="form-control text-end" required oninput="formatNumber(this)">
+            </div>
+            <div class="col-md-3"></div>
 
-                            <div class="row">
-                                <div class="col-3">
-                                    <label for="type_travaux_id">Type Travaux :</label>
-                                    <select name="type_travaux_id" id="type_travaux_id" class="form-select" required>
-                                    @foreach($typesTravaux as $type)
-                                        <option value="{{ $type->id }}">{{ $type->libelle }}</option>
-                                    @endforeach
-
-                                    </select>
-                                </div>
-                                <div class="col-1"></div>
-                                <div class="col-2">
-                                    <label for="cout_projet">Coût des travaux :</label>
-                                    <input type="text" name="cout_projet" id="cout_projet" class="form-control text-end" required oninput="formatNumber(this)">
-                                </div>
-                                <div class="col-2"></div>
-                                <div class="col-2">
-                                    <label for="date_debut_previsionnelle">Début Prévisionnel :</label>
-                                    <input type="date" name="date_debut_previsionnelle" id="date_debut_previsionnelle" class="form-control" required>
-                                </div>
-                                <div class="col-2">
-                                    <label for="date_fin_previsionnelle">Fin Prévisionnel :</label>
-                                    <input type="date" name="date_fin_previsionnelle" id="date_fin_previsionnelle" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-8"></div>
-                                <div class="col-2">
-                                    <label for="date_debut_effective">Début Effectif :</label>
-                                    <input type="date" name="date_debut_effective" id="date_debut_effective" class="form-control">
-                                </div>
-                                <div class="col-2">
-                                    <label for="date_fin_effective">Fin Effectif :</label>
-                                    <input type="date" name="date_fin_effective" id="date_fin_effective" class="form-control">
-                                </div>
-                                <div class="col-12 mt-3">
-                                    <label for="commentaire">Commentaire :</label>
-                                    <textarea name="commentaire" id="commentaire" class="form-control"></textarea>
-                                </div>
-                                <div class="col-12 mt-4">
-                                @can("ajouter_ecran_" . $ecran->id)
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary text-end">Enregistrer</button>
-                                </div>
-                                @endcan
-                                </div>
-                            </div>
-                        </form>
-
-                        <!-- Formulaire de modification caché par défaut -->
-                        <div id="editFormContainer" style="display: none;">
-                            <form id="formAction" action="" method="POST">
-                                @csrf
-                                @method('PUT')
-                                <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-
-                                <input type="hidden" id="edit_codeActivite" name="codeActivite">
-                                <div class="row">
-                                    <div class="col-4">
-                                        <label for="edit_code_projet">Code Projet :</label>
-                                        <input type="text" id="edit_code_projet" name="code_projet" class="form-control" required readonly>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col">
-                                        <label for="edit_type_travaux_id">Type Travaux :</label>
-                                        <select id="edit_type_travaux_id" name="type_travaux_id" class="form-select" required>
-                                            @foreach($typesTravaux as $type)
-                                                <option value="{{ $type->id }}">{{ $type->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col">
-                                        <label for="edit_cout_projet">Coût du Projet (XOF) :</label>
-                                        <input type="text" id="edit_cout_projet" name="cout_projet" class="form-control text-end" required>
-
-                                    </div>
-                                    <div class="col">
-                                        <label for="edit_date_debut_previsionnelle">Date Début Prévisionnelle :</label>
-                                        <input type="date" id="edit_date_debut_previsionnelle" name="date_debut_previsionnelle" class="form-control" required>
-
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col">
-                                        <label for="edit_date_fin_previsionnelle">Date Fin Prévisionnelle :</label>
-                                        <input type="date" id="edit_date_fin_previsionnelle" name="date_fin_previsionnelle" class="form-control" required>
-
-                                    </div>
-                                    <div class="col">
-                                        <label for="edit_date_debut_effective">Date Début Effective :</label>
-                                        <input type="date" id="edit_date_debut_effective" name="date_debut_effective" class="form-control">
-
-                                    </div>
-                                    <div class="col">
-                                        <label for="edit_date_fin_effective">Date Fin Effective :</label>
-                                        <input type="date" id="edit_date_fin_effective" name="date_fin_effective" class="form-control">
-
-                                    </div>
-                                </div>
-
-                                <label for="edit_commentaire">Commentaire :</label>
-                                <textarea id="edit_commentaire" name="commentaire" class="form-control"></textarea>
-                                @can("modifier_ecran_" . $ecran->id)
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary -mb-2 text-end">Modifier</button>
-                                </div>
-                                @endcan
-                            </form>
-                        </div>
-
-
-                    </div>
-                </div>
+            <div class="col-md-3">
+              <label class="form-label">Début prévisionnel <span class="text-danger">*</span></label>
+              <input type="date" id="edit_date_debut_previsionnelle" name="date_debut_previsionnelle" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Fin prévisionnelle <span class="text-danger">*</span></label>
+              <input type="date" id="edit_date_fin_previsionnelle" name="date_fin_previsionnelle" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Début effectif</label>
+              <input type="date" id="edit_date_debut_effective" name="date_debut_effective" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Fin effective</label>
+              <input type="date" id="edit_date_fin_effective" name="date_fin_effective" class="form-control">
             </div>
 
-        </div>
-    </div>
-
-
-    <div class="card">
-        <div class="card-header">
-            <h5 class="card-title">
-            Liste des activités connexe
-            </h5>
-        </div>
-        <div class="card-content">
             <div class="col-12">
-                @can("consulter_ecran_" . $ecran->id)
-                <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table">
-                    <thead>
-                        <tr>
-                            <th>Code Travaux</th>
-                            <th>Code Projet</th>
-                            <th>Type Travaux</th>
-                            <th>Coût (XOF)</th>
-                            <th>Date Début Prévisionnelle</th>
-                            <th>Date Fin Prévisionnelle</th>
-                            <th>Date Début Effective</th>
-                            <th>Date Fin Effective</th>
-                            <th>Commentaire</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($travaux as $travail)
-                        <tr>
-                            <td>{{ $travail->codeActivite }}</td>
-                            <td>{{ $travail?->projet?->code_projet }}</td>
-                            <td>{{ $travail->typeTravaux->libelle }}</td>
-                            <td style="text-align: right">{{ number_format($travail->cout_projet, 2) }}</td>
-                            <td>{{ $travail->date_debut_previsionnelle }}</td>
-                            <td>{{ $travail->date_fin_previsionnelle }}</td>
-                            <td>{{ $travail->date_debut_effective }}</td>
-                            <td>{{ $travail->date_fin_effective }}</td>
-                            <td>{{ $travail->commentaire }}</td>
-                            <td>
-                                <div class="dropdown">
-                                    <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
-                                        <span style="color: white"></span>
-                                    </a>
-                                    <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                    @can("modifier_ecran_" . $ecran->id)<li>
-                                            <a class="dropdown-item" href="#"
-                                            onclick="editActivite(
-                                                '{{ $travail->codeActivite }}',
-                                                '{{ $travail->code_projet }}',
-                                                '{{ $travail->type_travaux_id }}',
-                                                '{{ $travail->cout_projet }}',
-                                                '{{ $travail->date_debut_previsionnelle }}',
-                                                '{{ $travail->date_fin_previsionnelle }}',
-                                                '{{ $travail->date_debut_effective }}',
-                                                '{{ $travail->date_fin_effective }}',
-                                                '{{ $travail->commentaire }}')">
-                                            <i class="bi bi-pencil-fill me-3"></i> Modifier
-                                         </a>
-
-                                        </li>
-                                    @endcan
-                                    @can("supprmer_ecran_" . $ecran->id)
-                                        <li>
-                                            <a class="dropdown-item" href="#" onclick="deleteActivite('{{ $travail->codeActivite }}')">
-                                                <i class="bi bi-trash3-fill me-3"></i> Supprimer
-                                            </a>
-                                        </li>
-                                    @endcan
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                @endcan
-
+              <label class="form-label">Commentaire</label>
+              <textarea id="edit_commentaire" name="commentaire" class="form-control" rows="2"></textarea>
             </div>
-        </div>
+
+            <div class="col-12 text-end">
+              @can("modifier_ecran_" . $ecran->id)
+                <button type="submit" class="btn btn-primary">Modifier</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="cancelEdit()">Annuler</button>
+              @endcan
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 
+  {{-- LISTE --}}
+  <div class="card">
+    <div class="card-header"><strong>Liste des activités connexes</strong></div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered align-middle" id="table">
+          <thead class="table-light">
+            <tr>
+              <th>Code</th>
+              <th>Projet</th>
+              <th>Type</th>
+              <th class="text-end">Coût (XOF)</th>
+              <th>Début prév.</th>
+              <th>Fin prév.</th>
+              <th>Début eff.</th>
+              <th>Fin eff.</th>
+              <th>Commentaire</th>
+              <th style="width:1%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($travaux as $t)
+              <tr>
+                <td>{{ $t->codeActivite }}</td>
+                <td>{{ $t->projet?->code_projet }}</td>
+                <td>{{ $t->typeTravaux?->libelle }}</td>
+                <td class="text-end">{{ $t->cout_projet_fmt }}</td>
+                <td>{{ optional($t->date_debut_previsionnelle)->format('d/m/Y') }}</td>
+                <td>{{ optional($t->date_fin_previsionnelle)->format('d/m/Y') }}</td>
+                <td>{{ optional($t->date_debut_effective)->format('d/m/Y') }}</td>
+                <td>{{ optional($t->date_fin_effective)->format('d/m/Y') }}</td>
+                <td>{{ $t->commentaire }}</td>
+                <td class="text-nowrap">
+                  <div class="btn-group btn-group-sm">
+                    @can("modifier_ecran_" . $ecran->id)
+                    <button class="btn btn-outline-primary" title="Modifier"
+                      onclick="editActivite(
+                        @js($t->codeActivite),
+                        @js($t->code_projet),
+                        @js($t->type_travaux_id),
+                        @js($t->cout_projet),
+                        @js(optional($t->date_debut_previsionnelle)->toDateString()),
+                        @js(optional($t->date_fin_previsionnelle)->toDateString()),
+                        @js(optional($t->date_debut_effective)->toDateString()),
+                        @js(optional($t->date_fin_effective)->toDateString()),
+                        @js($t->commentaire)
+                      )"><i class="bi bi-pencil"></i></button>
+                    @endcan
+                    @can("supprimer_ecran_" . $ecran->id)
+                    <button class="btn btn-outline-danger" title="Supprimer"
+                      onclick="deleteActivite(@js($t->codeActivite))"><i class="bi bi-trash"></i></button>
+                    @endcan
+                  </div>
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
-</section>
+{{-- MODALE ALERT --}}
+<div class="modal fade" id="alertModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Information</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body"><div id="alertMessage"></div></div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @endcan
 @endisset
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
 <script>
+  // Horloge
+  setInterval(()=>{ const el=document.getElementById('date-now'); if(el) el.textContent=new Date().toLocaleString(); },1000);
 
-    $(document).ready(function() {
-
-        initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table', 'Listes des activités connexes');
-    });
-
-
-    function formatNumber(input) {
-        // Enlève tout caractère non numérique
-        let value = input.value.replace(/\D/g, '');
-
-        // Formate le nombre avec des espaces
-        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-
-        input.value = value;
+  // Select2
+  $(function(){
+    $('#code_projet,#type_travaux_id,#edit_type_travaux_id').select2({width:'resolve', allowClear:true, placeholder:'— Sélectionner —'});
+    if (typeof initDataTable === 'function') {
+      initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}','table','Liste des activités connexes');
     }
-    window.addEventListener('DOMContentLoaded', function() {
+  });
 
-        var startDateInput = document.getElementById('date_debut_previsionnelle');
-        var endDateInput = document.getElementById('date_fin_previsionnelle');
-        var startDateInputs = document.getElementById('date_debut_effective');
-        var endDateInputs = document.getElementById('date_fin_effective');
+  // Alert helper
+  function showAlert(msg){ document.getElementById('alertMessage').textContent = msg; new bootstrap.Modal('#alertModal').show(); }
 
-        endDateInput.addEventListener('change', function() {
-            var startDate = new Date(startDateInput.value);
-            var endDate = new Date(endDateInput.value);
+  // Formatage nombres (espaces)
+  function formatNumber(input){
+    let v = input.value.replace(/[^\d]/g,'');
+    input.value = v.replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+  }
 
-            if (endDate < startDate) {
-                $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
-                $('#alertModal').modal('show');
-                endDateInput.value = startDateInput.value; // Réinitialiser la date de fin à la date de début
-            }
+  // Dates cohérentes
+  ['date_fin_previsionnelle','edit_date_fin_previsionnelle'].forEach(id=>{
+    const fin=document.getElementById(id);
+    const deb=document.getElementById(id.includes('edit_')?'edit_date_debut_previsionnelle':'date_debut_previsionnelle');
+    if(fin&&deb){ fin.addEventListener('change',()=>{ if(new Date(fin.value)<new Date(deb.value)){ showAlert('La date de fin ne peut précéder la date de début.'); fin.value=deb.value; } }); }
+  });
+  ['date_fin_effective','edit_date_fin_effective'].forEach(id=>{
+    const fin=document.getElementById(id);
+    const deb=document.getElementById(id.includes('edit_')?'edit_date_debut_effective':'date_debut_effective');
+    if(fin&&deb){ fin.addEventListener('change',()=>{ if(deb.value && new Date(fin.value)<new Date(deb.value)){ showAlert('La date de fin effective ne peut précéder la date de début effective.'); fin.value=deb.value; } }); }
+  });
+
+  // Edit
+  function formatNumberForDisplay(v){ const s=(v??'').toString().replace(/\s+/g,''); return s.replace(/\B(?=(\d{3})+(?!\d))/g,' '); }
+  window.editActivite = function(code, code_projet, type_id, cout, d1, d2, d3, d4, com){
+    document.getElementById('addForm').classList.add('d-none');
+    const box = document.getElementById('editFormContainer'); box.classList.remove('d-none');
+
+    document.getElementById('edit_codeActivite').value = code;
+    document.getElementById('edit_code_projet').value  = code_projet;
+    document.getElementById('edit_type_travaux_id').value = type_id;
+    $('#edit_type_travaux_id').trigger('change');
+
+    document.getElementById('edit_cout_projet').value = formatNumberForDisplay(cout ?? 0);
+    document.getElementById('edit_date_debut_previsionnelle').value = d1 ?? '';
+    document.getElementById('edit_date_fin_previsionnelle').value   = d2 ?? '';
+    document.getElementById('edit_date_debut_effective').value      = d3 ?? '';
+    document.getElementById('edit_date_fin_effective').value        = d4 ?? '';
+    document.getElementById('edit_commentaire').value               = com ?? '';
+
+    document.getElementById('formAction').action = "{{ url('/') }}/activite/" + encodeURIComponent(code);
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  window.cancelEdit = function(){
+    document.getElementById('formAction').reset();
+    document.getElementById('editFormContainer').classList.add('d-none');
+    document.getElementById('addForm').classList.remove('d-none');
+  };
+
+  // Delete JSON
+  window.deleteActivite = async function(code){
+    if(!confirm('Supprimer cette activité ?')) return;
+    try{
+      const res = await fetch("{{ route('travaux_connexes.destroy', ':id') }}".replace(':id', encodeURIComponent(code)), {
+        method:'DELETE',
+        headers:{ 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept':'application/json' }
+      });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok || data.ok === false){ showAlert(data.message || 'Erreur lors de la suppression.'); return; }
+      showAlert(data.message || 'Supprimé.');
+      setTimeout(()=> location.reload(), 700);
+    }catch(e){ console.error(e); showAlert('Erreur réseau.'); }
+  };
+  $('#addForm').off('submit').on('submit', async function (e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+
+    try {
+        const res = await fetch(this.action, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept': 'application/json' },
+            body: fd
         });
 
-        endDateInputs.addEventListener('change', function() {
-            var startDates = new Date(startDateInputs.value);
-            var endDates = new Date(endDateInputs.value);
-
-            if (endDates < startDates) {
-                $('#alertMessage').text('La date de fin ne peut pas être antérieure à la date de début.');
-                $('#alertModal').modal('show');
-                endDateInputs.value = startDateInputs.value; // Réinitialiser la date de fin à la date de début
-            }
-        });
-    });
-    function deleteActivite(id) {
-        if (confirm("Êtes-vous sûr de vouloir supprimer ?")) {
-            $.ajax({
-                url: '{{ url("/")}}/activiteDelete/' + id,
-                type: 'DELETE',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(result) {
-                    $('#alertMessage').text("Activité connexe supprimé avec succès.");
-                    $('#alertModal').modal('show');
-                    window.location.reload(true);
-                },
-                error: function(xhr, status, error) {
-                    $('#alertMessage').text('Erreur lors de la suppression : ' + error);
-                    $('#alertModal').modal('show');
-                }
-            });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || data.ok === false) {
+            alert(data.message || 'Erreur lors de l’enregistrement.');
+            return;
         }
+        alert(data.message || 'Opération réussie.');
+        location.reload();
+    } catch (err) {
+        alert("Erreur réseau.");
     }
-    function formatNumberForDisplay(value) {
-        // Supprimer les espaces pour reformater
-        let number = value.toString().replace(/\s+/g, '');
-        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    }
-    function editActivite(codeActivite, code_projet, typeTravauxId, coutProjet, dateDebutPrevisionnelle, dateFinPrevisionnelle, dateDebutEffective, dateFinEffective, commentaire) {
-        // Cacher le formulaire d'enregistrement
-        document.getElementById('addForm').style.display = 'none';
+});
 
-        // Remplir les champs du formulaire avec les données passées en paramètres
-        document.getElementById('edit_codeActivite').value = codeActivite;
-        document.getElementById('edit_code_projet').value = code_projet;
-        document.getElementById('edit_type_travaux_id').value = typeTravauxId;
-
-        // Formater le coût projet avec des espaces
-        document.getElementById('edit_cout_projet').value = formatNumberForDisplay(coutProjet);
-
-        document.getElementById('edit_date_debut_previsionnelle').value = dateDebutPrevisionnelle;
-        document.getElementById('edit_date_fin_previsionnelle').value = dateFinPrevisionnelle;
-        document.getElementById('edit_date_debut_effective').value = dateDebutEffective;
-        document.getElementById('edit_date_fin_effective').value = dateFinEffective;
-        document.getElementById('edit_commentaire').value = commentaire;
-
-        // Modifier l'action du formulaire pour inclure l'ID (code_renforcement)
-        document.getElementById('formAction').action = '{{ url("/")}}/activite/' + codeActivite;
-
-        // Afficher le formulaire de modification
-        document.getElementById('editFormContainer').style.display = 'block';
-    }
 </script>
 @endsection

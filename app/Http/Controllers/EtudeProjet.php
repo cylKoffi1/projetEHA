@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreRenforcementRequest;
+use App\Http\Requests\UpdateRenforcementRequest;
 use App\Models\Acteur;
 use App\Models\ActionMener;
+use App\Models\ActionType;
 use App\Models\Approbateur;
 use App\Models\Bailleur;
 use App\Models\DecoupageAdministratif;
@@ -56,11 +59,13 @@ use App\Models\Beneficier;
 use App\Models\Executer;
 use App\Models\FamilleDomaine;
 use App\Models\Financer;
+use App\Models\Modalite;
 use App\Models\Posseder;
 use App\Models\ProjetApprobation;
 use App\Models\ProjetDocument;
 use App\Models\projets_natureTravaux;
 use App\Models\ProjetStatut;
+use App\Models\StatutOperation;
 use App\Models\TypeFinancement;
 use App\Models\UniteDerivee;
 use App\Services\FileProcService;
@@ -69,11 +74,14 @@ use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\FacadesLog;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class EtudeProjet extends Controller
 {
@@ -87,7 +95,7 @@ class EtudeProjet extends Controller
             $groupeSelectionne = session('projet_selectionne');
             $user = auth()->user();
             $groupe = GroupeUtilisateur::where('code', $user->groupe_utilisateur_id)->first();
-            $ecran = Ecran::find($request->input('ecran_id'));
+           
             $natures = NatureTravaux::all();
             $GroupeProjets = GroupeProjet::all();
             $Domaines = Domaine::where('groupe_projet_code', $groupeSelectionne)->get();
@@ -222,7 +230,7 @@ class EtudeProjet extends Controller
         // Récupérer les localités associées à un pays donné
         public function getLocalites($paysCode)
         {
-            $localites = \DB::table('localites_pays')
+            $localites = DB::table('localites_pays')
                 ->join('decoupage_administratif', 'localites_pays.code_decoupage', '=', 'decoupage_administratif.code_decoupage')
                 ->where('localites_pays.id_pays', $paysCode)
                 ->orderBy('localites_pays.libelle', 'asc')
@@ -397,277 +405,790 @@ class EtudeProjet extends Controller
 
             return response()->json($unites);
         }
+        public function historiqueApp(Request $request)
+        {
+            try {
+                $country = session('pays_selectionne');
+                $group = session('projet_selectionne');
+                $ecran   = Ecran::find($request->input('ecran_id'));
+                $approvalHistory = ProjetApprobation::with([
+                        'etude',
+                        'etude.projet',
+                        'approbateur.acteur',
+                        'statutValidation'
+                    ])
+                    ->whereIn('statut_validation_id', [2, 3]) // Validé ou refusé
+                    ->whereHas('etude.projet', function ($query) use ($country, $group) {
+                        $query->where('code_projet', 'like', $country . $group . '%');
+                    })
+                    ->orderByDesc('approved_at')
+                    ->get();
+
+                return view('etudes_projets.historiqueApp', compact('ecran', 'approvalHistory'));
+        
+            } catch (Exception $e) {
+                Log::error("Erreur chargement historique approbation : " . $e->getMessage());
+                return back()->with('error', 'Impossible de charger l’historique des validations.');
+            }
+        }
 
 
-        private function genererCodeEtude($codePays, $codeGroupeProjet)
-        {
-            $now = Carbon::now();
-            $annee = $now->format('Y');
-            $mois = $now->format('m');
+        
+        
 
-            // Compte les études existantes pour ce mois/pays/groupe
-            $ordre = EtudeProject::where('codeEtudeProjets', 'like', "{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_%")->count() + 1;
+        
+        
 
-            return strtoupper("{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_{$ordre}");
-        }
 
-        public function saveStep1(Request $request)
-        {
-            try {
-                $request->validate([
-                    'libelle_projet' => 'required|string|max:255',
-                    'code_sous_domaine' => 'required|string|max:10',
-                    'date_demarrage_prevue' => 'required|date',
-                    'date_fin_prevue' => 'required|date|after_or_equal:date_demarrage_prevue',
-                    'cout_projet' => 'required|numeric',
-                    'code_devise' => 'required|string|max:3',
-                    'code_nature' => 'required|string|max:10',
-                    'code_pays' => 'required|string|max:3',
-                    'commentaire' => 'nullable|string|max:500'
-                ]);
-        
-                $data = $request->only([
-                    'libelle_projet', 'commentaire', 'code_sous_domaine',
-                    'date_demarrage_prevue', 'date_fin_prevue',
-                    'cout_projet', 'code_devise', 'code_nature', 'code_pays'
-                ]);
-        
-                session(['form_step1' => $data]);
-        
-                // Vérification du stockage en session
-                if (session()->has('form_step1')) {
-                    \Log::info('Données correctement stockées en session', [
-                        'session_data' => session('form_step1')
+
+    /////////////////////////////RENFORCEMENT DES CAPACITE//////////////////////
+
+    public function indexRenfo(Request $request)
+    {
+        $country = session('pays_selectionne');
+        $group   = session('projet_selectionne');
+        $ecran   = Ecran::find($request->input('ecran_id'));
+    
+        Log::info("📌 indexRenfo appelé", [
+            'country' => $country,
+            'group'   => $group,
+            'ecran_id'=> $request->input('ecran_id'),
+            'statutFilter' => $request->query('statut')
+        ]);
+    
+        $statutFilter = $request->query('statut');
+    
+        $query = Renforcement::with(['beneficiaires','projets','modalite','actionType','statut', 'fichiers'])
+            ->where('code_renforcement', 'like', $country.'_'.$group.'%')
+            ->when($statutFilter, fn($q) => $q->where('statutId', $statutFilter))
+            ->orderByDesc('date_debut');
+    
+        $renforcements = $query->paginate(25)->withQueryString();
+    
+        Log::info("✅ indexRenfo résultats paginés", [
+            'total' => $renforcements->total()
+        ]);
+    
+        $projets        = Projet::where('code_projet', 'like', $country.$group.'%')->get();
+        $beneficiaires  = Acteur::where('code_pays', $country)->get();
+        $modalites      = Modalite::orderBy('Libelle')->get();
+        $actionTypes    = ActionType::orderBy('Libelle')->get();
+        $statuts        = StatutOperation::orderBy('Libelle')->get();
+    
+        $stats = Renforcement::select('statutId', DB::raw('COUNT(*) as total'))
+            ->where('code_renforcement', 'like', $country.'_'.$group.'%')
+            ->groupBy('statutId')
+            ->pluck('total', 'statutId');
+    
+        return view('etudes_projets.renforcement', compact(
+            'ecran',
+            'renforcements',
+            'projets',
+            'beneficiaires',
+            'modalites',
+            'actionTypes',
+            'statuts',
+            'stats',
+            'statutFilter'
+        ));
+    }
+    
+    public function storeRenfo(StoreRenforcementRequest $request)
+    {
+        DB::beginTransaction();
+        try {
+            Log::info("📌 storeRenfo début", $request->all());
+    
+            $country = session('pays_selectionne');
+            $group   = session('projet_selectionne');
+            $code    = Renforcement::generateCodeRenforcement($country, $group);
+    
+            $renfo = Renforcement::create([
+                'code_renforcement'        => $code,
+                'titre'                    => $request->titre,
+                'description'              => $request->description,
+                'actionTypeId'             => $request->actionTypeId,
+                'thematique'               => $request->thematique,
+                'organisme'                => $request->organisme,
+                'lieu'                     => $request->lieu,
+                'modaliteId'               => $request->modaliteId,
+                'nb_participants_prev'     => $request->nb_participants_prev,
+                'nb_participants_effectif' => $request->nb_participants_effectif,
+                'cout_previsionnel'        => $request->cout_previsionnel,
+                'cout_reel'                => $request->cout_reel,
+                'source_financement'       => $request->source_financement,
+                'pretest_moy'              => $request->pretest_moy,
+                'posttest_moy'             => $request->posttest_moy,
+                'statutId'                 => 'plan',
+                'date_debut'               => $request->date_debut,
+                'date_fin'                 => $request->date_fin,
+            ]);
+    
+            Log::info("✅ Renforcement créé", ['code' => $renfo->code_renforcement]);
+    
+            $renfo->beneficiaires()->sync($request->beneficiaires);
+            $renfo->projets()->sync($request->projets ?? []);
+    
+            // === Pièces jointes -> GridFS ===
+            // On stocke CHAQUE fichier dans GridFS et on crée une ligne dans `fichiers`
+            // owner_type = 'Renforcement' ; owner_id = code renforcement
+            if ($request->hasFile('pieces')) {
+                foreach ($request->file('pieces') as $file) {
+                    if (!$file || !$file->isValid()) continue;
+
+                    $res = app(\App\Services\FileProcService::class)->handle([
+                        'owner_type'  => 'Renforcement',
+                        'owner_id'    => (string)$code, // ou (string)$renfo->code_renforcement en update
+                        'categorie'   => 'DOC_RENFO',
+                        'file'        => $file,                       // UploadedFile
+                        'uploaded_by' => optional($request->user())->id,
+                        // optionnel: 'metadata' => ['context' => 'renfo-piece'],
                     ]);
-                } else {
-                    \Log::error('Échec du stockage en session');
+
+                    // $res contient typiquement: id (fichiers.id), gridfs_id, filename, mime, size
+                    Log::info("📦 Pièce jointe enregistrée (GridFS)", [
+                        'renfo'     => (string)$code,
+                        'fichierId' => $res['id'] ?? null,
+                        'mime'      => $res['mime'] ?? null,
+                        'size'      => $res['size'] ?? null,
+                    ]);
                 }
-        
-                return response()->json(['success' => true]);
-        
-            } catch (\Throwable $e) {
-                \Log::error('Erreur lors de l\'enregistrement des données step1', [
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                    'error' => 'Une erreur est survenue. Veuillez réessayer.'
-                ], 500);
+            }
+
+    
+            DB::commit();
+            return response()->json([
+                'ok' => true,
+                'message' => 'Renforcement créé avec succès.',
+                'data' => ['code' => $renfo->code_renforcement]
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("❌ Erreur storeRenfo", ['exception' => $e]);
+            return response()->json([
+                'ok' => false,
+                'message' => 'Erreur lors de la création.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    
+    public function updateRenfo(Request $request, string $code)
+    {
+        DB::beginTransaction();
+        try {
+            Log::info("📌 updateRenfo début", ['code' => $code, 'payload' => $request->all()]);
+    
+            $renfo = Renforcement::where('code_renforcement',$code)->firstOrFail();
+    
+            $renfo->update($request->only([
+                'titre','description','actionTypeId','thematique','organisme','lieu',
+                'modaliteId','nb_participants_prev','nb_participants_effectif',
+                'cout_previsionnel','cout_reel','source_financement',
+                'pretest_moy','posttest_moy','date_debut','date_fin'
+            ]));
+    
+            $renfo->beneficiaires()->sync($request->beneficiaires);
+            $renfo->projets()->sync($request->projets ?? []);
+            // === Pièces jointes -> GridFS (update) ===
+            if ($request->hasFile('pieces')) {
+                foreach ($request->file('pieces') as $file) {
+                    if (!$file || !$file->isValid()) continue;
+
+                    $res = app(\App\Services\FileProcService::class)->handle([
+                        'owner_type'  => 'Renforcement',
+                        'owner_id'    => (string)$renfo->code_renforcement,
+                        'categorie'   => 'DOC_RENFO',
+                        'file'        => $file,
+                        'uploaded_by' => optional($request->user())->id,
+                    ]);
+
+                    \Log::info("📦 Pièce jointe ajoutée (GridFS/update)", [
+                        'renfo'     => $renfo->code_renforcement,
+                        'fichierId' => $res['id'] ?? null,
+                        'mime'      => $res['mime'] ?? null,
+                        'size'      => $res['size'] ?? null,
+                    ]);
+                }
+            }
+
+    
+            DB::commit();
+            Log::info("✅ Renforcement mis à jour", ['code' => $renfo->code_renforcement]);
+    
+            return response()->json([
+                'ok' => true,
+                'message' => 'Renforcement modifié avec succès.',
+                'data' => ['code' => $renfo->code_renforcement]
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("❌ Erreur updateRenfo", ['exception' => $e]);
+            return response()->json([
+                'ok' => false,
+                'message' => 'Erreur lors de la modification.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    
+    public function updateRenfoStatus(Request $request, string $code)
+    {
+        $request->validate([
+            'statutId' => ['required','in:plan,enc,achv,annul,repr'],
+            'motif_annulation' => ['nullable','string','max:2000'],
+        ]);
+    
+        Log::info("📌 updateRenfoStatus début", ['code' => $code, 'payload' => $request->all()]);
+    
+        $renfo = \App\Models\Renforcement::where('code_renforcement',$code)->firstOrFail();
+    
+        $payload = ['statutId' => $request->statutId];
+        if ($request->statutId === 'annul') {
+            $payload['motif_annulation'] = $request->motif_annulation ?? 'Non précisé';
+        } else {
+            $payload['motif_annulation'] = null;
+        }
+    
+        $renfo->update($payload);
+    
+        Log::info("✅ Statut mis à jour", ['code' => $code, 'statutId' => $renfo->statutId]);
+    
+        return response()->json([
+            'ok' => true,
+            'message' => 'Statut mis à jour.',
+            'data' => ['statutId' => $renfo->statutId]
+        ]);
+    }
+    
+    public function destroyRenfo(string $code)
+    {
+        try {
+            Log::warning("📌 destroyRenfo demandé", ['code' => $code]);
+    
+            $renfo = \App\Models\Renforcement::where('code_renforcement',$code)->firstOrFail();
+            $renfo->delete();
+    
+            Log::info("✅ Renforcement supprimé", ['code' => $code]);
+    
+            return response()->json([
+                'ok' => true,
+                'message' => 'Renforcement supprimé avec succès.'
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("❌ Erreur destroyRenfo", ['code' => $code, 'exception' => $e]);
+            return response()->json([
+                'ok' => false,
+                'message' => 'Erreur lors de la suppression.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    
+
+
+    private function parseMoney(?string $raw): ?float
+    {
+        if ($raw === null || $raw === '') return null;
+        // retire espaces & NBSP, remplace virgule par point
+        $v = str_replace(["\xC2\xA0",' '], '', $raw);
+        $v = str_replace(',', '.', $v);
+        return is_numeric($v) ? (float)$v : null;
+    }
+
+    ////////////////////////////////////ACTIVITE CONNEXE//////////////////////////////
+    public function activite(Request $request)
+    {
+        $country = (string)session('pays_selectionne');
+        $group   = (string)session('projet_selectionne');
+
+        $ecran   = Ecran::find($request->integer('ecran_id'));
+
+        $travaux = TravauxConnexes::with(['typeTravaux','projet'])
+            ->where('codeActivite', 'like', "{$country}_{$group}%")
+            ->orderByDesc('date_debut_previsionnelle')
+            ->get();
+
+        $projets      = Projet::where('code_projet', 'like', $country.$group.'%')->get();
+        $typesTravaux = TypeTravauxConnexes::orderBy('libelle')->get();
+
+        return view('etudes_projets.activite', compact('ecran','travaux','projets','typesTravaux'));
+    }
+
+    // Store
+    public function storeConnexe(Request $request)
+    {
+        // Validation
+        $request->validate([
+            'code_projet'                => ['required','exists:projets,code_projet'],
+            'type_travaux_id'            => ['required','exists:types_travaux_connexes,id'],
+            'cout_projet'                => ['required','numeric','min:0'],
+            'date_debut_previsionnelle'  => ['required','date'],
+            'date_fin_previsionnelle'    => ['required','date','after_or_equal:date_debut_previsionnelle'],
+            'date_debut_effective'       => ['nullable','date'],
+            'date_fin_effective'         => ['nullable','date','after_or_equal:date_debut_effective'],
+            'commentaire'                => ['nullable','string','max:2000'],
+        ], [], [
+            'code_projet' => 'projet',
+            'type_travaux_id' => 'type de travaux',
+            'cout_projet' => 'coût du projet',
+            'date_debut_previsionnelle' => 'début prévisionnel',
+            'date_fin_previsionnelle' => 'fin prévisionnel',
+            'date_debut_effective' => 'début effectif',
+            'date_fin_effective' => 'fin effectif',
+        ]);
+
+        try {
+            $country = (string)session('pays_selectionne');
+            $group   = (string)session('projet_selectionne');
+            $code    = TravauxConnexes::generateCodeTravauxConnexe($country, $group);
+
+            TravauxConnexes::create([
+                'codeActivite'               => $code,
+                'code_projet'                => $request->code_projet,
+                'type_travaux_id'            => $request->type_travaux_id,
+                'cout_projet'                => $request->cout_projet, // mutator normalise
+                'date_debut_previsionnelle'  => $request->date_debut_previsionnelle,
+                'date_fin_previsionnelle'    => $request->date_fin_previsionnelle,
+                'date_debut_effective'       => $request->date_debut_effective,
+                'date_fin_effective'         => $request->date_fin_effective,
+                'commentaire'                => $request->commentaire,
+            ]);
+
+            Log::info('✅ Activité connexe créée', [
+                'code' => $code,
+                'user_id' => optional($request->user())->id,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Travail connexe enregistré avec succès.',
+                'data' => ['code' => $code]
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('❌ storeConnexe erreur', [
+                'err' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return back()->with('error', "Erreur lors de l'enregistrement : ".$e->getMessage())
+                         ->withInput();
+        }
+    }
+
+    // Update (id = codeActivite)
+    public function updateConnexe(Request $request, string $id)
+    {
+        $request->validate([
+            'type_travaux_id'            => ['required','exists:types_travaux_connexes,id'],
+            'cout_projet'                => ['required','numeric','min:0'],
+            'date_debut_previsionnelle'  => ['required','date'],
+            'date_fin_previsionnelle'    => ['required','date','after_or_equal:date_debut_previsionnelle'],
+            'date_debut_effective'       => ['nullable','date'],
+            'date_fin_effective'         => ['nullable','date','after_or_equal:date_debut_effective'],
+            'commentaire'                => ['nullable','string','max:2000'],
+        ]);
+
+        try {
+            $row = TravauxConnexes::where('codeActivite', $id)->firstOrFail();
+
+            $row->update([
+                'type_travaux_id'            => $request->type_travaux_id,
+                'cout_projet'                => $request->cout_projet, // mutator
+                'date_debut_previsionnelle'  => $request->date_debut_previsionnelle,
+                'date_fin_previsionnelle'    => $request->date_fin_previsionnelle,
+                'date_debut_effective'       => $request->date_debut_effective,
+                'date_fin_effective'         => $request->date_fin_effective,
+                'commentaire'                => $request->commentaire,
+            ]);
+
+            Log::info('✅ Activité connexe modifiée', [
+                'code' => $id,
+                'user_id' => optional($request->user())->id,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Travail connexe modifié avec succès.',
+                'data' => ['code' => $row->codeActivite]
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('❌ updateConnexe erreur', [
+                'code' => $id,
+                'err' => $e->getMessage(),
+            ]);
+            return back()->with('error', "Erreur lors de la modification : ".$e->getMessage())
+                         ->withInput();
+        }
+    }
+
+    // Delete JSON
+    public function deleteActivite(string $id)
+    {
+        try {
+            $row = TravauxConnexes::where('codeActivite', $id)->firstOrFail();
+            $row->delete();
+
+            Log::warning('🗑️ Activité connexe supprimée', ['code' => $id]);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Activité connexe supprimée.'
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('❌ deleteActivite erreur', [
+                'code' => $id,
+                'err' => $e->getMessage(),
+            ]);
+            return response()->json(['ok' => false, 'message' => "Erreur : ".$e->getMessage()], 500);
+        }
+    }
+    ///////////////MODELISER
+    public function modelisation(Request $request)
+    {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        return view('etudes_projets.modeliser', compact('ecran'));
+    }
+
+    private function genererCodeEtude($codePays, $codeGroupeProjet)
+    {
+        $now = Carbon::now();
+        $annee = $now->format('Y');
+        $mois = $now->format('m');
+
+        // Compte les études existantes pour ce mois/pays/groupe
+        $ordre = EtudeProject::where('codeEtudeProjets', 'like', "{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_%")->count() + 1;
+
+        return strtoupper("{$codePays}_{$codeGroupeProjet}_{$annee}_{$mois}_{$ordre}");
+    }
+    private function nettoyerSessionsEtFichiers()
+    {
+        foreach (session('form_step7.fichiers', []) as $file) {
+            $fullPath = storage_path('app/' . $file['storage_path']);
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
             }
         }
         
-        public function saveStep2(Request $request)
-        {
-            try {
-                $request->validate([
-                    'localites' => 'required|array|min:1',
-                    'localites.*.code_rattachement' => 'required|string',
-                    'localites.*.niveau' => 'nullable|string',
-                    'localites.*.decoupage' => 'nullable|string',
-                    'infrastructures' => 'nullable|array',
+        session()->forget([
+            'form_step1', 'form_step2', 'form_step3',
+            'form_step4', 'form_step5', 'form_step6', 'form_step7',
+            'code_localisation'
+        ]);
+    }
+    
+    private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
+    {
+        $paysAlpha3 = session('pays_selectionne');
+        $groupeProjet = session('projet_selectionne');
+        $date = Carbon::parse($dateDebut);
+
+        $codeLocalisation = substr($codeLocalisation, 0, 4);
+
+        // Génère la partie fixe du code projet (jusqu'à l’année)
+        $prefix = sprintf('%s%s%s_%s_%s_%s',
+            strtoupper($paysAlpha3),
+            strtoupper($groupeProjet),
+            $typeFinancement,
+            strtoupper($codeLocalisation),
+            strtoupper($codeSousDomaine),
+            $date->format('Y')
+        );
+
+        // Compte les projets déjà existants avec ce préfixe
+        $ordre = Projet::where('code_projet', 'like', $prefix . '_%')->count() + 1;
+
+        // Ajoute le suffixe (ordre)
+        return $prefix . '_' . str_pad($ordre, 2, '0', STR_PAD_LEFT);
+    }  
+    
+    public function getLatestProjectNumber($location, $category, $typeFinancement)
+    {
+        $year = date('Y');
+        $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}PROJ{$category}{$typeFinancement}{$year}_%")
+                                    ->orderBy('codeEtudeProjets', 'desc')
+                                    ->first();
+
+        $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
+        $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
+
+        return response()->json(['newNumber' => $newNumber]);
+    }
+
+    private function generateProjectCode($location, $category, $typeFinancement)
+    {
+        $year = date('Y');
+        $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}PROJ{$category}{$typeFinancement}{$year}_%")
+                                    ->orderBy('codeEtudeProjets', 'desc')
+                                    ->first();
+
+        $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
+        $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
+
+        return "{$location}{$category}{$typeFinancement}{$year}{$newNumber}";
+    }
+    
+    public function saveStep1(Request $request)
+    {
+        try {
+            $request->validate([
+                'libelle_projet' => 'required|string|max:255',
+                'code_sous_domaine' => 'required|string|max:10',
+                'date_demarrage_prevue' => 'required|date',
+                'date_fin_prevue' => 'required|date|after_or_equal:date_demarrage_prevue',
+                'cout_projet' => 'required|numeric',
+                'code_devise' => 'required|string|max:3',
+                'code_nature' => 'required|string|max:10',
+                'code_pays' => 'required|string|max:3',
+                'commentaire' => 'nullable|string|max:500'
+            ]);
+    
+            $data = $request->only([
+                'libelle_projet', 'commentaire', 'code_sous_domaine',
+                'date_demarrage_prevue', 'date_fin_prevue',
+                'cout_projet', 'code_devise', 'code_nature', 'code_pays'
+            ]);
+    
+            session(['form_step1' => $data]);
+    
+            // Vérification du stockage en session
+            if (session()->has('form_step1')) {
+                Log::info('Données correctement stockées en session', [
+                    'session_data' => session('form_step1')
                 ]);
-        
-                $data = $request->only(['localites', 'infrastructures']);
-                session(['form_step2' => $data]);
-        
-                // Stocker aussi le premier code_localisation s’il existe
-                if (!empty($request->localites)) {
-                    session(['code_localisation' => $request->localites[0]['code_rattachement']]);
-                }
-        
-                // Vérification
-                if (session()->has('form_step2')) {
-                    \Log::info('Étape 2 stockée en session avec succès.', [
-                        'session_data' => session('form_step2')
-                    ]);
-                } else {
-                    \Log::error('Échec de la sauvegarde en session (étape 2).');
-                }
-        
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Étape 2 enregistrée temporairement en session.',
-                ]);
-            } catch (\Throwable $e) {
-                \Log::error('Erreur lors de l\'enregistrement de l\'étape 2', [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 500);
+            } else {
+                Log::error('Échec du stockage en session');
             }
+    
+            return response()->json(['success' => true]);
+    
+        } catch (\Throwable $e) {
+            Log::error('Erreur lors de l\'enregistrement des données step1', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => 'Une erreur est survenue. Veuillez réessayer.'
+            ], 500);
         }
-        
-        public function saveStep3(Request $request)
-        {
-            try {
-                $request->validate([
-                     'actions' => 'required|array',
-                ]);
-                
-                $data = $request->only(['actions']);
-                session(['form_step3' => $data]);
-        
-                if (session()->has('form_step3')) {
-                    \Log::info('Étape 3 stockée en session avec succès.', [
-                        'session_data' => session('form_step3')
-                    ]);
-                } else {
-                    \Log::error('Échec de la sauvegarde en session (étape 3).');
-                }
-        
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Étape 3 enregistrée temporairement en session.',
-                ]);
-            } catch (\Throwable $e) {
-                \Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 500);
+    }
+    
+    public function saveStep2(Request $request)
+    {
+        try {
+            $request->validate([
+                'localites' => 'required|array|min:1',
+                'localites.*.code_rattachement' => 'required|string',
+                'localites.*.niveau' => 'nullable|string',
+                'localites.*.decoupage' => 'nullable|string',
+                'infrastructures' => 'nullable|array',
+            ]);
+    
+            $data = $request->only(['localites', 'infrastructures']);
+            session(['form_step2' => $data]);
+    
+            // Stocker aussi le premier code_localisation s’il existe
+            if (!empty($request->localites)) {
+                session(['code_localisation' => $request->localites[0]['code_rattachement']]);
             }
-        }
-        
-        public function saveStep4(Request $request)
-        {
-            try {
-                $request->validate([
-                    'acteurs' => 'required|array|min:1',
-                    'acteurs.*.code_acteur' => 'required|exists:acteur,code_acteur',
-                    'acteurs.*.secteur_id' => 'nullable|string',
-                    'type_ouvrage' => 'nullable|string',
-                    'priveMoeType' => 'nullable|string',
-                    'sectActivEntMoe' => 'nullable|string',
-                    'descriptionMoe' => 'nullable|string',
+    
+            // Vérification
+            if (session()->has('form_step2')) {
+                Log::info('Étape 2 stockée en session avec succès.', [
+                    'session_data' => session('form_step2')
                 ]);
-        
-                $data = $request->only([
-                    'type_ouvrage', 'priveMoeType', 'descriptionMoe', 'acteurs'
-                ]);
-        
-                session(['form_step4' => $data]);
-        
-                if (session()->has('form_step4')) {
-                    \Log::info('Étape 4 stockée en session avec succès.', [
-                        'session_data' => session('form_step4')
-                    ]);
-                } else {
-                    \Log::error('Échec du stockage en session (étape 4).');
-                }
-        
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Étape 4 enregistrée temporairement en session.',
-                ]);
-        
-            } catch (\Exception $e) {
-                \Log::error('Erreur lors de l\'enregistrement de l\'étape 4', [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 500);
+            } else {
+                Log::error('Échec de la sauvegarde en session (étape 2).');
             }
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 2 enregistrée temporairement en session.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'étape 2', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
-        
-        public function saveStep5(Request $request)
-        {
-            try {
-                $request->validate([
-                    'acteurs' => 'required|array',
-                    'acteurs.*.code_acteur' => 'required|string|exists:acteur,code_acteur',
-                    'acteurs.*.secteur_id' => 'nullable|string',
+    }
+    
+    public function saveStep3(Request $request)
+    {
+        try {
+            $request->validate([
+                 'actions' => 'required|array',
+            ]);
+            
+            $data = $request->only(['actions']);
+            session(['form_step3' => $data]);
+    
+            if (session()->has('form_step3')) {
+                Log::info('Étape 3 stockée en session avec succès.', [
+                    'session_data' => session('form_step3')
                 ]);
-        
-                $data = $request->only(['acteurs']);
-        
-                // Stockage en session
-                session(['form_step5' => $data]);
-        
-                if (session()->has('form_step5')) {
-                    \Log::info('Étape 5 stockée en session avec succès.', [
-                        'session_data' => session('form_step5')
-                    ]);
-                } else {
-                    \Log::error('Échec du stockage en session (étape 5).');
-                }
-        
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Étape 5 enregistrée temporairement en session.',
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Erreur lors de l\'enregistrement de l\'étape 5', [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 500);
+            } else {
+                Log::error('Échec de la sauvegarde en session (étape 3).');
             }
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 3 enregistrée temporairement en session.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'étape 3', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
-        
-        public function saveStep6(Request $request)
-        {
-            try {
-                $request->validate([
-                    'financements' => 'required|array',
-                    'financements.*.bailleur' => 'required|string|exists:acteur,code_acteur',
-                    'financements.*.montant' => 'required|numeric',
-                    'financements.*.devise' => 'required|string|max:3',
-                    'financements.*.local' => 'required|in:Oui,Non,oui,non,1,0,true,false',
-                    'financements.*.commentaire' => 'nullable|string|max:500',
-                    'type_financement' => 'required|string|exists:type_financement,code_type_financement',
+    }
+    
+    public function saveStep4(Request $request)
+    {
+        try {
+            $request->validate([
+                'acteurs' => 'required|array|min:1',
+                'acteurs.*.code_acteur' => 'required|exists:acteur,code_acteur',
+                'acteurs.*.secteur_id' => 'nullable|string',
+                'type_ouvrage' => 'nullable|string',
+                'priveMoeType' => 'nullable|string',
+                'sectActivEntMoe' => 'nullable|string',
+                'descriptionMoe' => 'nullable|string',
+            ]);
+    
+            $data = $request->only([
+                'type_ouvrage', 'priveMoeType', 'descriptionMoe', 'acteurs'
+            ]);
+    
+            session(['form_step4' => $data]);
+    
+            if (session()->has('form_step4')) {
+                Log::info('Étape 4 stockée en session avec succès.', [
+                    'session_data' => session('form_step4')
                 ]);
-        
-                $data = $request->only(['financements', 'type_financement']);
-        
-                // Stocker en session
-                session(['form_step6' => $data]);
-        
-                if (session()->has('form_step6')) {
-                    \Log::info('Étape 6 stockée en session avec succès.', [
-                        'session_data' => session('form_step6')
-                    ]);
-                } else {
-                    \Log::error('Échec du stockage en session (étape 6).');
-                }
-        
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Étape 6 enregistrée temporairement en session.',
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Erreur lors de l\'enregistrement de l\'étape 6', [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage(),
-                ], 500);
+            } else {
+                Log::error('Échec du stockage en session (étape 4).');
             }
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 4 enregistrée temporairement en session.',
+            ]);
+    
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'étape 4', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
-        public function saveStep7(Request $request)
+    }
+    
+    public function saveStep5(Request $request)
+    {
+        try {
+            $request->validate([
+                'acteurs' => 'required|array',
+                'acteurs.*.code_acteur' => 'required|string|exists:acteur,code_acteur',
+                'acteurs.*.secteur_id' => 'nullable|string',
+            ]);
+    
+            $data = $request->only(['acteurs']);
+    
+            // Stockage en session
+            session(['form_step5' => $data]);
+    
+            if (session()->has('form_step5')) {
+                Log::info('Étape 5 stockée en session avec succès.', [
+                    'session_data' => session('form_step5')
+                ]);
+            } else {
+                Log::error('Échec du stockage en session (étape 5).');
+            }
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 5 enregistrée temporairement en session.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'étape 5', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    
+    public function saveStep6(Request $request)
+    {
+        try {
+            $request->validate([
+                'financements' => 'required|array',
+                'financements.*.bailleur' => 'required|string|exists:acteur,code_acteur',
+                'financements.*.montant' => 'required|numeric',
+                'financements.*.devise' => 'required|string|max:3',
+                'financements.*.local' => 'required|in:Oui,Non,oui,non,1,0,true,false',
+                'financements.*.commentaire' => 'nullable|string|max:500',
+                'type_financement' => 'required|string|exists:type_financement,code_type_financement',
+            ]);
+    
+            $data = $request->only(['financements', 'type_financement']);
+    
+            // Stocker en session
+            session(['form_step6' => $data]);
+    
+            if (session()->has('form_step6')) {
+                Log::info('Étape 6 stockée en session avec succès.', [
+                    'session_data' => session('form_step6')
+                ]);
+            } else {
+                Log::error('Échec du stockage en session (étape 6).');
+            }
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Étape 6 enregistrée temporairement en session.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'étape 6', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function saveStep7(Request $request)
+
+    {
+        try 
         {
-            try {
                 // 1) Validation + journalisation d’entrée
                 Log::info('[Step7] Début upload', [
                     'has_files' => $request->hasFile('fichiers'),
@@ -731,869 +1252,349 @@ class EtudeProjet extends Controller
                     'success' => true,
                     'message' => count($uploadedFiles) . ' fichier(s) enregistré(s)',
                 ]);
+                
+        } catch (Throwable $e) {
+            Log::error('[Step7] Erreur globale', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => "Une erreur s'est produite lors de l’upload.",
+            ], 500);
+        }
+    }
+     
+    public function finaliserProjet()
+    {
+        return DB::transaction(function () {
+    
+            try {
+                Log::info('[Finaliser] Début finalisation');
+    
+                // 0) Récup sessions + garde-fous + logs
+                $step1 = session('form_step1', []);
+                $step2 = session('form_step2', []);
+                $step3 = session('form_step3', []);
+                $step4 = session('form_step4', []);
+                $step5 = session('form_step5', []);
+                $step6 = session('form_step6', []);
+                $step7 = session('form_step7', []);
+    
+                Log::info('[Finaliser] États de session', [
+                    'has_step1' => !empty($step1),
+                    'has_step2' => !empty($step2),
+                    'has_step3' => !empty($step3),
+                    'has_step4' => !empty($step4),
+                    'has_step5' => !empty($step5),
+                    'has_step6' => !empty($step6),
+                    'has_step7' => !empty($step7),
+                ]);
+    
+                // Checks essentiels
+                foreach ([
+                    'form_step1' => $step1,
+                    'form_step2' => $step2,
+                    'form_step6' => $step6,
+                ] as $k => $v) {
+                    if (empty($v)) {
+                        Log::error('[Finaliser] Session manquante', ['step' => $k]);
+                        throw new \Exception("Données manquantes ($k).");
+                    }
+                }
+    
+                $codeLocalisation = collect($step2['localites'] ?? [])
+                    ->pluck('code_rattachement')->filter()->first();
+    
+                Log::info('[Finaliser] Code localisation', [
+                    'codeLocalisation' => $codeLocalisation,
+                ]);
+    
+                // 1) Générer code projet
+                $codeProjet = $this->genererCodeProjet(
+                    $step1['code_sous_domaine'] ?? null,
+                    $step6['type_financement'] ?? null,
+                    $codeLocalisation,
+                    $step1['date_demarrage_prevue'] ?? null,
+                );
+    
+                if (!$codeProjet) {
+                    throw new \Exception('Échec génération code projet');
+                }
+    
+                Log::info('[Finaliser] Code projet généré', ['code_projet' => $codeProjet]);
+    
+                // 2) Projet principal
+                $projet = Projet::create([
+                    'code_projet'           => $codeProjet,
+                    'libelle_projet'        => $step1['libelle_projet'] ?? null,
+                    'commentaire'           => $step1['commentaire'] ?? null,
+                    'code_sous_domaine'     => $step1['code_sous_domaine'] ?? null,
+                    'date_demarrage_prevue' => $step1['date_demarrage_prevue'] ?? null,
+                    'date_fin_prevue'       => $step1['date_fin_prevue'] ?? null,
+                    'cout_projet'           => $step1['cout_projet'] ?? null,
+                    'code_devise'           => $step1['code_devise'] ?? null,
+                    'code_alpha3_pays'      => $step1['code_pays'] ?? null,
+                ]);
+    
+                Log::info('[Finaliser] Projet créé', ['id' => $projet->id, 'code' => $codeProjet]);
+    
+                projets_natureTravaux::create([
+                    'code_projet' => $codeProjet,
+                    'code_nature' => $step1['code_nature'] ?? null,
+                    'date'        => now(),
+                ]);
+    
+                ProjetStatut::create([
+                    'code_projet' => $codeProjet,
+                    'type_statut' => 1,
+                    'date_statut' => now(),
+                ]);
+    
+                $codePays = session('pays_selectionne');
+    
+                // 3) Localisations
+                foreach (($step2['localites'] ?? []) as $idx => $loc) {
+                    Log::info('[Finaliser] Localisation', ['index' => $idx, 'loc' => $loc]);
+    
+                    ProjetLocalisation::create([
+                        'code_projet'  => $codeProjet,
+                        'code_localite'=> $loc['code_rattachement'] ?? null,
+                        'niveau'       => $loc['niveau'] ?? null,
+                        'decoupage'    => $loc['code_decoupage'] ?? null,
+                        'pays_code'    => $step1['code_pays'] ?? null,
+                    ]);
+                }
+    
+                // 4) Infrastructures (+ caractéristiques)
+                if (!empty($step2['infrastructures'])) {
+                    foreach ($step2['infrastructures'] as $i => $infra) {
+                        Log::info('[Finaliser] Infra entrée', ['i' => $i, 'infra' => $infra]);
+    
+                        $codeFamille = $infra['famille_code'] ?? null;
+                        if (!$codeFamille) {
+                            throw new \Exception("Famille d'infrastructure manquante (infra #$i).");
+                        }
+    
+                        $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
+                            ->where('libelle', $infra['libelle'] ?? '')
+                            ->first();
+    
+                        if (!$infraDB) {
+                            $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->first();
+                            if (!$famille) {
+                                throw new \Exception("Famille introuvable ($codeFamille) pour infra #$i.");
+                            }
+    
+                            $familleId = $famille->idFamille;
+                            Log::info('[Finaliser] Famille trouvée', ['famille_id' => $familleId]);
+    
+                            $prefix = ($codePays ?? '') . $codeFamille;
+                            $last   = Infrastructure::where('code', 'like', $prefix.'%')->orderByDesc('code')->first();
+                            $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
+                            $codeInfra  = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+    
+                            $infraDB = Infrastructure::create([
+                                'code'               => $codeInfra,
+                                'libelle'            => $infra['libelle'] ?? ("Infra_$codeInfra"),
+                                'code_Ssys'          => $codeFamille,
+                                'code_groupe_projet' => session('projet_selectionne'),
+                                'code_pays'          => $codePays,
+                                'code_localite'      => $infra['localisation_id'] ?? null,
+                                'date_operation'     => now(),
+                                'IsOver'             => false,
+                            ]);
+    
+                            Log::info('[Finaliser] Infra créée', ['code' => $infraDB->code, 'id' => $infraDB->id]);
+                        } else {
+                            Log::info('[Finaliser] Infra existante', ['code' => $infraDB->code, 'id' => $infraDB->id]);
+                        }
+    
+                        $projetInfra = ProjetInfrastructure::create([
+                            'idInfrastructure' => $infraDB->id,
+                            'code_projet'      => $codeProjet,
+                            'localisation_id'  => $infra['localisation_id'] ?? $codeLocalisation,
+                        ]);
+    
+                        Log::info('[Finaliser] Lien Projet-Infrastructure créé', ['pi_id' => $projetInfra->id]);
+    
+                        foreach (($infra['caracteristiques'] ?? []) as $index => $carac) {
+                            if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') {
+                                Log::warning('[Finaliser] Caractéristique ignorée', ['i' => $i, 'carac' => $carac]);
+                                continue;
+                            }
+    
+                            ValeurCaracteristique::create([
+                                'infrastructure_code' => $infraDB->code,
+                                'idCaracteristique'   => $carac['id'],
+                                'idUnite'             => $carac['unite_id'] ?? null,
+                                'valeur'              => $carac['valeur'],
+                                'ordre'               => $index + 1,
+                            ]);
+                        }
+                    }
+                }
+    
+                // 5) Actions à mener
+                foreach (($step3['actions'] ?? []) as $k => $action) {
+                    Log::info('[Finaliser] Action', ['k' => $k, 'action' => $action]);
+    
+                    $created = ProjetActionAMener::create([
+                        'code_projet'       => $codeProjet,
+                        'Num_ordre'         => $action['ordre'] ?? ($k+1),
+                        'Action_mener'      => $action['action_code'] ?? null,
+                        'Quantite'          => $action['quantite'] ?? null,
+                        'Infrastrucrues_id' => $action['infrastructure_code'] ?? 0,
+                    ]);
+    
+                    foreach (($action['beneficiaires'] ?? []) as $b) {
+                        $type = $b['type'] ?? '';
+                        Log::info('[Finaliser] Bénéficiaire', ['type' => $type, 'b' => $b]);
+    
+                        match ($type) {
+                            'acteur' => Beneficier::create([
+                                'code_projet' => $codeProjet,
+                                'code_acteur' => $b['code'] ?? null,
+                                'is_active'   => true,
+                            ]),
+                            'localite' => Profiter::create([
+                                'code_projet'     => $codeProjet,
+                                'code_pays'       => $b['codePays'] ?? null,
+                                'code_rattachement'=> $b['codeRattachement'] ?? null,
+                            ]),
+                            'infrastructure' => Jouir::create([
+                                'code_projet'       => $codeProjet,
+                                'code_Infrastructure'=> $b['code'] ?? null,
+                            ]),
+                            default => Log::warning('[Finaliser] Type bénéficiaire inconnu', ['b' => $b]),
+                        };
+                    }
+                }
+    
+                // 6) Maîtres d’Ouvrage
+                foreach (($step4['acteurs'] ?? []) as $idx => $acteur) {
+                    Log::info('[Finaliser] MOA', ['idx' => $idx, 'acteur' => $acteur]);
+    
+                    Posseder::create([
+                        'code_projet' => $codeProjet,
+                        'code_acteur' => $acteur['code_acteur'] ?? null,
+                        'secteur_id'  => $acteur['secteur_code'] ?? null,
+                        'isAssistant' => !empty($acteur['is_assistant']),
+                        'date'        => now(),
+                        'is_active'   => true,
+                    ]);
+                }
+    
+                // 7) Maîtres d’œuvre
+                foreach (($step5['acteurs'] ?? []) as $idx => $acteur) {
+                    Log::info('[Finaliser] MOE', ['idx' => $idx, 'acteur' => $acteur]);
+    
+                    Executer::create([
+                        'code_projet' => $codeProjet,
+                        'code_acteur' => $acteur['code_acteur'] ?? null,
+                        'secteur_id'  => $acteur['secteur_id'] ?? null,
+                        'is_active'   => true,
+                    ]);
+                }
+    
+                // 8) Financements
+                foreach (($step6['financements'] ?? []) as $idx => $fin) {
+                    Log::info('[Finaliser] Financement', ['idx' => $idx, 'fin' => $fin]);
+    
+                    Financer::create([
+                        'code_projet'       => $codeProjet,
+                        'code_acteur'       => $fin['bailleur'] ?? null,
+                        'montant_finance'   => $fin['montant'] ?? null,
+                        'devise'            => $fin['devise'] ?? null,
+                        'financement_local' => in_array(strtolower((string)($fin['local'] ?? '')), ['oui','1','true'], true),
+                        'commentaire'       => $fin['commentaire'] ?? null,
+                        'FinancementType'   => $step6['type_financement'] ?? null,
+                        'is_active'         => true,
+                    ]);
+                }
+    
+                // 9) Documents
+                $uploadPath = public_path('data/documentProjet/' . $codeProjet);
+                File::ensureDirectoryExists($uploadPath);
+                Log::info('[Finaliser] Répertoire documents prêt', ['path' => $uploadPath]);
+    
+                foreach ((($step7['fichiers'] ?? [])) as $i => $f) {
+                    Log::info('[Finaliser] Doc entrée', ['i' => $i, 'file' => $f]);
+    
+                    $rel = ltrim($f['storage_path'] ?? '', '/');
+                    $absPath = storage_path('app/' . $rel);
+                    if (!File::exists($absPath)) {
+                        Log::error('[Finaliser] Fichier introuvable sur disque', ['i' => $i, 'abs' => $absPath]);
+                        throw new \Exception("Fichier temporaire introuvable ($absPath).");
+                    }
+    
+                    $res = app(FileProcService::class)->handlePath([
+                        'owner_type'    => 'Projet',
+                        'owner_id'      => $codeProjet,
+                        'categorie'     => 'DOC_PROJET',
+                        'path'          => $absPath,
+                        'original_name' => $f['original_name'] ?? ('document_'.Str::random(6)),
+                        'uploaded_by'   => optional(request()->user())->id,
+                    ]);
+    
+                    Log::info('[Finaliser] Stockage fichier OK', ['gridfs_id' => $res['id'] ?? null, 'res' => $res]);
+    
+                    ProjetDocument::create([
+                        'file_name'     => $f['original_name'] ?? ($res['filename'] ?? null),
+                        'file_path'     => null,
+                        'file_type'     => $f['mime_type'] ?? ($res['mime'] ?? null),
+                        'file_size'     => $f['size'] ?? ($res['size'] ?? null),
+                        'file_category' => 'DOC_PROJET',
+                        'code_projet'   => $codeProjet,
+                        'uploaded_at'   => now(),
+                        'fichier_id'    => $res['id'] ?? null,
+                    ]);
+    
+                    try {
+                        @unlink($absPath);
+                        Log::info('[Finaliser] Temp supprimé', ['abs' => $absPath]);
+                    } catch (\Throwable $th) {
+                        Log::warning('[Finaliser] Échec suppression temp', ['abs' => $absPath, 'ex' => $th->getMessage()]);
+                    }
+                }
+    
+                // 10) Étude
+                $codeEtude = $this->genererCodeEtude(session('pays_selectionne'), session('projet_selectionne'));
+                if (!$codeEtude) {
+                    throw new \Exception('Échec génération code étude');
+                }
+    
+                EtudeProject::create([
+                    'codeEtudeProjets' => $codeEtude,
+                    'code_projet'      => $codeProjet,
+                    'valider'          => false,
+                    'is_deleted'       => false,
+                ]);
+    
+                Log::info('[Finaliser] Étude créée', ['code_etude' => $codeEtude]);
+    
+                // 🔁 Nettoyage
+                $this->nettoyerSessionsEtFichiers();
+                Log::info('[Finaliser] Nettoyage sessions OK');
+    
+                return response()->json([
+                    'success'     => true,
+                    'code_projet' => $codeProjet,
+                    'code_etude'  => $codeEtude,
+                    'message'     => 'Demande effectuée avec succès.',
+                ]);
             } catch (\Throwable $e) {
-                Log::error('[Step7] Erreur globale', [
+                // 👉 Toute exception = rollback automatique (DB::transaction)
+                Log::error('[Finaliser] ERREUR — rollback', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => "Une erreur s'est produite lors de l’upload.",
-                ], 500);
-            }
-        }
-        
-        
-        public function finaliserProjet()
-        {
-            // 👉 Tout se passe dans une transaction : rollback automatique en cas d’exception
-            return DB::transaction(function () {
-        
-                try {
-                    Log::info('[Finaliser] Début finalisation');
-        
-                    // 0) Récup sessions + garde-fous + logs
-                    $step1 = session('form_step1', []);
-                    $step2 = session('form_step2', []);
-                    $step3 = session('form_step3', []);
-                    $step4 = session('form_step4', []);
-                    $step5 = session('form_step5', []);
-                    $step6 = session('form_step6', []);
-                    $step7 = session('form_step7', []);
-        
-                    Log::info('[Finaliser] États de session', [
-                        'has_step1' => !empty($step1),
-                        'has_step2' => !empty($step2),
-                        'has_step3' => !empty($step3),
-                        'has_step4' => !empty($step4),
-                        'has_step5' => !empty($step5),
-                        'has_step6' => !empty($step6),
-                        'has_step7' => !empty($step7),
-                    ]);
-        
-                    // Checks essentiels
-                    foreach ([
-                        'form_step1' => $step1,
-                        'form_step2' => $step2,
-                        'form_step6' => $step6,
-                    ] as $k => $v) {
-                        if (empty($v)) {
-                            Log::error('[Finaliser] Session manquante', ['step' => $k]);
-                            throw new \Exception("Données manquantes ($k).");
-                        }
-                    }
-        
-                    $codeLocalisation = collect($step2['localites'] ?? [])
-                        ->pluck('code_rattachement')->filter()->first();
-        
-                    Log::info('[Finaliser] Code localisation', [
-                        'codeLocalisation' => $codeLocalisation,
-                    ]);
-        
-                    // 1) Générer code projet
-                    $codeProjet = $this->genererCodeProjet(
-                        $step1['code_sous_domaine'] ?? null,
-                        $step6['type_financement'] ?? null,
-                        $codeLocalisation,
-                        $step1['date_demarrage_prevue'] ?? null,
-                    );
-        
-                    if (!$codeProjet) {
-                        throw new \Exception('Échec génération code projet');
-                    }
-        
-                    Log::info('[Finaliser] Code projet généré', ['code_projet' => $codeProjet]);
-        
-                    // 2) Projet principal
-                    $projet = Projet::create([
-                        'code_projet'           => $codeProjet,
-                        'libelle_projet'        => $step1['libelle_projet'] ?? null,
-                        'commentaire'           => $step1['commentaire'] ?? null,
-                        'code_sous_domaine'     => $step1['code_sous_domaine'] ?? null,
-                        'date_demarrage_prevue' => $step1['date_demarrage_prevue'] ?? null,
-                        'date_fin_prevue'       => $step1['date_fin_prevue'] ?? null,
-                        'cout_projet'           => $step1['cout_projet'] ?? null,
-                        'code_devise'           => $step1['code_devise'] ?? null,
-                        'code_alpha3_pays'      => $step1['code_pays'] ?? null,
-                    ]);
-        
-                    Log::info('[Finaliser] Projet créé', ['id' => $projet->id, 'code' => $codeProjet]);
-        
-                    projets_natureTravaux::create([
-                        'code_projet' => $codeProjet,
-                        'code_nature' => $step1['code_nature'] ?? null,
-                        'date'        => now(),
-                    ]);
-        
-                    ProjetStatut::create([
-                        'code_projet' => $codeProjet,
-                        'type_statut' => 1,
-                        'date_statut' => now(),
-                    ]);
-        
-                    $codePays = session('pays_selectionne');
-        
-                    // 3) Localisations
-                    foreach (($step2['localites'] ?? []) as $idx => $loc) {
-                        Log::info('[Finaliser] Localisation', ['index' => $idx, 'loc' => $loc]);
-        
-                        ProjetLocalisation::create([
-                            'code_projet'  => $codeProjet,
-                            'code_localite'=> $loc['code_rattachement'] ?? null,
-                            'niveau'       => $loc['niveau'] ?? null,
-                            'decoupage'    => $loc['code_decoupage'] ?? null,
-                            'pays_code'    => $step1['code_pays'] ?? null,
-                        ]);
-                    }
-        
-                    // 4) Infrastructures (+ caractéristiques)
-                    if (!empty($step2['infrastructures'])) {
-                        foreach ($step2['infrastructures'] as $i => $infra) {
-                            Log::info('[Finaliser] Infra entrée', ['i' => $i, 'infra' => $infra]);
-        
-                            $codeFamille = $infra['famille_code'] ?? null;
-                            if (!$codeFamille) {
-                                throw new \Exception("Famille d'infrastructure manquante (infra #$i).");
-                            }
-        
-                            $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
-                                ->where('libelle', $infra['libelle'] ?? '')
-                                ->first();
-        
-                            if (!$infraDB) {
-                                $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->first();
-                                if (!$famille) {
-                                    throw new \Exception("Famille introuvable ($codeFamille) pour infra #$i.");
-                                }
-        
-                                $familleId = $famille->idFamille;
-                                Log::info('[Finaliser] Famille trouvée', ['famille_id' => $familleId]);
-        
-                                $prefix = ($codePays ?? '') . $codeFamille;
-                                $last   = Infrastructure::where('code', 'like', $prefix.'%')->orderByDesc('code')->first();
-                                $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
-                                $codeInfra  = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
-        
-                                $infraDB = Infrastructure::create([
-                                    'code'               => $codeInfra,
-                                    'libelle'            => $infra['libelle'] ?? ("Infra_$codeInfra"),
-                                    'code_Ssys'          => $codeFamille,
-                                    'code_groupe_projet' => session('projet_selectionne'),
-                                    'code_pays'          => $codePays,
-                                    'code_localite'      => $infra['localisation_id'] ?? null,
-                                    'date_operation'     => now(),
-                                    'IsOver'             => false,
-                                ]);
-        
-                                Log::info('[Finaliser] Infra créée', ['code' => $infraDB->code, 'id' => $infraDB->id]);
-                            } else {
-                                Log::info('[Finaliser] Infra existante', ['code' => $infraDB->code, 'id' => $infraDB->id]);
-                            }
-        
-                            $projetInfra = ProjetInfrastructure::create([
-                                'idInfrastructure' => $infraDB->id,
-                                'code_projet'      => $codeProjet,
-                                'localisation_id'  => $infra['localisation_id'] ?? $codeLocalisation,
-                            ]);
-        
-                            Log::info('[Finaliser] Lien Projet-Infrastructure créé', ['pi_id' => $projetInfra->id]);
-        
-                            foreach (($infra['caracteristiques'] ?? []) as $index => $carac) {
-                                if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') {
-                                    Log::warning('[Finaliser] Caractéristique ignorée', ['i' => $i, 'carac' => $carac]);
-                                    continue;
-                                }
-        
-                                ValeurCaracteristique::create([
-                                    'infrastructure_code' => $infraDB->code,
-                                    'idCaracteristique'   => $carac['id'],
-                                    'idUnite'             => $carac['unite_id'] ?? null,
-                                    'valeur'              => $carac['valeur'],
-                                    'ordre'               => $index + 1,
-                                ]);
-                            }
-                        }
-                    }
-        
-                    // 5) Actions à mener
-                    foreach (($step3['actions'] ?? []) as $k => $action) {
-                        Log::info('[Finaliser] Action', ['k' => $k, 'action' => $action]);
-        
-                        $created = ProjetActionAMener::create([
-                            'code_projet'       => $codeProjet,
-                            'Num_ordre'         => $action['ordre'] ?? ($k+1),
-                            'Action_mener'      => $action['action_code'] ?? null,
-                            'Quantite'          => $action['quantite'] ?? null,
-                            'Infrastrucrues_id' => $action['infrastructure_code'] ?? 0,
-                        ]);
-        
-                        foreach (($action['beneficiaires'] ?? []) as $b) {
-                            $type = $b['type'] ?? '';
-                            Log::info('[Finaliser] Bénéficiaire', ['type' => $type, 'b' => $b]);
-        
-                            match ($type) {
-                                'acteur' => Beneficier::create([
-                                    'code_projet' => $codeProjet,
-                                    'code_acteur' => $b['code'] ?? null,
-                                    'is_active'   => true,
-                                ]),
-                                'localite' => Profiter::create([
-                                    'code_projet'     => $codeProjet,
-                                    'code_pays'       => $b['codePays'] ?? null,
-                                    'code_rattachement'=> $b['codeRattachement'] ?? null,
-                                ]),
-                                'infrastructure' => Jouir::create([
-                                    'code_projet'       => $codeProjet,
-                                    'code_Infrastructure'=> $b['code'] ?? null,
-                                ]),
-                                default => Log::warning('[Finaliser] Type bénéficiaire inconnu', ['b' => $b]),
-                            };
-                        }
-                    }
-        
-                    // 6) Maîtres d’Ouvrage
-                    foreach (($step4['acteurs'] ?? []) as $idx => $acteur) {
-                        Log::info('[Finaliser] MOA', ['idx' => $idx, 'acteur' => $acteur]);
-        
-                        Posseder::create([
-                            'code_projet' => $codeProjet,
-                            'code_acteur' => $acteur['code_acteur'] ?? null,
-                            'secteur_id'  => $acteur['secteur_code'] ?? null,
-                            'isAssistant' => !empty($acteur['is_assistant']),
-                            'date'        => now(),
-                            'is_active'   => true,
-                        ]);
-                    }
-        
-                    // 7) Maîtres d’œuvre
-                    foreach (($step5['acteurs'] ?? []) as $idx => $acteur) {
-                        Log::info('[Finaliser] MOE', ['idx' => $idx, 'acteur' => $acteur]);
-        
-                        Executer::create([
-                            'code_projet' => $codeProjet,
-                            'code_acteur' => $acteur['code_acteur'] ?? null,
-                            'secteur_id'  => $acteur['secteur_id'] ?? null,
-                            'is_active'   => true,
-                        ]);
-                    }
-        
-                    // 8) Financements
-                    foreach (($step6['financements'] ?? []) as $idx => $fin) {
-                        Log::info('[Finaliser] Financement', ['idx' => $idx, 'fin' => $fin]);
-        
-                        Financer::create([
-                            'code_projet'       => $codeProjet,
-                            'code_acteur'       => $fin['bailleur'] ?? null,
-                            'montant_finance'   => $fin['montant'] ?? null,
-                            'devise'            => $fin['devise'] ?? null,
-                            'financement_local' => in_array(strtolower((string)($fin['local'] ?? '')), ['oui','1','true'], true),
-                            'commentaire'       => $fin['commentaire'] ?? null,
-                            'FinancementType'   => $step6['type_financement'] ?? null,
-                            'is_active'         => true,
-                        ]);
-                    }
-        
-                    // 9) Documents
-                    $uploadPath = public_path('data/documentProjet/' . $codeProjet);
-                    File::ensureDirectoryExists($uploadPath);
-                    Log::info('[Finaliser] Répertoire documents prêt', ['path' => $uploadPath]);
-        
-                    foreach ((($step7['fichiers'] ?? [])) as $i => $f) {
-                        Log::info('[Finaliser] Doc entrée', ['i' => $i, 'file' => $f]);
-        
-                        $rel = ltrim($f['storage_path'] ?? '', '/');
-                        $absPath = storage_path('app/' . $rel);
-                        if (!File::exists($absPath)) {
-                            Log::error('[Finaliser] Fichier introuvable sur disque', ['i' => $i, 'abs' => $absPath]);
-                            throw new \Exception("Fichier temporaire introuvable ($absPath).");
-                        }
-        
-                        $res = app(FileProcService::class)->handlePath([
-                            'owner_type'    => 'Projet',
-                            'owner_id'      => $codeProjet,
-                            'categorie'     => 'DOC_PROJET',
-                            'path'          => $absPath,
-                            'original_name' => $f['original_name'] ?? ('document_'.Str::random(6)),
-                            'uploaded_by'   => optional(request()->user())->id,
-                        ]);
-        
-                        Log::info('[Finaliser] Stockage fichier OK', ['gridfs_id' => $res['id'] ?? null, 'res' => $res]);
-        
-                        ProjetDocument::create([
-                            'file_name'     => $f['original_name'] ?? ($res['filename'] ?? null),
-                            'file_path'     => null,
-                            'file_type'     => $f['mime_type'] ?? ($res['mime'] ?? null),
-                            'file_size'     => $f['size'] ?? ($res['size'] ?? null),
-                            'file_category' => 'DOC_PROJET',
-                            'code_projet'   => $codeProjet,
-                            'uploaded_at'   => now(),
-                            'fichier_id'    => $res['id'] ?? null,
-                        ]);
-        
-                        try {
-                            @unlink($absPath);
-                            Log::info('[Finaliser] Temp supprimé', ['abs' => $absPath]);
-                        } catch (\Throwable $th) {
-                            Log::warning('[Finaliser] Échec suppression temp', ['abs' => $absPath, 'ex' => $th->getMessage()]);
-                        }
-                    }
-        
-                    // 10) Étude
-                    $codeEtude = $this->genererCodeEtude(session('pays_selectionne'), session('projet_selectionne'));
-                    if (!$codeEtude) {
-                        throw new \Exception('Échec génération code étude');
-                    }
-        
-                    EtudeProject::create([
-                        'codeEtudeProjets' => $codeEtude,
-                        'code_projet'      => $codeProjet,
-                        'valider'          => false,
-                        'is_deleted'       => false,
-                    ]);
-        
-                    Log::info('[Finaliser] Étude créée', ['code_etude' => $codeEtude]);
-        
-                    // 🔁 Nettoyage
-                    $this->nettoyerSessionsEtFichiers();
-                    Log::info('[Finaliser] Nettoyage sessions OK');
-        
-                    return response()->json([
-                        'success'     => true,
-                        'code_projet' => $codeProjet,
-                        'code_etude'  => $codeEtude,
-                        'message'     => 'Demande effectuée avec succès.',
-                    ]);
-                } catch (\Throwable $e) {
-                    // 👉 Toute exception = rollback automatique (DB::transaction)
-                    Log::error('[Finaliser] ERREUR — rollback', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-        
-                    // On relance l’exception pour que la transaction sache qu’il faut annuler
-                    throw $e;
-                }
-            }, 3 /* tentatives en cas de deadlock */);
-        }
-        
-        
-        private function nettoyerSessionsEtFichiers()
-        {
-            foreach (session('form_step7.fichiers', []) as $file) {
-                $fullPath = storage_path('app/' . $file['storage_path']);
-                if (file_exists($fullPath)) {
-                    @unlink($fullPath);
-                }
-            }
-            
-            session()->forget([
-                'form_step1', 'form_step2', 'form_step3',
-                'form_step4', 'form_step5', 'form_step6', 'form_step7',
-                'code_localisation'
-            ]);
-        }
-        
-        private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
-        {
-            $paysAlpha3 = session('pays_selectionne');
-            $groupeProjet = session('projet_selectionne');
-            $date = Carbon::parse($dateDebut);
-
-            $codeLocalisation = substr($codeLocalisation, 0, 4);
-
-            // Génère la partie fixe du code projet (jusqu'à l’année)
-            $prefix = sprintf('%s%s%s_%s_%s_%s',
-                strtoupper($paysAlpha3),
-                strtoupper($groupeProjet),
-                $typeFinancement,
-                strtoupper($codeLocalisation),
-                strtoupper($codeSousDomaine),
-                $date->format('Y')
-            );
-
-            // Compte les projets déjà existants avec ce préfixe
-            $ordre = Projet::where('code_projet', 'like', $prefix . '_%')->count() + 1;
-
-            // Ajoute le suffixe (ordre)
-            return $prefix . '_' . str_pad($ordre, 2, '0', STR_PAD_LEFT);
-        }
-
     
-    
-
-    
-        
-
-
-        public function getLatestProjectNumber($location, $category, $typeFinancement)
-        {
-            $year = date('Y');
-            $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}PROJ{$category}{$typeFinancement}{$year}_%")
-                                        ->orderBy('codeEtudeProjets', 'desc')
-                                        ->first();
-
-            $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
-            $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
-
-            return response()->json(['newNumber' => $newNumber]);
-        }
-
-        private function generateProjectCode($location, $category, $typeFinancement)
-        {
-            $year = date('Y');
-            $lastProject = EtudeProject::where('codeEtudeProjets', 'like', "{$location}PROJ{$category}{$typeFinancement}{$year}_%")
-                                        ->orderBy('codeEtudeProjets', 'desc')
-                                        ->first();
-
-            $lastNumber = $lastProject ? (int)substr($lastProject->codeEtudeProjets, -2) : 0;
-            $newNumber = str_pad($lastNumber + 1, 2, '0', STR_PAD_LEFT);
-
-            return "{$location}{$category}{$typeFinancement}{$year}{$newNumber}";
-        }
-
-        ////////////////////////////////////Validation de projet/////////////////////////////////
-
-        public function validation(Request $request)
-        {
-            $ecran = Ecran::find($request->input('ecran_id'));
-            $user = auth()->user();
-
-            // Vérifier si l'utilisateur est connecté et est un approbateur
-            if (!$user || !$user->approbateur) {
-                return redirect()->route('projets.index')->with('error', 'Vous devez être un approbateur pour accéder à cette page.');
+                // On relance l’exception pour que la transaction sache qu’il faut annuler
+                throw $e;
             }
-
-            // Récupérer l'approbateur actuel
-            $approver = Approbateur::where('code_acteur', $user->approbateur->code_acteur)->first();
-
-            // Vérifier que l'approbateur existe
-            if (!$approver) {
-                return redirect()->route('projets.index')->with('error', 'Vous devez être un approbateur pour accéder à cette page.');
-            }
-
-            // Récupérer les projets qui n'ont pas encore été approuvés par l'approbateur ou qui ont été approuvés par un approbateur précédent
-            $projects = EtudeProject::where('valider', 0)
-            ->get();
-            
-            return view('etudes_projets.validations', compact('ecran',  'projects'));
-        }
-
-        public function suivreApp(Request $request){
-            $ecran = Ecran::find($request->input('ecran_id'));
-            $approvedProjects = EtudeProject::select('etudeprojects.codeEtudeProjets', 'etudeprojects.natureTravaux', 'etudeprojects.created_at', 'pa.approved_at')
-                ->join('project_approbation as pa', 'etudeprojects.codeEtudeProjets', '=', 'pa.codeEtudeProjets')
-                ->join('approbateur as app', 'app.codeAppro', '=', 'pa.codeAppro')
-                ->join('acteur as pers', 'pers.code_acteur', '=', 'app.code_acteur')
-                ->where('pa.is_approved', true) // Filtre pour les projets approuvés
-                ->where('etudeprojects.is_deleted', 0) // Assurez-vous que le projet n'est pas supprimé
-                ->groupBy('etudeprojects.codeEtudeProjets', 'etudeprojects.natureTravaux', 'etudeprojects.created_at', 'pa.approved_at') // Grouper par projet
-                ->addSelect(DB::raw('GROUP_CONCAT(CONCAT("N°", app.numOrdre, ": ", pers.nom, " ", pers.prenom) SEPARATOR "; ") as approbateurs')) // Concaténation des approbateurs
-                ->get();
-            return view('etudes_projets.suivreApp', compact('ecran',  'approvedProjects'));
-        }
-        
-        public function historiqueApp(Request $request)
-        {
-            try {
-                $country = session('pays_selectionne');
-                $group = session('projet_selectionne');
-
-                $approvalHistory = ProjetApprobation::with([
-                        'etude',
-                        'etude.projet',
-                        'approbateur.acteur',
-                        'statutValidation'
-                    ])
-                    ->whereIn('statut_validation_id', [2, 3]) // Validé ou refusé
-                    ->whereHas('etude.projet', function ($query) use ($country, $group) {
-                        $query->where('code_projet', 'like', $country . $group . '%');
-                    })
-                    ->orderByDesc('approved_at')
-                    ->get();
-
-                return view('etudes_projets.historiqueApp', compact('approvalHistory'));
-        
-            } catch (Exception $e) {
-                Log::error("Erreur chargement historique approbation : " . $e->getMessage());
-                return back()->with('error', 'Impossible de charger l’historique des validations.');
-            }
-        }
-        
-        // Afficher les détails du projet
-        public function show($codeEtudeProjets)
-        {
-            try {
-                $project = EtudeProject::where('codeEtudeProjets', $codeEtudeProjets)->firstOrFail();
-                $files = $project->files;
-                $validations = Validations::where('codeEtudeProjets', $codeEtudeProjets)
-                    ->with('user')
-                    ->orderBy('created_at')
-                    ->get();
-                $users = User::all();   // Récupérer les utilisateurs pour l'affichage des validations
-
-                // Vérifier si l'utilisateur a déjà validé le projet
-                $user = auth()->user();
-                $userHasValidated = Validations::where('codeEtudeProjets', $codeEtudeProjets)
-                    ->where('user_id', $user->id)
-                    ->exists();
-
-                // Récupérer les projets en attente si l'utilisateur n'a pas encore validé
-                $projects = $userHasValidated ? collect([]) : EtudeProject::with(['files', 'entreprise', 'particulier'])
-
-                    ->where('current_approver', $user->approbateur->codeAppro)
-                     ->get();
-
-                return view('etudes_projets.validation', compact('project', 'files', 'validations', 'users', 'userHasValidated', 'projects'));
-            } catch (ModelNotFoundException $e) {
-                return redirect()->back()->with('error', 'Projet non trouvé.');
-            }
-        }
-
-
-        // Valider le projet
-        /*public function validateProject(Request $request, $codeEtudeProjets)
-        {
-            $approbateur = $request->user()->approbateur; // Récupérer l'approbateur actuel
-
-            try {
-                $project = EtudeProject::where('codeEtudeProjets', $codeEtudeProjets)->firstOrFail();
-
-                // Vérifier si le projet est dans l'état correct pour la validation
-                if ($project->status !== 'pending' || $project->current_approver != $approbateur->codeAppro) {
-                    return redirect()->back()->with('error', 'Le projet ne peut pas être validé à ce stade.');
-                }
-
-                // Mettre à jour le statut du projet et définir le prochain approbateur
-                $nextApprover = Approbateur::where('numOrdre', '>', $approbateur->numOrdre)
-                    ->orderBy('numOrdre')
-                    ->first();
-
-                $project->update([
-                    'status' => 'approved',
-                    'current_approver' => $nextApprover ? $nextApprover->codeAppro : null,
-                ]);
-
-                return redirect()->back()->with('success', 'Projet validé avec succès.');
-
-            } catch (ModelNotFoundException $e) {
-                return redirect()->back()->with('error', 'Projet non trouvé.');
-            }
-        }*/
-        public function approve(Request $request, $id)
-        {
-            $userId = auth()->user();
-
-            // Récupérer l'approbateur actuel en fonction de l'utilisateur connecté
-            $approver = Approbateur::where('code_personnel', $userId->approbateur->code_personnel)->first();
-
-            if (!$approver) {
-                return back()->with('error', 'Vous n\'êtes pas un approbateur valide pour ce projet.');
-            }
-            // Vérifier l'existence de projets dans ProjectApproval
-            $projectExists = ProjectApproval::where('codeEtudeProjets', $id)->exists();
-
-            if (!$projectExists) {
-                // Aucun projet n'existe, seul l'approbateur avec numOrdre = 1 peut enregistrer
-                if ($approver->numOrdre === 1) {
-                    // Enregistrement d'approbation
-                    ProjectApproval::create([
-                        'codeEtudeProjets' => $id,
-                        'codeAppro' => $approver->codeAppro,
-                        'is_approved' => true,
-                        'approved_at' => now(),
-                    ]);
-                    return back()->with('success', 'Projet approuvé ');
-                } else {
-                    return back()->with('error', 'Vous ne pouvez pas encore valider le projet.');
-                }
-            } else {
-                // Un projet existe, vérifier si l'approbateur précédent a approuvé
-                $previousApproverNumOrdre = $approver->numOrdre - 1;
-
-                // Vérifier si l'approbateur précédent a approuvé
-                $previousApproverApproved = ProjectApproval::where('codeEtudeProjets', $id)
-                    ->join('approbateur', 'project_approbation.codeAppro', '=', 'approbateur.codeAppro')
-                    ->where('approbateur.numOrdre', $previousApproverNumOrdre)
-                    ->where('project_approbation.is_approved', true)
-                    ->exists();
-
-                if (!$previousApproverApproved) {
-                    // L'approbateur avec numOrdre inférieur n'a pas encore validé
-                    return back()->with('error', 'Vous ne pouvez pas encore valider le projet.');
-                }
-
-                // Enregistrement d'approbation
-                ProjectApproval::create([
-                    'codeEtudeProjets' => $id,
-                    'codeAppro' => $approver->codeAppro,
-                    'is_approved' => true,
-                    'approved_at' => now(),
-                ]);
-
-                return back()->with('success', 'Projet approuvé .');
-            }
-        }
-
-
-
-    /////////////////////////////RENFORCEMENT DES CAPACITE//////////////////////
-
-    public function deleteRenforcement($id)
-    {
-        // Trouver le renforcement par son code
-        $renforcement = Renforcement::where('code_renforcement', $id)->firstOrFail();
-
-        if (!$renforcement) {
-            return response()->json(['error' => 'Le renforcement de capacité que vous essayez de supprimer n\'existe pas.'], 404);
-        }
-
-        try {
-            // Supprimer le renforcement et les relations associées (grâce au hook deleting)
-            $renforcement->delete();
-
-            return response()->json(['success' => 'Le renforcement de capacité et ses relations associées ont été supprimés avec succès'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la suppression du renforcement de capacité. Détails : ' . $e->getMessage()], 500);
-        }
-    }
-
-
-    public function renfo(Request $request)
-    {
-        $country = session('pays_selectionne');
-        $group = session('projet_selectionne');
-        $renforcements = Renforcement::with(['beneficiaires', 'projets'])
-        ->where('code_renforcement', 'like', $country .'_'. $group . '%')
-        ->get();
-
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $projets = Projet::where('code_projet', 'like', $country . $group . '%')->get();
-        $beneficiaires = Acteur::where('code_pays', $country)->get();
-        return view('etudes_projets.renforcement', compact('renforcements', 'projets', 'beneficiaires', 'ecran'));
-    }
-
-    public function storerenfo(Request $request)
-    {
-        $request->validate([
-            'titre' => 'required|string|max:255',
-            'date_renforcement' => 'required|date',
-            'date_fin' => 'required|date|after_or_equal:date_renforcement',
-            'beneficiaires' => 'required|array|min:1'
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $country = session('pays_selectionne');
-            $group = session('projet_selectionne');
-            $code = Renforcement::generateCodeRenforcement($country, $group);
-
-            $renforcement = Renforcement::create([
-                'code_renforcement' => $code,
-                'titre' => $request->titre,
-                'description' => $request->description,
-                'date_debut' => $request->date_renforcement,
-                'date_fin' => $request->date_fin,
-            ]);
-
-            $renforcement->beneficiaires()->sync($request->beneficiaires);
-            $renforcement->projets()->sync($request->projets ?? []);
-
-            DB::commit();
-            Log::info('Renforcement créé', [
-                'code' => $code,
-                'titre' => $request->titre,
-                'utilisateur' => auth()->user()?->name,
-            ]);
-            
-            return redirect()->back()->with('success', 'Renforcement ajouté avec succès.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Erreur lors de l\'ajout de renforcement', [
-                'exception' => $e->getMessage(),
-                'utilisateur' => auth()->user()?->name,
-            ]);
-            
-            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
-        }
-    }
-
-    public function updaterenfo(Request $request, $code)
-    {
-        $request->validate([
-            'titre' => 'required|string|max:255',
-            'date_renforcement' => 'required|date',
-            'date_fin' => 'required|date|after_or_equal:date_renforcement',
-            'beneficiaires' => 'required|array|min:1'
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $renforcement = Renforcement::where('code_renforcement', $code)->firstOrFail();
-
-            $renforcement->update([
-                'titre' => $request->titre,
-                'description' => $request->description,
-                'date_debut' => $request->date_renforcement,
-                'date_fin' => $request->date_fin,
-            ]);
-
-            $renforcement->beneficiaires()->sync($request->beneficiaires);
-            $renforcement->projets()->sync($request->projets ?? []);
-
-            DB::commit();
-            return redirect()->back()->with('success', 'Renforcement modifié avec succès.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
-        }
-    }
-
-    public function destroyrenfo($code)
-    {
-        DB::beginTransaction();
-        try {
-            $renforcement = Renforcement::where('code_renforcement', $code)->firstOrFail();
-            $renforcement->delete();
-            DB::commit();
-            return response()->json(['success' => 'Renforcement supprimé avec succès.']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
-        }
-    }
-
-    ////////////////////////////////////ACTIVITE CONNEXE//////////////////////////////
-    // Afficher la liste des travaux connexes
-    public function activite(Request $request)
-    {
-        $country = session('pays_selectionne');
-        $group = session('projet_selectionne');
-       
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $travaux = TravauxConnexes::with('typeTravaux', 'projet')
-        ->where('codeActivite', 'like', $country .'_'. $group . '%')
-        ->get();
-        $projets = Projet::where('code_projet', 'like', $country . $group . '%')->get();
-        $typesTravaux = TypeTravauxConnexes::orderBy('libelle', 'asc')->get();
-
-        return view('etudes_projets.activite', compact('ecran','travaux', 'projets', 'typesTravaux'));
-    }
-
-    // Enregistrer un nouveau travail connexe
-    public function storeConnexe(Request $request)
-    {
-        $request->merge([
-            'cout_projet' => str_replace(' ', '', $request->input('cout_projet')),
-        ]);
-        // Validation des champs du formulaire
-        $request->validate([
-            'code_projet' => 'required',
-            'type_travaux_id' => 'required',
-            'cout_projet' => 'required|numeric',
-            'date_debut_previsionnelle' => 'required|date',
-            'date_fin_previsionnelle' => 'required|date|after_or_equal:date_debut_previsionnelle',
-        ]);
-
-        try {
-            // Générer un code personnalisé pour l'activité connexe
-            $country = session('pays_selectionne');
-            $group = session('projet_selectionne');
-            $codeActivite = TravauxConnexes::generateCodeTravauxConnexe($country, $group);
-
-            // Créer et enregistrer le travail connexe
-            TravauxConnexes::create([
-                'codeActivite' => $codeActivite,
-                'code_projet' => $request->input('code_projet'), // Utiliser le code projet fourni
-                'type_travaux_id' => $request->input('type_travaux_id'),
-                'cout_projet' => $request->input('cout_projet'), // Enlever les espaces
-                'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
-                'date_fin_previsionnelle' => $request->input('date_fin_previsionnelle'),
-                'date_debut_effective' => $request->input('date_debut_effective'),
-                'date_fin_effective' => $request->input('date_fin_effective'),
-                'commentaire' => $request->input('commentaire'),
-            ]);
-            Log::info('Activité connexe créée', [
-                'code' => $codeActivite,
-                'utilisateur' => auth()->user()?->name,
-            ]);
-            
-            // Rediriger avec un message de succès
-            return redirect()->route('activite.index', ['ecran_id' => $request->input('ecran_id')])
-                ->with('success', 'Travail connexe enregistré avec succès.');
-
-        } catch (\Exception $e) {
-            // En cas d'erreur, retourner avec un message d'erreur
-            return back()->with('error', 'Erreur lors de l\'enregistrement du travail connexe. Détails : ' . $e->getMessage());
-        }
-    }
-
-
-
-    // Modifier un travail connexe
-    public function updateConnexe(Request $request, $id)
-    {
-        $request->merge([
-            'cout_projet' => str_replace(' ', '', $request->input('cout_projet')),
-        ]);
-        // Valider les champs du formulaire
-        $request->validate([
-            'type_travaux_id' => 'required',
-            'cout_projet' => 'required|numeric',
-            'date_debut_previsionnelle' => 'required|date',
-            'date_fin_previsionnelle' => 'required|date|after_or_equal:date_debut_previsionnelle',
-        ]);
-
-        try {
-            // Récupérer le travail connexe à modifier par son code d'activité (codeActivite)
-            $travauxConnexe = TravauxConnexes::where('codeActivite', $id)->firstOrFail();
-
-            // Mettre à jour les informations du travail connexe
-            $travauxConnexe->update([
-                'type_travaux_id' => $request->input('type_travaux_id'),
-                'cout_projet' =>$request->input('cout_projet'), // Enlever les espaces avant d'enregistrer
-                'date_debut_previsionnelle' => $request->input('date_debut_previsionnelle'),
-                'date_fin_previsionnelle' => $request->input('date_fin_previsionnelle'),
-                'date_debut_effective' => $request->input('date_debut_effective'),
-                'date_fin_effective' => $request->input('date_fin_effective'),
-                'commentaire' => $request->input('commentaire'),
-            ]);
-
-            // Rediriger avec un message de succès
-            return redirect()->route('activite.index', ['ecran_id' => $request->input('ecran_id')])->with('success', 'Travail connexe modifié avec succès.');
-
-        } catch (\Exception $e) {
-            // Gérer les erreurs et rediriger avec un message d'erreur
-            return back()->with('error', 'Erreur lors de la modification du travail connexe. Détails : ' . $e->getMessage());
-        }
-    }
-
-
-    // Supprimer un travail connexe
-
-    public function deleteActivite($id)
-    {
-        // Trouver le renforcement par son code
-        $travaux = TravauxConnexes::where('codeActivite', $id)->firstOrFail();
-
-        if (!$travaux) {
-            return response()->json(['error' => 'L\'activité connexe que vous essayez de supprimer n\'existe pas.'], 404);
-        }
-
-        try {
-            // Supprimer le renforcement et les relations associées (grâce au hook deleting)
-            $travaux->delete();
-
-            return response()->json(['success' => 'L\'activite connexe a été supprimés avec succès'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la suppression. Détails : ' . $e->getMessage()], 500);
-        }
-    }
-    ///////////////MODELISER
-    public function modelisation(Request $request)
-    {
-        $ecran = Ecran::find($request->input('ecran_id'));
-        return view('etudes_projets.modeliser', compact('ecran'));
+        }, 3 );
     }
 }
 

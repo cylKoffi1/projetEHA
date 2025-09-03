@@ -33,6 +33,16 @@ function formatWithSpaces(number) {
   return n.toLocaleString('fr-FR');
 }
 
+function apiUrl(path = '') {
+  const base = (window.APP && window.APP.API_URL);
+  return base.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
+}
+
+function geojsonBaseUrl() {
+  const base = (window.APP && window.APP.GEOJSON);
+  return base.replace(/\/+$/, '') + '/';
+}
+
 // -----------------------------
 // URL helpers (overridable)
 // -----------------------------
@@ -48,9 +58,7 @@ async function urlExists(src) {
 }
 
 async function detectAvailableLevels(countryAlpha3Code, options) {
-  const base =
-    (options?.geojsonBaseUrl || `${window.location.origin}/geojson/`) +
-    `gadm41_${countryAlpha3Code}_`;
+  const base = (options?.geojsonBaseUrl || geojsonBaseUrl()) + `gadm41_${countryAlpha3Code}_`;
   const ok1 = await urlExists(`${base}1.json.js`);
   const ok2 = ok1 ? await urlExists(`${base}2.json.js`) : false;
   const ok3 = ok2 ? await urlExists(`${base}3.json.js`) : false;
@@ -59,6 +67,8 @@ async function detectAvailableLevels(countryAlpha3Code, options) {
   if (ok1) return 1;
   return 0;
 }
+
+
 
 // Minimum entre niveaux GeoJSON et niveaux disponibles en base
 async function detectMaxLevels(countryAlpha3Code, niveauxBackend, options) {
@@ -394,12 +404,16 @@ function initCountryMap(
   function createDynamicLegend(map, groupeCode) {
     const metric = window.currentMapMetric || 'count';
     const typeFin = metric === 'cost' ? 2 : 1;
+  
     const legendUrl = options.getLegendUrl
       ? options.getLegendUrl(groupeCode, typeFin)
-      : `/api/legende/${groupeCode}?typeFin=${typeFin}`;
-
-    fetch(legendUrl)
-      .then((r) => r.json())
+      : apiUrl(`legende/${encodeURIComponent(groupeCode)}?typeFin=${typeFin}`);
+  
+    fetch(encodeURI(legendUrl))
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         window.customLegend = data.seuils || [];
         if (window.currentLegendControl) map.removeControl(window.currentLegendControl);
@@ -410,7 +424,7 @@ function initCountryMap(
           (data.seuils || []).forEach(({ borneInf, borneSup, couleur }) => {
             labels.push(
               `<i style="background:${couleur}; opacity:0.7;"></i> ${borneInf}${
-                borneSup || borneSup === 0 ? `–${borneSup}` : '+'
+                (borneSup || borneSup === 0) ? `–${borneSup}` : '+'
               }`
             );
           });
@@ -422,6 +436,7 @@ function initCountryMap(
       })
       .catch((err) => console.error('Erreur chargement légende dynamique :', err));
   }
+  
 
   createDynamicLegend(map, codeGroupeProjet);
 
@@ -431,12 +446,15 @@ function initCountryMap(
   function loadProjectData(countryCode, groupCode) {
     const url = options.getProjectsUrl
       ? options.getProjectsUrl(countryCode, groupCode)
-      : `/api/projects?country=${countryCode}&group=${groupCode}`;
-    return fetch(url).then((r) => {
-      if (!r.ok) throw new Error('Network response was not ok');
-      return r.json();
-    });
+      : apiUrl(`projects?country=${encodeURIComponent(countryCode)}&group=${encodeURIComponent(groupCode)}`);
+  
+    return fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      });
   }
+  
 
   function processProjectData(projects) {
     const data = {};
@@ -579,34 +597,28 @@ function initCountryMap(
 
   function loadGeoJsonLevel(level, parentName = null) {
     if (level > maxLevels) return Promise.resolve();
-    const base = options.geojsonBaseUrl || `${window.location.origin}/geojson/`;
+  
+    const base = (options.geojsonBaseUrl || geojsonBaseUrl());
     const varName = `statesDataLevel${level}`;
     const url = `${base}gadm41_${countryAlpha3Code}_${level}.json.js`;
-
+  
     return new Promise((resolve, reject) => {
-      if (window[varName]) {
-        resolve(window[varName]);
-        return;
-      }
+      if (window[varName]) return resolve(window[varName]);
       const script = document.createElement('script');
       script.src = url;
       script.async = true;
-      script.onload = () => {
-        window[varName] ? resolve(window[varName]) : reject(new Error(`Variable ${varName} non trouvée`));
-      };
-      script.onerror = () => {
-        if (level <= maxLevels) maxLevels = level - 1;
-        resolve(null);
-      };
+      script.onload = () => window[varName] ? resolve(window[varName]) : reject(new Error(`Variable ${varName} non trouvée`));
+      script.onerror = () => { if (level <= maxLevels) maxLevels = level - 1; resolve(null); };
       document.head.appendChild(script);
     })
-      .then((data) => {
-        if (!data) return;
-        const filtered = parentName ? filterGeoJsonByParent(data, level - 1, parentName) : data;
-        createGeoJsonLayer(filtered, level);
-      })
-      .catch((err) => console.error(`Error loading GeoJSON level ${level}:`, err));
+    .then((data) => {
+      if (!data) return;
+      const filtered = parentName ? filterGeoJsonByParent(data, level - 1, parentName) : data;
+      createGeoJsonLayer(filtered, level);
+    })
+    .catch((err) => console.error(`Error loading GeoJSON level ${level}:`, err));
   }
+  
 
   // -----------------------------
   // Stats helpers
@@ -824,7 +836,7 @@ function initAfricaMap() {
     }
 
     const script = document.createElement('script');
-    script.src = `${window.location.origin}/geojson/gadm41_AFQ_1.json.js`;
+    script.src = geojsonBaseUrl() + 'gadm41_AFQ_1.json.js';
 
     script.onload = () => {
         const geojson = window.statesDataLevel1;
@@ -834,7 +846,7 @@ function initAfricaMap() {
             return;
         }
 
-        fetch('/api/projects/all')
+        fetch(apiUrl('projects/all'))
             .then(res => res.json())
             .then(data => {
                 africaData = processAfricaProjectData(data);

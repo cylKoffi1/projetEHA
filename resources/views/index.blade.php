@@ -100,7 +100,7 @@
     }
 
     .overlay-title {
-      font-size: clamp(3rem, 1vw, -1rem);
+      font-size: clamp(4rem, 1vw, -1rem);
       font-weight: 900;
       margin-bottom: 0.6rem;
       opacity: 0;
@@ -114,7 +114,7 @@
     }
 
     .overlay-subtitle {
-      font-size: clamp(1.25rem, 3.5vw, 9.2rem);
+      font-size: clamp(1.25rem, 2.8vw, 8.2rem);
       font-weight: 600;
       margin-bottom: 2.2rem;
       opacity: 0;
@@ -292,15 +292,7 @@
     }
 
     @media (max-height: 600px) {
-      .overlay-title {
-        font-size: 2.8rem;
-        margin-bottom: 0.3rem;
-      }
-      
-      .overlay-subtitle {
-        font-size: 1.3rem;
-        margin-bottom: 1rem;
-      }
+     
       
       .cta-button {
         padding: 10px 20px;

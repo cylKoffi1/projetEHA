@@ -60,4 +60,8 @@ class Infrastructure extends Model
     public function InfrastructureImage(){
         return $this->hasMany(InfrastructureImage::class, 'infrastructure_code', 'code'); 
     }
+    public function jouissances()
+    {
+        return $this->hasMany(Jouir::class, 'code_Infrastructure', 'code');
+    }
 }
