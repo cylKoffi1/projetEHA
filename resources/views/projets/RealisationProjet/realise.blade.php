@@ -11,127 +11,127 @@
         --light-bg: #f8f9fa;
         --dark-bg: #343a40;
     }
-    
+
     .card {
         border-radius: 10px;
         box-shadow: 0 4px 20px rgba(78, 70, 70, 0.1);
         border: none;
     }
-    
+
     .card-header {
         background: linear-gradient(135deg, #a6b4f0, #a3b6c7);
         color: white;
         border-radius: 10px 10px 0 0 !important;
     }
-    
+
     .form-control, .form-select {
         border-radius: 5px;
         border: 1px solid #ced4da;
         transition: all 0.3s;
     }
-    
+
     .form-control:focus, .form-select:focus {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 0.25rem rgba(67, 94, 190, 0.25);
     }
-    
+
     /* Styles pour les options du select */
     .avec-infrastructures {
         background-color: var(--warning-color);
         color: #000;
     }
-    
+
     .plusieurs-actions {
         background-color: var(--primary-color);
         color: white;
     }
-    
+
     .non-trouves {
         background-color: var(--danger-color);
         color: white;
     }
-    
+
     .btn-primary {
         background-color: var(--primary-color);
         border-color: var(--primary-color);
     }
-    
+
     .btn-secondary {
         background-color: var(--secondary-color);
         border-color: var(--secondary-color);
     }
-    
+
     .btn-warning {
         background-color: var(--warning-color);
         border-color: var(--warning-color);
     }
-    
+
     .btn-success {
         background-color: var(--success-color);
         border-color: var(--success-color);
     }
-    
+
     .btn-info {
         background-color: var(--info-color);
         border-color: var(--info-color);
     }
-    
+
     .btn-danger {
         background-color: var(--danger-color);
         border-color: var(--danger-color);
     }
-    
+
     .badge {
         padding: 5px 10px;
         border-radius: 20px;
         font-weight: 500;
     }
-    
+
     .modal-content {
         border-radius: 10px;
         border: none;
     }
-    
+
     .modal-header {
         background:  linear-gradient(135deg, #a6b4f0, #a3b6c7);
         color: white;
         border-radius: 10px 10px 0 0;
     }
-    
+
     .date-display {
         font-size: 1rem;
         color: var(--secondary-color);
         font-weight: 500;
     }
-    
+
     .action-btn {
         transition: all 0.3s;
         padding: 5px 10px;
         border-radius: 5px;
     }
-    
+
     .action-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    
+
     .return-icon {
         cursor: pointer;
         transition: all 0.3s;
         color: var(--primary-color);
     }
-    
+
     .return-icon:hover {
         transform: scale(1.1);
         color: var(--secondary-color);
     }
-    
+
     .toggle-list-btn {
         color: var(--primary-color);
         cursor: pointer;
         transition: all 0.3s;
     }
-    
+
     .toggle-list-btn:hover {
         color: var(--secondary-color);
         text-decoration: underline;
@@ -165,23 +165,23 @@
         padding-top: 10px;
     }
 
-    
+
     /* Animation pour les changements de données */
     @keyframes highlight {
         from { background-color: #ffff99; }
         to { background-color: transparent; }
     }
-    
+
     .highlight {
         animation: highlight 1.5s;
     }
-    
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .form-control, .form-select {
             width: 100% !important;
         }
-        
+
         .table-container {
             overflow-x: scroll;
         }
@@ -238,12 +238,13 @@
                         Réalisation: Nouveau projet
                     </h4>
                 </div>
-                
+
                 <div class="card-content">
                     <div class="card-body">
-                       
-                            <input type="hidden" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id">
-                            
+
+                            <input type="hidden" id="ecran_id" value="{{ optional($ecran)->id }}" name="ecran_id">
+
+
                             <div class="row mb-4">
                                 <div class="col-9">
                                     <div class="alert alert-info">
@@ -257,7 +258,7 @@
                                     </button>
                                     <div class="modal fade" id="modalDemarrerProjet" tabindex="-1" aria-hidden="true">
                                         <div class="modal-dialog modal-lg">
-                                           
+
                                                 <div class="modal-content">
                                                     <div class="modal-header bg-success text-white">
                                                         <h5 class="modal-title">
@@ -265,7 +266,7 @@
                                                         </h5>
                                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                     </div>
-                                                    <form method="POST" id="form-demarrer-projet" action="{{ route('enregistrer-dates-effectives') }}">
+                                                    <form method="POST" id="form-demarrer-projet">
                                                         @csrf
                                                         <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
 
@@ -296,18 +297,18 @@
                                                         </div>
                                                     </form>
                                                 </div>
-                                          
+
                                         </div>
                                     </div>
 
 
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-3">
                                     <label for="code_projet" class="form-label">Code projet</label>
-                                    <select name="code_projet" id="code_projet" class="form-select" 
+                                    <select name="code_projet" id="code_projet" class="form-select"
                                             onchange="checkProjectDetails()">
                                         <option value="">Sélectionner un projet</option>
                                         @foreach ($projets as $projet)
@@ -317,7 +318,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="date_debut">Date début</label>
                                     <div class="input-group">
@@ -325,7 +326,7 @@
                                         <input type="date" class="form-control" id="date_debut" name="date_debut">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="date_fin">Date fin</label>
                                     <div class="input-group">
@@ -333,7 +334,7 @@
                                         <input type="date" id="date_fin" class="form-control" name="date_fin">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="cout">Coût</label>
                                     <div class="input-group">
@@ -341,12 +342,12 @@
                                         <input type="text" class="form-control text-end" id="cout" name="cout">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-1">
                                     <label for="devise">Devise</label>
                                     <input type="text" id="devise" class="form-control" name="devise" readonly>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="statut">Statut</label>
                                     <div class="input-group">
@@ -356,10 +357,10 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <input type="hidden" id="codeProjetHidden">
-                       
-                        
+
+
                         <div class="row mt-4">
                             <div class="col-12">
                                 <div class="table-container mt-3">
@@ -381,7 +382,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="row mt-3">
                             <div class="col-12">
                                 <a href="#" id="voir-liste-link" class="toggle-list-btn">
@@ -395,7 +396,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Modal Bénéficiaires -->
     <div class="modal fade" id="beneficiaireModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -405,7 +406,7 @@
                     <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                     <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
                     <input type="hidden" name="numOrdreBene" id="numOrdreBene">
-                    
+
                     <div class="modal-header">
                         <h5 class="modal-title">
                             <i class="fas fa-users me-2"></i>
@@ -413,7 +414,7 @@
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    
+
                     <div class="modal-body">
                         <div class="row mb-4">
                             <div class="col-md-12">
@@ -422,12 +423,12 @@
                                     <label class="btn btn-outline-primary" for="type_acteur" onclick="afficheSelect('select_acteur')">
                                         <i class="fas fa-user-tie me-2"></i>Acteur
                                     </label>
-                                    
+
                                     <input type="radio" class="btn-check" name="beneficiaire_type" value="localite" id="type_localite" autocomplete="off">
                                     <label class="btn btn-outline-primary" for="type_localite" onclick="afficheSelect('select_localite')">
                                         <i class="fas fa-map-marker-alt me-2"></i>Localité
                                     </label>
-                                    
+
                                     <input type="radio" class="btn-check" name="beneficiaire_type" value="infrastructure" id="type_infra" autocomplete="off">
                                     <label class="btn btn-outline-primary" for="type_infra" onclick="afficheSelect('select_infra')">
                                         <i class="fas fa-building me-2"></i>Infrastructure
@@ -435,7 +436,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <select name="beneficiaire_code" id="select_acteur" class="form-select" style="display: block;">
@@ -444,14 +445,14 @@
                                     <option value="{{ $acteur->code_acteur }}">{{ $acteur->libelle_long }}</option>
                                     @endforeach
                                 </select>
-                                
+
                                 <select name="beneficiaire_code" id="select_localite" class="form-select" style="display: none;">
                                     <option value="">Sélectionner une localité</option>
                                     @foreach ($localites as $loc)
                                     <option value="{{ $loc->code_rattachement }}">{{ $loc->libelle }}</option>
                                     @endforeach
                                 </select>
-                                
+
                                 <select name="beneficiaire_code" id="select_infra" class="form-select" style="display: none;">
                                     <option value="">Sélectionner une infrastructure</option>
                                     @foreach ($infras as $infra)
@@ -459,7 +460,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            
+
                             <div class="col-md-6">
                                 <button type="button" class="btn btn-primary me-2" id="addBtn">
                                      Ajouter
@@ -469,7 +470,7 @@
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div class="row">
                             <div class="col-12">
                                 <div class="table-responsive">
@@ -490,7 +491,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-save me-1"></i> Enregistrer
@@ -503,7 +504,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Liste des projets (cachée par défaut) -->
     <div class="row mt-4" id="liste-projets" style="display: none;">
         <div class="col-12">
@@ -553,70 +554,47 @@
             </div>
         </div>
     </div>
-    <!-- Drawer latéral gauche -->
-<div id="caracDrawer" style="
-    position: fixed;
-    top: 12%;
-    right: -400px;
-    width: 350px;
-    height: 100%;
-    background-color: #fff;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-    z-index: 1050;
-    transition: left 0.3s ease-in-out;
-    overflow-y: auto;
-    padding: 20px;
-">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 id="caracDrawerTitle">Caractéristiques</h5>
-        <button class="btn btn-sm btn-outline-danger" onclick="closeCaracDrawer()">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    <div id="caracDrawerContent">
-        <p class="text-muted">Chargement...</p>
-    </div>
-</div>
 
 
 <script>
     $(document).ready(function() {
+
         // Initialisation DataTable
         $(document).ready(function() {
             initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des des projets prévus ')
         });
 
-        
+
         // Initialisation des sélecteurs de bénéficiaires
         $("#type_acteur").prop("checked", true);
         afficheSelect('select_acteur');
-        
+
         // Gestion de l'affichage de la liste des projets
         $('#voir-liste-link').click(function(e) {
             e.preventDefault();
             $('#liste-projets').slideToggle();
             $(this).find('i').toggleClass('fa-list fa-times');
         });
-        
+
         // Formatage des nombres
         $('#cout').on('input', function(e) {
             formatNumberInput(e.target);
         });
     });
-    
 
 
-    
+
+
     function checkProjectDetails() {
         const codeProjet = $('#code_projet').val();
         if (!codeProjet) return;
-        
+
         $.ajax({
             url: '{{ url("/fetchProjectDetails")}}',
             method: 'GET',
-            data: { 
+            data: {
                 _token: '{{ csrf_token() }}',
-                code_projet: codeProjet 
+                code_projet: codeProjet
             },
             beforeSend: function() {
                 // Afficher un indicateur de chargement
@@ -633,7 +611,7 @@
                 const codeProjet = response.codeProjet;
                 // Mettre à jour le tableau des actions
                 updateTableData(codeProjet, response.actions || []);
-                
+
                 // Animation de mise à jour
                 $('.form-control').addClass('highlight');
                 setTimeout(() => $('.form-control').removeClass('highlight'), 1500);
@@ -650,18 +628,36 @@
             }
         });
     }
-    
+
     function updateTableData(codeProjet, data) {
         const tbody = $('#beneficiaire-table-body');
         tbody.empty();
-        
+
         if (data.length === 0) {
             tbody.append('<tr><td colspan="6" class="text-center text-muted">Aucune action disponible pour ce projet</td></tr>');
             return;
         }
-        
+
         data.forEach(item => {
             console.log('item', item);
+
+            // Vérifier si l'infrastructure est définie
+            let caracButton = '';
+            if (item.infrastructure_idCode) {
+                caracButton = `
+                    <a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}"
+                    class="btn btn-sm btn-primary action-btn">
+                        <i class="fas fa-cog me-1"></i> Caractéristiques
+                    </a>
+                `;
+            } else {
+                caracButton = `
+                    <button type="button" class="btn btn-sm btn-secondary action-btn no-carac">
+                        <i class="fas fa-ban me-1"></i> Caractéristiques
+                    </button>
+                `;
+            }
+
             const row = `
                 <tr class="action" data-id="${item.code}">
                     <td class="num_ordre_cell">${item.Num_ordre}</td>
@@ -669,44 +665,46 @@
                     <td>${item.Quantite}</td>
                     <td>${item.infrastructure_libelle || '-'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary beneficiaire-btn" 
+                        <button class="btn btn-sm btn-outline-primary beneficiaire-btn"
                                 data-bs-toggle="modal" data-bs-target="#beneficiaireModal"
                                 data-projet="${codeProjet}" data-ordre="${item.Num_ordre}">
                             <i class="fas fa-user-plus me-1"></i> Bénéficiaires
                         </button>
                     </td>
                     <td>
-                        <button
-                        class="btn btn-sm btn-primary btn-caracteristiques action-btn"">
-                            <i class="fas fa-cog me-1"></i> Caractéristiques
-                        </button>
-
+                        ${caracButton}
                     </td>
                 </tr>
             `;
 
             tbody.append(row);
         });
+
+        // Gestion du clic sur le bouton "aucune caractéristique"
+        $(document).on('click', '.no-carac', function() {
+            alert("Aucune caractéristique disponible pour cette infrastructure.", 'warning');
+        });
+
     }
-    
+
     // Gestion des bénéficiaires
     $(document).on('click', '.beneficiaire-btn', function() {
         const codeProjet = $(this).data('projet');
         const numOrdre = $(this).data('ordre');
-        
+
         $('#CodeProjetBene').val(codeProjet);
         $('#numOrdreBene').val(numOrdre);
-        
+
         loadBeneficiaires(codeProjet, numOrdre);
     });
-    
+
     function loadBeneficiaires(codeProjet, numOrdre) {
         $.ajax({
             url: '{{ url("/recuperer-beneficiaires") }}',
             type: 'GET',
-            data: { 
-                code_projet: codeProjet, 
-                NumOrdre: numOrdre 
+            data: {
+                code_projet: codeProjet,
+                NumOrdre: numOrdre
             },
             beforeSend: function() {
                 $('#beneficiaireTable tbody').html('<tr><td colspan="4" class="text-center">Chargement...</td></tr>');
@@ -714,12 +712,12 @@
             success: function(response) {
                 const tbody = $('#beneficiaireTable tbody');
                 tbody.empty();
-                
+
                 if (response.length === 0) {
                     tbody.append('<tr><td colspan="4" class="text-center text-muted">Aucun bénéficiaire enregistré</td></tr>');
                     return;
                 }
-                
+
                 response.forEach(beneficiaire => {
                     const row = `
                         <tr>
@@ -741,11 +739,11 @@
             }
         });
     }
-    
+
     // Gestion de l'ajout de bénéficiaires
     $('#addBtn').click(function() {
         let code, libelle, type;
-        
+
         if ($('#type_acteur').is(':checked')) {
             code = $('#select_acteur').val();
             libelle = $('#select_acteur option:selected').text();
@@ -759,7 +757,7 @@
             libelle = $('#select_infra option:selected').text();
             type = 'infrastructure';
         }
-        
+
         if (!code) {
             Swal.fire({
                 icon: 'warning',
@@ -768,12 +766,12 @@
             });
             return;
         }
-        
+
         // Vérifier si l'élément existe déjà
         const exists = $('#beneficiaireTable tbody tr').toArray().some(tr => {
             return $(tr).find('td:eq(1)').text() === code && $(tr).find('td:eq(3)').text() === type;
         });
-        
+
         if (exists) {
             Swal.fire({
                 icon: 'warning',
@@ -782,7 +780,7 @@
             });
             return;
         }
-        
+
         // Ajouter à la table
         $('#beneficiaireTable tbody').append(`
             <tr>
@@ -792,26 +790,26 @@
                 <td>${type}</td>
             </tr>
         `);
-        
+
         // Réinitialiser le select
         if (type === 'acteur') $('#select_acteur').val('');
         else if (type === 'localite') $('#select_localite').val('');
         else if (type === 'infrastructure') $('#select_infra').val('');
     });
-    
+
     // Gestion de la suppression de bénéficiaires
     $('#deleteBtn').click(function() {
         const selected = $('#beneficiaireTable tbody input[type="checkbox"]:checked').closest('tr');
-        
+
         if (selected.length === 0) {
             Swal.fire({
-                icon: 'warning', 
+                icon: 'warning',
                 title: 'Attention',
                 text: 'Veuillez sélectionner au moins un élément à supprimer'
             });
             return;
         }
-        
+
         Swal.fire({
             title: 'Confirmer la suppression',
             text: `Êtes-vous sûr de vouloir supprimer ${selected.length} élément(s) ?`,
@@ -823,7 +821,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 selected.remove();
-                
+
                 // Si plus de lignes, afficher un message
                 if ($('#beneficiaireTable tbody tr').length === 0) {
                     $('#beneficiaireTable tbody').html('<tr><td colspan="4" class="text-center text-muted">Aucun bénéficiaire</td></tr>');
@@ -831,27 +829,27 @@
             }
         });
     });
-    
+
     // Sélection/désélection de tous les bénéficiaires
     $('#check-all').change(function() {
         $('#beneficiaireTable tbody input[type="checkbox"]').prop('checked', this.checked);
     });
-    
+
     // Formatage des nombres
     function formatNumber(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
-    
+
     function formatNumberInput(input) {
         let value = input.value.replace(/[^\d]/g, '');
         input.value = formatNumber(value);
     }
-    
+
     function afficheSelect(selectId) {
         $('#select_acteur, #select_localite, #select_infra').hide();
         $('#' + selectId).show();
     }
-    
+
     function goBack() {
         window.history.back();
     }
@@ -865,37 +863,47 @@
 <script>
         // Fonction générique pour la soumission AJAX
         function envoyerFormulaireAjax($form) {
-            console.log("Form submitted to:", $form.attr('action'));
-            console.log("Data sent:", $form.serialize());
+            const ecran_id = $form.find('input[name="ecran_id"]').val();
             const formData = $form.serialize();
-                $.ajax({
-                    type: 'POST',
-                    url: $form.attr('action'),
-                    data: formData,
-                    success: function (response) {
-                        if (response.success) {
-                            alert(response.message);
-                            window.location.href = '{{ route("projet.realise") }}';
-                        } else {
-                            alert(response.message, "error");
+
+            // Déterminer l'URL
+            let url = $form.attr('action');
+            if (!url || url.trim() === '') {
+                // Cas du form-demarrer-projet (pas d'action dans le form)
+                url = "{{ url('/enregistrer-dates-effectives') }}" + "?ecran_id=" + encodeURIComponent(ecran_id);
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message); // ✅ message succès natif
+
+                        // Redirection uniquement pour le formulaire "démarrage projet"
+                        if ($form.attr('id') === 'form-demarrer-projet') {
+                            window.location.href = '{{ route("projet.realise") }}' + "?ecran_id=" + encodeURIComponent(ecran_id);
                         }
-                    },
-                    error: function (xhr) {
-                        let message = 'Une erreur est survenue.';
-                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
-                            const errors = Object.values(xhr.responseJSON.errors).flat();
-                            message = errors.join('\n');
-                        } else if (xhr.responseJSON?.message) {
-                            message = xhr.responseJSON.message;
-                        }
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erreur',
-                            text: message
-                        });
+
+                    } else {
+                        alert(response.message || 'Erreur inconnue.'); // ✅ message erreur natif
                     }
-                });
+                },
+                error: function (xhr) {
+                    let message = 'Une erreur est survenue.';
+                    if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                        const errors = Object.values(xhr.responseJSON.errors).flat();
+                        message = errors.join('\n');
+                    } else if (xhr.responseJSON?.message) {
+                        message = xhr.responseJSON.message;
+                    }
+                    alert(message); // ✅ affichage natif
+                }
+            });
         }
+
+
 
         // Formulaire de bénéficiaires
         $('#beneficiaireForm').on('submit', function (e) {
@@ -938,58 +946,6 @@
             envoyerFormulaireAjax($(this));
         });
 
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Gestion du bouton "Caractéristiques"
-    $(document).on('click', '.action-btn', function () {
-        const $row = $(this).closest('tr');
-        const codeProjet = $('#codeProjetHidden').val();
-        const numOrdre = $row.find('.num_ordre_cell').text().trim();
-
-        $('#caracDrawer').css('left', '0px');
-        $('#caracDrawerTitle').text('Caractéristiques');
-
-        $('#caracDrawerContent').html('<p class="text-muted">Chargement...</p>');
-
-        $.ajax({
-            url: '{{ route("projets.recuperer.caracteristiques") }}',
-            type: 'GET',
-            data: {
-                code_projet: codeProjet,
-                NumOrdre: numOrdre
-            },
-            success: function (response) {
-                const { caracteristiques, infra } = response;
-                let html = `<h6 class="mb-3 text-primary">${infra}</h6>`;
-
-                if (caracteristiques.length === 0) {
-                    html += '<p class="text-muted">Aucune caractéristique renseignée.</p>';
-                } else {
-                    html += '<ul class="list-group">';
-                    caracteristiques.forEach(carac => {
-                        html += `
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>${carac.libelle}</strong>
-                                <span>${carac.valeur} ${carac.unite}</span>
-                            </li>`;
-                    });
-                    html += '</ul>';
-                }
-
-                $('#caracDrawerContent').html(html);
-            },
-            error: function () {
-                $('#caracDrawerContent').html('<div class="alert alert-danger">Erreur lors du chargement.</div>');
-            }
-        });
-    });
-});
-
-// Fonction pour fermer le drawer
-function closeCaracDrawer() {
-    document.getElementById('caracDrawer').style.left = '-400px';
-}
 
 </script>
 

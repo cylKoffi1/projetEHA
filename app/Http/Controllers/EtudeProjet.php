@@ -46,7 +46,7 @@ use App\Models\User;
 use App\Models\Validations;
 use App\Models\FamilleInfrastructure;
 use App\Models\TypeCaracteristique;
-use App\Models\Caracteristique; 
+use App\Models\Caracteristique;
 use App\Models\Unite;
 use App\Models\ProjetLocalisation;
 use App\Models\ProjetInfrastructure;
@@ -95,7 +95,7 @@ class EtudeProjet extends Controller
             $groupeSelectionne = session('projet_selectionne');
             $user = auth()->user();
             $groupe = GroupeUtilisateur::where('code', $user->groupe_utilisateur_id)->first();
-           
+
             $natures = NatureTravaux::all();
             $GroupeProjets = GroupeProjet::all();
             $Domaines = Domaine::where('groupe_projet_code', $groupeSelectionne)->get();
@@ -114,7 +114,7 @@ class EtudeProjet extends Controller
             $deviseCouts  = Devise::select('libelle', 'code_long')
                             ->where('code_long', $Dpays->code_devise)
                             ->first();
-            
+
             $actionMener = ActionMener::all();
 
             $tousPays = Pays::whereNotIn('id',  [0, 300, 301, 302, 303, 304])->get();
@@ -137,24 +137,24 @@ class EtudeProjet extends Controller
             $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise;
             $Pieceidentite = Pieceidentite::all();
             $TypeCaracteristiques = TypeCaracteristique::all();
-            
+
             $infrastructures = Infrastructure::where('code_pays', $paysSelectionne)
-            ->get();        
-            
+            ->get();
+
             $acteurs = Acteur::where('type_acteur', '=', 'etp')
             ->where('code_pays', $paysSelectionne)
             ->get();
             $familleInfrastructures = FamilleInfrastructure::all();
-            $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];   
+            $codes = ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF'];
 
             $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
-            
+
             $Devises = Pays::where('alpha3', $paysSelectionne)->get();
-            
+
             $unitesDerivees = UniteDerivee::with('uniteBase')
             ->get()
             ->groupBy('id_unite_base');
-            
+
             return view('etudes_projets.naissance', compact('ecran','unitesDerivees', 'familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
         }
 
@@ -173,13 +173,13 @@ class EtudeProjet extends Controller
         public function getLocaliteInfrastructure($code)
         {
             $infra = Infrastructure::where('code', $code)
-                ->with('localisation') 
+                ->with('localisation')
                 ->first();
-        
+
             if (!$infra || !$infra->localisation) {
                 return response()->json(null, 404);
             }
-        
+
             return response()->json([
                 'id' => $infra->localisation->id,
                 'code_rattachement' => $infra->localisation->code_rattachement,
@@ -189,18 +189,18 @@ class EtudeProjet extends Controller
                 'libelle_decoupage' => $infra->localisation->libelle_decoupage,
             ]);
         }
-        
+
         public function getBailleursParStatutLocal(Request $request)
         {
             $pays = session('pays_selectionne');
-            $local = $request->input('local'); 
+            $local = $request->input('local');
 
             $query = Acteur::query();
 
             if ($local == 1) {
-                $query->whereIn('code_pays', [ $pays, 'NEU']); 
+                $query->whereIn('code_pays', [ $pays, 'NEU']);
             } else {
-                $query->whereIn('code_pays', [ 'ARB', 'AFQ', 'ONU', 'ZAF']);          
+                $query->whereIn('code_pays', [ 'ARB', 'AFQ', 'ONU', 'ZAF']);
             }
 
             $bailleurs = $query->get(['code_acteur', 'libelle_court', 'libelle_long']);
@@ -242,20 +242,20 @@ class EtudeProjet extends Controller
                     'decoupage_administratif.libelle_decoupage'
                 )
                 ->get();
-        
+
             return response()->json($localites);
         }
-        
+
         // Récupérer le niveau et découpage associés à une localité sélectionnée
         public function getDecoupageNiveau($localiteId)
         {
             // Récupération de la localité (un seul objet, pas une collection)
             $localite = LocalitesPays::find($localiteId); // ou ->where('id', $localiteId)->first();
-        
+
             if (!$localite) {
                 return response()->json(['message' => 'Localité non trouvée'], 404);
             }
-            
+
             // Récupération du découpage administratif du pays
             $niveau = DecoupageAdminPays::where('code_decoupage', $localite->code_decoupage)
                                         ->first();
@@ -265,32 +265,32 @@ class EtudeProjet extends Controller
                 $decoupage = DecoupageAdministratif::where('code_decoupage', $localite->code_decoupage)->first();
                 $libelle = $decoupage ? $decoupage->libelle_decoupage : null;
             }
-        
+
             return response()->json([
                 'niveau' => $niveau ? $niveau->num_niveau_decoupage : 'Non défini',
                 'code_decoupage' => $localite->code_decoupage,
                 'libelle_decoupage' => $libelle ?? 'Non défini'
             ]);
         }
-        
+
         public function getFamilles($codeDomaine)
         {
             $codeProjet = session('projet_selectionne');
-        
+
             // Vérifie que la session contient bien un projet
             if (!$codeProjet) {
                 return response()->json(['error' => 'Aucun projet sélectionné.'], 400);
             }
-        
+
             $familles = FamilleDomaine::join('familleinfrastructure', 'famille_domaine.code_Ssys', '=', 'familleinfrastructure.code_Ssys')
                 ->where('famille_domaine.code_domaine', $codeDomaine)
                 ->whereIn('famille_domaine.code_groupe_projet', [$codeProjet])
                 ->select('familleinfrastructure.*')
                 ->get();
-        
+
             return response()->json($familles);
         }
-        
+
         public function getActeurs(Request $request)
         {
             // Vérification du type de requête : Maître d’Ouvrage ou Maître d’Œuvre
@@ -307,7 +307,7 @@ class EtudeProjet extends Controller
             // Vérification si le pays est bien défini
             $pays = Pays::where('alpha3', $paysSelectionne)->first();
             $code_pays = $pays ? $pays->id : null;
-            
+
             if ($code_pays) {
                 if (!empty($type_ouvrage)) {
                     // 🔹 Logique pour le Maître d'Œuvre
@@ -425,7 +425,7 @@ class EtudeProjet extends Controller
                     ->get();
 
                 return view('etudes_projets.historiqueApp', compact('ecran', 'approvalHistory'));
-        
+
             } catch (Exception $e) {
                 Log::error("Erreur chargement historique approbation : " . $e->getMessage());
                 return back()->with('error', 'Impossible de charger l’historique des validations.');
@@ -433,11 +433,11 @@ class EtudeProjet extends Controller
         }
 
 
-        
-        
 
-        
-        
+
+
+
+
 
 
 
@@ -448,38 +448,38 @@ class EtudeProjet extends Controller
         $country = session('pays_selectionne');
         $group   = session('projet_selectionne');
         $ecran   = Ecran::find($request->input('ecran_id'));
-    
+
         Log::info("📌 indexRenfo appelé", [
             'country' => $country,
             'group'   => $group,
             'ecran_id'=> $request->input('ecran_id'),
             'statutFilter' => $request->query('statut')
         ]);
-    
+
         $statutFilter = $request->query('statut');
-    
+
         $query = Renforcement::with(['beneficiaires','projets','modalite','actionType','statut', 'fichiers'])
             ->where('code_renforcement', 'like', $country.'_'.$group.'%')
             ->when($statutFilter, fn($q) => $q->where('statutId', $statutFilter))
             ->orderByDesc('date_debut');
-    
+
         $renforcements = $query->paginate(25)->withQueryString();
-    
+
         Log::info("✅ indexRenfo résultats paginés", [
             'total' => $renforcements->total()
         ]);
-    
+
         $projets        = Projet::where('code_projet', 'like', $country.$group.'%')->get();
         $beneficiaires  = Acteur::where('code_pays', $country)->get();
         $modalites      = Modalite::orderBy('Libelle')->get();
         $actionTypes    = ActionType::orderBy('Libelle')->get();
         $statuts        = StatutOperation::orderBy('Libelle')->get();
-    
+
         $stats = Renforcement::select('statutId', DB::raw('COUNT(*) as total'))
             ->where('code_renforcement', 'like', $country.'_'.$group.'%')
             ->groupBy('statutId')
             ->pluck('total', 'statutId');
-    
+
         return view('etudes_projets.renforcement', compact(
             'ecran',
             'renforcements',
@@ -492,17 +492,17 @@ class EtudeProjet extends Controller
             'statutFilter'
         ));
     }
-    
+
     public function storeRenfo(StoreRenforcementRequest $request)
     {
         DB::beginTransaction();
         try {
             Log::info("📌 storeRenfo début", $request->all());
-    
+
             $country = session('pays_selectionne');
             $group   = session('projet_selectionne');
             $code    = Renforcement::generateCodeRenforcement($country, $group);
-    
+
             $renfo = Renforcement::create([
                 'code_renforcement'        => $code,
                 'titre'                    => $request->titre,
@@ -523,12 +523,12 @@ class EtudeProjet extends Controller
                 'date_debut'               => $request->date_debut,
                 'date_fin'                 => $request->date_fin,
             ]);
-    
+
             Log::info("✅ Renforcement créé", ['code' => $renfo->code_renforcement]);
-    
+
             $renfo->beneficiaires()->sync($request->beneficiaires);
             $renfo->projets()->sync($request->projets ?? []);
-    
+
             // === Pièces jointes -> GridFS ===
             // On stocke CHAQUE fichier dans GridFS et on crée une ligne dans `fichiers`
             // owner_type = 'Renforcement' ; owner_id = code renforcement
@@ -555,7 +555,7 @@ class EtudeProjet extends Controller
                 }
             }
 
-    
+
             DB::commit();
             return response()->json([
                 'ok' => true,
@@ -572,22 +572,22 @@ class EtudeProjet extends Controller
             ], 500);
         }
     }
-    
+
     public function updateRenfo(Request $request, string $code)
     {
         DB::beginTransaction();
         try {
             Log::info("📌 updateRenfo début", ['code' => $code, 'payload' => $request->all()]);
-    
+
             $renfo = Renforcement::where('code_renforcement',$code)->firstOrFail();
-    
+
             $renfo->update($request->only([
                 'titre','description','actionTypeId','thematique','organisme','lieu',
                 'modaliteId','nb_participants_prev','nb_participants_effectif',
                 'cout_previsionnel','cout_reel','source_financement',
                 'pretest_moy','posttest_moy','date_debut','date_fin'
             ]));
-    
+
             $renfo->beneficiaires()->sync($request->beneficiaires);
             $renfo->projets()->sync($request->projets ?? []);
             // === Pièces jointes -> GridFS (update) ===
@@ -612,10 +612,10 @@ class EtudeProjet extends Controller
                 }
             }
 
-    
+
             DB::commit();
             Log::info("✅ Renforcement mis à jour", ['code' => $renfo->code_renforcement]);
-    
+
             return response()->json([
                 'ok' => true,
                 'message' => 'Renforcement modifié avec succès.',
@@ -631,46 +631,46 @@ class EtudeProjet extends Controller
             ], 500);
         }
     }
-    
+
     public function updateRenfoStatus(Request $request, string $code)
     {
         $request->validate([
             'statutId' => ['required','in:plan,enc,achv,annul,repr'],
             'motif_annulation' => ['nullable','string','max:2000'],
         ]);
-    
+
         Log::info("📌 updateRenfoStatus début", ['code' => $code, 'payload' => $request->all()]);
-    
+
         $renfo = \App\Models\Renforcement::where('code_renforcement',$code)->firstOrFail();
-    
+
         $payload = ['statutId' => $request->statutId];
         if ($request->statutId === 'annul') {
             $payload['motif_annulation'] = $request->motif_annulation ?? 'Non précisé';
         } else {
             $payload['motif_annulation'] = null;
         }
-    
+
         $renfo->update($payload);
-    
+
         Log::info("✅ Statut mis à jour", ['code' => $code, 'statutId' => $renfo->statutId]);
-    
+
         return response()->json([
             'ok' => true,
             'message' => 'Statut mis à jour.',
             'data' => ['statutId' => $renfo->statutId]
         ]);
     }
-    
+
     public function destroyRenfo(string $code)
     {
         try {
             Log::warning("📌 destroyRenfo demandé", ['code' => $code]);
-    
+
             $renfo = \App\Models\Renforcement::where('code_renforcement',$code)->firstOrFail();
             $renfo->delete();
-    
+
             Log::info("✅ Renforcement supprimé", ['code' => $code]);
-    
+
             return response()->json([
                 'ok' => true,
                 'message' => 'Renforcement supprimé avec succès.'
@@ -684,7 +684,7 @@ class EtudeProjet extends Controller
             ], 500);
         }
     }
-    
+
 
 
     private function parseMoney(?string $raw): ?float
@@ -715,9 +715,25 @@ class EtudeProjet extends Controller
         return view('etudes_projets.activite', compact('ecran','travaux','projets','typesTravaux'));
     }
 
+    private function normalizeCout(Request $request): void
+    {
+        // Accepte "12 345", "12.345,67", etc. et convertit en décimal standard "12345.67"
+        $raw = (string) $request->input('cout_projet', '');
+        $raw = str_replace([' ', "\u{00A0}"], '', $raw); // espaces & espaces insécables
+        // remplace la virgule décimale par un point si nécessaire
+        if (preg_match('/,\d{1,2}$/', $raw)) {
+            $raw = str_replace('.', '', $raw); // enlever séparateurs de milliers
+            $raw = str_replace(',', '.', $raw); // virgule -> point
+        }
+        $raw = preg_replace('/[^\d.]/', '', $raw);
+        $request->merge(['cout_projet' => $raw === '' ? null : $raw]);
+    }
+
     // Store
     public function storeConnexe(Request $request)
     {
+        $this->normalizeCout($request);
+
         // Validation
         $request->validate([
             'code_projet'                => ['required','exists:projets,code_projet'],
@@ -779,7 +795,10 @@ class EtudeProjet extends Controller
     // Update (id = codeActivite)
     public function updateConnexe(Request $request, string $id)
     {
+        $this->normalizeCout($request);
+
         $request->validate([
+            'cout_projet' => ['required','numeric','min:0'],
             'type_travaux_id'            => ['required','exists:types_travaux_connexes,id'],
             'cout_projet'                => ['required','numeric','min:0'],
             'date_debut_previsionnelle'  => ['required','date'],
@@ -808,19 +827,18 @@ class EtudeProjet extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            return response()->json([
-                'ok' => true,
-                'message' => 'Travail connexe modifié avec succès.',
-                'data' => ['code' => $row->codeActivite]
-            ]);
+            return $request->expectsJson()
+            ? response()->json(['ok'=>true,'message'=>'Travail connexe modifié avec succès.','data'=>['code'=>$row->codeActivite]])
+            : redirect()->route('activite.index')->with('success','Travail connexe modifié avec succès.');
+
         } catch (\Throwable $e) {
-            Log::error('❌ updateConnexe erreur', [
-                'code' => $id,
-                'err' => $e->getMessage(),
-            ]);
-            return back()->with('error', "Erreur lors de la modification : ".$e->getMessage())
-                         ->withInput();
+            Log::error('❌ updateConnexe erreur', ['code'=>$id, 'err'=>$e->getMessage()]);
+            if ($request->expectsJson()) {
+                return response()->json(['ok'=>false,'message'=>"Erreur : ".$e->getMessage()], 422);
+            }
+            return back()->with('error', "Erreur lors de la modification : ".$e->getMessage())->withInput();
         }
+
     }
 
     // Delete JSON
@@ -870,14 +888,14 @@ class EtudeProjet extends Controller
                 @unlink($fullPath);
             }
         }
-        
+
         session()->forget([
             'form_step1', 'form_step2', 'form_step3',
             'form_step4', 'form_step5', 'form_step6', 'form_step7',
             'code_localisation'
         ]);
     }
-    
+
     private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
     {
         $paysAlpha3 = session('pays_selectionne');
@@ -901,8 +919,8 @@ class EtudeProjet extends Controller
 
         // Ajoute le suffixe (ordre)
         return $prefix . '_' . str_pad($ordre, 2, '0', STR_PAD_LEFT);
-    }  
-    
+    }
+
     public function getLatestProjectNumber($location, $category, $typeFinancement)
     {
         $year = date('Y');
@@ -928,7 +946,7 @@ class EtudeProjet extends Controller
 
         return "{$location}{$category}{$typeFinancement}{$year}{$newNumber}";
     }
-    
+
     public function saveStep1(Request $request)
     {
         try {
@@ -943,15 +961,15 @@ class EtudeProjet extends Controller
                 'code_pays' => 'required|string|max:3',
                 'commentaire' => 'nullable|string|max:500'
             ]);
-    
+
             $data = $request->only([
                 'libelle_projet', 'commentaire', 'code_sous_domaine',
                 'date_demarrage_prevue', 'date_fin_prevue',
                 'cout_projet', 'code_devise', 'code_nature', 'code_pays'
             ]);
-    
+
             session(['form_step1' => $data]);
-    
+
             // Vérification du stockage en session
             if (session()->has('form_step1')) {
                 Log::info('Données correctement stockées en session', [
@@ -960,15 +978,15 @@ class EtudeProjet extends Controller
             } else {
                 Log::error('Échec du stockage en session');
             }
-    
+
             return response()->json(['success' => true]);
-    
+
         } catch (\Throwable $e) {
             Log::error('Erreur lors de l\'enregistrement des données step1', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -976,7 +994,7 @@ class EtudeProjet extends Controller
             ], 500);
         }
     }
-    
+
     public function saveStep2(Request $request)
     {
         try {
@@ -987,15 +1005,15 @@ class EtudeProjet extends Controller
                 'localites.*.decoupage' => 'nullable|string',
                 'infrastructures' => 'nullable|array',
             ]);
-    
+
             $data = $request->only(['localites', 'infrastructures']);
             session(['form_step2' => $data]);
-    
+
             // Stocker aussi le premier code_localisation s’il existe
             if (!empty($request->localites)) {
                 session(['code_localisation' => $request->localites[0]['code_rattachement']]);
             }
-    
+
             // Vérification
             if (session()->has('form_step2')) {
                 Log::info('Étape 2 stockée en session avec succès.', [
@@ -1004,7 +1022,7 @@ class EtudeProjet extends Controller
             } else {
                 Log::error('Échec de la sauvegarde en session (étape 2).');
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Étape 2 enregistrée temporairement en session.',
@@ -1014,24 +1032,24 @@ class EtudeProjet extends Controller
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
         }
     }
-    
+
     public function saveStep3(Request $request)
     {
         try {
             $request->validate([
                  'actions' => 'required|array',
             ]);
-            
+
             $data = $request->only(['actions']);
             session(['form_step3' => $data]);
-    
+
             if (session()->has('form_step3')) {
                 Log::info('Étape 3 stockée en session avec succès.', [
                     'session_data' => session('form_step3')
@@ -1039,7 +1057,7 @@ class EtudeProjet extends Controller
             } else {
                 Log::error('Échec de la sauvegarde en session (étape 3).');
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Étape 3 enregistrée temporairement en session.',
@@ -1049,14 +1067,14 @@ class EtudeProjet extends Controller
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
         }
     }
-    
+
     public function saveStep4(Request $request)
     {
         try {
@@ -1069,13 +1087,13 @@ class EtudeProjet extends Controller
                 'sectActivEntMoe' => 'nullable|string',
                 'descriptionMoe' => 'nullable|string',
             ]);
-    
+
             $data = $request->only([
                 'type_ouvrage', 'priveMoeType', 'descriptionMoe', 'acteurs'
             ]);
-    
+
             session(['form_step4' => $data]);
-    
+
             if (session()->has('form_step4')) {
                 Log::info('Étape 4 stockée en session avec succès.', [
                     'session_data' => session('form_step4')
@@ -1083,25 +1101,25 @@ class EtudeProjet extends Controller
             } else {
                 Log::error('Échec du stockage en session (étape 4).');
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Étape 4 enregistrée temporairement en session.',
             ]);
-    
+
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'enregistrement de l\'étape 4', [
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
         }
     }
-    
+
     public function saveStep5(Request $request)
     {
         try {
@@ -1110,12 +1128,12 @@ class EtudeProjet extends Controller
                 'acteurs.*.code_acteur' => 'required|string|exists:acteur,code_acteur',
                 'acteurs.*.secteur_id' => 'nullable|string',
             ]);
-    
+
             $data = $request->only(['acteurs']);
-    
+
             // Stockage en session
             session(['form_step5' => $data]);
-    
+
             if (session()->has('form_step5')) {
                 Log::info('Étape 5 stockée en session avec succès.', [
                     'session_data' => session('form_step5')
@@ -1123,7 +1141,7 @@ class EtudeProjet extends Controller
             } else {
                 Log::error('Échec du stockage en session (étape 5).');
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Étape 5 enregistrée temporairement en session.',
@@ -1133,14 +1151,14 @@ class EtudeProjet extends Controller
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
         }
     }
-    
+
     public function saveStep6(Request $request)
     {
         try {
@@ -1153,12 +1171,12 @@ class EtudeProjet extends Controller
                 'financements.*.commentaire' => 'nullable|string|max:500',
                 'type_financement' => 'required|string|exists:type_financement,code_type_financement',
             ]);
-    
+
             $data = $request->only(['financements', 'type_financement']);
-    
+
             // Stocker en session
             session(['form_step6' => $data]);
-    
+
             if (session()->has('form_step6')) {
                 Log::info('Étape 6 stockée en session avec succès.', [
                     'session_data' => session('form_step6')
@@ -1166,7 +1184,7 @@ class EtudeProjet extends Controller
             } else {
                 Log::error('Échec du stockage en session (étape 6).');
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Étape 6 enregistrée temporairement en session.',
@@ -1176,7 +1194,7 @@ class EtudeProjet extends Controller
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -1187,19 +1205,19 @@ class EtudeProjet extends Controller
     public function saveStep7(Request $request)
 
     {
-        try 
+        try
         {
                 // 1) Validation + journalisation d’entrée
                 Log::info('[Step7] Début upload', [
                     'has_files' => $request->hasFile('fichiers'),
                     'count'     => $request->hasFile('fichiers') ? count($request->file('fichiers')) : 0,
                 ]);
-        
+
                 $request->validate([
                     'fichiers'   => 'required|array|min:1',
                     'fichiers.*' => 'required|file|max:102400|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar,dwg,dxf,ifc',
                 ]);
-        
+
                 $uploadedFiles = [];
                 if ($request->hasFile('fichiers')) {
                     foreach ($request->file('fichiers') as $idx => $file) {
@@ -1211,11 +1229,11 @@ class EtudeProjet extends Controller
                             ]);
                             continue;
                         }
-        
+
                         try {
                             // Stockage temporaire
                             $path = $file->store('temp/projet', 'local');
-        
+
                             $uploadedFiles[] = [
                                 'original_name' => $file->getClientOriginalName(),
                                 'extension'     => $file->getClientOriginalExtension(),
@@ -1223,7 +1241,7 @@ class EtudeProjet extends Controller
                                 'size'          => $file->getSize(),
                                 'storage_path'  => $path,
                             ];
-        
+
                             Log::info('[Step7] Fichier stocké temporairement', [
                                 'index' => $idx,
                                 'path'  => $path,
@@ -1240,39 +1258,39 @@ class EtudeProjet extends Controller
                         }
                     }
                 }
-        
+
                 session(['form_step7' => ['fichiers' => $uploadedFiles]]);
-        
+
                 Log::info('[Step7] Fichiers stockés en session', [
                     'count' => count($uploadedFiles),
                     'files' => $uploadedFiles,
                 ]);
-        
+
                 return response()->json([
                     'success' => true,
                     'message' => count($uploadedFiles) . ' fichier(s) enregistré(s)',
                 ]);
-                
+
         } catch (Throwable $e) {
             Log::error('[Step7] Erreur globale', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => "Une erreur s'est produite lors de l’upload.",
             ], 500);
         }
     }
-     
+
     public function finaliserProjet()
     {
         return DB::transaction(function () {
-    
+
             try {
                 Log::info('[Finaliser] Début finalisation');
-    
+
                 // 0) Récup sessions + garde-fous + logs
                 $step1 = session('form_step1', []);
                 $step2 = session('form_step2', []);
@@ -1281,7 +1299,7 @@ class EtudeProjet extends Controller
                 $step5 = session('form_step5', []);
                 $step6 = session('form_step6', []);
                 $step7 = session('form_step7', []);
-    
+
                 Log::info('[Finaliser] États de session', [
                     'has_step1' => !empty($step1),
                     'has_step2' => !empty($step2),
@@ -1291,7 +1309,7 @@ class EtudeProjet extends Controller
                     'has_step6' => !empty($step6),
                     'has_step7' => !empty($step7),
                 ]);
-    
+
                 // Checks essentiels
                 foreach ([
                     'form_step1' => $step1,
@@ -1303,14 +1321,14 @@ class EtudeProjet extends Controller
                         throw new \Exception("Données manquantes ($k).");
                     }
                 }
-    
+
                 $codeLocalisation = collect($step2['localites'] ?? [])
                     ->pluck('code_rattachement')->filter()->first();
-    
+
                 Log::info('[Finaliser] Code localisation', [
                     'codeLocalisation' => $codeLocalisation,
                 ]);
-    
+
                 // 1) Générer code projet
                 $codeProjet = $this->genererCodeProjet(
                     $step1['code_sous_domaine'] ?? null,
@@ -1318,13 +1336,13 @@ class EtudeProjet extends Controller
                     $codeLocalisation,
                     $step1['date_demarrage_prevue'] ?? null,
                 );
-    
+
                 if (!$codeProjet) {
                     throw new \Exception('Échec génération code projet');
                 }
-    
+
                 Log::info('[Finaliser] Code projet généré', ['code_projet' => $codeProjet]);
-    
+
                 // 2) Projet principal
                 $projet = Projet::create([
                     'code_projet'           => $codeProjet,
@@ -1337,27 +1355,27 @@ class EtudeProjet extends Controller
                     'code_devise'           => $step1['code_devise'] ?? null,
                     'code_alpha3_pays'      => $step1['code_pays'] ?? null,
                 ]);
-    
+
                 Log::info('[Finaliser] Projet créé', ['id' => $projet->id, 'code' => $codeProjet]);
-    
+
                 projets_natureTravaux::create([
                     'code_projet' => $codeProjet,
                     'code_nature' => $step1['code_nature'] ?? null,
                     'date'        => now(),
                 ]);
-    
+
                 ProjetStatut::create([
                     'code_projet' => $codeProjet,
                     'type_statut' => 1,
                     'date_statut' => now(),
                 ]);
-    
+
                 $codePays = session('pays_selectionne');
-    
+
                 // 3) Localisations
                 foreach (($step2['localites'] ?? []) as $idx => $loc) {
                     Log::info('[Finaliser] Localisation', ['index' => $idx, 'loc' => $loc]);
-    
+
                     ProjetLocalisation::create([
                         'code_projet'  => $codeProjet,
                         'code_localite'=> $loc['code_rattachement'] ?? null,
@@ -1366,35 +1384,35 @@ class EtudeProjet extends Controller
                         'pays_code'    => $step1['code_pays'] ?? null,
                     ]);
                 }
-    
+
                 // 4) Infrastructures (+ caractéristiques)
                 if (!empty($step2['infrastructures'])) {
                     foreach ($step2['infrastructures'] as $i => $infra) {
                         Log::info('[Finaliser] Infra entrée', ['i' => $i, 'infra' => $infra]);
-    
+
                         $codeFamille = $infra['famille_code'] ?? null;
                         if (!$codeFamille) {
                             throw new \Exception("Famille d'infrastructure manquante (infra #$i).");
                         }
-    
+
                         $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
                             ->where('libelle', $infra['libelle'] ?? '')
                             ->first();
-    
+
                         if (!$infraDB) {
                             $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->first();
                             if (!$famille) {
                                 throw new \Exception("Famille introuvable ($codeFamille) pour infra #$i.");
                             }
-    
+
                             $familleId = $famille->idFamille;
                             Log::info('[Finaliser] Famille trouvée', ['famille_id' => $familleId]);
-    
+
                             $prefix = ($codePays ?? '') . $codeFamille;
                             $last   = Infrastructure::where('code', 'like', $prefix.'%')->orderByDesc('code')->first();
                             $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
                             $codeInfra  = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
-    
+
                             $infraDB = Infrastructure::create([
                                 'code'               => $codeInfra,
                                 'libelle'            => $infra['libelle'] ?? ("Infra_$codeInfra"),
@@ -1405,26 +1423,26 @@ class EtudeProjet extends Controller
                                 'date_operation'     => now(),
                                 'IsOver'             => false,
                             ]);
-    
+
                             Log::info('[Finaliser] Infra créée', ['code' => $infraDB->code, 'id' => $infraDB->id]);
                         } else {
                             Log::info('[Finaliser] Infra existante', ['code' => $infraDB->code, 'id' => $infraDB->id]);
                         }
-    
+
                         $projetInfra = ProjetInfrastructure::create([
                             'idInfrastructure' => $infraDB->id,
                             'code_projet'      => $codeProjet,
                             'localisation_id'  => $infra['localisation_id'] ?? $codeLocalisation,
                         ]);
-    
+
                         Log::info('[Finaliser] Lien Projet-Infrastructure créé', ['pi_id' => $projetInfra->id]);
-    
+
                         foreach (($infra['caracteristiques'] ?? []) as $index => $carac) {
                             if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') {
                                 Log::warning('[Finaliser] Caractéristique ignorée', ['i' => $i, 'carac' => $carac]);
                                 continue;
                             }
-    
+
                             ValeurCaracteristique::create([
                                 'infrastructure_code' => $infraDB->code,
                                 'idCaracteristique'   => $carac['id'],
@@ -1435,11 +1453,11 @@ class EtudeProjet extends Controller
                         }
                     }
                 }
-    
+
                 // 5) Actions à mener
                 foreach (($step3['actions'] ?? []) as $k => $action) {
                     Log::info('[Finaliser] Action', ['k' => $k, 'action' => $action]);
-    
+
                     $created = ProjetActionAMener::create([
                         'code_projet'       => $codeProjet,
                         'Num_ordre'         => $action['ordre'] ?? ($k+1),
@@ -1447,11 +1465,11 @@ class EtudeProjet extends Controller
                         'Quantite'          => $action['quantite'] ?? null,
                         'Infrastrucrues_id' => $action['infrastructure_code'] ?? 0,
                     ]);
-    
+
                     foreach (($action['beneficiaires'] ?? []) as $b) {
                         $type = $b['type'] ?? '';
                         Log::info('[Finaliser] Bénéficiaire', ['type' => $type, 'b' => $b]);
-    
+
                         match ($type) {
                             'acteur' => Beneficier::create([
                                 'code_projet' => $codeProjet,
@@ -1471,11 +1489,11 @@ class EtudeProjet extends Controller
                         };
                     }
                 }
-    
+
                 // 6) Maîtres d’Ouvrage
                 foreach (($step4['acteurs'] ?? []) as $idx => $acteur) {
                     Log::info('[Finaliser] MOA', ['idx' => $idx, 'acteur' => $acteur]);
-    
+
                     Posseder::create([
                         'code_projet' => $codeProjet,
                         'code_acteur' => $acteur['code_acteur'] ?? null,
@@ -1485,11 +1503,11 @@ class EtudeProjet extends Controller
                         'is_active'   => true,
                     ]);
                 }
-    
+
                 // 7) Maîtres d’œuvre
                 foreach (($step5['acteurs'] ?? []) as $idx => $acteur) {
                     Log::info('[Finaliser] MOE', ['idx' => $idx, 'acteur' => $acteur]);
-    
+
                     Executer::create([
                         'code_projet' => $codeProjet,
                         'code_acteur' => $acteur['code_acteur'] ?? null,
@@ -1497,11 +1515,11 @@ class EtudeProjet extends Controller
                         'is_active'   => true,
                     ]);
                 }
-    
+
                 // 8) Financements
                 foreach (($step6['financements'] ?? []) as $idx => $fin) {
                     Log::info('[Finaliser] Financement', ['idx' => $idx, 'fin' => $fin]);
-    
+
                     Financer::create([
                         'code_projet'       => $codeProjet,
                         'code_acteur'       => $fin['bailleur'] ?? null,
@@ -1513,22 +1531,22 @@ class EtudeProjet extends Controller
                         'is_active'         => true,
                     ]);
                 }
-    
+
                 // 9) Documents
                 $uploadPath = public_path('data/documentProjet/' . $codeProjet);
                 File::ensureDirectoryExists($uploadPath);
                 Log::info('[Finaliser] Répertoire documents prêt', ['path' => $uploadPath]);
-    
+
                 foreach ((($step7['fichiers'] ?? [])) as $i => $f) {
                     Log::info('[Finaliser] Doc entrée', ['i' => $i, 'file' => $f]);
-    
+
                     $rel = ltrim($f['storage_path'] ?? '', '/');
                     $absPath = storage_path('app/' . $rel);
                     if (!File::exists($absPath)) {
                         Log::error('[Finaliser] Fichier introuvable sur disque', ['i' => $i, 'abs' => $absPath]);
                         throw new \Exception("Fichier temporaire introuvable ($absPath).");
                     }
-    
+
                     $res = app(FileProcService::class)->handlePath([
                         'owner_type'    => 'Projet',
                         'owner_id'      => $codeProjet,
@@ -1537,9 +1555,9 @@ class EtudeProjet extends Controller
                         'original_name' => $f['original_name'] ?? ('document_'.Str::random(6)),
                         'uploaded_by'   => optional(request()->user())->id,
                     ]);
-    
+
                     Log::info('[Finaliser] Stockage fichier OK', ['gridfs_id' => $res['id'] ?? null, 'res' => $res]);
-    
+
                     ProjetDocument::create([
                         'file_name'     => $f['original_name'] ?? ($res['filename'] ?? null),
                         'file_path'     => null,
@@ -1550,7 +1568,7 @@ class EtudeProjet extends Controller
                         'uploaded_at'   => now(),
                         'fichier_id'    => $res['id'] ?? null,
                     ]);
-    
+
                     try {
                         @unlink($absPath);
                         Log::info('[Finaliser] Temp supprimé', ['abs' => $absPath]);
@@ -1558,26 +1576,26 @@ class EtudeProjet extends Controller
                         Log::warning('[Finaliser] Échec suppression temp', ['abs' => $absPath, 'ex' => $th->getMessage()]);
                     }
                 }
-    
+
                 // 10) Étude
                 $codeEtude = $this->genererCodeEtude(session('pays_selectionne'), session('projet_selectionne'));
                 if (!$codeEtude) {
                     throw new \Exception('Échec génération code étude');
                 }
-    
+
                 EtudeProject::create([
                     'codeEtudeProjets' => $codeEtude,
                     'code_projet'      => $codeProjet,
                     'valider'          => false,
                     'is_deleted'       => false,
                 ]);
-    
+
                 Log::info('[Finaliser] Étude créée', ['code_etude' => $codeEtude]);
-    
+
                 // 🔁 Nettoyage
                 $this->nettoyerSessionsEtFichiers();
                 Log::info('[Finaliser] Nettoyage sessions OK');
-    
+
                 return response()->json([
                     'success'     => true,
                     'code_projet' => $codeProjet,
@@ -1590,7 +1608,7 @@ class EtudeProjet extends Controller
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-    
+
                 // On relance l’exception pour que la transaction sache qu’il faut annuler
                 throw $e;
             }

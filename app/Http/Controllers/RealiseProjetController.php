@@ -23,6 +23,7 @@ use App\Models\ProjetStatut;
 use App\Models\TypeCaracteristique;
 use App\Models\User;
 use App\Models\ValeurCaracteristique;
+use App\Services\FileProcService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -36,7 +37,7 @@ class RealiseProjetController extends Controller
     {
         $code = $request->code_projet;
         $ordre = $request->NumOrdre;
-    
+
         $action = ProjetActionAMener::with([
             'caracteristiques.caracteristique',
             'caracteristiques.unite',
@@ -45,11 +46,11 @@ class RealiseProjetController extends Controller
         ->where('code_projet', $code)
         ->where('Num_ordre', $ordre)
         ->first();
-    
+
         if (!$action || !$action->caracteristiques) {
             return response()->json(['caracteristiques' => [], 'infra' => null], 200);
         }
-    
+
         $caracs = $action->caracteristiques->map(function ($valeur) {
             return [
                 'libelle' => $valeur->caracteristique?->libelleCaracteristique ?? '—',
@@ -57,14 +58,14 @@ class RealiseProjetController extends Controller
                 'unite' => $valeur->unite?->symbole ?? '',
             ];
         });
-    
+
         return response()->json([
             'caracteristiques' => $caracs,
             'infra' => $action->infrastructure?->libelle ?? 'Inconnue'
         ]);
     }
-    
-    
+
+
 
     public function PramatreRealise(Request $request)
     {
@@ -100,34 +101,34 @@ class RealiseProjetController extends Controller
             'TypeCaracteristiques' => $TypeCaracteristiques,
         ]);
     }
-    
+
     public function getFamillesByProjet(Request $request)
     {
         $codeProjet = $request->input('codeProjet');
-    
+
         // 1. Trouver le projet par code
         $projet = Projet::where('code_projet', $codeProjet)->first();
         if (!$projet) {
             return response()->json(['error' => 'Projet non trouvé'], 404);
         }
-    
+
         $codeSDomaine = $projet->code_sous_domaine; // récupère le code sous-domaine du projet
         $codeGroupeProjet = session('projet_selectionne'); // récupère la session
-    
+
         if (!$codeGroupeProjet) {
             return response()->json(['error' => 'Groupe projet non trouvé en session'], 400);
         }
-    
+
         // 2. Récupérer les familles correspondant au sous-domaine et au groupe de projet
         $familles = FamilleInfrastructure::where('code_sdomaine', $codeSDomaine)
                     ->where('code_groupe_projet', $codeGroupeProjet)
                     ->get();
-    
+
         return response()->json([
             'familles' => $familles
         ]);
     }
-    
+
     public function getInfrastructuresByProjet(Request $request)
     {
         $codeProjet = $request->codeProjet;
@@ -138,9 +139,9 @@ class RealiseProjetController extends Controller
                 $q->with(['familleInfrastructure', 'valeursCaracteristiques.caracteristique', 'valeursCaracteristiques.unite']);
             }])
             ->get();
-    
+
         $result = [];
-    
+
         foreach ($projetsInfra as $projetInfra) {
             $infra = $projetInfra->infra;
             if ($infra) {
@@ -160,7 +161,7 @@ class RealiseProjetController extends Controller
                 ];
             }
         }
-    
+
         return response()->json(['infrastructures' => $result]);
     }
     public function getFamilleInfrastructure(Request $request)
@@ -222,16 +223,17 @@ class RealiseProjetController extends Controller
                   ->where('ps2.type_statut', '!=', 1);
         })
         ->select('projets.*')
-        ->with('dernierStatut') 
+        ->with('dernierStatut')
         ->get();
-    
 
-        $localites = LocalitesPays::all();
-        $infras = Infrastructure::all();
 
-        $acteurs = Acteur::where('code_pays', $country)->get(); 
+        $localites = LocalitesPays::where('id_pays', session('pays_selectionne'))->get();
+        $infras = Infrastructure::where('code_pays', session('projet_selectionne'))
+        ->where('code_groupe_projet', session('pays_selectionne'))->get();
 
-        return view('realise', [
+        $acteurs = Acteur::where('code_pays', $country)->get();
+
+        return view('projets.RealisationProjet.realise', [
             'ecran' => $ecran,
             'projetsNonTrouves'=>$projetsNonTrouves,
             'code_projet' => $code_projet,
@@ -267,7 +269,7 @@ class RealiseProjetController extends Controller
     {
         // Récupérer le code projet depuis la requête
         $code_projet = $request->codeProjet;
-    
+
         // Effectuer la requête pour récupérer les données en fonction du code projet
 
             $projetData = DB::table('projet_action_a_mener')
@@ -390,9 +392,9 @@ class RealiseProjetController extends Controller
                 'infrastructure_libelle' => $action->infrastructure?->libelle,
             ];
         });
-    
-    
-        
+
+
+
 
         // Récupérer les bénéficiaires
 
@@ -416,58 +418,83 @@ class RealiseProjetController extends Controller
         // Par exemple, concaténez $familleCode avec un identifiant unique ou utilisez une autre logique appropriée.
         return $familleCode . '_' . uniqid();
     }
-    
+
     public function enregistrerDatesEffectives(Request $request)
     {
         try {
             $request->validate([
                 'code_projet' => 'required|string|exists:projets,code_projet',
-                'date_debut' => 'required|date',
+                'date_debut'  => 'required|date',
                 'commentaire' => 'nullable|string',
             ]);
-    
+
             $projet = Projet::where('code_projet', $request->code_projet)->first();
             if (!$projet) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Projet introuvable.'
-                ], 404);
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Projet introuvable.'], 404);
+                }
+                return redirect()->back()->with('error', 'Projet introuvable.');
             }
-    
+
             if ($projet->date_demarrage_prevue && $request->date_debut < $projet->date_demarrage_prevue) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La date effective ne peut pas être antérieure à la date prévisionnelle.'
-                ], 422);
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La date effective ne peut pas être antérieure à la date prévisionnelle.'
+                    ], 422);
+                }
+                return redirect()->back()->with('error', 'La date effective ne peut pas être antérieure à la date prévisionnelle.');
             }
-    
-            // Enregistrement
-            DateEffectiveProjet::updateOrCreate([
-                'code_projet' => $request->code_projet,
-                'date_debut_effective' => $request->date_debut,
-                'description' => $request->commentaire,
-            ]);
-    
+
+            // Enregistrement ou mise à jour
+            DateEffectiveProjet::updateOrCreate(
+                ['code_projet' => $request->code_projet],
+                [
+                    'date_debut_effective' => $request->date_debut,
+                    'description'          => $request->commentaire,
+                ]
+            );
+
+            // Mise à jour du statut projet
             ProjetStatut::create([
                 'code_projet' => $request->code_projet,
-                'type_statut' => 2, 
+                'type_statut' => 2,
                 'date_statut' => now(),
             ]);
-    
-            return response()->json([
-                'success' => true,
-                'message' => 'Le projet a bien été lancé avec succès.'
-            ]);
+
+            // URL cible avec ecran_id
+            $redirectUrl = route('projet.realise', ['ecran_id' => $request->ecran_id]);
+
+            // Si JSON attendu → retour JSON
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success'      => true,
+                    'message'      => 'Le projet a bien été lancé avec succès.',
+                    'ecran_id'     => $request->ecran_id,
+                    'redirect_url' => $redirectUrl,
+                ]);
+            }
+
+            // Sinon redirection classique
+            return redirect()->to($redirectUrl)->with('success', 'Le projet a bien été lancé avec succès.');
+
         } catch (\Throwable $e) {
-            Log::error('Erreur lors du lancement du projet', ['error' => $e]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Une erreur est survenue lors de l’enregistrement.',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Erreur lors du lancement du projet', ['error' => $e->getMessage()]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Une erreur est survenue lors de l’enregistrement.',
+                    'error'   => $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Une erreur est survenue lors de l’enregistrement.');
         }
     }
-    
+
+
+
 
 
 
@@ -529,7 +556,7 @@ class RealiseProjetController extends Controller
             // Gérer le cas où l'utilisateur n'est pas trouvé
             return redirect()->route('users.users')->with('error', 'Utilisateur non trouvé.');
         }
-    
+
         $projetsAvecInfrastructures = DB::table('projet_statut')
             ->where('type_statut', 2)
             ->whereIn('code_projet', function($query) {
@@ -539,11 +566,11 @@ class RealiseProjetController extends Controller
             })
             ->where('code_projet', 'like', $country . $group . '%')
             ->get();
-       
+
             $lastStatuses = DB::table('projet_statut')
             ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
             ->groupBy('code_projet');
-        
+
         $projets = Projet::joinSub($lastStatuses, 'last_status', function ($join) {
                 $join->on('projets.code_projet', '=', 'last_status.code_projet');
             })
@@ -553,15 +580,17 @@ class RealiseProjetController extends Controller
             })
             ->where('projet_statut.type_statut', 2)
             ->where('projets.code_projet', 'like', $country . $group . '%')
-           
+
             ->select('projets.*')
             ->with('dernierStatut')
             ->get();
-        
 
-        $localites = LocalitesPays::all();
-        $acteurs = Acteur::all();
-        $infras = Infrastructure::all();
+            $localites = LocalitesPays::where('id_pays', session('pays_selectionne'))->get();
+            $infras = Infrastructure::where('code_pays', session('projet_selectionne'))
+            ->where('code_groupe_projet', session('pays_selectionne'))->get();
+
+            $acteurs = Acteur::where('code_pays', $country)->get();
+
         $code_projet = $request->input('code_projet');
         $beneficiairesActions = Projet::join('profiter', 'profiter.code_projet', '=', 'projets.code_projet')
         ->join('jouir', 'jouir.code_projet', '=', 'projets.code_projet')
@@ -571,7 +600,7 @@ class RealiseProjetController extends Controller
 
        $ecran = Ecran::find($request->input('ecran_id'));
 
-        return view('etatAvancement', ['ecran' => $ecran,
+        return view('projets.RealisationProjet.etatAvancement', ['ecran' => $ecran,
         'projets'=>$projets,
         'localites' => $localites,
         'acteurs' => $acteurs,
@@ -584,7 +613,7 @@ class RealiseProjetController extends Controller
     {
         $code_projet = $request->input('code_projet');
         $ordre = $request->input('Ordre');
-    
+
         $exists = DB::table('valeurcaracteristique as vc')
             ->join('caracteristiques as c', 'vc.idCaracteristique', '=', 'c.idCaracteristique')
             ->join('projetinfrastructure as pi', 'vc.idInfrastructure', '=', 'pi.idInfrastructure')
@@ -592,10 +621,10 @@ class RealiseProjetController extends Controller
             ->where('pi.code_projet', $code_projet)
             ->where('paam.Num_ordre', $ordre)
             ->exists();
-    
+
         return response()->json(['exists' => $exists]);
     }
-    
+
 
     public function enregistrerBeneficiaires(Request $request)
     {
@@ -603,23 +632,23 @@ class RealiseProjetController extends Controller
             $projet = $request->input('CodeProjetBene');
             $ordre = $request->input('numOrdreBene');
             $beneficiaires = $request->input('beneficiaires');
-    
+
             if (!is_array($beneficiaires) || empty($beneficiaires)) {
                 return response()->json([
                     'error' => true,
                     'message' => 'Aucun bénéficiaire à enregistrer.',
                 ], 422);
             }
-    
+
             foreach ($beneficiaires as $b) {
                 $code = $b['code'] ?? null;
                 $type = $b['type'] ?? null;
-    
+
                 if (!$code || !$type) {
                     Log::warning("Bénéficiaire ignoré : informations manquantes", ['data' => $b]);
                     continue;
                 }
-    
+
                 switch ($type) {
                     case 'acteur':
                         Beneficier::updateOrCreate([
@@ -627,38 +656,39 @@ class RealiseProjetController extends Controller
                             'code_acteur' => $code,
                         ]);
                         break;
-    
+
                     case 'localite':
                         Profiter::updateOrCreate([
                             'code_projet' => $projet,
+                            'code_pays' => session('pays_selectionne'),
                             'code_rattachement' => $code,
                         ]);
                         break;
-    
+
                     case 'infrastructure':
                         Jouir::updateOrCreate([
                             'code_projet' => $projet,
                             'code_Infrastructure' => $code,
                         ]);
                         break;
-    
+
                     default:
                         Log::warning("Type de bénéficiaire inconnu : $type", ['code' => $code]);
                         break;
                 }
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Bénéficiaires enregistrés avec succès.',
             ]);
-    
+
         } catch (\Throwable $e) {
             Log::error('Erreur lors de l’enregistrement des bénéficiaires', [
                 'exception' => $e,
                 'request_data' => $request->all()
             ]);
-    
+
             return response()->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de l’enregistrement.',
@@ -666,12 +696,12 @@ class RealiseProjetController extends Controller
             ], 500);
         }
     }
-    
+
 
     public function recupererBeneficiaires(Request $request)
     {
         $codeProjet = $request->input('code_projet');
-        
+
         $numOrdre = $request->input('NumOrdre'); // Utilisé si tu filtres plus tard selon des actions
 
         $beneficiaires = [];
@@ -819,7 +849,7 @@ class RealiseProjetController extends Controller
                 'code_projet' => 'required',
                 'num_ordre' => 'required|integer'
             ]);
-            
+
             $historique = AvancementProjet::where('code_projet', $request->code_projet)
                 ->where('num_ordre', $request->num_ordre)
                 ->orderBy('date_avancement', 'desc')
@@ -832,10 +862,10 @@ class RealiseProjetController extends Controller
                         'photos' => $item->photos ? explode(',', $item->photos) : []
                     ];
                 });
-                
+
             return response()->json($historique);
         }
-        
+
         public function saveAvancement(Request $request)
         {
             try {
@@ -844,44 +874,44 @@ class RealiseProjetController extends Controller
                     'num_ordre'          => 'required|integer',
                     'quantite_reel'      => 'required|numeric|min:0',
                     'date_avancement'    => 'required|date',
-                    'photos_avancement.*'=> 'nullable|image|max:5120', // 5MB/photo
+                    'photos_avancement.*'=> 'nullable|image|max:5120',
                     'date_fin_effective' => 'nullable|date',
                     'description_finale' => 'nullable|string|max:500'
                 ]);
-        
+
                 $action = ProjetActionAMener::where('code_projet', $request->code_projet)
                     ->where('Num_ordre', $request->num_ordre)
                     ->first();
-        
+
                 if (!$action || (float)$action->Quantite <= 0) {
                     return response()->json([
                         'success' => false,
                         'message' => 'La quantité prévue est introuvable ou égale à zéro.'
                     ], 400);
                 }
-        
+
                 $quantiteReelle = (float)$request->quantite_reel;
                 $pourcentage    = min(100, ($quantiteReelle / (float)$action->Quantite) * 100); // clamp à 100%
-        
+
                 // 1) Créer l’avancement SANS les photos (pour avoir l’ID si besoin)
                 $avancement = AvancementProjet::create([
                     'code_projet'        => $request->code_projet,
                     'num_ordre'          => $request->num_ordre,
                     'quantite'           => $action->Quantite,
-                    'pourcentage'        => $pourcentage,
+                    'pourcentage'        => $request->pourcentage_Modal,
                     'date_avancement'    => $request->date_avancement,
                     'photos'             => null, // rempli après upload
                     'date_fin_effective' => ($pourcentage >= 100) ? $request->date_fin_effective : null,
                     'description_finale' => ($pourcentage >= 100) ? $request->description_finale : null,
                     'code_acteur'        => auth()->user()->acteur_id
                 ]);
-        
+
                 // 2) Upload des photos dans GridFS (facultatif)
                 $photoIds = [];
                 if ($request->hasFile('photos_avancement')) {
                     foreach ($request->file('photos_avancement') as $photo) {
                         if (!$photo || !$photo->isValid()) continue;
-        
+
                         $res = app(FileProcService::class)->handle([
                             'owner_type'  => 'Projet',            // ou 'Avancement'
                             'owner_id'    => (string)$request->code_projet, // ok si owner_id est VARCHAR
@@ -889,42 +919,49 @@ class RealiseProjetController extends Controller
                             'file'        => $photo,
                             'uploaded_by' => optional($request->user())->id,
                         ]);
-        
+
                         $photoIds[] = (string)$res['id']; // on stocke l’ID fichiers
                     }
                 }
-        
+
                 if (!empty($photoIds)) {
                     $avancement->photos = implode(',', $photoIds); // colonne existante "photos"
                     $avancement->save();
                 }
-        
+
                 // 3) Si finalisation
-                if ($pourcentage >= 100 && $request->filled('date_fin_effective')) {
-                    ProjetStatut::create([
-                        'code_projet' => $request->code_projet,
-                        'type_statut' => 7,
-                        'date_statut' => now()
-                    ]);
-        
-                    DateEffectiveProjet::updateOrCreate(
-                        ['code_projet' => $request->code_projet],
-                        ['date_fin_effective' => $request->date_fin_effective]
-                    );
-        
-                    if (!empty($action->infrastructure_idCode)) {
-                        Infrastructure::where('code', $action->infrastructure_idCode)
-                            ->update(['isOver' => true]);
+                if ($pourcentage >= 100) {
+                    if ($request->date_fin_effective) {
+                        ProjetStatut::updateOrCreate(
+                            ['code_projet' => $request->code_projet, 'type_statut' => 7],
+                            ['date_statut' => now()]
+                        );
+
+                        DateEffectiveProjet::updateOrCreate(
+                            ['code_projet' => $request->code_projet],
+                            ['date_fin_effective' => $request->date_fin_effective]
+                        );
+
+                        if (!empty($action->infrastructure_idCode)) {
+                            Infrastructure::where('code', $action->infrastructure_idCode)
+                                ->update(['isOver' => true]);
+                        }
+
+                        $avancement->update([
+                            'date_fin_effective' => $request->date_fin_effective,
+                            'description_finale' => $request->description_finale
+                        ]);
+                    } else {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'La date de fin effective est obligatoire pour clôturer le projet.'
+                        ], 422);
                     }
-        
-                    $avancement->update([
-                        'date_fin_effective' => $request->date_fin_effective,
-                        'description_finale' => $request->description_finale
-                    ]);
                 }
-        
+
+
                 return response()->json(['success' => true]);
-        
+
             } catch (\Throwable $e) {
                 Log::error('Erreur lors de l’enregistrement de l’avancement', [
                     'exception'    => $e->getMessage(),
@@ -932,7 +969,7 @@ class RealiseProjetController extends Controller
                     'num_ordre'    => $request->num_ordre ?? null,
                     'trace'        => $e->getTraceAsString(),
                 ]);
-        
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Une erreur est survenue lors de l’enregistrement.',
@@ -940,36 +977,55 @@ class RealiseProjetController extends Controller
                 ], 500);
             }
         }
-        
-        
-        
+
         public function deleteSuivi($id)
         {
             $suivi = AvancementProjet::findOrFail($id);
-            
-            // Supprimer les photos associées
-            if ($suivi->photos) {
-                foreach (explode(',', $suivi->photos) as $photo) {
-                    Storage::delete('public/avancement/'.$photo);
+
+            DB::beginTransaction();
+            try {
+                // Supprimer les photos associées via FileProcService
+                if ($suivi->photos) {
+                    foreach (explode(',', $suivi->photos) as $photoId) {
+                        try {
+                            app(FileProcService::class)->delete($photoId);
+                        } catch (\Throwable $e) {
+                            Log::warning("Impossible de supprimer le fichier $photoId", ['error' => $e->getMessage()]);
+                        }
+                    }
                 }
+
+                $suivi->delete();
+                DB::commit();
+
+                return response()->json(['success' => true]);
+
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error("Erreur lors de la suppression du suivi", [
+                    'id' => $id,
+                    'error' => $e->getMessage()
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "Impossible de supprimer ce suivi."
+                ], 500);
             }
-            
-            $suivi->delete();
-            
-            return response()->json(['success' => true]);
         }
+
         public function getDonneesFormulaireSimplifie(Request $request)
         {
             $code_projet = $request->input('code_projet');
             $num_ordre = $request->input('num_ordre');
-        
+
             if (!$code_projet || !$num_ordre) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Paramètres manquants.'
                 ], 400);
             }
-        
+
             $data = DB::table('projet_action_a_mener as pam')
                 ->leftJoin('projets_naturetravaux as pnt', 'pam.code_projet', '=', 'pnt.code_projet')
                 ->leftJoin('nature_traveaux as nt', 'nt.code', '=', 'pnt.code_nature')
@@ -982,39 +1038,39 @@ class RealiseProjetController extends Controller
                     'dde.date_debut_effective as date_debut_effective'
                 )
                 ->first();
-        
+
             if (!$data) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Aucune donnée trouvée pour ce projet et numéro d’ordre.'
                 ], 404);
             }
-        
+
             return response()->json([
                 'success' => true,
                 'result' => $data
             ]);
         }
 
-     
+
         public function verifierProjetFinalisable(Request $request)
         {
             $code_projet = $request->code_projet;
-        
+
             $actions = ProjetActionAMener::where('code_projet', $code_projet)->pluck('Num_ordre');
-        
+
             $nonCompletes = AvancementProjet::where('code_projet', $code_projet)
                 ->whereIn('num_ordre', $actions)
                 ->select('num_ordre', DB::raw('MAX(pourcentage) as max_pourcentage'))
                 ->groupBy('num_ordre')
                 ->havingRaw('max_pourcentage < 100')
                 ->count();
-        
+
             return response()->json([
                 'finalisable' => $nonCompletes == 0
             ]);
         }
-        
+
 
 }
 

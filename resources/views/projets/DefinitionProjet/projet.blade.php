@@ -71,7 +71,7 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                </div> 
+                                </div>
                                 <div class="row">
                                     <div class="col">
                                         <label for="date_debut">Date début</label>
@@ -82,12 +82,12 @@
                                         <label for="date_fin">Date fin</label>
                                         <input type="date" name="date_fin" class="form-control" required>
                                     </div>
-                                </div>    
+                                </div>
                                 <button type="submit" id="formButton" class="btn btn-primary mt-3">Enregistrer</button>
 
                             </form>
                     </div>
-                </div>                
+                </div>
             </div>
         </div>
 
@@ -95,7 +95,7 @@
                     <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
                         <thead>
                             <tr>
-                    
+
                                 <th>Code projet</th>
                                 <th>Chef projet</th>
                                 <th>Date debut</th>
@@ -182,39 +182,40 @@
             data: form.serialize(),
             success: function(response) {
                 if (response.success) {
-                    showToast('success', response.success);
+                    alert(response.success);
                     // Recharger tableau ou injecter nouvel élément ici
                     setTimeout(() => location.reload(), 1000); // ou mise à jour dynamique
                 }
             },
             error: function(xhr) {
-                let message = xhr.responseJSON?.error || 'Erreur inconnue.';
-                showToast('error', message);
+                if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                    let errs = Object.values(xhr.responseJSON.errors).flat();
+                    alert("Erreurs :\n" + errs.join("\n"), 'error');
+                } else {
+                    let msg = xhr.responseJSON?.error || xhr.responseJSON?.message || 'Erreur inconnue.';
+                    alert(msg, 'error');
+                }
             }
+
         });
     });
 
-    function showToast(type, message) {
-        const color = type === 'success' ? 'green' : 'red';
-        $('body').append(`<div class="toast-message" style="position: fixed; top: 20px; right: 20px; background: ${color}; color: white; padding: 10px 20px; border-radius: 4px; z-index: 9999;">${message}</div>`);
-        setTimeout(() => $('.toast-message').fadeOut(500, function() { $(this).remove(); }), 3000);
-    }
 
     function editContrat(data) {
         $('#contrat_id').val(data.id);
 
         let projetSelect = $('select[name="projet_id"]');
-        let optionExists = projetSelect.find(`option[value="${data.code_projet}"]`).length > 0;
-
-        if (!optionExists) {
+        if (!projetSelect.find(`option[value="${data.code_projet}"]`).length) {
             projetSelect.append(`<option value="${data.code_projet}" selected>${data.code_projet}</option>`);
         }
-
         projetSelect.val(data.code_projet);
+
         $('select[name="chef_projet_id"]').val(data.code_acteur);
         $('input[name="date_debut"]').val(data.date_debut);
         $('input[name="date_fin"]').val(data.date_fin);
 
+        // Supprimer un éventuel ancien _method
+        $('#contratForm').find('input[name="_method"]').remove();
         $('#contratForm').attr('action', `{{url('/')}}/contrats/${data.id}`)
             .append('<input type="hidden" name="_method" value="PUT">');
 

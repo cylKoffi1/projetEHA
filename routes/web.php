@@ -89,13 +89,13 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('admin', [AdminController::class, 'index'])->name('projets.index');
     Route::get('/projets-data', [AdminController::class, 'getProjetData']);
     Route::get('/admin/initSidebar', [AdminController::class, 'initSidebar']);
-    
+
     /**************************** PROFIL UTILISATEUR **********************************/
     Route::get('/profil', [ProfilController::class, 'index'])->name('profil.index');
     Route::post('/profil', [ProfilController::class, 'update'])->name('profil.update');
 
 
-    
+
     // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
     Route::get('admin/pays', [PaysController::class, 'pays'])->name('pays');
     // Route pour afficher le formulaire d'édition (GET)
@@ -150,7 +150,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
     /** Enregistrement */
     Route::post('admin/demographie', [GestionDemographieController::class, 'storeHabitants'])->name('habitants.store');
-    
+
     // 👉 Nouveau : stats et liste
     Route::get('stats', [GestionDemographieController::class, 'stats'])->name('habitants.stats');
     Route::get('entries', [GestionDemographieController::class, 'entries'])->name('habitants.entries');
@@ -253,23 +253,23 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::prefix('familles/{famille}/caracteristiques')->name('caracteristiques.')->group(function () {
         // Récupérer toutes les caractéristiques d'une famille (hiérarchie)
         Route::get('/', [CaracteristiqueStructureController::class, 'index'])->name('index');
-    
+
         // Enregistrer un ensemble de caractéristiques (JSON imbriqué)
         Route::post('/', [CaracteristiqueStructureController::class, 'store'])->name('store');
-    
+
         // Mettre à jour la structure complète
         Route::put('/', [CaracteristiqueStructureController::class, 'update'])->name('update');
-    
+
         // Supprimer toutes les caractéristiques d'une famille (optionnel)
         Route::delete('/', [CaracteristiqueStructureController::class, 'destroy'])->name('destroy');
     });
-    
+
     Route::prefix('caracteristiques')->name('caracteristique.')->group(function () {
         Route::get('/{id}', [CaracteristiqueStructureController::class, 'show'])->name('show');
         Route::put('/{id}', [CaracteristiqueStructureController::class, 'updateSingle'])->name('update.single');
         Route::delete('/{id}', [CaracteristiqueStructureController::class, 'destroySingle'])->name('destroy.single');
     });
-    
+
     // Routes pour la structure hiérarchique des caractéristiques
     Route::prefix('famille-infrastructure/{famille}/structure')->group(function() {
         Route::get('/data', [CaracteristiqueStructureController::class, 'getStructures'])->name('famille.structure.get');
@@ -369,7 +369,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::post('admin/etablissement', [PlateformeController::class, 'storeEtablissement'])->name('etablissement.store');
     Route::post('admin/etablissement/update', [PlateformeController::class, 'updateEtablissement'])->name('etablissement.update');
     Route::get('admin/get-niveaux/{typeId}', [PlateformeController::class, 'getNiveaux']);
- 
+
     //***************** BENEFICIAIRES ************* */
     Route::get('admin/beneficiaires', [PlateformeController::class, 'beneficiaires'])->name('beneficiaires');
     Route::get('admin/etablissements', [PlateformeController::class, 'etablissements'])->name('etablissements');
@@ -403,7 +403,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
         Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
         Route::get('/get-bailleurs', [EtudeProjet::class, 'getBailleursParStatutLocal']);
-       
+
                 /*******************SAUVEGARDE DE DEMANDE DE PROJET */
                 Route::post('/projets/temp/save-step1', [EtudeProjet::class, 'saveStep1'])->name('projets.temp.save.step1');
                 Route::post('/projets/temp/save-step2', [EtudeProjet::class, 'saveStep2'])->name('projets.temp.save.step2');
@@ -423,7 +423,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
             Route::get('admin/validationProjet', [ProjetValidationController::class, 'index'])->name('projets.validation.index');
             Route::get('/projets/validation/{codeProjet}', [ProjetValidationController::class, 'show'])->name('projets.validation.show');
-            
+
             Route::post('/projets/validation/{codeProjet}/valider', [ProjetValidationController::class, 'valider'])->name('projets.validation.valider');
             Route::post('/projets/validation/{codeProjet}/refuser', [ProjetValidationController::class, 'refuser'])->name('projets.validation.refuser');
         /************************SUIVRE APPROBATION************* */
@@ -472,17 +472,17 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
 
             /**************************** GESTION DES EDITIONS **********************************/
-            
+
             Route::get('admin/editionProjet', [AnnexeController::class, 'index'])->name('admin.edition.projet');
             // Routes pour les exports PDF
                 Route::get('/pdf/projet/{code}', [AnnexeController::class, 'exportProjet'])->name('pdf.projet');
                 Route::get('/pdf/acteur/{code}', [AnnexeController::class, 'exportActeur'])->name('pdf.acteur');
                 Route::get('/pdf/contrat/{code}', [AnnexeController::class, 'exportContrat'])->name('pdf.contrat');
                 Route::get('/pdf/infrastructure/{code}', [AnnexeController::class, 'exportInfrastructure'])->name('pdf.infrastructure');
-                
+
                 // Route pour l'export multiple
                 Route::post('/pdf/export-multiple', [AnnexeController::class, 'exportMultiple'])->name('pdf.export.multiple');
-        
+
             Route::get('/projets/{projet}', [AnnexeController::class, 'show'])
             ->name('projets.show');
             //***************** REALISATION ************* */
@@ -512,6 +512,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::get('/get-historique-avancement', [RealiseProjetController::class, 'getHistorique'])->name('get.historique.avancement');
             Route::post('/save-avancement', [RealiseProjetController::class, 'saveAvancement'])->name('save.avancement');
             Route::delete('/delete-suivi/{id}', [RealiseProjetController::class, 'deleteSuivi'])->name('delete.suivi');
+
             Route::post('/caracteristiques/store', [RealiseProjetController::class, 'storeCaracteristiques'])->name('caracteristique.store');
             Route::get('/get-donnees-suivi', [RealiseProjetController::class, 'getDonneesFormulaireSimplifie'])->name('get.donnees.suivi');
 
@@ -533,7 +534,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::get('admin/autresRequetes', [InfrastructureMapController::class, 'showMap'])->name('infrastructures.map');
             Route::get('/api/infrastructures/geojson', [InfrastructureMapController::class, 'getInfrastructuresGeoJson']);
             Route::get('/api/infrastructures/familles-colors', [InfrastructureMapController::class, 'getFamillesColors']);
-            
+
             //Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
             Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
             Route::get('admin/autresRequetes', [sigAdminController::class, 'page'])->name('sig.infras.page');
@@ -551,10 +552,10 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                 Route::get('stat_nombre_projet', [StatController::class, 'statNombreProjet'])->name('tb.nombre.vue');
                 Route::get('stat-finance',       [StatController::class, 'statFinance'])->name('tb.finance.vue');
             });
-            
+
             Route::get('/nombreProjetLien',            [StatController::class, 'statNombreData'])->name('nombre.data');
             Route::get('/stat-finance_projet/data',    [StatController::class, 'statFinanceData'])->name('finance.data');
-            
+
             /**************************** GESTION DES UTILISATEURS **********************************/
             Route::get('admin/personnel', [UserController::class, 'personnel'])->name('users.personnel');
             Route::get('admin/personnel/create', [UserController::class, 'createPersonnel'])->name('personnel.create');
@@ -562,7 +563,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::delete('/admin/personnel/{code_personnel}', [UserController::class, 'destroy'])->name('utilisateurs.destroy');
             Route::get('/domaines/{groupeProjet}', [UserController::class, 'getDomainesByGroupeProjet']);
             Route::get('/sous-domaines/{domaine}/{groupeProjet}', [UserController::class, 'getSousDomaines']);
-            
+
             Route::get('admin/personnel/details-personne/{personneId}', [UserController::class, 'detailsPersonne'])->name('personnel.details');
             Route::get('admin/personnel/get-personne/{personneId}', [UserController::class, 'getPersonne'])->name('personne.updateForm');
             Route::post('admin/personnel/update/{personnelId}', [UserController::class, 'updatePersonne'])->name('personne.update');
@@ -599,7 +600,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             // Historique
             Route::get('/{id}/historique', [InfrastructureController::class, 'historique'])
             ->name('infrastructures.historique');
-            
+
             Route::put('/infrastructures/{infrastructure}/caracteristiques', [InfrastructureController::class, 'updateCaracteristiques'])
             ->name('infrastructures.caracteristiques.updateMultiple');
 
@@ -608,35 +609,35 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             // Liste des infrastructures
             Route::get('/', [InfrastructureController::class, 'index'])
                 ->name('infrastructures.index');
-            
+
             // Formulaire de création
             Route::get('/create', [InfrastructureController::class, 'create'])
                 ->name('infrastructures.create');
-            
+
             // Enregistrement
             Route::post('/', [InfrastructureController::class, 'store'])
                 ->name('infrastructures.store');
-            
+
             // Détails d'une infrastructure
             Route::get('/{id}', [InfrastructureController::class, 'show'])
                 ->name('infrastructures.show');
-            
+
             // Formulaire d'édition
             Route::get('/{id}/edit', [InfrastructureController::class, 'edit'])
                 ->name('infrastructures.edit');
-            
+
             // Mise à jour
             Route::put('/{id}', [InfrastructureController::class, 'update'])
                 ->name('infrastructures.update');
-            
+
             // Suppression
             Route::delete('/{id}', [InfrastructureController::class, 'destroy'])
                 ->name('infrastructures.destroy');
-            
+
             // Gestion des caractéristiques
             Route::post('/{id}/caracteristiques', [InfrastructureController::class, 'storeCaracteristique'])
                 ->name('infrastructures.caracteristiques.store');
-            
+
             Route::delete('/caracteristiques/{id}', [InfrastructureController::class, 'destroyCaracteristique'])
                 ->name('infrastructures.caracteristiques.destroy');
             Route::get('/localites/by-pays', [InfrastructureController::class, 'getByPays'])
@@ -649,7 +650,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                         LocalitesPays::getByPaysCode($paysCode)
                     );
                 });
-                
+
                 Route::get('/localites/{codeLocalite}/details', function ($codeLocalite) {
                     return response()->json(
                         LocalitesPays::getFullLocaliteData($codeLocalite)
@@ -714,7 +715,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
      // Servir aux cartes (accepte 0..4 : tu as L0 et L4 en base)
      Route::get('/geojson/{alpha3}/{level}.json.js', [GeojsonController::class, 'serveJs'])
          ->where(['alpha3' => '[A-Z]{3}', 'level' => '[0-4]']);
-     
+
      Route::get('/geojson/{alpha3}/{level}.json', [GeojsonController::class, 'serveJson'])
          ->where(['alpha3' => '[A-Z]{3}', 'level' => '[0-4]']);
 
@@ -744,7 +745,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                     'lib_sous_domaine' => $sousDomaine->lib_sous_domaine,
                 ];
             });
-    
+
         return response()->json($sousDomaines);
     });
 

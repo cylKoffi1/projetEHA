@@ -2,7 +2,6 @@
 @extends('layouts.app')
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <style>
   .invalid-feedback{display:block}
   .select2-container{width:100%!important}
@@ -21,10 +20,10 @@
 
   {{-- Flash -> modal --}}
   @if (session('success'))
-    <script>window.addEventListener('DOMContentLoaded',()=>{showAlert(`{{ session('success') }}`);});</script>
+    <script>window.addEventListener('DOMContentLoaded',()=>{alert(`{{ session('success') }}`);});</script>
   @endif
   @if (session('error'))
-    <script>window.addEventListener('DOMContentLoaded',()=>{showAlert(`{{ session('error') }}`);});</script>
+    <script>window.addEventListener('DOMContentLoaded',()=>{alert(`{{ session('error') }}`);});</script>
   @endif
   @if ($errors->any())
     <div class="alert alert-danger">
@@ -166,7 +165,7 @@
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-striped table-bordered align-middle" id="table">
-          <thead class="table-light">
+          <thead >
             <tr>
               <th>Code</th>
               <th>Projet</th>
@@ -223,39 +222,57 @@
   </div>
 </div>
 
-{{-- MODALE ALERT --}}
-<div class="modal fade" id="alertModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">Information</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body"><div id="alertMessage"></div></div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">OK</button>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 @endcan
 @endisset
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+<script>
+    // Soumission AJAX du formulaire d’édition
+    $('#formAction').off('submit').on('submit', async function(e){
+      e.preventDefault();
+      const url = this.action;
+
+      // normaliser cout côté front (optionnel, le back le fait déjà)
+      const coutEl = document.getElementById('edit_cout_projet');
+      if (coutEl) {
+        let v = (coutEl.value || '').replace(/[^\d,.\s]/g,'').replace(/\s+/g,'');
+        // ex: 12 345,67 -> 12345.67
+        if (/,\d{1,2}$/.test(v)) { v = v.replace(/\./g,'').replace(',', '.'); }
+        coutEl.value = v;
+      }
+
+      const fd = new FormData(this);
+      try{
+        const res = await fetch(url, {
+          method:'POST', // spoofed by @method('PUT')
+          headers:{ 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept':'application/json' },
+          body: fd
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok || data.ok === false) {
+          alert(data.message || 'Erreur lors de la modification.');
+          return;
+        }
+        alert(data.message || 'Modifié avec succès.');
+        setTimeout(()=> location.reload(), 700);
+      }catch(err){
+        console.error(err);
+        alert('Erreur réseau.');
+      }
+    });
+  </script>
+
 <script>
   // Horloge
   setInterval(()=>{ const el=document.getElementById('date-now'); if(el) el.textContent=new Date().toLocaleString(); },1000);
 
   // Select2
   $(function(){
-    $('#code_projet,#type_travaux_id,#edit_type_travaux_id').select2({width:'resolve', allowClear:true, placeholder:'— Sélectionner —'});
+    /*$('#code_projet,#type_travaux_id,#edit_type_travaux_id').select2({width:'resolve', allowClear:true, placeholder:'— Sélectionner —'});*/
     if (typeof initDataTable === 'function') {
       initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}','table','Liste des activités connexes');
     }
   });
-
-  // Alert helper
-  function showAlert(msg){ document.getElementById('alertMessage').textContent = msg; new bootstrap.Modal('#alertModal').show(); }
 
   // Formatage nombres (espaces)
   function formatNumber(input){
@@ -267,12 +284,12 @@
   ['date_fin_previsionnelle','edit_date_fin_previsionnelle'].forEach(id=>{
     const fin=document.getElementById(id);
     const deb=document.getElementById(id.includes('edit_')?'edit_date_debut_previsionnelle':'date_debut_previsionnelle');
-    if(fin&&deb){ fin.addEventListener('change',()=>{ if(new Date(fin.value)<new Date(deb.value)){ showAlert('La date de fin ne peut précéder la date de début.'); fin.value=deb.value; } }); }
+    if(fin&&deb){ fin.addEventListener('change',()=>{ if(new Date(fin.value)<new Date(deb.value)){ alert('La date de fin ne peut précéder la date de début.'); fin.value=deb.value; } }); }
   });
   ['date_fin_effective','edit_date_fin_effective'].forEach(id=>{
     const fin=document.getElementById(id);
     const deb=document.getElementById(id.includes('edit_')?'edit_date_debut_effective':'date_debut_effective');
-    if(fin&&deb){ fin.addEventListener('change',()=>{ if(deb.value && new Date(fin.value)<new Date(deb.value)){ showAlert('La date de fin effective ne peut précéder la date de début effective.'); fin.value=deb.value; } }); }
+    if(fin&&deb){ fin.addEventListener('change',()=>{ if(deb.value && new Date(fin.value)<new Date(deb.value)){ alert('La date de fin effective ne peut précéder la date de début effective.'); fin.value=deb.value; } }); }
   });
 
   // Edit
@@ -293,7 +310,7 @@
     document.getElementById('edit_date_fin_effective').value        = d4 ?? '';
     document.getElementById('edit_commentaire').value               = com ?? '';
 
-    document.getElementById('formAction').action = "{{ url('/') }}/activite/" + encodeURIComponent(code);
+    document.getElementById('formAction').action = "{{ route('travaux_connexes.update', ':id') }}".replace(':id', encodeURIComponent(code));
     window.scrollTo({top:0, behavior:'smooth'});
   };
 
@@ -312,10 +329,10 @@
         headers:{ 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept':'application/json' }
       });
       const data = await res.json().catch(()=> ({}));
-      if(!res.ok || data.ok === false){ showAlert(data.message || 'Erreur lors de la suppression.'); return; }
-      showAlert(data.message || 'Supprimé.');
+      if(!res.ok || data.ok === false){ alert(data.message || 'Erreur lors de la suppression.'); return; }
+      alert(data.message || 'Supprimé.');
       setTimeout(()=> location.reload(), 700);
-    }catch(e){ console.error(e); showAlert('Erreur réseau.'); }
+    }catch(e){ console.error(e); alert('Erreur réseau.'); }
   };
   $('#addForm').off('submit').on('submit', async function (e) {
     e.preventDefault();

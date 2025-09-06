@@ -61,7 +61,7 @@
 
         .offcanvas.offcanvas-end {
             top: 87px !important;
-            width: 90% !important; 
+            width: 90% !important;
             height: calc(100vh - 90px) !important;
         }
     </style>
@@ -307,7 +307,7 @@
                                     <label class="form-label">Fichiers</label>
                                     <input type="file" name="pieces[]" class="form-control" multiple>
                                     <div class="form-text">Supports, listes d’émargement, rapports, photos…</div>
-                                    
+
                                 </div>
                             </div>
                         </div>
@@ -354,7 +354,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
                                 <th>Code</th>
                                 <th>Titre</th>
@@ -425,8 +425,6 @@
                                             </li>
                                         @endforeach
                                         </ul>
-                                    @else
-                                        <em class="text-muted">Aucune</em>
                                     @endif
                                     </td>
 
@@ -500,7 +498,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-center text-muted">Aucun enregistrement.</td></tr>
+                               
                             @endforelse
                         </tbody>
                     </table>
@@ -541,7 +539,7 @@
 <script>
         $(document).ready(function() {
             initDataTable('{{ auth()->user()->acteur?->lieblle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des renforcements de capacité');
-            
+
         });
 </script>
 <script>

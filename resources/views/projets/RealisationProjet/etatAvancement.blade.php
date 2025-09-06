@@ -10,140 +10,140 @@
         --light-bg: #f8f9fa;
         --dark-bg: #343a40;
     }
-    
+
     .card {
         border-radius: 10px;
         box-shadow: 0 4px 20px rgba(78, 70, 70, 0.1);
         border: none;
     }
-    
+
     .card-header {
         background: linear-gradient(135deg, #a6b4f0, #a3b6c7);
         color: white;
         border-radius: 10px 10px 0 0 !important;
     }
-    
+
     .form-control, .form-select {
         border-radius: 5px;
         border: 1px solid #ced4da;
         transition: all 0.3s;
     }
-    
+
     .form-control:focus, .form-select:focus {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 0.25rem rgba(67, 94, 190, 0.25);
     }
-    
+
     /* Styles pour les options du select */
     .avec-infrastructures {
         background-color: var(--warning-color);
         color: #000;
     }
-    
+
     .plusieurs-actions {
         background-color: var(--primary-color);
         color: white;
     }
-    
+
     .non-trouves {
         background-color: var(--danger-color);
         color: white;
     }
-    
+
     .btn-primary {
         background-color: var(--primary-color);
         border-color: var(--primary-color);
     }
-    
+
     .btn-secondary {
         background-color: var(--secondary-color);
         border-color: var(--secondary-color);
     }
-    
+
     .btn-warning {
         background-color: var(--warning-color);
         border-color: var(--warning-color);
     }
-    
+
     .btn-success {
         background-color: var(--success-color);
         border-color: var(--success-color);
     }
-    
+
     .btn-info {
         background-color: var(--info-color);
         border-color: var(--info-color);
     }
-    
+
     .btn-danger {
         background-color: var(--danger-color);
         border-color: var(--danger-color);
     }
-    
+
     .badge {
         padding: 5px 10px;
         border-radius: 20px;
         font-weight: 500;
     }
-    
+
     .modal-content {
         border-radius: 10px;
         border: none;
     }
-    
+
     .modal-header {
         background: linear-gradient(135deg, #a6b4f0, #a3b6c7);
         color: white;
         border-radius: 10px 10px 0 0;
     }
-    
+
     .date-display {
         font-size: 1rem;
         color: var(--secondary-color);
         font-weight: 500;
     }
-    
+
     .action-btn {
         transition: all 0.3s;
         padding: 5px 10px;
         border-radius: 5px;
     }
-    
+
     .action-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    
+
     .return-icon {
         cursor: pointer;
         transition: all 0.3s;
         color: var(--primary-color);
     }
     .offcanvas-backdrop.show {
-        opacity: .1 !important; 
+        opacity: .1 !important;
     }
     .return-icon:hover {
         transform: scale(1.1);
         color: var(--secondary-color);
     }
-    
+
     .toggle-list-btn {
         color: var(--primary-color);
         cursor: pointer;
         transition: all 0.3s;
     }
-    
+
     .toggle-list-btn:hover {
         color: var(--secondary-color);
         text-decoration: underline;
     }
-    
+
     /* Animation pour les changements de données */
     @keyframes highlight {
         from { background-color: #ffff99; }
         to { background-color: transparent; }
     }
-    
+
     .highlight {
         animation: highlight 1.5s;
     }
@@ -190,7 +190,7 @@
         .offcanvas {
             width: 85vw !important;
         }
-        
+
         #photos-preview img {
             width: 80px;
             height: 80px;
@@ -201,7 +201,7 @@
         .form-control, .form-select {
             width: 100% !important;
         }
-        
+
         .table-container {
             overflow-x: scroll;
         }
@@ -258,7 +258,7 @@
                         Réalisation: Projets en cours
                     </h4>
                 </div>
-                
+
                 <div class="card-content">
                     <div class="card-body">
                         @if (session('success'))
@@ -272,12 +272,12 @@
                             {{ session('error') }}
                         </div>
                         @endif
-                        
+
                         <form class="form" id="projectForm" method="POST" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" id="ecran_id" value="{{ $ecran->id }}" name="ecran_id">
                             <input type="hidden" id="codeProjetHidden">
-                            
+
                             <div class="row mb-4">
                                 <div id="info-projet-col" class="col-12">
                                     <div class="alert alert-info">
@@ -288,7 +288,7 @@
 
 
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-3">
                                     <label for="code_projet" class="form-label">Code projet</label>
@@ -301,7 +301,7 @@
                                             @endforeach
                                     </select>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="date_debut">Date début</label>
                                     <div class="input-group">
@@ -309,7 +309,7 @@
                                         <input type="date" class="form-control" id="date_debut" name="date_debut">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="date_fin">Date fin</label>
                                     <div class="input-group">
@@ -317,7 +317,7 @@
                                         <input type="date" id="date_fin" class="form-control" name="date_fin">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="cout">Coût</label>
                                     <div class="input-group">
@@ -325,12 +325,12 @@
                                         <input type="text" class="form-control text-end" id="cout" name="cout">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-1">
                                     <label for="devise">Devise</label>
                                     <input type="text" id="devise" class="form-control" name="devise" readonly>
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <label for="statut">Statut</label>
                                     <div class="input-group">
@@ -341,7 +341,7 @@
                                 </div>
                             </div>
                         </form>
-                        
+
                         <div class="row mt-4">
                             <div class="col-12">
                                 <div class="table-responsive">
@@ -364,7 +364,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="row mt-3">
                             <div class="col-12">
                                 <a href="#" id="voir-liste-link" class="toggle-list-btn">
@@ -378,7 +378,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Modal Bénéficiaires -->
     <div class="modal fade" id="beneficiaireModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -388,7 +388,7 @@
                     <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                     <input type="hidden" name="CodeProjetBene" id="CodeProjetBene">
                     <input type="hidden" name="numOrdreBene" id="numOrdreBene">
-                    
+
                     <div class="modal-header">
                         <h5 class="modal-title">
                             <i class="fas fa-users me-2"></i>
@@ -396,63 +396,10 @@
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    
+
                     <div class="modal-body">
-                        <div class="row mb-4">
-                            <div class="col-md-12">
-                                <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="beneficiaire_type" value="acteur" id="type_acteur" autocomplete="off" checked>
-                                    <label class="btn btn-outline-primary" for="type_acteur" onclick="afficheSelect('select_acteur')">
-                                        <i class="fas fa-user-tie me-2"></i>Acteur
-                                    </label>
-                                    
-                                    <input type="radio" class="btn-check" name="beneficiaire_type" value="localite" id="type_localite" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="type_localite" onclick="afficheSelect('select_localite')">
-                                        <i class="fas fa-map-marker-alt me-2"></i>Localité
-                                    </label>
-                                    
-                                    <input type="radio" class="btn-check" name="beneficiaire_type" value="infrastructure" id="type_infra" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="type_infra" onclick="afficheSelect('select_infra')">
-                                        <i class="fas fa-building me-2"></i>Infrastructure
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <select name="beneficiaire_code" id="select_acteur" class="form-select" style="display: block;">
-                                    <option value="">Sélectionner un acteur</option>
-                                    @foreach ($acteurs as $acteur)
-                                    <option value="{{ $acteur->code_acteur }}">{{ $acteur->libelle_long }}</option>
-                                    @endforeach
-                                </select>
-                                
-                                <select name="beneficiaire_code" id="select_localite" class="form-select" style="display: none;">
-                                    <option value="">Sélectionner une localité</option>
-                                    @foreach ($localites as $loc)
-                                    <option value="{{ $loc->code_rattachement }}">{{ $loc->libelle }}</option>
-                                    @endforeach
-                                </select>
-                                
-                                <select name="beneficiaire_code" id="select_infra" class="form-select" style="display: none;">
-                                    <option value="">Sélectionner une infrastructure</option>
-                                    @foreach ($infras as $infra)
-                                    <option value="{{ $infra->code }}">{{ $infra->libelle }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <button type="button" class="btn btn-primary me-2" id="addBtn">
-                                    <i class="fas fa-plus me-1"></i> Ajouter
-                                </button>
-                                <button type="button" class="btn btn-danger" id="deleteBtn">
-                                    <i class="fas fa-trash me-1"></i> Supprimer
-                                </button>
-                            </div>
-                        </div>
-                        
+
+
                         <div class="row">
                             <div class="col-12">
                                 <div class="table-responsive">
@@ -471,11 +418,9 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save me-1"></i> Enregistrer
-                        </button>
+
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-times me-1"></i> Fermer
                         </button>
@@ -484,7 +429,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Modal Niveau d'avancement - Version corrigée -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="niveauAvancementModal" aria-labelledby="niveauAvancementLabel" style="width: 61% !important; height: calc(100vh - 90px); top: auto; overflow-y: auto;background-color: #e1e6f6 !important;">
         <div class="offcanvas-header" style="background-color: #a1a1ca !important;">
@@ -500,7 +445,7 @@
                 <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                 <input type="hidden" id="code_projet_Modal" name="code_projet">
                 <input type="hidden" id="ordre_Modal" name="num_ordre">
-                
+
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label for="nature_travaux_Modal">Nature des travaux</label>
@@ -517,7 +462,7 @@
                         <input type="hidden" id="quantite_reel_Modal" name="quantite_reel">
                     </div>
                 </div>
-                
+
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label for="date_debut_Modal">Date début</label>
@@ -526,17 +471,17 @@
                     <div class="col-md-4">
                         <label for="pourcentage_Modal">Pourcentage</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="pourcentage_Modal" readonly>
+                            <input type="text" class="form-control" name="pourcentage_Modal" id="pourcentage_Modal" readonly>
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <label for="date_avancement_Modal">Date du suivi</label>
-                        <input type="date" class="form-control" id="date_avancement_Modal" name="date_avancement" 
+                        <input type="date" class="form-control" id="date_avancement_Modal" name="date_avancement"
                             value="{{ date('Y-m-d') }}">
                     </div>
                 </div>
-                
+
                 <div class="row mb-3" id="finalisation-section" style="display: none;">
                     <div class="col-md-6">
                         <label for="date_fin_effective">Date effective de fin</label>
@@ -544,7 +489,7 @@
                     </div>
                     <div class="col-md-6">
                         <label for="description_finale">Description finale</label>
-                        <textarea class="form-control" id="description_finale" name="description_finale" 
+                        <textarea class="form-control" id="description_finale" name="description_finale"
                                 rows="2" placeholder="Décrivez l'état final"></textarea>
                     </div>
                 </div>
@@ -552,7 +497,7 @@
                 <div class="row mb-3 d-flex ">
                     <div class="col-8">
                         <label for="photos_avancement">Photos de l'avancement</label>
-                        <input type="file" class="form-control" id="photos_avancement" name="photos_avancement[]" 
+                        <input type="file" class="form-control" id="photos_avancement" name="photos_avancement[]"
                             multiple accept="image/*">
                         <small class="text-muted">Vous pouvez sélectionner jusqu'à 15 photos</small>
                     </div>
@@ -563,13 +508,13 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-12">
                         <div id="photos-preview" class="d-flex flex-wrap gap-2 mt-2"></div>
                     </div>
                 </div>
-                
+
                 <!-- Historique des suivis -->
                 <div class="row mt-4">
                     <div class="col-12">
@@ -585,17 +530,17 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    
+
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                
+
             </form>
         </div>
     </div>
-    
+
     <!-- Liste des projets (cachée par défaut) -->
     <div class="row mt-4" id="liste-projets" style="display: none;">
         <div class="col-12">
@@ -664,11 +609,11 @@
     function calculatePercentage() {
         const quantitePrevue = parseFloat($('#quantite_provisionnel_Modal').val()) || 0;
         const quantiteReelle = parseFloat($('#quantite_reel_Modal').val()) || 0;
-        
+
         if (quantitePrevue > 0) {
             const pourcentage = (quantiteReelle / quantitePrevue) * 100;
             $('#pourcentage_Modal').val(pourcentage.toFixed(2));
-            
+
             // Afficher la section de finalisation si 100%
             if (pourcentage >= 100) {
                 $('#finalisation-section').show();
@@ -677,17 +622,17 @@
             }
 
         }
-        
+
     }
 
- 
+
 
     // Mise à jour de la barre de progression
     function updateProgressBar(val) {
         $('#sliderValue').text(val + '%');
         $('#pourcentage_Modal').val(val);
         $('#quantite_reel_Modal').val(val);
-        
+
         // Afficher/masquer la section de finalisation
         /*if (parseInt(val) >= 100) {
             $('#finalisation-section').show();
@@ -711,23 +656,23 @@
         const files = this.files;
         const preview = $('#photos-preview');
         preview.empty();
-        
+
         if (files.length > 15) {
             alert('Vous ne pouvez sélectionner que 5 photos maximum');
             $(this).val('');
             return;
         }
-        
+
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (!file.type.match('image.*')) continue;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 preview.append(`
                     <div class="position-relative" style="width: 100px; height: 100px;">
                         <img src="${e.target.result}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                             onclick="removePhotoPreview(this)" style="cursor: pointer;">
                             ×
                         </span>
@@ -748,9 +693,9 @@
         $.ajax({
             url: '{{ route("get.historique.avancement") }}',
             type: 'GET',
-            data: { 
-                code_projet: codeProjet, 
-                num_ordre: numOrdre 
+            data: {
+                code_projet: codeProjet,
+                num_ordre: numOrdre
             },
             beforeSend: function() {
                 $('#historiqueTable tbody').html('<tr><td colspan="4" class="text-center">Chargement...</td></tr>');
@@ -758,17 +703,17 @@
             success: function(response) {
                 const tbody = $('#historiqueTable tbody');
                 tbody.empty();
-                
+
                 if (response.length === 0) {
                     tbody.append('<tr><td colspan="4" class="text-center text-muted">Aucun suivi enregistré</td></tr>');
                     return;
                 }
-                
+
                 response.forEach(item => {
-                    const photosHtml = item.photos && item.photos.length > 0 
+                    const photosHtml = item.photos && item.photos.length > 0
                         ? `<a href="#" onclick="showPhotos('${item.photos.join(',')}')">Voir photos (${item.photos.length})</a>`
                         : 'Aucune photo';
-                    
+
                     tbody.append(`
                         <tr>
                             <td>${item.date_avancement}</td>
@@ -843,10 +788,11 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '{{ route("delete.suivi", ":id") }}'.replace(':id', id),
-                    type: 'DELETE',
+                    url: '/delete-suivi/' + id,
+                    type: 'POST',
                     data: {
-                        _token: '{{ csrf_token() }}'
+                        _token: '{{ csrf_token() }}',
+                         _method: 'DELETE'
                     },
 
                     success: function(response) {
@@ -868,23 +814,23 @@
     // Gestion de la soumission du formulaire d'avancement
     $('#avancementForm').on('submit', function(e) {
         e.preventDefault();
-        
+
         const formData = new FormData(this);
         const pourcentage = parseInt($('#pourcentage_Modal').val());
-        
+
         // Validation
         if (pourcentage > 100) {
             Swal.fire('Attention', 'Le pourcentage ne peut pas dépasser 100%', 'warning');
             return;
         }
-        
+
         // Vérifier les fichiers
         const files = $('#photos_avancement')[0].files;
         if (files.length > 15) {
             Swal.fire('Attention', 'Vous ne pouvez sélectionner que 5 photos maximum', 'warning');
             return;
         }
-        
+
         $.ajax({
             url: '{{ route("save.avancement") }}',
             type: 'POST',
@@ -897,18 +843,18 @@
             },
             success: function(response) {
                     alert('Le suivi a été enregistré avec succès');
-                 
+
                 // Recharger l'historique
                 const codeProjet = $('#code_projet_Modal').val();
                 const numOrdre = $('#ordre_Modal').val();
                 loadHistorique(codeProjet, numOrdre);
-                
+
                 // Réinitialiser partiellement le formulaire
                 $('#quantite_reel_slider').val(0);
                 $('#sliderValue').text('0%');
                 $('#photos_avancement').val('');
                 $('#photos-preview').empty();
-                
+
                 if (pourcentage >= 100) {
                     $('#date_fin_effective').val('');
                     $('#description_finale').val('');
@@ -937,30 +883,30 @@
     $(document).ready(function() {
         // Initialisation DataTable
 
-        
+
         // Initialisation des sélecteurs de bénéficiaires
         $("#type_acteur").prop("checked", true);
         afficheSelect('select_acteur');
-        
+
         // Gestion de l'affichage de la liste des projets
         $('#voir-liste-link').click(function(e) {
             e.preventDefault();
             $('#liste-projets').slideToggle();
             $(this).find('i').toggleClass('fa-list fa-times');
         });
-        
+
         // Formatage des nombres
         $('#cout, #coutEffective_Modal').on('input', function(e) {
             formatNumberInput(e.target);
         });
-        
+
         // Calcul du pourcentage d'avancement
         $("#quantite_reel_Modal").on("input", function() {
             calculatePercentage();
         });
     });
-    
-    
+
+
     function initDataTable(tableId) {
         $('#' + tableId).DataTable({
             language: {
@@ -971,17 +917,17 @@
             pageLength: 10
         });
     }
-    
+
     function checkProjectDetails() {
         const codeProjet = $('#code_projet').val();
         if (!codeProjet) return;
-        
+
         $.ajax({
             url: '{{ url("/fetchProjectDetails")}}',
             method: 'GET',
-            data: { 
+            data: {
                 _token: '{{ csrf_token() }}',
-                code_projet: codeProjet 
+                code_projet: codeProjet
             },
             beforeSend: function() {
                 // Afficher un indicateur de chargement
@@ -1034,18 +980,37 @@
             }
         });
     }
-    
+
     function updateTableData(codeProjet, data) {
         const tbody = $('#beneficiaire-table-body');
         tbody.empty();
-        
+
         if (data.length === 0) {
             tbody.append('<tr><td colspan="6" class="text-center text-muted">Aucune action disponible pour ce projet</td></tr>');
             return;
         }
-        
+
         data.forEach(item => {
             console.log('item', item);
+
+            // Bouton Caractéristiques
+            let caracButton = '';
+            if (item.infrastructure_idCode) {
+                caracButton = `
+                    <a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}"
+                    class="btn btn-sm btn-primary action-btn">
+                        <i class="fas fa-cog me-1"></i> Caractéristiques
+                    </a>
+                `;
+            } else {
+                caracButton = `
+                    <button type="button" class="btn btn-sm btn-secondary no-carac">
+                        <i class="fas fa-ban me-1"></i> Caractéristiques
+                    </button>
+                `;
+            }
+
+
             const row = `
                 <tr class="action" data-id="${item.code}">
                     <td class="num_ordre_cell">${item.Num_ordre}</td>
@@ -1053,55 +1018,53 @@
                     <td>${item.Quantite}</td>
                     <td>${item.infrastructure_libelle || '-'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary beneficiaire-btn" 
+                        <button class="btn btn-sm btn-outline-primary beneficiaire-btn"
                                 data-bs-toggle="modal" data-bs-target="#beneficiaireModal"
                                 data-projet="${codeProjet}" data-ordre="${item.Num_ordre}">
                             <i class="fas fa-user-plus me-1"></i> Bénéficiaires
                         </button>
                     </td>
-                    <td>
-                        <a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}" 
-                        class="btn btn-sm btn-primary action-btn">
-                            <i class="fas fa-cog me-1"></i> Caractéristiques
-                        </a>
-
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-success action-btn btn-niveau-avancement"
-                            data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
-                            data-projet="${codeProjet}" data-ordre="${item.Num_ordre}" data-quantite="${item.Quantite}">
-
-                            <i class="fas fa-chart-line me-1"></i> Suivi
-                        </button>
-                    </td>
+                    <td>${caracButton}</td>
+                    <td><button type="button" class="btn btn-sm btn-success action-btn btn-niveau-avancement"
+                        data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
+                        data-projet="${codeProjet}" data-ordre="${item.Num_ordre}" data-quantite="${item.Quantite}">
+                        <i class="fas fa-chart-line me-1"></i> Suivi
+                    </button></td>
                 </tr>
             `;
 
             tbody.append(row);
         });
+
+        // Gestion des clics sur boutons désactivés
+        $(document).on('click', '.no-carac', function() {
+            alert("Aucune caractéristique disponible pour cette infrastructure.");
+        });
+
+
     }
-    
+
     // Gestion des bénéficiaires
     $(document).on('click', '.beneficiaire-btn', function() {
         const codeProjet = $(this).data('projet');
         const numOrdre = $(this).data('ordre');
-        
+
         $('#CodeProjetBene').val(codeProjet);
         $('#numOrdreBene').val(numOrdre);
-        
+
         loadBeneficiaires(codeProjet, numOrdre);
     });
-    
+
     // Fonction pour ouvrir le suivi d'avancement
     $(document).on('click', '.btn-niveau-avancement', function() {
         const codeProjet = $(this).data('projet');
         const numOrdre = $(this).data('ordre');
-        
+
         // Réinitialiser le formulaire
         $('#avancementForm')[0].reset();
         $('#photos-preview').empty();
         $('#finalisation-section').hide();
-        
+
         // Définir les valeurs cachées
         $('#code_projet_Modal').val(codeProjet);
         $('#ordre_Modal').val(numOrdre);
@@ -1157,14 +1120,14 @@
         offcanvas.show();
 
     });
-    
+
     function loadBeneficiaires(codeProjet, numOrdre) {
         $.ajax({
             url: '{{ url("/recuperer-beneficiaires") }}',
             type: 'GET',
-            data: { 
-                code_projet: codeProjet, 
-                NumOrdre: numOrdre 
+            data: {
+                code_projet: codeProjet,
+                NumOrdre: numOrdre
             },
             beforeSend: function() {
                 $('#beneficiaireTable tbody').html('<tr><td colspan="4" class="text-center">Chargement...</td></tr>');
@@ -1172,12 +1135,12 @@
             success: function(response) {
                 const tbody = $('#beneficiaireTable tbody');
                 tbody.empty();
-                
+
                 if (response.length === 0) {
                     tbody.append('<tr><td colspan="4" class="text-center text-muted">Aucun bénéficiaire enregistré</td></tr>');
                     return;
                 }
-                
+
                 response.forEach(beneficiaire => {
                     const row = `
                         <tr>
@@ -1199,11 +1162,11 @@
             }
         });
     }
-    
+
     // Gestion de l'ajout de bénéficiaires
     $('#addBtn').click(function() {
         let code, libelle, type;
-        
+
         if ($('#type_acteur').is(':checked')) {
             code = $('#select_acteur').val();
             libelle = $('#select_acteur option:selected').text();
@@ -1255,7 +1218,7 @@
     // Suppression des bénéficiaires
     $('#deleteBtn').click(function() {
         const selected = $('#beneficiaireTable tbody input[type="checkbox"]:checked').closest('tr');
-        
+
         if (selected.length === 0) {
             Swal.fire({
                 icon: 'warning',
