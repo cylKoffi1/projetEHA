@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <title>Fiche Projet - {{ $projet->code_projet }}</title>
     <style>
-        @page {
-            margin: 120px 30px 100px 30px;
-        }
+     
 
         body {
             font-family: 'DejaVu Sans', sans-serif;
@@ -16,28 +14,8 @@
             padding: 0;
         }
 
-        header {
-            position: fixed;
-            top: -100px;
-            left: 0;
-            right: 0;
-            height: 100px;
-            background-color: #000046;
-            color: white;
-            padding: 10px 20px;
-        }
 
-        footer {
-            position: fixed;
-            bottom: -60px;
-            left: 0;
-            right: 0;
-            height: 60px;
-            font-size: 10px;
-            text-align: center;
-            color: #7f8c8d;
-            background-color: white;
-        }
+
 
         .page-number:after {
             content: "Page " counter(page) ;
@@ -107,32 +85,63 @@
 </head>
 <body>
 
-    <!-- Header global (répété) -->
-    <header>
-        <table width="100%">
-            <tr>
-                <td style="font-size: 12px; font-weight: bold;">BTP-PROJECT</td>
-                <td style="text-align: right; font-size: 11px;">
-                    Impression le : {{ \Carbon\Carbon::now()->translatedFormat('d F Y à H:i') }}
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" style="text-align: center; font-size: 15px; font-weight: bold; padding-top: 5px;">
-                    FICHE PROJET DÉTAILLÉE
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    @if(auth()->user()?->paysSelectionne()?->armoirie)
-                        <img src="{{ public_path(auth()->user()?->paysSelectionne()?->armoirie) }}" style="height: 35px;">
-                    @endif
-                </td>
-                <td style="text-align: right; font-size: 11px;">
-                    Imprimé par : {{ auth()->user()->acteur?->libelle_court ?? '' }} {{ auth()->user()->acteur?->libelle_long ?? '' }}
-                </td>
-            </tr>
-        </table>
-    </header>
+<style>
+@page { margin: 150px 30px 90px 30px; }
+
+header {
+  position: fixed;
+  top: -150px;
+  left: -30px;   /* étend dans les marges */
+  right: -30px;  /* étend dans les marges */
+  height: 130px; /* ≤ margin-top */
+  background: #000046;
+  color: #fff;
+  box-sizing: border-box;
+}
+.header-inner { padding: 12px 20px; }
+
+
+  footer {
+      position: fixed;
+      bottom: -90px;  /* Doit être l’opposé de @page margin-bottom */
+      left: 0;
+      right: 0;
+      height: 90px;   /* Toujours <= margin-bottom */
+      font-size: 10px;
+      text-align: center;
+      color: #7f8c8d;
+      background-color: #fff;
+  }
+</style>
+
+<header>
+  <div class="header-inner">
+    <table width="100%">
+      <tr>
+        <td style="font-size:12px;font-weight:bold;">BTP-PROJECT</td>
+        <td style="text-align:right;font-size:11px;">
+          Impression le : {{ \Carbon\Carbon::now()->translatedFormat('d F Y à H:i') }}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align:center;font-size:15px;font-weight:bold;padding-top:5px;">
+          FICHE PROJET DÉTAILLÉE
+        </td>
+      </tr>
+      <tr>
+        <td>
+          @if(auth()->user()?->paysSelectionne()?->armoirie)
+            <img src="{{ public_path(auth()->user()?->paysSelectionne()?->armoirie) }}" style="height:35px;">
+          @endif
+        </td>
+        <td style="text-align:right;font-size:11px;">
+          Imprimé par : {{ auth()->user()->acteur?->libelle_court ?? '' }} {{ auth()->user()->acteur?->libelle_long ?? '' }}
+        </td>
+      </tr>
+    </table>
+  </div>
+</header>
+
 
     <!-- Footer global (répété) -->
     <footer>
@@ -196,7 +205,7 @@
                         <tr>
                             <td>{{ $loc->localite->libelle ?? $loc->code_localite }}</td>
                             <td>{{ $loc->niveau }}</td>
-                            <td>{{ $loc->decoupage ?? 'N/A' }}</td>
+                            <td>{{ $loc->decoupageLibelle->libelle_decoupage ?? 'N/A' }}</td>
                             <td>{{ $loc->pays->nom_fr_fr ?? 'N/A' }}</td>
                         </tr>
                         @endforeach
@@ -217,27 +226,27 @@
                 <tbody>
                     <tr>
                         <td>Maître d'ouvrage</td>
-                        <td>{{ $projet->maitreOuvrage->acteur->libelle_court ?? 'Non défini' }}</td>
+                        <td>{{ $projet->maitreOuvrage->acteur->libelle_court }} {{ $projet->maitreOuvrage->acteur->libelle_long ?? 'Non défini' }}</td>
                         <td>
                             {{ $projet->maitreOuvrage->acteur->telephone ?? 'NC' }}<br>
                             {{ $projet->maitreOuvrage->acteur->email ?? 'NC' }}
                         </td>
-                        <td>{{ $projet->maitreOuvrage->secteur->libelle ?? 'NC' }}</td>
+                        <td>{{ $projet->maitreOuvrage->secteurActivite->libelle ?? 'NC' }}</td>
                     </tr>
                     @foreach($projet->maitresOeuvre as $moe)
                     <tr>
                         <td>Maître d'œuvre</td>
-                        <td>{{ $moe->acteur->libelle_court }}</td>
+                        <td>{{ $moe->acteur->libelle_court }} {{ $moe->acteur->libelle_long  ?? 'Non défini' }}</td>
                         <td>
                             {{ $moe->acteur->telephone ?? 'NC' }}<br>
                             {{ $moe->acteur->email ?? 'NC' }}
                         </td>
-                        <td>{{ $moe->secteur->libelle ?? 'NC' }}</td>
+                        <td>{{ $moe->secteurActivite->libelle ?? 'NC' }}</td>
                     </tr>
                     @endforeach
                     <tr>
                         <td>Chef de projet</td>
-                        <td>{{ $projet->ChefProjet?->acteur->libelle_court }}</td>
+                        <td>{{ $projet->ChefProjet?->acteur->libelle_court }} {{ $projet->ChefProjet?->acteur->libelle_long  ?? 'Non défini' }}</td>
                         <td>
                             {{ $projet->ChefProjet?->acteur->telephone ?? 'NC' }}<br>
                             {{ $projet->ChefProjet?->acteur->email ?? 'NC' }}
@@ -262,7 +271,21 @@
                     <tbody>
                         @foreach($projet->financements as $financement)
                         <tr>
-                            <td>{{ $financement->bailleur->libelle_court }}</td>
+                        @php
+                            $is5689  = $financement->bailleur && (string)$financement->bailleur->code_acteur === '5689';
+                            $secteur = $is5689
+                                ? optional($financement->bailleur->secteurActiviteActeur->first())->secteur
+                                : null;
+                        @endphp
+
+                        <td>
+                            {{ $financement->bailleur?->libelle_court }} {{ $financement->bailleur?->libelle_long }}
+                            @if ($is5689 && $secteur?->libelle)
+                                de {{ $secteur->libelle }}
+                            @endif
+                        </td>
+
+                            
                             <td>{{ number_format($financement->montant_finance, 0, ',', ' ') }}</td>
                             <td>{{ $financement->devise }}</td>
                             <td>{{ $financement->financement_local ? 'Local' : 'Externe' }}</td>
@@ -282,23 +305,42 @@
         </div>
 
         <!-- Section 5: Infrastructures -->
+    
         <div class="section">
             <div class="section-title">INFRASTRUCTURES</div>
+
             @if($projet->infrastructures->count() > 0)
-                @foreach($projet->infrastructures as $infras)
+                @foreach($projet->infrastructures as $pi) {{-- $pi = ProjetInfrastructure --}}
+                    @php
+                        /** @var \App\Models\Infrastructure|null $infra */
+                        $infra = $pi->infra;
+                        // Collection (ou collection vide si pas d’infra)
+                        $caracs = $infra?->valeursCaracteristiques ?? collect();
+                    @endphp
+
                     <div style="margin-bottom: 15px;">
-                        <h4>{{ $infras->infra?->libelle }}</h4>
-                        <p><strong>Famille:</strong> {{ $infras->infra?->familleInfrastructure->libelleFamille ?? 'N/A' }}</p>
-                        @if($infras->valeursCaracteristiques->count() > 0)
+                        <h4>{{ $infra?->libelle ?? 'Infrastructure (non définie)' }}</h4>
+                        <p>
+                            <strong>Famille :</strong>
+                            {{ $infra?->familleInfrastructure?->libelleFamille ?? 'N/A' }}
+                        </p>
+
+                        @if($caracs->isNotEmpty())
                             <table>
-                                <thead><tr><th>Caractéristique</th><th>Valeur</th><th>Unité</th></tr></thead>
-                                <tbody>
-                                    @foreach($infras->valeursCaracteristiques as $carac)
+                                <thead>
                                     <tr>
-                                        <td>{{ $carac->caracteristique->nom }}</td>
-                                        <td>{{ $carac->valeur }}</td>
-                                        <td>{{ $carac->unite->symbole ?? '' }}</td>
+                                        <th>Caractéristique</th>
+                                        <th>Valeur</th>
+                                        <th>Unité</th>
                                     </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($caracs as $vc)
+                                        <tr>
+                                            <td>{{ $vc->caracteristique?->libelleCaracteristique ?? '-' }}</td>
+                                            <td>{{ $vc->valeur ?? '-' }}</td>
+                                            <td>{{ $vc->unite?->symbole ?? '' }}</td>
+                                        </tr>
                                     @endforeach
                                 </tbody>
                             </table>
@@ -311,6 +353,7 @@
                 <p>Aucune infrastructure enregistrée pour ce projet.</p>
             @endif
         </div>
+
 
         <!-- Section 6: Documents -->
         <div class="section">

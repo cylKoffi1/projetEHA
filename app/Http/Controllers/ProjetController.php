@@ -22,6 +22,7 @@ use App\Models\Project;     // si tu as un modèle Projet
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class ProjetController extends Controller
 {
@@ -397,14 +398,14 @@ class ProjetController extends Controller
             ->where('code_pays', $paysSelectionne)
             ->get();
 
-        $executions = Executer::with('acteur')
+        $executions = Executer::with('acteur', 'secteurActivite')
             ->where('is_active', true)
             ->where('code_projet', 'like', $paysSelectionne . $groupeSelectionne . '%')
             ->get();
 
         $SecteurActivites = SecteurActivite::all();
 
-        return view('reattributionProjet', compact(
+        return view('projets.GestionExceptions.reattributionProjet', compact(
             'projets',
             'acteurs',
             'executions',
@@ -420,7 +421,7 @@ class ProjetController extends Controller
             $validated = $request->validate([
                 'projet_id' => 'required|string',
                 'acteur_id' => 'required|string',
-                'secteur_id' => 'nullable|integer',
+                'secteur_id' => 'nullable|string',
                 'motif' => 'nullable|string|max:255'
             ]);
 
@@ -454,7 +455,7 @@ class ProjetController extends Controller
             $validated = $request->validate([
                 'projet_id' => 'required|string',
                 'acteur_id' => 'required|string',
-                'secteur_id' => 'nullable|integer',
+                'secteur_id' => 'nullable|string',
                 'motif' => 'required|string|max:255'
             ]);
 
@@ -618,57 +619,91 @@ class ProjetController extends Controller
 
     public function formAnnulation()
     {
-        $pays = session('pays_selectionne');
+        $pays   = session('pays_selectionne');
         $groupe = session('projet_selectionne');
-        $projets = Projet::where('projet_statut.code_projet', 'like', $pays . $groupe . '%')
-        ->join('projet_statut', 'projet_statut.code_projet', '=', 'projets.code_projet')
-        ->whereIn('projet_statut.type_statut', [1, 2, 5, 6])->get();
-
-
-        return view('annulationProjet', compact('projets'));
+        $prefix = $pays.$groupe.'%';
+    
+        // Projets éligibles à l’annulation (1,2,5,6)
+        $projets = Projet::query()
+            ->join('projet_statut as ps', 'ps.code_projet', '=', 'projets.code_projet')
+            ->where('projets.code_projet', 'like', $prefix)
+            ->whereIn('ps.type_statut', [1,2,5,6])
+            ->select('projets.*')
+            ->distinct()
+            ->get();
+    
+        // Projets déjà annulés (type_statut = 4)
+        $projetsAnnules = Projet::query()
+            ->join('projet_statut as ps', 'ps.code_projet', '=', 'projets.code_projet')
+            ->leftJoin('type_statut as ts', 'ts.id', '=', 'ps.type_statut')
+            ->where('projets.code_projet', 'like', $prefix)
+            ->where('ps.type_statut', 4)
+            ->select([
+                'projets.code_projet',
+                'projets.libelle_projet',
+                'ps.date_statut',
+                'ts.libelle as statut_libelle',
+            ])
+            ->with('dernierStatut')
+            ->get();
+    
+        return view('projets.GestionExceptions.annulationProjet', compact('projets', 'projetsAnnules'));
     }
+    
 
 
     public function annulerProjet(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'code_projet' => 'required|string|exists:projets,code_projet',
-            'motif' => 'required|string|min:5',
+            'motif'       => 'required|string|min:5',
         ]);
-
+    
         try {
-            // Enregistrement du statut "annulé"
-            ProjetStatut::create([
-                'code_projet' => $request->code_projet,
-                'type_statut' => 4, // ID = 4 pour "Annulé"
-                'date_statut' => now(),
-            ]);
-
-            // Enregistrement du motif lié à ce statut
-            MotifStatutProjet::create([
-                'code_projet' => $request->code_projet,
-                'type_statut' => 4,
-                'motif' => $request->motif,
-                'code_acteur' => auth()->user()?->acteur_id,
-                'date_motif' => now(),
-            ]);
-
+            DB::transaction(function () use ($validated) {
+                // Empêcher une double annulation (retire ce bloc si tu veux autoriser plusieurs lignes "Annulé")
+                $dejaAnnule = ProjetStatut::where('code_projet', $validated['code_projet'])
+                    ->where('type_statut', 4) // 4 = Annulé
+                    ->exists();
+    
+                if ($dejaAnnule) {
+                    throw ValidationException::withMessages([
+                        'code_projet' => 'Ce projet est déjà annulé.',
+                    ]);
+                }
+    
+                // 1) Statut "annulé"
+                ProjetStatut::create([
+                    'code_projet' => $validated['code_projet'],
+                    'type_statut' => 4,
+                    'date_statut' => now(),
+                    'motif'       => $validated['motif'],
+                ]);
+    
+                // (Optionnel) Désactiver d’éventuelles exécutions en cours
+                // Executer::where('code_projet', $validated['code_projet'])->update(['is_active' => false]);
+            });
+    
             Log::info('Projet annulé', [
-                'code_projet' => $request->code_projet,
-                'motif' => $request->motif,
-                'user_id' => auth()->id(),
+                'code_projet' => $validated['code_projet'],
+                'motif'       => $validated['motif'],
+                'user_id'     => auth()->id(),
             ]);
-
-            return redirect()->route('projets.annulation.form')
-                             ->with('success', 'Projet annulé avec succès.');
-
+    
+            return redirect()
+                ->route('projets.annulation.form')
+                ->with('success', 'Projet annulé avec succès.');
+    
+        } catch (ValidationException $e) {
+            // Remonte proprement les erreurs de validation (ex: déjà annulé)
+            return back()->withErrors($e->errors())->withInput();
         } catch (\Throwable $e) {
             Log::error('Erreur lors de l’annulation du projet', [
-                'code_projet' => $request->code_projet,
-                'message' => $e->getMessage(),
-                'user_id' => auth()->id(),
+                'code_projet' => $request->input('code_projet'),
+                'message'     => $e->getMessage(),
+                'user_id'     => auth()->id(),
             ]);
-
+    
             return back()->with('error', 'Erreur lors de l’annulation du projet.');
         }
     }
@@ -700,7 +735,7 @@ class ProjetController extends Controller
             ])
             ->get();
 
-        return view('suspendreProjet', compact('projets', 'projetsSuspendus'));
+        return view('projets.GestionExceptions.suspendreProjet', compact('projets', 'projetsSuspendus'));
     }
 
 
@@ -708,29 +743,49 @@ class ProjetController extends Controller
     {
         $request->validate([
             'code_projet' => 'required|string|exists:projets,code_projet',
-            'motif' => 'required|string|min:5',
+            'motif'       => 'required|string|min:5',
         ]);
-
+    
         try {
             ProjetStatut::create([
                 'code_projet' => $request->code_projet,
-                'type_statut' => 5,
+                'type_statut' => 5,             // 5 = suspendu
                 'date_statut' => now(),
-                'motif' => $request->motif,
+                'motif'       => $request->motif,
             ]);
-
+    
             Log::info('Projet suspendu', [
                 'code_projet' => $request->code_projet,
-
-                'user_id' => auth()->id()
+                'user_id'     => auth()->id()
             ]);
-
-            return redirect()->route('projets.suspension.form')->with('success', 'Projet suspendu avec succès.');
+    
+            // ➜ Si AJAX : JSON ; sinon redirection classique
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Projet suspendu avec succès.',
+                    'code_projet' => $request->code_projet,
+                ]);
+            }
+    
+            return redirect()
+                ->route('projets.suspension.form')
+                ->with('success', 'Projet suspendu avec succès.');
+    
         } catch (\Throwable $e) {
             Log::error('Erreur suspension projet', ['message' => $e->getMessage()]);
+    
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de la suspension du projet.',
+                ], 500);
+            }
+    
             return back()->with('error', 'Erreur lors de la suspension du projet.');
         }
     }
+    
 
     public function redemarrerProjet(Request $request){
         try{
@@ -772,5 +827,75 @@ class ProjetController extends Controller
             return back()->with('error', 'Erreur lors du redemarrage de projet.');
         }
     }
+
+    /**
+     * Liste / consultation des projets (alimente resources/views/users/create.blade.php)
+     */
+    public function ConsultationProjet(Request $request)
+    {
+        try {
+            // Filtres de contexte (si tu les utilises déjà)
+            $pays   = session('pays_selectionne');
+            $groupe = session('projet_selectionne');
+
+            // Charger ce qu'il faut pour la vue
+            $projets = Projet::query()
+                ->with([
+                    'devise',                                    // pour $projet->devise->code_long
+                    'statuts.statut',                            // dernier statut (si besoin)
+                    'localisations.localite.decoupage',          // pour extraire région/district
+                    'sousDomaine',                               // libellé du sous-domaine
+                    'sousDomaine.domaine',                       // libellé du domaine
+                ])
+                // Filtre optionnel par code pays+groupe
+                ->when($pays && $groupe, function ($q) use ($pays, $groupe) {
+                    $q->where('code_projet', 'like', $pays.$groupe.'%');
+                })
+                ->orderByDesc('created_at')
+                ->get();
+
+            // Adapter les attributs pour coller exactement à ta vue (champs en MAJ / alias)
+            $projets->each(function (Projet $p) {
+                // Champs attendus par la vue en MAJ / alias
+                $p->CodeProjet              = $p->code_projet;
+                $p->Date_demarrage_prevue   = $p->date_demarrage_prevue;
+                // la vue utilise déjà "date_fin_prevue" et "cout_projet" en snake_case, on laisse tel quel
+
+                // Domaine / Sous-domaine
+                $p->domaine_libelle        = $p->sousDomaine->domaine->libelle ?? null;
+                $p->sous_domaine_libelle   = $p->sousDomaine->libelle ?? null;
+
+                // Region / District depuis la première localisation (si présente)
+                $firstLoc = $p->localisations->first();
+                $p->region_libelle   = $firstLoc->localite->decoupage->region_libelle  // si ton découpage expose ce champ
+                                       ?? $firstLoc->localite->region_libelle
+                                       ?? null;
+
+                $p->district_libelle = $firstLoc->localite->decoupage->district_libelle
+                                       ?? $firstLoc->localite->district_libelle
+                                       ?? null;
+            });
+
+            // Toutes les lignes de statuts (la vue affiche potentiellement plusieurs statuts par projet)
+            // On renvoie une collection avec ->CodeProjet et ->statut_libelle pour rester plug&play avec la vue
+            $Statuts = ProjetStatut::query()
+                ->with('statut')
+                ->whereIn('code_projet', $projets->pluck('code_projet'))
+                ->get()
+                ->map(function (ProjetStatut $ps) {
+                    return (object) [
+                        'CodeProjet'     => $ps->code_projet,
+                        'statut_libelle' => $ps->statut->libelle ?? '-',
+                    ];
+                });
+
+            return view('projets.consultation', compact('projets', 'Statuts'));
+        } catch (\Throwable $e) {
+            Log::error('Erreur chargement consultation projets', ['error' => $e->getMessage()]);
+            return back()->with('error', "Impossible de charger la liste des projets.");
+        }
+    }
+
+
 }
 

@@ -27,7 +27,8 @@ class Acteur extends Model
         'is_user',
         'type_financement'
     ];
-    protected $appends = ['photo_url'];
+    
+   /* protected $appends = ['photo_url'];
 
     public function getPhotoUrlAttribute(): ?string
     {
@@ -39,8 +40,9 @@ class Acteur extends Model
             return url($this->Photo);
         }
         return null;
-    }
-    
+    }*/
+
+
     public function pays()
     {
         return $this->belongsTo(Pays::class, 'code_pays', 'alpha3');
@@ -89,7 +91,12 @@ class Acteur extends Model
     {
         return $this->hasMany(SecteurActiviteActeur::class, 'code_acteur', 'code_acteur');
     }
-
+    public function secteurPrincipal()
+    {
+        return $this->hasOne(SecteurActiviteActeur::class, 'code_acteur', 'code_acteur')->latestOfMany();
+    }
+    
+    
         public function bailleurs()
     {
         return $this->hasMany(Financer::class, 'code_acteur', 'code_acteur');

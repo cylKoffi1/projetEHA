@@ -300,7 +300,8 @@ function confirmDelete(url, onSuccess, messages = {}) {
             <button class="sidebar-toggle" onclick="toggleSidebar()" style="margin: 2px;">☰</button>
 
             <a class="navbar-brand d-flex align-items-center" href="#" style="color: white; flex-direction: column;">
-                <img src="{{ auth()->user()?->paysSelectionne()?->armoirie_url }}" alt="Armoirie">
+                <img src="{{ asset(auth()->user()?->paysSelectionne()?->armoirie) }}" style="width: 40px; height: auto; " class="logo-img" alt="Logo" />
+               {{-- <img src="{{ auth()->user()?->paysSelectionne()?->armoirie_url }}" alt="Armoirie">--}}
                 <span class="project-title">GP-INFRAS</span>
             </a>
         </div>
@@ -342,7 +343,8 @@ function confirmDelete(url, onSuccess, messages = {}) {
                             <span class="user-name fw-bold" style="color: #F1C40F;">{{ auth()->user()->login }}</span>
                             <span class="user-group text-sm" style="color: #F1C40F;">{{ auth()->user()->groupeUtilisateur->libelle_groupe }}</span>
                         </div>
-                        <img class="profile-img" src="{{ url('/api/fichiers/'.auth()->user()->acteur->Photo) }}" alt="Profile Picture" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover;">
+                        <img class="profile-img" src="{{ asset(auth()->user()->acteur?->Photo ?? 'users/user.png') }}" alt="Profile Picture" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                        {{--<img class="profile-img" src="{{ url('/api/fichiers/'.auth()->user()->acteur->Photo) }}" alt="Profile Picture" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover;">--}}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end text-dark" aria-labelledby="navbarDropdown">
                         <li><hr class="dropdown-divider"></li>

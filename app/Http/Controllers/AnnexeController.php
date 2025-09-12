@@ -23,30 +23,30 @@ class AnnexeController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
-        return view('editionProjet', compact('projets'));
+        return view('projets.Annexe.editionProjet', compact('projets'));
     }
     public function exportProjet($code)
     {
         $projet = Projet::with([
             'localisations.localite.decoupage',
-            'infrastructures.valeursCaracteristiques.caracteristique.unite',
+            'infrastructures.infra.valeursCaracteristiques.caracteristique.unite',
             'actions',
-            'financements.bailleur',
+            'financements.bailleur.secteurActiviteActeur.secteur', // <-- ajouter ceci
             'documents',
             'maitreOuvrage.acteur',
             'maitresOeuvre.acteur',
             'statuts.statut',
             'ChefProjet.acteur',
-        ])->where('code_projet', $code)->first();
+        ])->where('code_projet', $code)->firstOrFail();
+        
+        
     
-        if (!$projet) {
-            abort(404, "Projet introuvable.");
-        }
-    
-        $pdf = PDF::loadView('pdf.projet', compact('projet'))->setPaper('a4', 'portrait');
+        $pdf = PDF::loadView('pdf.projet', compact('projet'))
+                  ->setPaper('a4', 'portrait');
     
         return $pdf->stream("projet-{$code}.pdf");
     }
+    
     
     
 
@@ -78,6 +78,7 @@ class AnnexeController extends Controller
         return $pdf->stream("contrat-{$code}.pdf");
     }
 
+
     public function exportInfrastructure($code)
     {
         $infrastructure = Infrastructure::with([
@@ -99,7 +100,7 @@ class AnnexeController extends Controller
     {
         $request->validate([
             'projets' => 'required',
-            'type' => 'required|in:projet,acteur,contrat,infrastructure'
+            'type' => 'required|in:projets,acteur,contrat,infrastructure'
         ]);
     
         $codes = json_decode($request->input('projets'), true);
@@ -119,27 +120,30 @@ class AnnexeController extends Controller
     public function show($codeProjet)
     {
         try {
-            $etude = Projet::with([
-                
+            $projet = Projet::with([
                 'localisations.localite.decoupage',
-                'infrastructures.infra.valeursCaracteristiques', // Charger les caractéristiques ici
+                // Charger les caracs au bon endroit (sur infra) + leurs relations
+                'infrastructures.infra.valeursCaracteristiques.caracteristique.unite',
                 'actions',
-                'maitreOuvrage',
-                'maitresOeuvre',
-                'financements',
+                'maitreOuvrage.acteur',
+                'maitreOuvrage.secteur',                      // ← si Posseder a une relation secteur()
+                'maitresOeuvre.acteur',
+                'maitresOeuvre.secteurActivite',      // nécessaire pour la vue
+                'financements.bailleur',      // nécessaire pour la vue
                 'documents',
-                'statuts',
+                'statuts.statut',             // si tu affiches libellé du statut
                 'beneficiairesActeurs.acteur',
                 'beneficiairesLocalites.localite',
                 'beneficiairesInfrastructures.infrastructure',
             ])->where('code_projet', $codeProjet)->firstOrFail();
     
-            return view('projets.show', compact('projet'));
-        } catch (Exception $e) {
+            return view('projets.Annexe.show', compact('projet'));
+        } catch (\Exception $e) {
             Log::error("Erreur affichage projet [{$codeProjet}] : " . $e->getMessage());
             return back()->with('error', 'Impossible de charger les détails du projet.');
         }
     }
+    
     
 }
 

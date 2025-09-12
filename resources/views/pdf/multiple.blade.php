@@ -19,21 +19,22 @@
 </head>
 <body>
     @foreach($codes as $code)
-        @if($type === 'projet')
-            @php $projet = \App\Models\Projet::with([
-                'localisations.localite.decoupage',
-                'infrastructures.valeursCaracteristiques.caracteristique.unite',
-                'actions',
-                'financements.bailleur',
-                'documents',
-                'maitreOuvrage.acteur',
-                'maitresOeuvre.acteur',
-                'statuts.statut',
-                'ChefProjet.acteur'
-            ])->where('code_projet', $code)->first(); @endphp
-            @include('pdf.projet', ['projet' => $projet])
-        
-        
+            @if($type === 'projet')
+                @php
+                    $projet = \App\Models\Projet::with([
+                        'localisations.localite.decoupage',
+                        'infrastructures.infra.valeursCaracteristiques.caracteristique.unite',
+                        'infrastructures.infra.valeursCaracteristiques.unite',
+                        'actions',
+                        'financements.bailleur.secteurActiviteActeur.secteur',
+                        'documents',
+                        'maitreOuvrage.acteur',
+                        'maitresOeuvre.acteur',
+                        'statuts.statut',
+                        'ChefProjet.acteur'
+                    ])->where('code_projet', $code)->first();
+                @endphp
+                @include('pdf.projet', ['projet' => $projet])
             @elseif($type === 'acteur')
                 @php
                     $chefs = \App\Models\Acteur::with('type')->whereHas('projetsChef', fn($q) => $q->where('code_projet', $code))->get();

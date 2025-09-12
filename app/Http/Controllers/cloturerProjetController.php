@@ -23,6 +23,7 @@ use App\Models\Sous_prefecture;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class cloturerProjetController extends Controller
 {
@@ -42,18 +43,27 @@ class cloturerProjetController extends Controller
     $statutProjetStatut = DB::table('projet_action_a_mener as paam')
         ->join('projet_statut as psp', 'psp.code_projet', '=', 'paam.code_projet')
         ->join('projets', 'projets.code_projet', '=', 'psp.code_projet')
-        ->where('psp.type_statut', 2)
+        ->whereIn('psp.type_statut', [2,6,5])
         ->select('paam.code_projet')
         ->where('projets.code_projet', 'like', $country . $group . '%')
         ->get();
-    $projets = Projet::where('code_projet', 'like', $country . $group . '%')
-        ->get();
 
-        $statuts = DB::table('projet_statut')
-        ->join('type_statut', 'type_statut.id', '=', 'projet_statut.type_statut')
-        ->join('projets', 'projets.code_projet', '=', 'projet_statut.code_projet')
-        ->where('projets.code_projet', 'like', $country . $group . '%') // FILTRAGE
-        ->select('projet_statut.id', 'projets.code_projet', 'projet_statut.type_statut as codeSStatu', 'projet_statut.date_statut', 'type_statut.libelle as statut_libelle')
+        $lastStatuses = DB::table('projet_statut')
+            ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
+            ->groupBy('code_projet');
+
+        $projets = Projet::joinSub($lastStatuses, 'last_status', function ($join) {
+            $join->on('projets.code_projet', '=', 'last_status.code_projet');
+        })
+        ->join('projet_statut', function ($join) {
+            $join->on('projet_statut.code_projet', '=', 'last_status.code_projet')
+                 ->on('projet_statut.date_statut', '=', 'last_status.max_date');
+        })
+        ->where('projet_statut.type_statut', 7)
+        ->where('projets.code_projet', 'like', $country . $group . '%')
+
+        ->select('projets.*')
+        ->with('dernierStatut')
         ->get();
 
         
@@ -69,12 +79,12 @@ class cloturerProjetController extends Controller
 
        $ecran = Ecran::find($request->input('ecran_id'));
 
-        return view('clotureProjet', ['ecran'=>$ecran,         
+        return view('projets.RealisationProjet.clotureProjet', ['ecran'=>$ecran,         
         'acteurs' => $acteurs,
         'localites'=> $localites,
         'infras' => $infras,
         'beneficiairesActions'=>$beneficiairesActions,
-        'statutProjetStatut' => $statutProjetStatut, 'projets'=>$projets,'statuts' => $statuts]);
+        'statutProjetStatut' => $statutProjetStatut, 'projets'=>$projets]);
     }
     public function checkCodeProjet(Request $request)
     {
@@ -231,32 +241,51 @@ class cloturerProjetController extends Controller
         }
         public function cloturerProjet(Request $request)
         {
+            $validated = $request->validate([
+                'code_projet'  => 'required|exists:projets,code_projet',
+                'date_cloture' => 'required|date',
+                'description'  => 'nullable|string|max:2000',
+            ]);
+        
+            DB::beginTransaction();
             try {
-                // Validation des données
-                $request->validate([
-                    'code_projet' => 'required',
-                    'date_cloture' => 'required|date',
+                // 1) Une seule ligne par projet dans dates_effectives_projet → updateOrCreate
+                DateEffectiveProjet::updateOrCreate(
+                    ['code_projet' => $validated['code_projet']],
+                    [
+                        'date_fin_effective' => $validated['date_cloture'],
+                        'description'        => $validated['description'] ?? null,
+                    ]
+                );
+        
+                // 2) Historiser le statut : on AJOUTE une nouvelle ligne (create)
+                //    Si votre table a un index unique (code_projet, type_statut), supprimez-le ou ajoutez un champ pour éviter le conflit
+                $statut = ProjetStatut::create([
+                    'code_projet' => $validated['code_projet'],
+                    'type_statut' => 7, // ou '07' selon votre FK ; adaptez si besoin
+                    'date_statut' => $validated['date_cloture'],
+                    'motif'       => $validated['description'] ?? null,
                 ]);
-
-                // Enregistrement de la date de clôture dans la table
-                DateEffectiveProjet::create([
-                    'code_projet' => $request->code_projet,
-                    'date_fin_effective' => $request->date_cloture,
-                    'description' =>$request->descriptionCloture,
+                
+        
+                DB::commit();
+        
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Projet clôturé avec succès.',
+                    'statut_id' => $statut->id,
                 ]);
-
-                // Mise à jour du statut du projet dans la table projet_statut
-                // Assurez-vous de définir le bon code de statut pour la clôture du projet
-                $projetStatut = ProjetStatut::where('code_projet', $request->code_projet)->first();
-                $projetStatut->update(['type_statut' => '04']);
-
-                return redirect()->back()->with('success', 'Projet clôturé. ');
-
-            } catch (\Exception $e) {
-                // En cas d'erreur, annulez la transaction
-                DB::rollback();
-
-                return redirect()->back()->with('error', 'Une erreur s\'est produite lors de la clôture du projet..');
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error('Erreur clôture projet', [
+                    'code_projet' => $request->input('code_projet'),
+                    'error'       => $e->getMessage(),
+                ]);
+        
+                return response()->json([
+                    'success' => false,
+                    'message' => "Une erreur s'est produite lors de la clôture du projet.",
+                ], 500);
             }
         }
 

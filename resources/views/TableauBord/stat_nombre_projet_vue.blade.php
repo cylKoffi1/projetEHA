@@ -12,6 +12,19 @@
   .invalid-feedback{display:block;margin-top:6px;font-size:80%;color:#dc3545}
   th, td { white-space: nowrap; }
   tbody tr td a { text-decoration: none; }
+
+  /* Ligne National mise en avant et épinglée en haut */
+  .national-row {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #e8f4ff !important; /* bleu très léger */
+    font-weight: 600;
+  }
+  .national-row td, .national-row th {
+    background: #e8f4ff !important;
+    border-bottom: 2px solid #bcdfff;
+  }
   
   /* Styles améliorés pour les filtres */
   .filters-card {
@@ -50,29 +63,28 @@
   }
 
   /* === Zone de filtres === */
-.card#filtersCollapse,
-.card.shadow-sm.border-0.mb-4 {
-  background: #f0f6ff; /* bleu très léger pour la zone */
-  border-radius: 8px;
-}
+  .card#filtersCollapse,
+  .card.shadow-sm.border-0.mb-4 {
+    background: #f0f6ff; /* bleu très léger pour la zone */
+    border-radius: 8px;
+  }
 
-/* === En-tête bouton toggle === */
-#filtersToggle {
-  background: linear-gradient(135deg, #007bff, #0056b3) !important;
-  color: #fff !important;
-  border-radius: 0;
-}
+  /* === En-tête bouton toggle === */
+  #filtersToggle {
+    background: linear-gradient(135deg, #007bff, #0056b3) !important;
+    color: #fff !important;
+    border-radius: 0;
+  }
 
-#filtersToggle h6,
-#filtersToggle i {
-  color: #fff !important;
-}
+  #filtersToggle h6,
+  #filtersToggle i {
+    color: #fff !important;
+  }
 
-/* Hover sur le bouton */
-#filtersToggle:hover {
-  background: linear-gradient(135deg, #0056b3, #004494) !important;
-}
-
+  /* Hover sur le bouton */
+  #filtersToggle:hover {
+    background: linear-gradient(135deg, #0056b3, #004494) !important;
+  }
 </style>
 
 <section id="multiple-column-form">
@@ -116,8 +128,12 @@
               $statusOrder  = $statusOrder ?? ['prevu','en_cours','cloture','termine','redemarre','suspendu','annule'];
               $statusTitles = $statusTitles ?? [
                 'prevu'=>'Prévu','en_cours'=>'En cours','cloture'=>'Clôturé',
-                'termine'=>'Terminé','redemarre'=>'Redémarré','suspendu'=>'Suspendu','annule'=>'Annulé'
+                'termine'=>'Terminé','redemarré'=>'Redémarré','suspendu'=>'Suspendu','annule'=>'Annulé'
               ];
+              // corriger clé 'redemarre'
+              $statusTitles['redemarre'] = $statusTitles['redemarré'] ?? 'Redémarré';
+              unset($statusTitles['redemarré']);
+
               $roleLabels = [
                 'chef_projet' => "Chef de projet",
                 'moe'         => "Maître d'œuvre",
@@ -134,85 +150,99 @@
                   return $v > 0 ? '<a href="'.$url.'">'.$v.'</a>' : '0';
               };
             @endphp
-            {{-- ======== CARD DE FILTRES SIMPLE & MODERNE ======== --}}
+
+            {{-- ======== CARD DE FILTRES ======== --}}
             <div class="card shadow-sm border-0 mb-4">
-            <button
+              <button
                 id="filtersToggle"
                 type="button"
                 class="card-header bg-white border-0 w-100 d-flex align-items-center justify-content-between"
                 aria-expanded="true"
                 aria-controls="filtersCollapse"
                 style="cursor:pointer"
-            >
+              >
                 <h6 class="mb-0 d-flex align-items-center fw-semibold text-secondary">
-                <i class="bi bi-funnel me-2 text-muted"></i> Filtres
+                  <i class="bi bi-funnel me-2 text-muted"></i> Filtres
                 </h6>
                 <i class="bi bi-chevron-up chevron-toggle text-muted"></i>
-            </button>
-            
-            <div class="collapse show" id="filtersCollapse">
+              </button>
+              
+              <div class="collapse show" id="filtersCollapse">
                 <div class="card-body" style="background-color: #d9d9d9;">
-                <div class="row g-4">
+                  <div class="row g-4">
+                    
                     {{-- STATUTS --}}
                     <div class="col-md-6 col-lg-4">
-                    <h6 class="small fw-bold text-muted mb-3"><i class="bi bi-circle-fill text-primary me-1"></i> Statuts</h6>
-                    <div class="d-flex flex-wrap gap-2">
+                      <h6 class="small fw-bold text-muted mb-3">
+                        <i class="bi bi-circle-fill text-primary me-1"></i> Statuts
+                      </h6>
+                      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
                         @foreach($statusOrder as $k)
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input status-filter" type="checkbox" id="st-{{ $k }}" value="{{ $k }}" checked>
-                            <label class="form-check-label small" for="st-{{ $k }}">{{ $statusTitles[$k] }}</label>
-                        </div>
+                          <div class="col">
+                            <div class="form-check">
+                              <input class="form-check-input status-filter" type="checkbox" id="st-{{ $k }}" value="{{ $k }}" checked>
+                              <label class="form-check-label small" for="st-{{ $k }}">{{ $statusTitles[$k] }}</label>
+                            </div>
+                          </div>
                         @endforeach
-                    </div>
+                      </div>
                     </div>
 
                     {{-- TYPE PROJET --}}
                     <div class="col-md-6 col-lg-4">
-                    <h6 class="small fw-bold text-muted mb-3"><i class="bi bi-grid-1x2 text-success me-1"></i> Type de projet</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        <div class="form-check form-check-inline">
-                        <input class="form-check-input type-filter" type="radio" name="typeProjet" id="tous" value="tous" checked>
-                        <label class="form-check-label small" for="tous">Tous</label>
+                      <h6 class="small fw-bold text-muted mb-3">
+                        <i class="bi bi-grid-1x2 text-success me-1"></i> Type de projet
+                      </h6>
+                      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+                        <div class="col">
+                          <div class="form-check">
+                            <input class="form-check-input type-filter" type="radio" name="typeProjet" id="tous" value="tous" checked>
+                            <label class="form-check-label small" for="tous">Tous</label>
+                          </div>
                         </div>
-                        <div class="form-check form-check-inline">
-                        <input class="form-check-input type-filter" type="radio" name="typeProjet" id="public" value="public">
-                        <label class="form-check-label small" for="public">Public</label>
+                        <div class="col">
+                          <div class="form-check">
+                            <input class="form-check-input type-filter" type="radio" name="typeProjet" id="public" value="public">
+                            <label class="form-check-label small" for="public">Public</label>
+                          </div>
                         </div>
-                        <div class="form-check form-check-inline">
-                        <input class="form-check-input type-filter" type="radio" name="typeProjet" id="prive" value="prive">
-                        <label class="form-check-label small" for="prive">Privé</label>
+                        <div class="col">
+                          <div class="form-check">
+                            <input class="form-check-input type-filter" type="radio" name="typeProjet" id="prive" value="prive">
+                            <label class="form-check-label small" for="prive">Privé</label>
+                          </div>
                         </div>
-                    </div>
+                      </div>
                     </div>
 
-                    {{-- ACTEURS --}}
+                    {{-- ACTEURS (sans checkbox National) --}}
                     <div class="col-md-12 col-lg-4">
-                    <h6 class="small fw-bold text-muted mb-3"><i class="bi bi-people text-warning me-1"></i> Acteurs</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        <div class="form-check form-check-inline">
-                        <input class="form-check-input actor-filter" type="checkbox" id="role-national" value="national" checked>
-                        <label class="form-check-label small" for="role-national">National</label>
-                        </div>
+                      <h6 class="small fw-bold text-muted mb-2">
+                        <i class="bi bi-people text-warning me-1"></i> Acteurs
+                      </h6>
+                      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
                         @foreach($rolesAvailable as $code)
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input actor-filter" type="checkbox" id="role-{{ $code }}" value="{{ $code }}" checked>
-                            <label class="form-check-label small" for="role-{{ $code }}">{{ $roleLabels[$code] ?? $code }}</label>
-                        </div>
+                          <div class="col">
+                            <div class="form-check">
+                              <input class="form-check-input actor-filter" type="checkbox" id="role-{{ $code }}" value="{{ $code }}" checked>
+                              <label class="form-check-label small" for="role-{{ $code }}">{{ $roleLabels[$code] ?? $code }}</label>
+                            </div>
+                          </div>
                         @endforeach
+                      </div>
                     </div>
-                    </div>
-                </div>
 
-                <div class="text-center mt-4">
+                  </div>
+
+                  <div class="text-center mt-4">
                     <button id="btn-reset-filters" type="button" class="btn btn-light border rounded-pill px-4">
-                    <i class="bi bi-arrow-clockwise"></i> Réinitialiser
+                      <i class="bi bi-arrow-clockwise"></i> Réinitialiser
                     </button>
+                  </div>
                 </div>
-                </div>
+              </div>
             </div>
-            </div>
-
-            {{-- ================================== --}}
+            {{-- ======== FIN CARD DE FILTRES ======== --}}
 
             <table class="table table-striped table-bordered tableClass" id="table1" style="width:100%">
               <thead>
@@ -261,13 +291,13 @@
                   @endforeach
                 @endif
 
-                {{-- RATIO (aucun lien) --}}
+                {{-- RATIO (recalculé côté JS) --}}
                 <tr data-role="ratio">
                   <td><strong>Ratio (%)</strong></td>
                   @foreach($statusOrder as $k)
-                    <td>{{ $stats['Ratio']["total_$k"]  ?? 0 }}%</td>
-                    <td>{{ $stats['Ratio']["public_$k"] ?? 0 }}%</td>
-                    <td>{{ $stats['Ratio']["prive_$k"]  ?? 0 }}%</td>
+                    <td>0%</td>
+                    <td>0%</td>
+                    <td>0%</td>
                   @endforeach
                 </tr>
 
@@ -301,17 +331,16 @@
     }
 
     // ===== 2) Init DataTables via TA fonction (elle attend un ID)
-    // si elle est async, on l'attend pour garantir que DT est prêt
     await initDataTable(
       '{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}',
       tableId,
       'Liste des nombres de projets'
     );
 
-    // récupérer l'instance DT à partir de la table par CLASSE
+    // récupérer l'instance DT
     const dt = $table.DataTable();
 
-    // ===== 3) Collapse robuste (inchangé)
+    // ===== 3) Collapse robuste
     const collapseEl   = document.getElementById('filtersCollapse');
     const headerButton = document.getElementById('filtersToggle');
     const chevron      = document.querySelector('.chevron-toggle');
@@ -337,71 +366,141 @@
       setExpanded(willShow);
     });
 
-    // ===== 4) Filtres côté front (en utilisant LA CLASSE)
-    (function(){
-      const statusOrder = @json($statusOrder); // ["prevu","en_cours",...]
-      // 1ère colonne = libellé ; ensuite groupes de 3 colonnes par statut
-      const colMap = {};
-      let start = 1;
+    // ===== 4) Mapping des colonnes par statut
+    const statusOrder = @json($statusOrder); // ["prevu","en_cours",...]
+    const colMap = {};
+    let start = 1; // 1ère colonne = libellé
+    statusOrder.forEach(k => {
+      colMap[k] = { total: start, public: start+1, prive: start+2 };
+      start += 3;
+    });
+
+    // ---- helpers type de projet
+    function typeSelection(){ return $('input.type-filter:checked').val(); }
+    const showPublicCol = () => (typeSelection()==='tous' || typeSelection()==='public');
+    const showPriveCol  = () => (typeSelection()==='tous' || typeSelection()==='prive');
+
+    // ---- helpers numériques (lit la valeur visible dans la cellule)
+    function getCellNumber(rowEl, colIdx) {
+      const node = dt.cell(rowEl, colIdx).node();
+      if (!node) return 0;
+      const raw = (node.textContent || '').replace(/\s+/g, '');
+      const n = parseFloat(raw);
+      return isNaN(n) ? 0 : n;
+    }
+
+    // ===== 5) Filtre DataTables par ACTEURS (au lieu de toggle DOM)
+    let enabledActors = new Set(
+      $('.actor-filter:checked').map((_,el)=>el.value.toLowerCase()).get()
+    );
+
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex){
+      if (settings.nTable !== $table[0]) return true; // ne filtre que cette table
+
+      const node = dt.row(dataIndex).node();
+      const role = (node?.dataset?.role || '').toLowerCase();
+
+      // Toujours visibles : National + Ratio
+      if (role === 'national' || role === 'ratio') return true;
+
+      // autres lignes : seulement si acteur coché
+      return enabledActors.has(role);
+    });
+
+    function applyActorFilter(){
+      enabledActors = new Set(
+        $('.actor-filter:checked').map((_,el)=>el.value.toLowerCase()).get()
+      );
+      dt.draw(false); // déclenche recalcul via hook
+    }
+
+    // ===== 6) Recompute Ratio = National / (Somme des autres visibles)
+    function recomputeRatio() {
+      const $tbody    = $table.find('tbody');
+      const natRowEl  = $tbody.find('tr.national-row')[0];
+      const ratioRow  = $tbody.find('tr[data-role="ratio"]')[0];
+      if (!natRowEl || !ratioRow) return;
+
+      // Lignes réellement filtrées par DT, page courante
+      const rowsNodes = dt.rows({ page: 'current', search: 'applied' }).nodes().toArray();
+      const otherRows = rowsNodes.filter(n => {
+        const role = (n.dataset.role || '').toLowerCase();
+        return role !== 'national' && role !== 'ratio';
+      });
+
+      const segments = ['total','public','prive'];
+      Object.entries(colMap).forEach(([k, cols]) => {
+        segments.forEach(seg => {
+          const colIdx = cols[seg];
+          if (!dt.column(colIdx).visible()) return;
+
+          const natVal = getCellNumber(natRowEl, colIdx);
+
+          let othersSum = 0;
+          otherRows.forEach(function(row){
+            othersSum += getCellNumber(row, colIdx);
+          });
+
+          const node = dt.cell(ratioRow, colIdx).node();
+
+          // === Formule demandée : National / Somme des autres (peut dépasser 100%) ===
+         // const pct = (othersSum > 0) ? Math.round((natVal / othersSum) * 100) : 0;
+
+          // === Variante bornée 0–100% (si tu préfères la part des autres dans le National) ===
+           const pct = (natVal > 0) ? Math.round((othersSum / natVal) * 100) : 0;
+
+          node.textContent = pct + '%';
+        });
+      });
+    }
+
+    // ===== 7) Filtres front pour statuts / type projet (colonnes)
+    function applyStatusFilter(){
+      const checked = $('.status-filter:checked').map((_,el)=>el.value).get();
       statusOrder.forEach(k => {
-        colMap[k] = { total: start, public: start+1, prive: start+2 };
-        start += 3;
+        const visible = checked.includes(k);
+        const cols = colMap[k];
+        dt.column(cols.total).visible(visible, false);
+        dt.column(cols.public).visible(visible && showPublicCol(), false);
+        dt.column(cols.prive ).visible(visible && showPriveCol(),  false);
       });
+      dt.columns.adjust().draw(false); // draw -> recompute via hook
+    }
 
-      function typeSelection(){ return $('input.type-filter:checked').val(); }
-      const showPublicCol = () => (typeSelection()==='tous' || typeSelection()==='public');
-      const showPriveCol  = () => (typeSelection()==='tous' || typeSelection()==='prive');
-
-      function applyStatusFilter(){
-        const checked = $('.status-filter:checked').map((_,el)=>el.value).get();
-        statusOrder.forEach(k => {
-          const visible = checked.includes(k);
-          const cols = colMap[k];
-          dt.column(cols.total).visible(visible, false);
-          dt.column(cols.public).visible(visible && showPublicCol(), false);
-          dt.column(cols.prive ).visible(visible && showPriveCol(),  false);
-        });
-        dt.columns.adjust().draw(false);
-      }
-
-      function applyTypeProjetFilter(){
-        const checked = $('.status-filter:checked').map((_,el)=>el.value).get();
-        statusOrder.forEach(k => {
-          const cols = colMap[k];
-          dt.column(cols.public).visible(checked.includes(k) && showPublicCol(), false);
-          dt.column(cols.prive ).visible(checked.includes(k) && showPriveCol(),  false);
-        });
-        dt.columns.adjust().draw(false);
-      }
-
-      function applyActorFilter(){
-        const enabled = $('.actor-filter:checked').map((_,el)=>el.value.toLowerCase()).get(); // ["national","mo",...]
-        // important : cibler les lignes via LA CLASSE
-        $table.find('tbody tr').each(function(){
-          const role = (this.dataset.role || '').toLowerCase();
-          if (role === 'ratio') { $(this).show(); return; }
-          $(this).toggle(enabled.includes(role));
-        });
-        dt.draw(false);
-      }
-
-      // Listeners
-      $(document).on('change', '.status-filter', applyStatusFilter);
-      $(document).on('change', '.type-filter',   applyTypeProjetFilter);
-      $(document).on('change', '.actor-filter',  applyActorFilter);
-
-      $('#btn-reset-filters').on('click', function(){
-        $('.status-filter').prop('checked', true);
-        $('.type-filter[value="tous"]').prop('checked', true);
-        $('.actor-filter').prop('checked', true);
-        applyStatusFilter(); applyTypeProjetFilter(); applyActorFilter();
+    function applyTypeProjetFilter(){
+      const checked = $('.status-filter:checked').map((_,el)=>el.value).get();
+      statusOrder.forEach(k => {
+        const cols = colMap[k];
+        dt.column(cols.public).visible(checked.includes(k) && showPublicCol(), false);
+        dt.column(cols.prive ).visible(checked.includes(k) && showPriveCol(),  false);
       });
+      dt.columns.adjust().draw(false); // draw -> recompute via hook
+    }
 
-      // Init
-      applyStatusFilter();
-      applyTypeProjetFilter();
-      applyActorFilter();
-    })();
+    // Hook draw : garder National en 1er et recalculer Ratio
+    dt.on('draw.dt', function(){
+      const $body = $table.find('tbody');
+      const $nat  = $body.find('tr.national-row');
+      if ($nat.length) { $nat.prependTo($body); } // National toujours en haut
+      recomputeRatio();
+    });
+
+    // Listeners
+    $(document).on('change', '.status-filter', applyStatusFilter);
+    $(document).on('change', '.type-filter',   applyTypeProjetFilter);
+    $(document).on('change', '.actor-filter',  applyActorFilter);
+
+    $('#btn-reset-filters').on('click', function(){
+      $('.status-filter').prop('checked', true);
+      $('.type-filter[value="tous"]').prop('checked', true);
+      $('.actor-filter').prop('checked', true);
+      applyStatusFilter(); applyTypeProjetFilter(); applyActorFilter(); // draw -> recompute
+    });
+
+    // Init
+    applyStatusFilter();
+    applyTypeProjetFilter();
+    applyActorFilter(); // draw -> recompute via hook
   });
 </script>
 

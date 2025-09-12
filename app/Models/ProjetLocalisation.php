@@ -30,6 +30,10 @@ class ProjetLocalisation extends Model
         return $this->hasOne(LocalitesPays::class, 'code_rattachement', 'code_localite')
                     ->where('id_pays', session('pays_selectionne'));
     }
-    
-
+    public function pays(){
+        return $this->belongsTo(Pays::class,  'pays_code', 'alpha3');
+    }
+    public function decoupageLibelle(){
+        return $this->belongsTo(DecoupageAdministratif::class,  'decoupage', 'code_decoupage');
+    }
 }

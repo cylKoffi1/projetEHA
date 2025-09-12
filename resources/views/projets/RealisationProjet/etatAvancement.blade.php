@@ -630,26 +630,16 @@
     // Mise à jour de la barre de progression
     function updateProgressBar(val) {
         $('#sliderValue').text(val + '%');
-        $('#pourcentage_Modal').val(val);
-        $('#quantite_reel_Modal').val(val);
-
-        // Afficher/masquer la section de finalisation
-        /*if (parseInt(val) >= 100) {
-            $('#finalisation-section').show();
-        } else {
-            $('#finalisation-section').hide();
-        }*/
+        $('#pourcentage_Modal').val(val);       // ← garder
+        // NE PAS pousser val dans #quantite_reel_Modal (ou supprime ce champ)
+        $('#quantite_reel_Modal').val(val);  // ← à enlever si on reste en modèle %
         if (parseInt(val) >= 100) {
             $('#finalisation-section').show();
-            $('#btn-finalisation-partielle').show();
-            $('enregistrerBtn').hide();
         } else {
             $('#finalisation-section').hide();
-            $('#btn-finalisation-partielle').hide();
-            $('enregistrerBtn').show();
         }
-
     }
+
 
     // Prévisualisation des photos avant upload
     $('#photos_avancement').on('change', function() {
@@ -658,7 +648,7 @@
         preview.empty();
 
         if (files.length > 15) {
-            alert('Vous ne pouvez sélectionner que 5 photos maximum');
+            swalMsg('Limite de fichiers', 'Vous ne pouvez sélectionner que 15 photos maximum', 'warning');
             $(this).val('');
             return;
         }
@@ -690,126 +680,136 @@
 
     // Chargement de l'historique des suivis
     function loadHistorique(codeProjet, numOrdre) {
-        $.ajax({
-            url: '{{ route("get.historique.avancement") }}',
-            type: 'GET',
-            data: {
-                code_projet: codeProjet,
-                num_ordre: numOrdre
-            },
-            beforeSend: function() {
-                $('#historiqueTable tbody').html('<tr><td colspan="4" class="text-center">Chargement...</td></tr>');
-            },
-            success: function(response) {
-                const tbody = $('#historiqueTable tbody');
-                tbody.empty();
+    $.ajax({
+        url: '{{ route("get.historique.avancement") }}',
+        type: 'GET',
+        data: { code_projet: codeProjet, num_ordre: numOrdre },
+        beforeSend: function() {
+        $('#historiqueTable tbody').html('<tr><td colspan="4" class="text-center">Chargement...</td></tr>');
+        },
+        success: function(response) {
+        const tbody = $('#historiqueTable tbody');
+        tbody.empty();
 
-                if (response.length === 0) {
-                    tbody.append('<tr><td colspan="4" class="text-center text-muted">Aucun suivi enregistré</td></tr>');
-                    return;
-                }
+        if (!response || response.length === 0) {
+            tbody.append('<tr><td colspan="4" class="text-center text-muted">Aucun suivi enregistré</td></tr>');
+            return;
+        }
 
-                response.forEach(item => {
-                    const photosHtml = item.photos && item.photos.length > 0
-                        ? `<a href="#" onclick="showPhotos('${item.photos.join(',')}')">Voir photos (${item.photos.length})</a>`
-                        : 'Aucune photo';
+        response.forEach(item => {
+            const photosHtml = (item.photos && item.photos.length > 0)
+            ? `<a href="#" onclick="return showPhotos('${item.photos.join(',')}')">Voir photos (${item.photos.length})</a>`
+            : 'Aucune photo';
 
-                    tbody.append(`
-                        <tr>
-                            <td>${item.date_avancement}</td>
-                            <td>${item.pourcentage}%</td>
-                            <td>${photosHtml}</td>
-                            <td>
-                                <button class="btn btn-sm btn-danger" onclick="deleteSuivi(${item.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `);
-                });
-            },
-            error: function(error) {
-                console.error('Erreur lors du chargement de l\'historique :', error);
-            }
+            tbody.append(`
+            <tr>
+                <td>${item.date_avancement}</td>
+                <td>${item.pourcentage}%</td>
+                <td>${photosHtml}</td>
+                <td>
+                <button type="button" class="btn btn-sm btn-danger btn-delete-suivi" onclick="deleteSuivi(${item.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+                </td>
+            </tr>
+            `);
         });
+        },
+        error: function() {
+        swalMsg('Erreur', "Impossible de charger l'historique", 'error');
+        }
+    });
     }
-
     // Fonction pour afficher les photos en grand
     function showPhotos(photos) {
-        const modal = `
-            <div class="modal fade" id="photosModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Photos de l'avancement</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="carouselPhotos" class="carousel slide" data-bs-ride="carousel">
-                                <div class="carousel-inner">
-                                    ${photos.split(',').map((photo, index) => `
-                                        <div class="carousel-item ${index === 0 ? 'active' : ''}">
-                                            <img src="/Data/avancement/${photo}" class="d-block w-100" alt="Photo avancement">
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselPhotos" data-bs-slide="prev">
-                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Previous</span>
-                                </button>
-                                <button class="carousel-control-next" type="button" data-bs-target="#carouselPhotos" data-bs-slide="next">
-                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Next</span>
-                                </button>
-                            </div>
-                        </div>
+    const ids = (photos || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (!ids.length) return false;
+
+    const modal = `
+        <div class="modal fade" id="photosModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Photos de l'avancement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <div id="carouselPhotos" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    ${ids.map((id, index) => `
+                    <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                        <!-- Adapte la route si tu sers GridFS: /files/{id} -->
+                        <img src="/Data/avancement/${id}" class="d-block w-100" alt="Photo avancement">
                     </div>
+                    `).join('')}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselPhotos" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Précédent</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselPhotos" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Suivant</span>
+                </button>
                 </div>
             </div>
-        `;
-
-        $('body').append(modal);
-        $('#photosModal').modal('show');
-        $('#photosModal').on('hidden.bs.modal', function () {
-            $(this).remove();
-        });
+            </div>
+        </div>
+        </div>`;
+    $('body').append(modal);
+    $('#photosModal').modal('show').on('hidden.bs.modal', function(){ $(this).remove(); });
+    return false;
     }
 
+    // Helpers SweetAlert2
+    function swalConfirm(opts) {
+    // opts: {title, text, icon='warning', confirmButtonText='Oui', cancelButtonText='Annuler'}
+    return Swal.fire({
+        title: opts.title || 'Confirmer',
+        text: opts.text || '',
+        icon: opts.icon || 'warning',
+        showCancelButton: true,
+        confirmButtonText: opts.confirmButtonText || 'OK',
+        cancelButtonText: opts.cancelButtonText || 'Annuler'
+    });
+    }
+
+    function swalMsg(title, text, icon) {
+    // icon doit être: 'success' | 'error' | 'warning' | 'info' | 'question'
+    return Swal.fire(title || '', text || '', icon || 'info');
+    }
 
     // Suppression d'un suivi
     function deleteSuivi(id) {
-        Swal.fire({
-            title: 'Confirmer la suppression',
-            text: 'Êtes-vous sûr de vouloir supprimer ce suivi ?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Oui, supprimer',
-            cancelButtonText: 'Annuler'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '/delete-suivi/' + id,
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                         _method: 'DELETE'
-                    },
+    swalConfirm({
+        title: 'Confirmer la suppression',
+        text: 'Êtes-vous sûr de vouloir supprimer ce suivi ?',
+        icon: 'warning',
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+    }).then((res) => {
+        if (!res.isConfirmed) return;
 
-                    success: function(response) {
-                        Swal.fire('Succès', 'Le suivi a été supprimé', 'success');
-                        // Recharger l'historique
-                        const codeProjet = $('#code_projet_Modal').val();
-                        const numOrdre = $('#ordre_Modal').val();
-                        loadHistorique(codeProjet, numOrdre);
-                    },
-                    error: function(error) {
-                        Swal.fire('Erreur', 'Une erreur est survenue', 'error');
-                    }
-                });
-            }
+        $.ajax({
+        url: '/delete-suivi/' + id,
+        type: 'POST',
+        data: { _token: '{{ csrf_token() }}', _method: 'DELETE' },
+        success: function() {
+            swalMsg('Succès', 'Le suivi a été supprimé', 'success');
+            const codeProjet = $('#code_projet_Modal').val();
+            const numOrdre   = $('#ordre_Modal').val();
+            loadHistorique(codeProjet, numOrdre);
+        },
+        error: function() {
+            swalMsg('Erreur', 'Une erreur est survenue pendant la suppression', 'error');
+        }
         });
+    });
     }
 
+    $(document).on('click', '.btn-delete-suivi', function(e){
+        e.preventDefault(); e.stopPropagation();
+    });
 
     // Gestion de la soumission du formulaire d'avancement
     $('#avancementForm').on('submit', function(e) {
@@ -820,14 +820,15 @@
 
         // Validation
         if (pourcentage > 100) {
-            Swal.fire('Attention', 'Le pourcentage ne peut pas dépasser 100%', 'warning');
+            alert('Attention', 'Le pourcentage ne peut pas dépasser 100%', 'warning');
             return;
         }
 
         // Vérifier les fichiers
-        const files = $('#photos_avancement')[0].files;
+
+        const files = $('#photos_avancement')[0].files || [];
         if (files.length > 15) {
-            Swal.fire('Attention', 'Vous ne pouvez sélectionner que 5 photos maximum', 'warning');
+            alert('Vous ne pouvez sélectionner que 15 photos maximum', 'warning');
             return;
         }
 
@@ -838,39 +839,45 @@
             processData: false,
             contentType: false,
             beforeSend: function() {
-                $('button[type="submit"]').prop('disabled', true)
-                    .html('<i class="fas fa-spinner fa-spin me-1"></i> Enregistrement...');
+            $('button[type="submit"]').prop('disabled', true)
+                .html('<i class="fas fa-spinner fa-spin me-1"></i> Enregistrement...');
             },
-            success: function(response) {
-                    alert('Le suivi a été enregistré avec succès');
+            success: function() {
+            swalMsg('Succès', 'Le suivi a été enregistré avec succès', 'success');
 
-                // Recharger l'historique
-                const codeProjet = $('#code_projet_Modal').val();
-                const numOrdre = $('#ordre_Modal').val();
-                loadHistorique(codeProjet, numOrdre);
+            // Recharge historique
+            const codeProjet = $('#code_projet_Modal').val();
+            const numOrdre   = $('#ordre_Modal').val();
+            loadHistorique(codeProjet, numOrdre);
 
-                // Réinitialiser partiellement le formulaire
-                $('#quantite_reel_slider').val(0);
-                $('#sliderValue').text('0%');
-                $('#photos_avancement').val('');
-                $('#photos-preview').empty();
+            // Reset partiel
+            const nextMin = Math.min(100, pourcentage + 1);
+            $('#quantite_reel_slider').attr({ min: nextMin, max: 100 }).val(nextMin);
+            updateProgressBar(nextMin);
+            $('#photos_avancement').val('');
+            $('#photos-preview').empty();
 
-                if (pourcentage >= 100) {
-                    $('#date_fin_effective').val('');
-                    $('#description_finale').val('');
-                    $('#finalisation-section').hide();
-                }
+            if (pourcentage >= 100) {
+                $('#date_fin_effective').val('');
+                $('#description_finale').val('');
+                $('#finalisation-section').hide();
+            }
             },
             error: function(xhr) {
-                let errorMessage = 'Une erreur est survenue';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                Swal.fire('Erreur', errorMessage, 'error');
+            // Affiche erreurs de validation si présentes
+            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                const errs = xhr.responseJSON.errors;
+                const firstKey = Object.keys(errs)[0];
+                swalMsg('Validation', errs[firstKey][0], 'warning');
+            } else {
+                let errorMessage = 'Une erreur est survenue lors de l’enregistrement.';
+                if (xhr.responseJSON && xhr.responseJSON.message) errorMessage = xhr.responseJSON.message;
+                swalMsg('Erreur', errorMessage, 'error');
+            }
             },
             complete: function() {
-                $('button[type="submit"]').prop('disabled', false)
-                    .html('<i class="fas fa-save me-1"></i> Enregistrer');
+            $('button[type="submit"]').prop('disabled', false)
+                .html('<i class="fas fa-save me-1"></i> Enregistrer');
             }
         });
     });
@@ -889,7 +896,7 @@
         afficheSelect('select_acteur');
 
         // Gestion de l'affichage de la liste des projets
-        $('#voir-liste-link').click(function(e) {
+        $('#voir-liste-link').on('click', function(e) {
             e.preventDefault();
             $('#liste-projets').slideToggle();
             $(this).find('i').toggleClass('fa-list fa-times');
@@ -907,16 +914,6 @@
     });
 
 
-    function initDataTable(tableId) {
-        $('#' + tableId).DataTable({
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
-            },
-            responsive: true,
-            dom: '<"top"f>rt<"bottom"lip><"clear">',
-            pageLength: 10
-        });
-    }
 
     function checkProjectDetails() {
         const codeProjet = $('#code_projet').val();
@@ -972,76 +969,57 @@
                 $('#code_projet').removeClass('loading');
             },
             error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: xhr.responseJSON?.message || 'Une erreur est survenue'
-                });
+                alert(xhr.responseJSON?.message || 'Une erreur est survenue', 'error');
             }
         });
     }
 
     function updateTableData(codeProjet, data) {
-        const tbody = $('#beneficiaire-table-body');
-        tbody.empty();
+    const tbody = $('#beneficiaire-table-body');
+    tbody.empty();
 
-        if (data.length === 0) {
-            tbody.append('<tr><td colspan="6" class="text-center text-muted">Aucune action disponible pour ce projet</td></tr>');
-            return;
-        }
+    if (!data || data.length === 0) {
+        tbody.append('<tr><td colspan="7" class="text-center text-muted">Aucune action disponible pour ce projet</td></tr>');
+        return;
+    }
 
-        data.forEach(item => {
-            console.log('item', item);
+    data.forEach(item => {
+        const caracButton = item.infrastructure_idCode
+        ? `<a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}" class="btn btn-sm btn-primary action-btn">
+            <i class="fas fa-cog me-1"></i> Caractéristiques
+            </a>`
+        : `<button type="button" class="btn btn-sm btn-secondary no-carac">
+            <i class="fas fa-ban me-1"></i> Caractéristiques
+            </button>`;
 
-            // Bouton Caractéristiques
-            let caracButton = '';
-            if (item.infrastructure_idCode) {
-                caracButton = `
-                    <a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}"
-                    class="btn btn-sm btn-primary action-btn">
-                        <i class="fas fa-cog me-1"></i> Caractéristiques
-                    </a>
-                `;
-            } else {
-                caracButton = `
-                    <button type="button" class="btn btn-sm btn-secondary no-carac">
-                        <i class="fas fa-ban me-1"></i> Caractéristiques
-                    </button>
-                `;
-            }
+        const row = `
+        <tr class="action" data-id="${item.code}">
+            <td class="num_ordre_cell">${item.Num_ordre}</td>
+            <td>${item.action_libelle || '-'}</td>
+            <td>${item.Quantite}</td>
+            <td>${item.infrastructure_libelle || '-'}</td>
+            <td>
+            <button type="button" class="btn btn-sm btn-outline-primary beneficiaire-btn"
+                    data-bs-toggle="modal" data-bs-target="#beneficiaireModal"
+                    data-projet="${codeProjet}" data-ordre="${item.Num_ordre}">
+                <i class="fas fa-user-plus me-1"></i> Bénéficiaires
+            </button>
+            </td>
+            <td>${caracButton}</td>
+            <td>
+            <button type="button" class="btn btn-sm btn-success action-btn btn-niveau-avancement"
+                    data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
+                    data-projet="${codeProjet}" data-ordre="${item.Num_ordre}" data-quantite="${item.Quantite}">
+                <i class="fas fa-chart-line me-1"></i> Suivi
+            </button>
+            </td>
+        </tr>`;
+        tbody.append(row);
+    });
 
-
-            const row = `
-                <tr class="action" data-id="${item.code}">
-                    <td class="num_ordre_cell">${item.Num_ordre}</td>
-                    <td>${item.action_libelle || '-'}</td>
-                    <td>${item.Quantite}</td>
-                    <td>${item.infrastructure_libelle || '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary beneficiaire-btn"
-                                data-bs-toggle="modal" data-bs-target="#beneficiaireModal"
-                                data-projet="${codeProjet}" data-ordre="${item.Num_ordre}">
-                            <i class="fas fa-user-plus me-1"></i> Bénéficiaires
-                        </button>
-                    </td>
-                    <td>${caracButton}</td>
-                    <td><button type="button" class="btn btn-sm btn-success action-btn btn-niveau-avancement"
-                        data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
-                        data-projet="${codeProjet}" data-ordre="${item.Num_ordre}" data-quantite="${item.Quantite}">
-                        <i class="fas fa-chart-line me-1"></i> Suivi
-                    </button></td>
-                </tr>
-            `;
-
-            tbody.append(row);
-        });
-
-        // Gestion des clics sur boutons désactivés
-        $(document).on('click', '.no-carac', function() {
-            alert("Aucune caractéristique disponible pour cette infrastructure.");
-        });
-
-
+    $(document).on('click', '.no-carac', function() {
+        swalMsg('Info', "Aucune caractéristique disponible pour cette infrastructure.", 'info');
+    });
     }
 
     // Gestion des bénéficiaires
@@ -1058,67 +1036,68 @@
     // Fonction pour ouvrir le suivi d'avancement
     $(document).on('click', '.btn-niveau-avancement', function() {
         const codeProjet = $(this).data('projet');
-        const numOrdre = $(this).data('ordre');
+        const numOrdre   = $(this).data('ordre');
 
-        // Réinitialiser le formulaire
+        // Reset UI
         $('#avancementForm')[0].reset();
         $('#photos-preview').empty();
         $('#finalisation-section').hide();
 
-        // Définir les valeurs cachées
+        // Valeurs cachées
         $('#code_projet_Modal').val(codeProjet);
         $('#ordre_Modal').val(numOrdre);
+
+        // Précharge les données + dernier pourcentage
         $.ajax({
             url: '{{ route("get.donnees.suivi") }}',
             type: 'GET',
-            data: {
-                code_projet: codeProjet,
-                num_ordre: numOrdre
-            },
+            data: { code_projet: codeProjet, num_ordre: numOrdre },
             beforeSend: function() {
-                $('#nature_travaux_Modal').val('Chargement...');
-                $('#quantite_provisionnel_Modal').val('...');
-                $('#date_debut_Modal').val('');
+            $('#nature_travaux_Modal').val('Chargement...');
+            $('#quantite_provisionnel_Modal').val('...');
+            $('#date_debut_Modal').val('');
             },
             success: function(response) {
-                if (!response.success || !response.result) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Aucune donnée',
-                        text: response.message || 'Aucune information disponible.'
-                    });
-                    return;
-                }
+            if (!response || !response.success || !response.result) {
+                swalMsg('Info', (response && response.message) || 'Aucune information disponible.', 'info');
+                return;
+            }
+            const data = response.result;
 
-                const data = response.result;
+            $('#nature_travaux_Modal').val(data.nature_travaux || 'Non défini');
+            $('#quantite_provisionnel_Modal').val(data.Quantite || 0);
+            $('#date_debut_Modal').val(data.date_debut_effective || '');
 
-                $('#nature_travaux_Modal').val(data.nature_travaux || 'Non défini');
-                $('#quantite_provisionnel_Modal').val(data.Quantite || 0);
-                $('#date_debut_Modal').val(data.date_debut_effective || '');
-                loadHistorique(codeProjet, numOrdre);
+            // Dernier % (retour API; défaut 0 si absent)
+            const lastPct = Number(data.dernier_pourcentage || 0);
+            const minNext = Math.min(100, lastPct + 1);
 
+            $('#quantite_reel_slider').attr({ min: minNext, max: 100 }).val(minNext);
+            updateProgressBar(minNext);
+
+            if (lastPct >= 100) {
+                $('#quantite_reel_slider').prop('disabled', true);
+                $('button[type="submit"]').prop('disabled', true);
+                $('#finalisation-section').hide();
+                swalMsg('Terminé', "Cette action est déjà à 100%. Aucun nouveau suivi n'est possible.", 'info');
+            } else {
+                $('#quantite_reel_slider').prop('disabled', false);
+                $('button[type="submit"]').prop('disabled', false);
+            }
+
+            loadHistorique(codeProjet, numOrdre);
             },
             error: function(xhr) {
-                const message = xhr.responseJSON?.message || 'Erreur inconnue lors du chargement des données.';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur AJAX',
-                    text: message
-                });
-                console.error('Erreur AJAX :', xhr);
+            const message = xhr.responseJSON?.message || 'Erreur inconnue lors du chargement des données.';
+            swalMsg('Erreur', message, 'error');
             }
         });
 
-
-        // Ouvrir l'offcanvas
-        const offcanvasEl = document.getElementById('niveauAvancementModal');
-        if (!offcanvasEl) {
-            console.error('Offcanvas non trouvé : #niveauAvancementModal');
-            return;
-        }
-        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+        // Ouvre l'offcanvas
+        const el = document.getElementById('niveauAvancementModal');
+        if (!el) return console.error('Offcanvas non trouvé : #niveauAvancementModal');
+        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(el);
         offcanvas.show();
-
     });
 
     function loadBeneficiaires(codeProjet, numOrdre) {
@@ -1154,11 +1133,7 @@
                 });
             },
             error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: 'Impossible de charger les bénéficiaires'
-                });
+                alert('Impossible de charger les bénéficiaires', 'erreur');
             }
         });
     }
@@ -1182,11 +1157,7 @@
         }
 
         if (!code) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Attention',
-                text: 'Veuillez sélectionner un élément à ajouter'
-            });
+            alert( 'Veuillez sélectionner un élément à ajouter', 'warning');
             return;
         }
 
@@ -1196,11 +1167,7 @@
         });
 
         if (exists) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Attention',
-                text: 'Cet élément est déjà dans la liste'
-            });
+            alert('Cet élément est déjà dans la liste', 'warning');
             return;
         }
 
@@ -1220,15 +1187,11 @@
         const selected = $('#beneficiaireTable tbody input[type="checkbox"]:checked').closest('tr');
 
         if (selected.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Attention',
-                text: 'Veuillez sélectionner au moins un élément à supprimer'
-            });
+            alert('Veuillez sélectionner au moins un élément à supprimer', 'warning');
             return;
         }
 
-        Swal.fire({
+        alert({
             title: 'Confirmer la suppression',
             text: `Êtes-vous sûr de vouloir supprimer ${selected.length} élément(s) ?`,
             icon: 'warning',

@@ -49,6 +49,11 @@ class Posseder extends Model
     public function secteurActivite(){
         return $this->belongsTo(SecteurActivite::class, 'secteur_id', 'code');
     }
+// App\Models\Posseder
+public function secteur()
+{
+    return $this->belongsTo(SecteurActivite::class, 'secteur_id', 'code');
+}
 
     /**
      * Scope pour récupérer uniquement les entrées actives

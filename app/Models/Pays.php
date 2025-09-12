@@ -28,7 +28,7 @@ class Pays extends Model
         'minZoom',
         'maxZoom'
     ];
-    protected $appends = ['armoirie_url','flag_url']; // ✅
+   /* protected $appends = ['armoirie_url','flag_url']; // ✅
 
     public function getArmoirieUrlAttribute(): ?string
     {
@@ -50,7 +50,7 @@ class Pays extends Model
             return str_starts_with($this->flag, 'http') ? $this->flag : url($this->flag);
         }
         return null;
-    }
+    }*/
     public static function idFromAlpha3(string $alpha3): ?int {
         return self::where('alpha3', $alpha3)->value('id');
     }

@@ -95,3 +95,4 @@ Route::prefix('api/infras')->group(function () {
     // Listes pour filtres (groupes, domaines, sous-domaines)
     Route::get('filters',   [sigAdminController::class, 'filters']);
 });
+

@@ -29,6 +29,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class RealiseProjetController extends Controller
 {
@@ -869,99 +872,154 @@ class RealiseProjetController extends Controller
         public function saveAvancement(Request $request)
         {
             try {
+                // 1) Validation (PAS de pourcentage_Modal ici)
                 $request->validate([
-                    'code_projet'        => 'required',
-                    'num_ordre'          => 'required|integer',
-                    'quantite_reel'      => 'required|numeric|min:0',
-                    'date_avancement'    => 'required|date',
-                    'photos_avancement.*'=> 'nullable|image|max:5120',
-                    'date_fin_effective' => 'nullable|date',
-                    'description_finale' => 'nullable|string|max:500'
+                    'code_projet'          => 'required',
+                    'num_ordre'            => 'required|integer',
+                    // Le slider envoie un % (0..100)
+                    'quantite_reel'        => 'required|numeric|min:0|max:100',
+                    'date_avancement'      => 'required|date',
+                    'photos_avancement'    => 'nullable|array|max:15',
+                    'photos_avancement.*'  => 'nullable|image|max:5120', // 5 Mo / fichier
+                    'date_fin_effective'   => 'nullable|date',
+                    'description_finale'   => 'nullable|string|max:500',
                 ]);
-
+        
+                // 2) Récupération action & garde-fous
                 $action = ProjetActionAMener::where('code_projet', $request->code_projet)
                     ->where('Num_ordre', $request->num_ordre)
                     ->first();
-
+        
                 if (!$action || (float)$action->Quantite <= 0) {
                     return response()->json([
                         'success' => false,
                         'message' => 'La quantité prévue est introuvable ou égale à zéro.'
                     ], 400);
                 }
-
-                $quantiteReelle = (float)$request->quantite_reel;
-                $pourcentage    = min(100, ($quantiteReelle / (float)$action->Quantite) * 100); // clamp à 100%
-
-                // 1) Créer l’avancement SANS les photos (pour avoir l’ID si besoin)
-                $avancement = AvancementProjet::create([
+        
+                // 3) Normalise le pourcentage reçu du slider (0..100)
+                $pourcentage = (int) $request->quantite_reel;
+                $pourcentage = max(0, min(100, $pourcentage));
+        
+                // 4) Dernier état (anti-régression)
+                $stats = AvancementProjet::where('code_projet', $request->code_projet)
+                    ->where('num_ordre', $request->num_ordre)
+                    ->selectRaw('MAX(pourcentage) as max_pct, MAX(date_avancement) as max_date')
+                    ->first();
+                $lastPct  = (int)($stats->max_pct ?? 0);
+                $lastDate = $stats->max_date ? Carbon::parse($stats->max_date) : null;
+        
+                if ($lastPct >= 100) {
+                    throw ValidationException::withMessages([
+                        'pourcentage' => "Cette action est déjà à 100%. Aucun nouveau suivi n'est possible."
+                    ]);
+                }
+                if ($pourcentage <= $lastPct) {
+                    throw ValidationException::withMessages([
+                        'pourcentage' => "Le nouvel avancement ({$pourcentage}%) doit être strictement supérieur au précédent ({$lastPct}%)."
+                    ]);
+                }
+                if ($lastDate && Carbon::parse($request->date_avancement)->lt($lastDate)) {
+                    throw ValidationException::withMessages([
+                        'date_avancement' => "La date de suivi doit être postérieure ou égale à {$lastDate->format('d/m/Y')}."
+                    ]);
+                }
+        
+                // 5) Calcule quantité réelle à partir du %
+                $quantitePrevue = (float) $action->Quantite;
+                $quantiteReelle = round(($pourcentage / 100) * $quantitePrevue, 4);
+        
+                DB::beginTransaction();
+        
+                // 6) Crée l’avancement (sans photos au départ)
+                $payload = [
                     'code_projet'        => $request->code_projet,
                     'num_ordre'          => $request->num_ordre,
-                    'quantite'           => $action->Quantite,
-                    'pourcentage'        => $request->pourcentage_Modal,
+                    // On garde le champ existant "quantite" = prévue (pour compat)
+                    'quantite'           => $quantitePrevue,
+                    'pourcentage'        => $pourcentage,
                     'date_avancement'    => $request->date_avancement,
-                    'photos'             => null, // rempli après upload
-                    'date_fin_effective' => ($pourcentage >= 100) ? $request->date_fin_effective : null,
-                    'description_finale' => ($pourcentage >= 100) ? $request->description_finale : null,
-                    'code_acteur'        => auth()->user()->acteur_id
-                ]);
-
-                // 2) Upload des photos dans GridFS (facultatif)
+                    'photos'             => null,
+                    'date_fin_effective' => null,
+                    'description_finale' => null,
+                    'code_acteur'        => auth()->user()->acteur_id ?? null,
+                ];
+        
+                // Si la colonne quantite_reelle existe, on la remplit aussi
+                try {
+                    if (Schema::hasColumn((new AvancementProjet)->getTable(), 'quantite_reelle')) {
+                        $payload['quantite_reelle'] = $quantiteReelle;
+                    }
+                } catch (\Throwable $e) {
+                    // ignore si pas de connexion schema en prod
+                }
+        
+                $avancement = AvancementProjet::create($payload);
+        
+                // 7) Upload photos (GridFS / Storage) + MAJ colonne photos (CSV d’IDs)
                 $photoIds = [];
                 if ($request->hasFile('photos_avancement')) {
                     foreach ($request->file('photos_avancement') as $photo) {
                         if (!$photo || !$photo->isValid()) continue;
-
+        
                         $res = app(FileProcService::class)->handle([
-                            'owner_type'  => 'Projet',            // ou 'Avancement'
-                            'owner_id'    => (string)$request->code_projet, // ok si owner_id est VARCHAR
-                            'categorie'   => 'AVANCEMENT_PHOTO', // ajoute cette catégorie à ta whitelist
+                            'owner_type'  => 'Projet',
+                            'owner_id'    => (string)$request->code_projet,
+                            'categorie'   => 'AVANCEMENT_PHOTO',
                             'file'        => $photo,
                             'uploaded_by' => optional($request->user())->id,
                         ]);
-
-                        $photoIds[] = (string)$res['id']; // on stocke l’ID fichiers
+        
+                        if (empty($res['id'])) {
+                            throw new \RuntimeException('Échec upload photo.');
+                        }
+                        $photoIds[] = (string)$res['id'];
                     }
                 }
-
-                if (!empty($photoIds)) {
-                    $avancement->photos = implode(',', $photoIds); // colonne existante "photos"
+                if ($photoIds) {
+                    $avancement->photos = implode(',', $photoIds);
                     $avancement->save();
                 }
-
-                // 3) Si finalisation
+        
+                // 8) Finalisation si 100%
                 if ($pourcentage >= 100) {
-                    if ($request->date_fin_effective) {
-                        ProjetStatut::updateOrCreate(
-                            ['code_projet' => $request->code_projet, 'type_statut' => 7],
-                            ['date_statut' => now()]
-                        );
-
-                        DateEffectiveProjet::updateOrCreate(
-                            ['code_projet' => $request->code_projet],
-                            ['date_fin_effective' => $request->date_fin_effective]
-                        );
-
-                        if (!empty($action->infrastructure_idCode)) {
-                            Infrastructure::where('code', $action->infrastructure_idCode)
-                                ->update(['isOver' => true]);
-                        }
-
-                        $avancement->update([
-                            'date_fin_effective' => $request->date_fin_effective,
-                            'description_finale' => $request->description_finale
+                    if (!$request->date_fin_effective) {
+                        throw ValidationException::withMessages([
+                            'date_fin_effective' => 'La date de fin effective est obligatoire pour clôturer.'
                         ]);
-                    } else {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'La date de fin effective est obligatoire pour clôturer le projet.'
-                        ], 422);
                     }
+        
+                    ProjetStatut::updateOrCreate(
+                        ['code_projet' => $request->code_projet, 'type_statut' => 3], 
+                        ['date_statut' => now()]
+                    );
+        
+                    DateEffectiveProjet::updateOrCreate(
+                        ['code_projet' => $request->code_projet],
+                        ['date_fin_effective' => $request->date_fin_effective]
+                    );
+        
+                    // Flag infra si liée
+                    if (!empty($action->infrastructure_idCode)) {
+                        Infrastructure::where('code', $action->infrastructure_idCode)
+                            ->update(['isOver' => true]);
+                    }
+        
+                    $avancement->update([
+                        'date_fin_effective' => $request->date_fin_effective,
+                        'description_finale' => $request->description_finale
+                    ]);
                 }
-
-
+        
+                DB::commit();
                 return response()->json(['success' => true]);
-
+        
+            } catch (\Illuminate\Validation\ValidationException $ve) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $ve->getMessage(),
+                    'errors'  => $ve->errors(),
+                ], 422);
             } catch (\Throwable $e) {
                 Log::error('Erreur lors de l’enregistrement de l’avancement', [
                     'exception'    => $e->getMessage(),
@@ -969,51 +1027,148 @@ class RealiseProjetController extends Controller
                     'num_ordre'    => $request->num_ordre ?? null,
                     'trace'        => $e->getTraceAsString(),
                 ]);
-
+        
                 return response()->json([
                     'success' => false,
-                    'message' => 'Une erreur est survenue lors de l’enregistrement.',
-                    'error'   => $e->getMessage()
+                    'message' => 'Une erreur est survenue lors de l’enregistrement.'
                 ], 500);
             }
         }
-
+        
         public function deleteSuivi($id)
         {
+            // 0) Récupération + autorisation
             $suivi = AvancementProjet::findOrFail($id);
-
-            DB::beginTransaction();
+        
+            // TODO: Policy/Gate si tu en as une
+            // $this->authorize('delete', $suivi);
+        
+            // 1) Suppression des fichiers AVANT la transaction DB
+            //    - évite d'avoir une DB "propre" et des blobs orphelins
+            $photoIds = [];
+            if (!empty($suivi->photos)) {
+                $photoIds = array_values(array_filter(array_map('trim', explode(',', (string) $suivi->photos))));
+            }
+        
             try {
-                // Supprimer les photos associées via FileProcService
-                if ($suivi->photos) {
-                    foreach (explode(',', $suivi->photos) as $photoId) {
-                        try {
-                            app(FileProcService::class)->delete($photoId);
-                        } catch (\Throwable $e) {
-                            Log::warning("Impossible de supprimer le fichier $photoId", ['error' => $e->getMessage()]);
-                        }
+                foreach ($photoIds as $pid) {
+                    try {
+                        // Doit tolérer les fichiers déjà supprimés côté stockage
+                        app(FileProcService::class)->delete($pid);
+                    } catch (\Throwable $e) {
+                        // Si c'est un "not found" tolérable, log en warning et continue.
+                        // Sinon, si c'est un vrai échec de stockage, on ABANDONNE pour éviter l’incohérence.
+                        Log::warning("Suppression fichier avancement: $pid échouée", ['error' => $e->getMessage()]);
+                        // -> Si tu veux être strict et ABORTER :
+                        // throw new \RuntimeException("Impossible de supprimer la pièce jointe $pid");
                     }
                 }
-
+            } catch (\Throwable $e) {
+                Log::error("Suppression des pièces jointe interrompue", ['id' => $id, 'error' => $e->getMessage()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => "Impossible de supprimer les pièces jointes de ce suivi. Suppression annulée."
+                ], 500);
+            }
+        
+            // 2) Transaction DB : suppression + remise en cohérence
+            DB::beginTransaction();
+            try {
+                $codeProjet = $suivi->code_projet;
+                $numOrdre   = $suivi->num_ordre;
+        
+                // Pour recalculs après suppression :
+                // On récupère l'action et l'infrastructure liée
+                $action = ProjetActionAMener::where('code_projet', $codeProjet)
+                    ->where('Num_ordre', $numOrdre)
+                    ->first();
+        
+                $infraCode = $action?->infrastructure_idCode;
+        
+                // (a) Supprimer le suivi
                 $suivi->delete();
+        
+                // (b) Recalculer l’avancement max de l’action concernée
+                $maxPctAction = AvancementProjet::where('code_projet', $codeProjet)
+                    ->where('num_ordre', $numOrdre)
+                    ->max('pourcentage') ?? 0;
+        
+                // (c) Si une infrastructure est liée, recalculer son "isOver"
+                if (!empty($infraCode)) {
+                    // Une infra est "over" si TOUTES ses actions associées au projet ont un dernier avancement à 100
+                    $actionsInfra = ProjetActionAMener::where('code_projet', $codeProjet)
+                        ->where('infrastructure_idCode', $infraCode)
+                        ->pluck('Num_ordre');
+        
+                    $all100 = true;
+                    foreach ($actionsInfra as $ord) {
+                        $pct = AvancementProjet::where('code_projet', $codeProjet)
+                            ->where('num_ordre', $ord)
+                            ->max('pourcentage') ?? 0;
+        
+                        if ((int)$pct < 100) {
+                            $all100 = false;
+                            break;
+                        }
+                    }
+        
+                    Infrastructure::where('code', $infraCode)->update(['isOver' => $all100]);
+                }
+        
+                // (d) Recalculer la finalisation du PROJET (optionnel mais recommandé)
+                //     Projet "terminé" si TOUTES ses actions ont un dernier % = 100
+                $ordresProjet = ProjetActionAMener::where('code_projet', $codeProjet)->pluck('Num_ordre');
+        
+                $projectAll100 = true;
+                foreach ($ordresProjet as $ord) {
+                    $pct = AvancementProjet::where('code_projet', $codeProjet)
+                        ->where('num_ordre', $ord)
+                        ->max('pourcentage') ?? 0;
+        
+                    if ((int)$pct < 100) {
+                        $projectAll100 = false;
+                        break;
+                    }
+                }
+        
+                if ($projectAll100) {
+                    // Le projet reste finalisé : s’assurer du statut/date OK (no-op)
+                    ProjetStatut::updateOrCreate(
+                        ['code_projet' => $codeProjet, 'type_statut' => 3],
+                        ['date_statut' => now()]
+                    );
+                    // On ne touche pas DateEffectiveProjet ici (ou on la conserve telle quelle)
+                } else {
+                    // Le projet n'est plus "terminé" suite à cette suppression :
+                    // - soit on supprime le statut 7
+                    // - soit on le rétrograde (selon ta gouvernance)
+                    ProjetStatut::where('code_projet', $codeProjet)
+                        ->where('type_statut', 3)
+                        ->delete();
+        
+                    // Option : effacer la date effective si plus de 100% nulle part
+                    // (à confirmer avec ta règle métier)
+                    DateEffectiveProjet::where('code_projet', $codeProjet)
+                        ->update(['date_fin_effective' => null]);
+                }
+        
                 DB::commit();
-
                 return response()->json(['success' => true]);
-
+        
             } catch (\Throwable $e) {
                 DB::rollBack();
                 Log::error("Erreur lors de la suppression du suivi", [
                     'id' => $id,
                     'error' => $e->getMessage()
                 ]);
-
+        
                 return response()->json([
                     'success' => false,
                     'message' => "Impossible de supprimer ce suivi."
                 ], 500);
             }
         }
-
+        
         public function getDonneesFormulaireSimplifie(Request $request)
         {
             $code_projet = $request->input('code_projet');

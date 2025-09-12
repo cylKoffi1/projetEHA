@@ -9,7 +9,7 @@ class ActionType extends Model
 {
     use HasFactory;
 
-    protected $table = 'actionType';
+    protected $table = 'actiontype';
     protected $primaryKey = 'id';
     public $timestamps = false;
 
