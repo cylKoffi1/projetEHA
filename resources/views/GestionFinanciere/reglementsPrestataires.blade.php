@@ -42,74 +42,88 @@
                 <input type="hidden" name="_method" value="POST" id="formMethod">
 
                 <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Projet *</label>
-                        <select name="code_projet" id="code_projet" class="form-select" required>
-                            <option value="">— Sélectionnez —</option>
-                            @foreach($projets as $p)
-                                <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
-                            @endforeach
-                        </select>
-                        @error('code_projet') <small class="text-danger">{{ $message }}</small> @enderror
+                
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Projet</label>
+                            <select name="code_projet" id="code_projet" class="form-select" required>
+                                <option value="">— Sélectionnez —</option>
+                                @foreach($projets as $p)
+                                    <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
+                                @endforeach
+                            </select>
+                            @error('code_projet') <small class="text-danger">{{ $message }}</small> @enderror
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Prestataire *</label>
+                            <select name="code_acteur" id="code_acteur" class="form-select" required>
+                                <option value="">— Sélectionnez —</option>
+                                @foreach($prestataires as $a)
+                                    <option value="{{ $a->code_acteur }}">{{ trim(($a->libelle_court ?? '').' '.($a->libelle_long ?? '')) }}</option>
+                                @endforeach
+                            </select>
+                            @error('code_acteur') <small class="text-danger">{{ $message }}</small> @enderror
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Mt. Facture</label>
+                            <input type="number" step="0.01" min="0" name="montant_facture" id="montant_facture" class="form-control">
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Devise</label>
+                            <input type="text" name="devise" class="form-control" placeholder="XOF">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Statut *</label>
+                            <select name="statut_id" class="form-select" required>
+                                @foreach($statuts as $s)
+                                    <option value="{{ $s->id }}">{{ $s->libelle }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Prestataire *</label>
-                        <select name="code_acteur" id="code_acteur" class="form-select" required>
-                            <option value="">— Sélectionnez —</option>
-                            @foreach($prestataires as $a)
-                                <option value="{{ $a->code_acteur }}">{{ trim(($a->libelle_court ?? '').' '.($a->libelle_long ?? '')) }}</option>
-                            @endforeach
-                        </select>
-                        @error('code_acteur') <small class="text-danger">{{ $message }}</small> @enderror
-                    </div>
+                    <div class="row">
+                        <div class="col-7"></div>
+                        <div class="col-md-2">
+                            <label class="form-label">Date Facture</label>
+                            <input type="date" name="date_facture" class="form-control">
+                        </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Mode de paiement *</label>
-                        <select name="mode_id" class="form-select" required>
-                            @foreach($modes as $m)
-                                <option value="{{ $m->id }}">{{ $m->libelle }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Réf. Facture</label>
+                            <input type="text" name="reference_facture" class="form-control">
+                        </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Statut *</label>
-                        <select name="statut_id" class="form-select" required>
-                            @foreach($statuts as $s)
-                                <option value="{{ $s->id }}">{{ $s->libelle }}</option>
-                            @endforeach
-                        </select>
                     </div>
+                    <div class="row">
+                        <div class="col-md-2">
+                            <label class="form-label">Date Règlement *</label>
+                            <input type="date" name="date_reglement" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Tranche N°</label>
+                            <input type="number" name="date_reglement" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Mode règlement *</label>
+                            <select name="mode_id" class="form-select" required>
+                                @foreach($modes as $m)
+                                    <option value="{{ $m->id }}">{{ $m->libelle }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="col-md-1">
-                        <label class="form-label">Devise</label>
-                        <input type="text" name="devise" class="form-control" placeholder="XOF">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Réf. Facture</label>
-                        <input type="text" name="reference_facture" class="form-control">
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Date Facture</label>
-                        <input type="date" name="date_facture" class="form-control">
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Mt. Facture</label>
-                        <input type="number" step="0.01" min="0" name="montant_facture" id="montant_facture" class="form-control">
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Date Règlement *</label>
-                        <input type="date" name="date_reglement" class="form-control" required>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Montant réglé *</label>
-                        <input type="number" step="0.01" min="0.01" name="montant_regle" id="montant_regle" class="form-control" required>
+                        <div class="col-md-3">
+                            <label class="form-label">Montant réglé *</label>
+                            <input type="number" step="0.01" min="0.01" name="montant_regle" id="montant_regle" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Solde *</label>
+                            <input type="number" step="0.01" min="0.01" name="montant_regle" id="montant_regle" class="form-control" required>
+                        </div>
                     </div>
 
                     <div class="col-12">

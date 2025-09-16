@@ -161,7 +161,7 @@
               {{-- TYPE PROJET --}}
               <div class="col-md-6 col-lg-4">
                 <h6 class="small fw-bold text-muted mb-3">
-                  <i class="bi bi-grid-1x2 text-success me-1"></i> Type de projet
+                 <center> <i class="bi bi-grid-1x2 text-success me-1"></i> Type de projet</center>
                 </h6>
                 <div class="row row-cols-3 g-2">
                   <div class="col">

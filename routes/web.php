@@ -534,11 +534,15 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::get('/api/infrastructures/geojson', [InfrastructureMapController::class, 'getInfrastructuresGeoJson']);
             Route::get('/api/infrastructures/familles-colors', [InfrastructureMapController::class, 'getFamillesColors']);
 
-            Route::get('admin/autresRequetes', [sigAdminController::class, 'Autrecarte']);
+            Route::get('', [sigAdminController::class, 'Autrecarte']);
             //Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
             //Route::get('admin/autresRequetes', [sigAdminController::class, 'page'])->name('sig.infras.page');
             // Légende dynamique
-  /*          Route::get('/api/legende/{groupe}', [SigAdminInfrastructureController::class, 'getByGroupe']);
+            
+            Route::get('admin/autresRequetes', [SigAdminInfrastructureController::class, 'pageInfras'])->name('sig.infras');
+
+// agrégats & légende
+ /*          Route::get('/api/legende/{groupe}', [SigAdminInfrastructureController::class, 'getByGroupe']);
 
             // Agrégat principal (utilisé par map.js → loadProjectData)
             Route::get('/api/projects', [SigAdminInfrastructureController::class, 'getProjects']);
@@ -851,48 +855,43 @@ Route::get('/map', function () {
 Route::get('/pays/armoirie/base64', function () {
     $user = Auth::user();
     $pays = $user?->paysSelectionne();
-    $armoirie = $pays?->armoirie;
+    $armoirie = $pays?->armoirie; // ex: "ci.png" ou "Data/armoirie/ci.png"
 
     if (!$armoirie) {
         return response()->json(['error' => 'Image non disponible.'], 404);
     }
 
-    // Nouveau : ID fichiers => GridFS
-    if (ctype_digit((string)$armoirie)) {
-        $row = DB::table('fichiers')->where('id', (int)$armoirie)->first();
-        if (!$row) {
-            return response()->json(['error' => 'Métadonnées fichier introuvables.'], 404);
-        }
-        $bytes = app(GridFsService::class)->downloadToString($row->gridfs_id);
-        if ($bytes === '') {
-            return response()->json(['error' => 'Contenu vide.'], 404);
-        }
-        $mime = $row->mime_type ?: 'image/png';
-        return response()->json([
-            'base64Image' => base64_encode($bytes),
-            'mime'        => $mime,
-        ]);
+    // Normalise pour n’accepter qu’un nom de fichier (évite ../ etc.)
+    $filename = basename($armoirie);
+
+    $baseDir = public_path('Data/armoiries');
+    $path = $baseDir . DIRECTORY_SEPARATOR . $filename;
+
+    // Vérif d’existence
+    if (!is_file($path)) {
+        return response()->json(['error' => 'Fichier non trouvé.'], 404);
     }
 
-    // Legacy : chemin local (public/)
-    if (!str_starts_with($armoirie, 'http')) {
-        $imagePath = public_path($armoirie);
-        if (!is_file($imagePath)) {
-            return response()->json(['error' => 'Fichier non trouvé.'], 404);
-        }
-        $bytes = file_get_contents($imagePath);
-        $mime  = \Illuminate\Support\Facades\File::mimeType($imagePath) ?: 'image/png';
-        return response()->json([
-            'base64Image' => base64_encode($bytes),
-            'mime'        => $mime,
-        ]);
+    // Lire les octets + MIME
+    $bytes = file_get_contents($path);
+    if ($bytes === false || $bytes === '') {
+        return response()->json(['error' => 'Contenu vide.'], 404);
     }
 
-    // (Optionnel) Si c’est une URL http/https, soit on refuse (pas de fetch serveur),
-    // soit on renvoie un placeholder
-    return response()->json(['error' => 'Source distante non supportée.'], 422);
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $path) ?: 'image/png';
+    finfo_close($finfo);
+
+    // (Optionnel) méta pour cache côté client
+    $mtime = filemtime($path) ?: time();
+
+    return response()->json([
+        'base64Image' => base64_encode($bytes),
+        'mime'        => $mime,
+        'filename'    => $filename,
+        'lastModified'=> $mtime,
+    ]);
 });
-
 route::get('/geojson', function () {
     $path = public_path('geojson/gadm41_CIV_4.json'); // Mettez à jour le chemin selon votre structure
 

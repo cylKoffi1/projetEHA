@@ -66,7 +66,7 @@
                 <div class="card-header">
                     <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
                         <h5 class="card-title">
-                            Ajout d'un projet
+                            Ajout d'un chef de projet
                             <a href="{{ route('projet') }}"  style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
                         </h5>
 

@@ -14,18 +14,33 @@ async function initDataTable(userNameReplace, table, title) {
 
     async function loadImage() {
         try {
-            const cached = sessionStorage.getItem('arm_b64');
-            if (cached) { imagePath = cached; return; }
-
-            const resp = await $.getJSON('/pays/armoirie/base64');
-            const mime = resp.mime || 'image/png';
-            imagePath = `data:${mime};base64,${resp.base64Image}`;
-            sessionStorage.setItem('arm_b64', imagePath);
+            // On met la clé sous la forme arm_b64::<filename>::<mtime>
+            // pour invalider le cache si le fichier change.
+            const metaResp = await $.getJSON('/pays/armoirie/base64'); // on va l'appeler une seule fois
+            const { mime, base64Image, filename, lastModified } = metaResp;
+            const cacheKey = `arm_b64::${filename}::${lastModified}`;
+    
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                imagePath = cached;
+                return;
+            }
+    
+            const dataUrl = `data:${mime || 'image/png'};base64,${base64Image}`;
+            imagePath = dataUrl;
+    
+            // Nettoyage des anciennes clés (autres arm_b64)
+            Object.keys(sessionStorage)
+              .filter(k => k.startsWith('arm_b64::'))
+              .forEach(k => sessionStorage.removeItem(k));
+    
+            sessionStorage.setItem(cacheKey, dataUrl);
         } catch (e) {
             console.warn("Logo non chargé, on continue sans image.", e);
-            imagePath = null; // pas de logo
+            imagePath = null;
         }
     }
+    
 
     function formatDate(date) {
         return date.toLocaleString("fr-FR", {

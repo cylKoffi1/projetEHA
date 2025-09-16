@@ -8,6 +8,7 @@ use App\Http\Controllers\WorkflowValidationController;
 use App\Models\Acteur;
 use App\Models\PersonnePhysique;
 use App\Http\Controllers\sigAdminController;
+use App\Http\Controllers\SigAdminInfrastructureController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -96,3 +97,15 @@ Route::prefix('api/infras')->group(function () {
     Route::get('filters',   [sigAdminController::class, 'filters']);
 });
 
+Route::get('/projectsInfras',                 [SigAdminInfrastructureController::class, 'aggregateProjectsInfras']);
+Route::get('/legendeInfras/{groupe}',         [SigAdminInfrastructureController::class, 'legendByGroupInfras']);
+
+// markers & détails
+Route::get('/infrasInfras/markers',           [SigAdminInfrastructureController::class, 'markersInfras']);
+Route::get('/project-detailsInfras',          [SigAdminInfrastructureController::class, 'projectDetailsInfras']);
+
+// filtres
+Route::get('/filtrer-projetsInfras',          [SigAdminInfrastructureController::class, 'filterOptionsAndAggregateInfras']);
+
+// carte afrique (optionnel)
+Route::get('/projectsInfras/all',             [SigAdminInfrastructureController::class, 'allProjectsInfras']);

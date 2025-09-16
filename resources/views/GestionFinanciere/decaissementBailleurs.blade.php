@@ -79,43 +79,27 @@
                         <input type="text" name="devise" id="devise" class="form-control" placeholder="XOF, USD..." readonly>
                     </div>
 
+                    <div class="col-md-2">
+                        <label class="form-label">Date décaissement</label>
+                        <input type="date" name="date_decaissement" class="form-control">
+                    </div>
+                    <div class="col-1"></div>
+                    <div class="col-md-2">
+                        <label class="form-label">Tranche N°</label>
+                        <input type="number" name="tranche_no" class="form-control" min="1">
+                    </div><div class="col-1"></div>
                     <div class="col-md-3">
-                        <label class="form-label">Montant *</label>
+                        <label class="form-label">Montant décaissé</label>
                         <input type="number" step="0.01" min="0.01" name="montant" class="form-control" required>
                         @error('montant') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-3 ">
                         <label class="form-label">Référence</label>
                         <input type="text" name="reference" class="form-control" placeholder="Ref. ou note interne">
                     </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Tranche N°</label>
-                        <input type="number" name="tranche_no" class="form-control" min="1">
-                    </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Statut *</label>
-                        <select name="statut_id" class="form-select" required>
-                            @foreach($statuts as $s)
-                                <option value="{{ $s->id }}" @selected($s->code==='demandee')>{{ $s->libelle }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Demandé le</label>
-                        <input type="date" name="date_demande" class="form-control">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Validé le</label>
-                        <input type="date" name="date_validation" class="form-control">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Décaissé le</label>
-                        <input type="date" name="date_decaissement" class="form-control">
-                    </div>
 
                     <div class="col-12">
                         <label class="form-label">Commentaire</label>
@@ -140,10 +124,10 @@
                     <tr>
                         <th>Projet</th>
                         <th>Bailleur</th>
-                        <th>Réf / Tranche</th>
+                        <th class="col-1">Tranche N° </th>
                         <th>Montant</th>
-                        <th>Dates</th>
-                        <th>Statut</th>
+                        <th>Date</th>
+                        <th>Référence</th>
                         <th style="width:110px">Actions</th>
                     </tr>
                 </thead>
