@@ -572,6 +572,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::post('admin/decaissementBailleurs',              [GestionFinanciereController::class, 'decaissementsStore'])->name('gf.decaissements.store');
             Route::put ('admin/decaissementBailleurs/{id}',         [GestionFinanciereController::class, 'decaissementsUpdate'])->name('gf.decaissements.update');
             Route::delete('admin/decaissementBailleurs/{id}',       [GestionFinanciereController::class, 'decaissementsDestroy'])->name('gf.decaissements.destroy');
+            Route::get('gf/decaissements/next-tranche', [GestionFinanciereController::class, 'getNextTranche'])->name('gf.decaissements.nextTranche');
+
         
             // Ajax: récupérer les financements (engagements) d’un projet pour alimenter la liste
             Route::get('admin/decaissementBailleurs/financements/{code_projet}', [GestionFinanciereController::class, 'financementsByProjet'])

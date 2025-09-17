@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\DecaissementStatut;
 use Illuminate\Database\Eloquent\Model;
 
 class Decaissement extends Model
@@ -17,18 +16,14 @@ class Decaissement extends Model
         'tranche_no',
         'montant',
         'devise',
-        'date_demande',
-        'date_validation',
         'date_decaissement',
-        'statut_id',
         'commentaire',
         'created_by',
     ];
 
     protected $casts = [
+        'tranche_no'        => 'integer', 
         'montant'           => 'decimal:2',
-        'date_demande'      => 'date',
-        'date_validation'   => 'date',
         'date_decaissement' => 'date',
         'created_at'        => 'datetime',
         'updated_at'        => 'datetime',
@@ -50,8 +45,4 @@ class Decaissement extends Model
         return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
     }
 
-    public function statut()
-    {
-        return $this->belongsTo(DecaissementStatut::class, 'statut_id');
-    }
 }
