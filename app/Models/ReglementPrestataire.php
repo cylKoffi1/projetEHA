@@ -11,7 +11,7 @@ class ReglementPrestataire extends Model
     protected $table = 'gf_reglements';
     protected $fillable = [
         'code_projet','code_acteur',
-        'reference_facture','date_facture',
+        'reference_facture','date_facture','tranche_no',
         'montant_facture','montant_regle','devise',
         'mode_id','statut_id','date_reglement',
         'commentaire','created_by'
@@ -22,7 +22,8 @@ class ReglementPrestataire extends Model
         'date_reglement'  => 'date',
         'montant_facture' => 'decimal:2',
         'montant_regle'   => 'decimal:2',
-    ];
+        'tranche_no'      => 'integer',
+      ];
 
     public function projet()      { return $this->belongsTo(Projet::class, 'code_projet', 'code_projet'); }
     public function prestataire() { return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur'); }

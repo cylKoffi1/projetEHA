@@ -244,25 +244,17 @@
                                         <label class="form-label">Participants effectifs</label>
                                         <input type="number" name="nb_participants_effectif" class="form-control" placeholder="Ex : 47">
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label">Coût prévisionnel (XOF)</label>
                                         <input type="number" step="0.01" name="cout_previsionnel" class="form-control" placeholder="Ex : 2500000">
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label">Coût réel (XOF)</label>
                                         <input type="number" step="0.01" name="cout_reel" class="form-control" placeholder="Ex : 2350000">
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label">Source de financement</label>
                                         <input type="text" name="source_financement" class="form-control" placeholder="Ex : Banque mondiale / État">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Pré-test (moy.)</label>
-                                        <input type="number" step="0.01" name="pretest_moy" class="form-control" placeholder="Ex : 45.5">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Post-test (moy.)</label>
-                                        <input type="number" step="0.01" name="posttest_moy" class="form-control" placeholder="Ex : 78.0">
                                     </div>
                                 </div>
                             </div>
@@ -453,8 +445,6 @@
                                                     'cout_previsionnel' => $r->cout_previsionnel,
                                                     'cout_reel' => $r->cout_reel,
                                                     'source_financement' => $r->source_financement,
-                                                    'pretest_moy' => $r->pretest_moy,
-                                                    'posttest_moy' => $r->posttest_moy,
                                                     'statutId' => $r->statutId,
                                                     'motif_annulation' => $r->motif_annulation,
                                                     'projets' => $r->projets->pluck('code_projet'),
@@ -631,8 +621,6 @@ async function deleteFile(id) {
     $('[name="cout_previsionnel"]').val(payload.cout_previsionnel || '');
     $('[name="cout_reel"]').val(payload.cout_reel || '');
     $('[name="source_financement"]').val(payload.source_financement || '');
-    $('[name="pretest_moy"]').val(payload.pretest_moy || '');
-    $('[name="posttest_moy"]').val(payload.posttest_moy || '');
     $('#statutId').val(payload.statutId || 'plan');
 
     $('#projets').val((payload.projets || []).map(String)).trigger('change');

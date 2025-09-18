@@ -17,6 +17,8 @@ use App\Models\ReglementStatut;
 use App\Models\ModePaiement;
 use App\Models\Pays;
 use App\Models\Pib;
+use App\Models\Renforcement;
+use App\Models\TravauxConnexes;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,666 +29,704 @@ use Illuminate\Validation\ValidationException;
 
 class GestionFinanciereController extends Controller
 {
-    /** Liste + écran principal */
-    public function decaissementsIndex(Request $request)
-    {
-        $pays   = session('pays_selectionne');
-        $groupe = session('projet_selectionne');
+    /*******************DECAISSEMENT ***********************/
+        /** Liste + écran principal */
+        public function decaissementsIndex(Request $request)
+        {
+            $pays   = session('pays_selectionne');
+            $groupe = session('projet_selectionne');
 
-        $projets = Projet::where('code_projet', 'like', $pays.$groupe.'%')
-            ->orderBy('code_projet')
-            ->get(['code_projet','libelle_projet','code_devise']);
+            $projets = Projet::where('code_projet', 'like', $pays.$groupe.'%')
+                ->orderBy('code_projet')
+                ->get(['code_projet','libelle_projet','code_devise']);
 
 
-        $decaissements = Decaissement::with(['projet','bailleur','financer.bailleur'])
-            ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
-            ->orderByDesc('date_decaissement')
-            ->paginate(25);
+            $decaissements = Decaissement::with(['projet','bailleur','financer.bailleur'])
+                ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
+                ->orderByDesc('date_decaissement')
+                ->paginate(25);
 
-        return view('GestionFinanciere.decaissementBailleurs', compact('projets','decaissements'));
-    }
-
-    public function getNextTranche(Request $request)
-    {
-        $code_projet = $request->get('code_projet');
-        $financer_id = $request->get('financer_id'); // peut être null
-    
-        // On résout le bailleur (code_acteur) si un financer_id est fourni
-        $codeActeur = null;
-        if (!empty($financer_id)) {
-            $fin = Financer::with('bailleur')->find($financer_id);
-            $codeActeur = $fin?->bailleur?->code_acteur;
+            return view('GestionFinanciere.decaissementBailleurs', compact('projets','decaissements'));
         }
-    
-        $max = Decaissement::where('code_projet', $code_projet)
-            ->when($codeActeur, fn($q) => $q->where('code_acteur', $codeActeur))
-            ->max('tranche_no');
-    
-        $next = $max ? ((int)$max + 1) : 1;
-    
-        return response()->json(['next' => $next]);
-    }
-    
-    private function computeNextTranche(string $codeProjet, $financerId = null, $codeActeur = null): int
-    {
-        // priorité au codeActeur si fourni (ex: tu peux l’appeler avec code_acteur directement)
-        if (!$codeActeur && $financerId) {
-            $fin = Financer::with('bailleur')->find($financerId);
-            $codeActeur = $fin?->bailleur?->code_acteur;
-        }
-    
-        $max = Decaissement::where('code_projet', $codeProjet)
-            ->when($codeActeur, fn($q) => $q->where('code_acteur', $codeActeur))
-            ->max('tranche_no');
-    
-        return $max ? ((int)$max + 1) : 1;
-    }
-    
-    // === JSON: listage des financements par projet (pour peupler les selects) ===
-    public function financementsByProjet(string $codeProjet)
-    {
-        $financements = Financer::with(['bailleur.secteurActiviteActeur.secteur'])
-            ->where('code_projet', $codeProjet)
-            ->actifs() // si tu as le scope
-            ->get();
 
-        $payload = $financements->map(function ($f) {
-            $b = $f->bailleur;
-            // Libellé bailleur (avec précision Ministère de … si dispo)
-            $isMinistere = trim($b->libelle_court) === 'Ministère' || trim($b->libelle_long) === 'Ministère';
-            $secteur = optional($b->secteurActiviteActeur->first())->secteur?->libelle;
-            $bailleurLabel = trim(($b->libelle_court ?? '').' '.($b->libelle_long ?? ''));
-            if ($isMinistere && $secteur) {
-                $bailleurLabel = 'Ministère de '.$secteur;
+        public function getNextTranche(Request $request)
+        {
+            $code_projet = $request->get('code_projet');
+            $financer_id = $request->get('financer_id'); // peut être null
+        
+            // On résout le bailleur (code_acteur) si un financer_id est fourni
+            $codeActeur = null;
+            if (!empty($financer_id)) {
+                $fin = Financer::with('bailleur')->find($financer_id);
+                $codeActeur = $fin?->bailleur?->code_acteur;
             }
-
-            return [
-                'id'               => $f->id,
-                'montant'          => (float) $f->montant_finance,
-                'montant_fmt'      => number_format((float)$f->montant_finance, 0, ',', ' '),
-                'devise'           => $f->devise,
-                'date'             => optional($f->date_engagement)->format('Y-m-d'),
-                'bailleur_id'      => $b?->code_acteur,
-                'bailleur_label'   => $bailleurLabel,
-                'is_ministere'     => $isMinistere,
-                'bailleur_secteur' => $secteur,
-            ];
-        })->values();
-
-        return response()->json($payload);
-    }
-
-    /**
-     * Retourne le plafond (montant financé) et le total déjà décaissé
-     * pour un couple (code_projet, code_acteur). Si financer_id est fourni,
-     * le plafond est le montant de CE financement uniquement ; sinon, c’est
-     * la somme des financements de ce bailleur sur le projet.
-     *
-     * @return array{plafond: float, deja: float}
-     */
-    private function getPlafondEtDeja(string $codeProjet, ?int $financerId, string $codeActeur, ?int $ignoreDecaissementId = null): array
-    {
-        // 1) Plafond (financement)
-        if ($financerId) {
-            $plafond = (float) optional(Financer::find($financerId))->montant_finance ?? 0.0;
-        } else {
-            // somme des financements du même bailleur sur le projet
-            $plafond = (float) Financer::where('code_projet', $codeProjet)
-                ->whereHas('bailleur', fn($q) => $q->where('code_acteur', $codeActeur))
-                ->sum('montant_finance');
+        
+            $max = Decaissement::where('code_projet', $code_projet)
+                ->when($codeActeur, fn($q) => $q->where('code_acteur', $codeActeur))
+                ->max('tranche_no');
+        
+            $next = $max ? ((int)$max + 1) : 1;
+        
+            return response()->json(['next' => $next]);
         }
+        
+        private function computeNextTranche(string $codeProjet, $financerId = null, $codeActeur = null): int
+        {
+            // priorité au codeActeur si fourni (ex: tu peux l’appeler avec code_acteur directement)
+            if (!$codeActeur && $financerId) {
+                $fin = Financer::with('bailleur')->find($financerId);
+                $codeActeur = $fin?->bailleur?->code_acteur;
+            }
+        
+            $max = Decaissement::where('code_projet', $codeProjet)
+                ->when($codeActeur, fn($q) => $q->where('code_acteur', $codeActeur))
+                ->max('tranche_no');
+        
+            return $max ? ((int)$max + 1) : 1;
+        }
+        
+        // === JSON: listage des financements par projet (pour peupler les selects) ===
+        public function financementsByProjet(string $codeProjet)
+        {
+            $financements = Financer::with(['bailleur.secteurActiviteActeur.secteur'])
+                ->where('code_projet', $codeProjet)
+                ->actifs() // si tu as le scope
+                ->get();
 
-        // 2) Déjà décaissé (tous décaissements pour ce projet + bailleur)
-        $deja = (float) Decaissement::where('code_projet', $codeProjet)
-            ->where('code_acteur', $codeActeur)
-            ->when($ignoreDecaissementId, fn($q) => $q->where('id', '!=', $ignoreDecaissementId))
-            ->sum('montant');
-
-        return ['plafond' => $plafond, 'deja' => $deja];
-    }
-
-    // === JSON: création ===
-    public function decaissementsStore(Request $request)
-    {
-        try {
-            // 1) Si un financement est choisi, on récupère le bailleur/devise AVANT la validation
-            if ($request->filled('financer_id')) {
-                $fin = Financer::with('bailleur')->find($request->input('financer_id'));
-                if ($fin && $fin->bailleur) {
-                    $request->merge([
-                        'code_acteur' => $request->input('code_acteur') ?: $fin->bailleur->code_acteur,
-                        'devise'      => $request->input('devise') ?: $fin->devise,
-                    ]);
+            $payload = $financements->map(function ($f) {
+                $b = $f->bailleur;
+                // Libellé bailleur (avec précision Ministère de … si dispo)
+                $isMinistere = trim($b->libelle_court) === 'Ministère' || trim($b->libelle_long) === 'Ministère';
+                $secteur = optional($b->secteurActiviteActeur->first())->secteur?->libelle;
+                $bailleurLabel = trim(($b->libelle_court ?? '').' '.($b->libelle_long ?? ''));
+                if ($isMinistere && $secteur) {
+                    $bailleurLabel = 'Ministère de '.$secteur;
                 }
+
+                return [
+                    'id'               => $f->id,
+                    'montant'          => (float) $f->montant_finance,
+                    'montant_fmt'      => number_format((float)$f->montant_finance, 0, ',', ' '),
+                    'devise'           => $f->devise,
+                    'date'             => optional($f->date_engagement)->format('Y-m-d'),
+                    'bailleur_id'      => $b?->code_acteur,
+                    'bailleur_label'   => $bailleurLabel,
+                    'is_ministere'     => $isMinistere,
+                    'bailleur_secteur' => $secteur,
+                ];
+            })->values();
+
+            return response()->json($payload);
+        }
+
+        /**
+         * Retourne le plafond (montant financé) et le total déjà décaissé
+         * pour un couple (code_projet, code_acteur). Si financer_id est fourni,
+         * le plafond est le montant de CE financement uniquement ; sinon, c’est
+         * la somme des financements de ce bailleur sur le projet.
+         *
+         * @return array{plafond: float, deja: float}
+         */
+        private function getPlafondEtDeja(string $codeProjet, ?int $financerId, string $codeActeur, ?int $ignoreDecaissementId = null): array
+        {
+            // 1) Plafond (financement)
+            if ($financerId) {
+                $plafond = (float) optional(Financer::find($financerId))->montant_finance ?? 0.0;
+            } else {
+                // somme des financements du même bailleur sur le projet
+                $plafond = (float) Financer::where('code_projet', $codeProjet)
+                    ->whereHas('bailleur', fn($q) => $q->where('code_acteur', $codeActeur))
+                    ->sum('montant_finance');
             }
-    
-            // 2) Validation : code_acteur requis si financer_id absent
-            $data = $request->validate([
-                'code_projet'       => ['required','string','exists:projets,code_projet'],
-                'code_acteur'       => ['required_without:financer_id','string','exists:acteur,code_acteur'],
-                'reference'         => ['nullable','string','max:100'],
-                'tranche_no'        => ['nullable','integer','min:1'],
-                'montant'           => ['required','numeric', 'min:0.01'],
-                'devise'            => ['nullable','string','max:10'],
-                'date_decaissement' => ['nullable','date'],
-                'commentaire'       => ['nullable','string'],
-            ], [
-                'code_acteur.required_without' => "Le bailleur est obligatoire si aucun financement n'est sélectionné.",
-            ]);
 
-            // Résoudre code_acteur (tu l’as déjà merge si financer_id)
-            $codeProjet  = $data['code_projet'];
-            $codeActeur  = $data['code_acteur'];
-            $financerId  = $request->input('financer_id');
-            $montantCourant = (float) $data['montant'];
+            // 2) Déjà décaissé (tous décaissements pour ce projet + bailleur)
+            $deja = (float) Decaissement::where('code_projet', $codeProjet)
+                ->where('code_acteur', $codeActeur)
+                ->when($ignoreDecaissementId, fn($q) => $q->where('id', '!=', $ignoreDecaissementId))
+                ->sum('montant');
 
-            // Récup plafond & déjà décaissé
-            ['plafond' => $plafond, 'deja' => $deja] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, null);
+            return ['plafond' => $plafond, 'deja' => $deja];
+        }
 
-            // Comparaison
-            if ($plafond > 0 && ($deja + $montantCourant) - $plafond > 1e-9) {
-                $reste = max(0, $plafond - $deja);
-                return response()->json([
-                    'ok'      => false,
-                    'message' => "Plafond dépassé : déjà décaissé "
-                        . number_format($deja, 2, ',', ' ')
-                        . " sur " . number_format($plafond, 2, ',', ' ')
-                        . ". Reste autorisé : " . number_format($reste, 2, ',', ' ') . ".",
-                ], 422);
-            }
+        // === JSON: création ===
+        public function decaissementsStore(Request $request)
+        {
+            try {
+                // 1) Si un financement est choisi, on récupère le bailleur/devise AVANT la validation
+                if ($request->filled('financer_id')) {
+                    $fin = Financer::with('bailleur')->find($request->input('financer_id'));
+                    if ($fin && $fin->bailleur) {
+                        $request->merge([
+                            'code_acteur' => $request->input('code_acteur') ?: $fin->bailleur->code_acteur,
+                            'devise'      => $request->input('devise') ?: $fin->devise,
+                        ]);
+                    }
+                }
+        
+                // 2) Validation : code_acteur requis si financer_id absent
+                $data = $request->validate([
+                    'code_projet'       => ['required','string','exists:projets,code_projet'],
+                    'code_acteur'       => ['required_without:financer_id','string','exists:acteur,code_acteur'],
+                    'reference'         => ['nullable','string','max:100'],
+                    'tranche_no'        => ['nullable','integer','min:1'],
+                    'montant'           => ['required','numeric', 'min:0.01'],
+                    'devise'            => ['nullable','string','max:10'],
+                    'date_decaissement' => ['nullable','date'],
+                    'commentaire'       => ['nullable','string'],
+                ], [
+                    'code_acteur.required_without' => "Le bailleur est obligatoire si aucun financement n'est sélectionné.",
+                ]);
 
-            if (!empty($data['financer_id'])) {
-                $fin = Financer::find($data['financer_id']);
-                if ($fin && $data['montant'] > (float) $fin->montant_finance) {
+                // Résoudre code_acteur (tu l’as déjà merge si financer_id)
+                $codeProjet  = $data['code_projet'];
+                $codeActeur  = $data['code_acteur'];
+                $financerId  = $request->input('financer_id');
+                $montantCourant = (float) $data['montant'];
+
+                // Récup plafond & déjà décaissé
+                ['plafond' => $plafond, 'deja' => $deja] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, null);
+
+                // Comparaison
+                if ($plafond > 0 && ($deja + $montantCourant) - $plafond > 1e-9) {
+                    $reste = max(0, $plafond - $deja);
                     return response()->json([
                         'ok'      => false,
-                        'message' => 'Le montant décaissé dépasse le montant financé par le bailleur.',
+                        'message' => "Plafond dépassé : déjà décaissé "
+                            . number_format($deja, 2, ',', ' ')
+                            . " sur " . number_format($plafond, 2, ',', ' ')
+                            . ". Reste autorisé : " . number_format($reste, 2, ',', ' ') . ".",
                     ], 422);
                 }
-            }
 
-            if (empty($data['tranche_no'])) {
-                $data['tranche_no'] = $this->computeNextTranche(
-                    $data['code_projet'],
-                    $request->input('financer_id'),  
-                    $data['code_acteur'] ?? null    
-                );
-            }            
-
-            $dec = Decaissement::create($data + ['created_by' => auth()->id()]);
-    
-            return response()->json([
-                'ok' => true,
-                'message' => 'Décaissement créé avec succès.',
-                'data' => $dec->load(['bailleur'])
-            ], 201);
-    
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Veuillez corriger les erreurs.',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Throwable $e) {
-            Log::error('Création décaissement - erreur', ['msg' => $e->getMessage()]);
-            return response()->json(['ok' => false, 'message' => 'Erreur lors de la création du décaissement.'], 500);
-        }
-    }
-    
-    // === JSON: mise à jour ===
-    public function decaissementsUpdate(Request $request, $id)
-    {
-        $dec = Decaissement::findOrFail($id);
-    
-        try {
-            if ($request->filled('financer_id')) {
-                $fin = Financer::with('bailleur')->find($request->input('financer_id'));
-                if ($fin && $fin->bailleur) {
-                    $request->merge([
-                        'code_acteur' => $request->input('code_acteur') ?: $fin->bailleur->code_acteur,
-                        'devise'      => $request->input('devise') ?: $fin->devise,
-                    ]);
+                if (!empty($data['financer_id'])) {
+                    $fin = Financer::find($data['financer_id']);
+                    if ($fin && $data['montant'] > (float) $fin->montant_finance) {
+                        return response()->json([
+                            'ok'      => false,
+                            'message' => 'Le montant décaissé dépasse le montant financé par le bailleur.',
+                        ], 422);
+                    }
                 }
-            }
-    
-            $data = $request->validate([
-                'code_projet'       => ['required','string','exists:projets,code_projet'],
-                'code_acteur'       => ['required_without:financer_id','string','exists:acteur,code_acteur'],
-                'reference'         => ['nullable','string','max:100'],
-                'tranche_no'        => ['nullable','integer','min:1'],
-                'montant'           => ['required','numeric', 'min:0.01'],
-                'devise'            => ['nullable','string','max:10'],
-                'date_decaissement' => ['nullable','date'],
-                'commentaire'       => ['nullable','string'],
-            ], [
-                'code_acteur.required_without' => "Le bailleur est obligatoire si aucun financement n'est sélectionné.",
-            ]);
-    
-            $codeProjet  = $data['code_projet'];
-            $codeActeur  = $data['code_acteur'];
-            $financerId  = $request->input('financer_id');
-            $montantCourant = (float) $data['montant'];
 
-            ['plafond' => $plafond, 'deja' => $dejaHorsCourant] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, $dec->id);
+                if (empty($data['tranche_no'])) {
+                    $data['tranche_no'] = $this->computeNextTranche(
+                        $data['code_projet'],
+                        $request->input('financer_id'),  
+                        $data['code_acteur'] ?? null    
+                    );
+                }            
 
-            if ($plafond > 0 && ($dejaHorsCourant + $montantCourant) - $plafond > 1e-9) {
-                $reste = max(0, $plafond - $dejaHorsCourant);
+                $dec = Decaissement::create($data + ['created_by' => auth()->id()]);
+        
                 return response()->json([
-                    'ok'      => false,
-                    'message' => "Plafond dépassé : déjà décaissé "
-                        . number_format($dejaHorsCourant, 2, ',', ' ')
-                        . " sur " . number_format($plafond, 2, ',', ' ')
-                        . ". Reste autorisé : " . number_format($reste, 2, ',', ' ') . ".",
+                    'ok' => true,
+                    'message' => 'Décaissement créé avec succès.',
+                    'data' => $dec->load(['bailleur'])
+                ], 201);
+        
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Veuillez corriger les erreurs.',
+                    'errors' => $e->errors()
                 ], 422);
+            } catch (\Throwable $e) {
+                Log::error('Création décaissement - erreur', ['msg' => $e->getMessage()]);
+                return response()->json(['ok' => false, 'message' => 'Erreur lors de la création du décaissement.'], 500);
             }
-
-            if (!empty($data['financer_id'])) {
-                $fin = Financer::find($data['financer_id']);
-                if ($fin && $data['montant'] > (float) $fin->montant_finance) {
-                    return response()->json([
-                        'ok'      => false,
-                        'message' => 'Le montant décaissé dépasse le montant financé par le bailleur.',
-                    ], 422);
-                }
-            }
-    
-            if (empty($data['tranche_no'])) {
-                $data['tranche_no'] = $this->computeNextTranche(
-                    $data['code_projet'],
-                    $request->input('financer_id'),   
-                    $data['code_acteur'] ?? null      
-                );
-            }
-            
-            $dec->update($data);
-    
-            return response()->json([
-                'ok' => true,
-                'message' => 'Décaissement mis à jour.',
-                'data' => $dec->fresh()->load(['bailleur'])
-            ]);
-    
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Veuillez corriger les erreurs.',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Throwable $e) {
-            \Log::error('MAJ décaissement - erreur', ['msg' => $e->getMessage()]);
-            return response()->json(['ok' => false, 'message' => 'Erreur lors de la mise à jour.'], 500);
         }
-    }
-    
-
-    // === JSON: suppression ===
-    public function decaissementsDestroy($id)
-    {
-        try {
+        
+        // === JSON: mise à jour ===
+        public function decaissementsUpdate(Request $request, $id)
+        {
             $dec = Decaissement::findOrFail($id);
-            $dec->delete();
-            return response()->json(['ok'=>true,'message'=>'Décaissement supprimé.']);
-        } catch (\Throwable $e) {
-            return response()->json(['ok'=>false,'message'=>'Suppression impossible.'], 500);
-        }
-    }
-
-
-    public function achatsIndex(Request $request)
-    {
-        $pays   = session('pays_selectionne');
-        $groupe = session('projet_selectionne');
-
-        Log::info('[GF][Achats] Index', [
-            'user_id' => auth()->id(),
-            'pays'    => $pays,
-            'groupe'  => $groupe,
-            'query'   => $request->all()
-        ]);
-
-        $projets = Projet::where('code_projet', 'like', $pays.$groupe.'%')
-            ->orderBy('code_projet')
-            ->get(['code_projet','libelle_projet','code_devise']);
-
-        $fournisseurs = Acteur::where('code_pays', $pays)
-            ->where('type_acteur', 'FOU')
-            ->orderBy('libelle_long')
-            ->get(['code_acteur','libelle_court','libelle_long']);
-
-        $statuts = AchatStatut::orderBy('id')->get();
-
-        $achats = AchatMateriau::with(['projet','fournisseur','statut','lignes'])
-            ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
-            ->orderByDesc('date_commande')
-            ->paginate(25);
-
-        Log::info('[GF][Achats] Index loaded', [
-            'user_id'   => auth()->id(),
-            'count'     => $achats->total()
-        ]);
-
-        return view('GestionFinanciere.achatsMateriaux', compact('projets','fournisseurs','statuts','achats'));
-    }
-
-    /** Création (AJAX) */
-    public function achatsStore(Request $request)
-    {
-        Log::info('[GF][Achats] Store: payload', [
-            'user_id' => auth()->id(),
-            'input'   => $request->all()
-        ]);
-
-        $request->validate([
-            'code_projet'                 => ['required','string','exists:projets,code_projet'],
-            'code_acteur'                 => ['required','string','exists:acteur,code_acteur'],
-            'reference_bc'                => ['nullable','string','max:100'],
-            'date_commande'               => ['required','date'],
-            'devise'                      => ['nullable','string','max:10'],
-            'statut_id'                   => ['required','integer','exists:gf_achat_statuts,id'],
-            'commentaire'                 => ['nullable','string'],
-            'lignes'                      => ['required','array','min:1'],
-            'lignes.*.libelle_materiau'   => ['required','string','max:255'],
-            'lignes.*.unite'              => ['nullable','string','max:50'],
-            'lignes.*.quantite_prevue'    => ['required','numeric','min:0.0001'],
-            'lignes.*.quantite_recue'     => ['nullable','numeric','min:0'],
-            'lignes.*.prix_unitaire'      => ['required','numeric','min:0'],
-            'lignes.*.tva'                => ['nullable','numeric','min:0','max:100'],
-        ]);
-
-        try {
-            $achat = AchatMateriau::create([
-                'code_projet'  => $request->code_projet,
-                'code_acteur'  => $request->code_acteur,
-                'reference_bc' => $request->reference_bc,
-                'date_commande'=> $request->date_commande,
-                'devise'       => $request->devise,
-                'statut_id'    => $request->statut_id,
-                'commentaire'  => $request->commentaire,
-                'created_by'   => auth()->id(),
-            ]);
-
-            foreach ($request->lignes as $L) {
-                AchatMateriauLigne::create([
-                    'achat_id'         => $achat->id,
-                    'libelle_materiau' => $L['libelle_materiau'],
-                    'unite'            => $L['unite'] ?? null,
-                    'quantite_prevue'  => $L['quantite_prevue'],
-                    'quantite_recue'   => $L['quantite_recue'] ?? 0,
-                    'prix_unitaire'    => $L['prix_unitaire'],
-                    'tva'              => $L['tva'] ?? 0,
+        
+            try {
+                if ($request->filled('financer_id')) {
+                    $fin = Financer::with('bailleur')->find($request->input('financer_id'));
+                    if ($fin && $fin->bailleur) {
+                        $request->merge([
+                            'code_acteur' => $request->input('code_acteur') ?: $fin->bailleur->code_acteur,
+                            'devise'      => $request->input('devise') ?: $fin->devise,
+                        ]);
+                    }
+                }
+        
+                $data = $request->validate([
+                    'code_projet'       => ['required','string','exists:projets,code_projet'],
+                    'code_acteur'       => ['required_without:financer_id','string','exists:acteur,code_acteur'],
+                    'reference'         => ['nullable','string','max:100'],
+                    'tranche_no'        => ['nullable','integer','min:1'],
+                    'montant'           => ['required','numeric', 'min:0.01'],
+                    'devise'            => ['nullable','string','max:10'],
+                    'date_decaissement' => ['nullable','date'],
+                    'commentaire'       => ['nullable','string'],
+                ], [
+                    'code_acteur.required_without' => "Le bailleur est obligatoire si aucun financement n'est sélectionné.",
                 ]);
-            }
+        
+                $codeProjet  = $data['code_projet'];
+                $codeActeur  = $data['code_acteur'];
+                $financerId  = $request->input('financer_id');
+                $montantCourant = (float) $data['montant'];
 
-            Log::info('[GF][Achats] Store: success', [
-                'user_id' => auth()->id(),
-                'achat_id'=> $achat->id,
-                'lignes'  => count($request->lignes)
-            ]);
+                ['plafond' => $plafond, 'deja' => $dejaHorsCourant] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, $dec->id);
 
-            return response()->json([
-                'ok'       => true,
-                'message'  => 'Achat créé avec succès.',
-                'achat_id' => $achat->id
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('[GF][Achats] Store: error', [
-                'user_id'   => auth()->id(),
-                'exception' => $e->getMessage(),
-                'trace'     => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                'ok'      => false,
-                'message' => 'Erreur lors de la création.',
-            ], 500);
-        }
-    }
+                if ($plafond > 0 && ($dejaHorsCourant + $montantCourant) - $plafond > 1e-9) {
+                    $reste = max(0, $plafond - $dejaHorsCourant);
+                    return response()->json([
+                        'ok'      => false,
+                        'message' => "Plafond dépassé : déjà décaissé "
+                            . number_format($dejaHorsCourant, 2, ',', ' ')
+                            . " sur " . number_format($plafond, 2, ',', ' ')
+                            . ". Reste autorisé : " . number_format($reste, 2, ',', ' ') . ".",
+                    ], 422);
+                }
 
-    /** Mise à jour (AJAX) */
-    public function achatsUpdate(Request $request, $id)
-    {
-        Log::info('[GF][Achats] Update: payload', [
-            'user_id' => auth()->id(),
-            'achat_id'=> $id,
-            'input'   => $request->all()
-        ]);
-
-        $achat = AchatMateriau::with('lignes')->findOrFail($id);
-
-        $request->validate([
-            'code_acteur'                 => ['required','string','exists:acteur,code_acteur'],
-            'reference_bc'                => ['nullable','string','max:100'],
-            'date_commande'               => ['required','date'],
-            'devise'                      => ['nullable','string','max:10'],
-            'statut_id'                   => ['required','integer','exists:gf_achat_statuts,id'],
-            'commentaire'                 => ['nullable','string'],
-            'lignes'                      => ['required','array','min:1'],
-            'lignes.*.libelle_materiau'   => ['required','string','max:255'],
-            'lignes.*.unite'              => ['nullable','string','max:50'],
-            'lignes.*.quantite_prevue'    => ['required','numeric','min:0.0001'],
-            'lignes.*.quantite_recue'     => ['nullable','numeric','min:0'],
-            'lignes.*.prix_unitaire'      => ['required','numeric','min:0'],
-            'lignes.*.tva'                => ['nullable','numeric','min:0','max:100'],
-        ]);
-
-        try {
-            $achat->update($request->only([
-                'code_acteur','reference_bc','date_commande','devise','statut_id','commentaire'
-            ]));
-
-            $achat->lignes()->delete();
-            foreach ($request->lignes as $L) {
-                AchatMateriauLigne::create([
-                    'achat_id'         => $achat->id,
-                    'libelle_materiau' => $L['libelle_materiau'],
-                    'unite'            => $L['unite'] ?? null,
-                    'quantite_prevue'  => $L['quantite_prevue'],
-                    'quantite_recue'   => $L['quantite_recue'] ?? 0,
-                    'prix_unitaire'    => $L['prix_unitaire'],
-                    'tva'              => $L['tva'] ?? 0,
+                if (!empty($data['financer_id'])) {
+                    $fin = Financer::find($data['financer_id']);
+                    if ($fin && $data['montant'] > (float) $fin->montant_finance) {
+                        return response()->json([
+                            'ok'      => false,
+                            'message' => 'Le montant décaissé dépasse le montant financé par le bailleur.',
+                        ], 422);
+                    }
+                }
+        
+                if (empty($data['tranche_no'])) {
+                    $data['tranche_no'] = $this->computeNextTranche(
+                        $data['code_projet'],
+                        $request->input('financer_id'),   
+                        $data['code_acteur'] ?? null      
+                    );
+                }
+                
+                $dec->update($data);
+        
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Décaissement mis à jour.',
+                    'data' => $dec->fresh()->load(['bailleur'])
                 ]);
+        
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Veuillez corriger les erreurs.',
+                    'errors' => $e->errors()
+                ], 422);
+            } catch (\Throwable $e) {
+                \Log::error('MAJ décaissement - erreur', ['msg' => $e->getMessage()]);
+                return response()->json(['ok' => false, 'message' => 'Erreur lors de la mise à jour.'], 500);
             }
-
-            Log::info('[GF][Achats] Update: success', [
-                'user_id' => auth()->id(),
-                'achat_id'=> $achat->id,
-                'lignes'  => count($request->lignes)
-            ]);
-
-            return response()->json([
-                'ok'       => true,
-                'message'  => 'Achat mis à jour.',
-                'achat_id' => $achat->id
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('[GF][Achats] Update: error', [
-                'user_id'   => auth()->id(),
-                'achat_id'  => $id,
-                'exception' => $e->getMessage(),
-            ]);
-            return response()->json([
-                'ok'      => false,
-                'message' => 'Erreur lors de la mise à jour.',
-            ], 500);
         }
-    }
+        
+        // === JSON: suppression ===
+        public function decaissementsDestroy($id)
+        {
+            try {
+                $dec = Decaissement::findOrFail($id);
+                $dec->delete();
+                return response()->json(['ok'=>true,'message'=>'Décaissement supprimé.']);
+            } catch (\Throwable $e) {
+                return response()->json(['ok'=>false,'message'=>'Suppression impossible.'], 500);
+            }
+        }
+    /******************* FIN DECAISSEMENT ***********************/
 
-    /** Suppression (AJAX) */
-    public function achatsDestroy($id)
-    {
-        Log::info('[GF][Achats] Destroy: start', ['user_id' => auth()->id(), 'achat_id' => $id]);
 
-        try {
+    /******************* ACHAT DE MATERIEL ******************/
+        public function achatsIndex(Request $request)
+        {
+            $pays   = session('pays_selectionne');
+            $groupe = session('projet_selectionne');
+
+            Log::info('[GF][Achats] Index', [
+                'user_id' => auth()->id(),
+                'pays'    => $pays,
+                'groupe'  => $groupe,
+                'query'   => $request->all()
+            ]);
+
+            $projets = Projet::where('code_projet', 'like', $pays.$groupe.'%')
+                ->orderBy('code_projet')
+                ->get(['code_projet','libelle_projet','code_devise']);
+
+            $fournisseurs = Acteur::where('code_pays', $pays)
+                ->where('type_acteur', 'FOU')
+                ->orderBy('libelle_long')
+                ->get(['code_acteur','libelle_court','libelle_long']);
+
+            $statuts = AchatStatut::orderBy('id')->get();
+
+            $achats = AchatMateriau::with(['projet','fournisseur','statut','lignes'])
+                ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
+                ->orderByDesc('date_commande')
+                ->paginate(25);
+
+            Log::info('[GF][Achats] Index loaded', [
+                'user_id'   => auth()->id(),
+                'count'     => $achats->total()
+            ]);
+
+            return view('GestionFinanciere.achatsMateriaux', compact('projets','fournisseurs','statuts','achats'));
+        }
+
+        /** Création (AJAX) */
+        public function achatsStore(Request $request)
+        {
+            Log::info('[GF][Achats] Store: payload', [
+                'user_id' => auth()->id(),
+                'input'   => $request->all()
+            ]);
+
+            $request->validate([
+                'code_projet'                 => ['required','string','exists:projets,code_projet'],
+                'code_acteur'                 => ['required','string','exists:acteur,code_acteur'],
+                'reference_bc'                => ['nullable','string','max:100'],
+                'date_commande'               => ['required','date'],
+                'devise'                      => ['nullable','string','max:10'],
+                'statut_id'                   => ['required','integer','exists:gf_achat_statuts,id'],
+                'commentaire'                 => ['nullable','string'],
+                'lignes'                      => ['required','array','min:1'],
+                'lignes.*.libelle_materiau'   => ['required','string','max:255'],
+                'lignes.*.unite'              => ['nullable','string','max:50'],
+                'lignes.*.quantite_prevue'    => ['required','numeric','min:0.0001'],
+                'lignes.*.quantite_recue'     => ['nullable','numeric','min:0'],
+                'lignes.*.prix_unitaire'      => ['required','numeric','min:0'],
+                'lignes.*.tva'                => ['nullable','numeric','min:0','max:100'],
+            ]);
+
+            try {
+                $achat = AchatMateriau::create([
+                    'code_projet'  => $request->code_projet,
+                    'code_acteur'  => $request->code_acteur,
+                    'reference_bc' => $request->reference_bc,
+                    'date_commande'=> $request->date_commande,
+                    'devise'       => $request->devise,
+                    'statut_id'    => $request->statut_id,
+                    'commentaire'  => $request->commentaire,
+                    'created_by'   => auth()->id(),
+                ]);
+
+                foreach ($request->lignes as $L) {
+                    AchatMateriauLigne::create([
+                        'achat_id'         => $achat->id,
+                        'libelle_materiau' => $L['libelle_materiau'],
+                        'unite'            => $L['unite'] ?? null,
+                        'quantite_prevue'  => $L['quantite_prevue'],
+                        'quantite_recue'   => $L['quantite_recue'] ?? 0,
+                        'prix_unitaire'    => $L['prix_unitaire'],
+                        'tva'              => $L['tva'] ?? 0,
+                    ]);
+                }
+
+                Log::info('[GF][Achats] Store: success', [
+                    'user_id' => auth()->id(),
+                    'achat_id'=> $achat->id,
+                    'lignes'  => count($request->lignes)
+                ]);
+
+                return response()->json([
+                    'ok'       => true,
+                    'message'  => 'Achat créé avec succès.',
+                    'achat_id' => $achat->id
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('[GF][Achats] Store: error', [
+                    'user_id'   => auth()->id(),
+                    'exception' => $e->getMessage(),
+                    'trace'     => $e->getTraceAsString()
+                ]);
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'Erreur lors de la création.',
+                ], 500);
+            }
+        }
+
+        /** Mise à jour (AJAX) */
+        public function achatsUpdate(Request $request, $id)
+        {
+            Log::info('[GF][Achats] Update: payload', [
+                'user_id' => auth()->id(),
+                'achat_id'=> $id,
+                'input'   => $request->all()
+            ]);
+
             $achat = AchatMateriau::with('lignes')->findOrFail($id);
 
-            DB::transaction(function () use ($achat) {
-                // Si pas de FK ON DELETE CASCADE, on supprime explicitement les lignes :
+            $request->validate([
+                'code_acteur'                 => ['required','string','exists:acteur,code_acteur'],
+                'reference_bc'                => ['nullable','string','max:100'],
+                'date_commande'               => ['required','date'],
+                'devise'                      => ['nullable','string','max:10'],
+                'statut_id'                   => ['required','integer','exists:gf_achat_statuts,id'],
+                'commentaire'                 => ['nullable','string'],
+                'lignes'                      => ['required','array','min:1'],
+                'lignes.*.libelle_materiau'   => ['required','string','max:255'],
+                'lignes.*.unite'              => ['nullable','string','max:50'],
+                'lignes.*.quantite_prevue'    => ['required','numeric','min:0.0001'],
+                'lignes.*.quantite_recue'     => ['nullable','numeric','min:0'],
+                'lignes.*.prix_unitaire'      => ['required','numeric','min:0'],
+                'lignes.*.tva'                => ['nullable','numeric','min:0','max:100'],
+            ]);
+
+            try {
+                $achat->update($request->only([
+                    'code_acteur','reference_bc','date_commande','devise','statut_id','commentaire'
+                ]));
+
                 $achat->lignes()->delete();
-                $achat->delete();
-            });
+                foreach ($request->lignes as $L) {
+                    AchatMateriauLigne::create([
+                        'achat_id'         => $achat->id,
+                        'libelle_materiau' => $L['libelle_materiau'],
+                        'unite'            => $L['unite'] ?? null,
+                        'quantite_prevue'  => $L['quantite_prevue'],
+                        'quantite_recue'   => $L['quantite_recue'] ?? 0,
+                        'prix_unitaire'    => $L['prix_unitaire'],
+                        'tva'              => $L['tva'] ?? 0,
+                    ]);
+                }
 
-            Log::info('[GF][Achats] Destroy: success', ['user_id' => auth()->id(), 'achat_id' => $id]);
+                Log::info('[GF][Achats] Update: success', [
+                    'user_id' => auth()->id(),
+                    'achat_id'=> $achat->id,
+                    'lignes'  => count($request->lignes)
+                ]);
 
-            return response()->json([
-                'ok'      => true,
-                'message' => 'Achat supprimé avec succès.',
-            ]);
-        } catch (ModelNotFoundException $e) {
-            Log::warning('[GF][Achats] Destroy: not found', ['user_id' => auth()->id(), 'achat_id' => $id]);
-
-            return response()->json([
-                'ok'    => false,
-                'error' => 'Achat introuvable.',
-            ], 404);
-        } catch (\Throwable $e) {
-            Log::error('[GF][Achats] Destroy: error', [
-                'user_id'   => auth()->id(),
-                'achat_id'  => $id,
-                'exception' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'ok'    => false,
-                'error' => 'Impossible de supprimer cet achat.',
-            ], 500);
+                return response()->json([
+                    'ok'       => true,
+                    'message'  => 'Achat mis à jour.',
+                    'achat_id' => $achat->id
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('[GF][Achats] Update: error', [
+                    'user_id'   => auth()->id(),
+                    'achat_id'  => $id,
+                    'exception' => $e->getMessage(),
+                ]);
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'Erreur lors de la mise à jour.',
+                ], 500);
+            }
         }
-    }
 
-    public function reglementsIndex(Request $request)
-    {
-        $pays   = session('pays_selectionne');
-        $groupe = session('projet_selectionne');
+        /** Suppression (AJAX) */
+        public function achatsDestroy($id)
+        {
+            Log::info('[GF][Achats] Destroy: start', ['user_id' => auth()->id(), 'achat_id' => $id]);
 
-        $projets = Projet::where('code_projet','like',$pays.$groupe.'%')
-            ->orderBy('code_projet')
-            ->get(['code_projet','libelle_projet','code_devise']);
+            try {
+                $achat = AchatMateriau::with('lignes')->findOrFail($id);
 
-        // Prestataires = tous acteurs actifs (tu peux filtrer par type si besoin)
-        $prestataires = Acteur::where('code_pays', session('pays_selectionne'))
-        ->orderBy('libelle_long')->get(['code_acteur','libelle_court','libelle_long']);
+                DB::transaction(function () use ($achat) {
+                    // Si pas de FK ON DELETE CASCADE, on supprime explicitement les lignes :
+                    $achat->lignes()->delete();
+                    $achat->delete();
+                });
 
-        $modes   = ModePaiement::orderBy('id')->get();
-        $statuts = ReglementStatut::orderBy('id')->get();
+                Log::info('[GF][Achats] Destroy: success', ['user_id' => auth()->id(), 'achat_id' => $id]);
 
-        $reglements = ReglementPrestataire::with(['projet','prestataire','mode','statut'])
-            ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
-            ->orderByDesc('date_reglement')
-            ->paginate(25);
+                return response()->json([
+                    'ok'      => true,
+                    'message' => 'Achat supprimé avec succès.',
+                ]);
+            } catch (ModelNotFoundException $e) {
+                Log::warning('[GF][Achats] Destroy: not found', ['user_id' => auth()->id(), 'achat_id' => $id]);
 
-        return view('GestionFinanciere.reglementsPrestataires', compact('projets','prestataires','modes','statuts','reglements'));
-    }
+                return response()->json([
+                    'ok'    => false,
+                    'error' => 'Achat introuvable.',
+                ], 404);
+            } catch (\Throwable $e) {
+                Log::error('[GF][Achats] Destroy: error', [
+                    'user_id'   => auth()->id(),
+                    'achat_id'  => $id,
+                    'exception' => $e->getMessage(),
+                ]);
 
-    public function reglementsStore(Request $request)
-    {
-        try {
-            $data = $this->validateReglement($request);
-    
-            $reg = ReglementPrestataire::create([
-                'code_projet'       => $data['code_projet'],
-                'code_acteur'       => $data['code_acteur'],
-                'reference_facture' => $data['reference_facture'] ?? null,
-                'date_facture'      => $data['date_facture'] ?? null,
-                'montant_facture'   => $data['montant_facture'] ?? null,
-                'montant_regle'     => $data['montant_regle'],
-                'devise'            => $data['devise'] ?? null,
-                'mode_id'           => $data['mode_id'],
-                'statut_id'         => $data['statut_id'],
-                'date_reglement'    => $data['date_reglement'],
-                'commentaire'       => $data['commentaire'] ?? null,
-                'created_by'        => auth()->id(),
-            ]);
-    
-            return response()->json([
-                'ok'      => true,
-                'message' => 'Règlement enregistré.',
-                'id'      => $reg->id,
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json(['ok' => false, 'errors' => $e->errors()], 422);
-        } catch (\Throwable $e) {
-            Log::error('Reglement create error', ['msg'=>$e->getMessage()]);
-            return response()->json(['ok' => false, 'error' => "Erreur lors de l’enregistrement."], 500);
+                return response()->json([
+                    'ok'    => false,
+                    'error' => 'Impossible de supprimer cet achat.',
+                ], 500);
+            }
         }
-    }
-    
-    public function reglementsUpdate(Request $request, $id)
-    {
-        try {
-            $reg = ReglementPrestataire::findOrFail($id);
-            $data = $this->validateReglement($request, $update = true);
-    
-            $reg->update([
-                'code_acteur'       => $data['code_acteur'],
-                'reference_facture' => $data['reference_facture'] ?? null,
-                'date_facture'      => $data['date_facture'] ?? null,
-                'montant_facture'   => $data['montant_facture'] ?? null,
-                'montant_regle'     => $data['montant_regle'],
-                'devise'            => $data['devise'] ?? null,
-                'mode_id'           => $data['mode_id'],
-                'statut_id'         => $data['statut_id'],
-                'date_reglement'    => $data['date_reglement'],
-                'commentaire'       => $data['commentaire'] ?? null,
-            ]);
-    
-            return response()->json([
-                'ok'      => true,
-                'message' => 'Règlement mis à jour.',
-                'id'      => $reg->id,
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json(['ok' => false, 'errors' => $e->errors()], 422);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['ok' => false, 'error' => 'Règlement introuvable.'], 404);
-        } catch (\Throwable $e) {
-            Log::error('Reglement update error', ['msg'=>$e->getMessage()]);
-            return response()->json(['ok' => false, 'error' => 'Erreur lors de la mise à jour.'], 500);
+    /******************* FIN ACHAT DE MATERIEL ******************/
+
+
+    /******************* REGLEMENT ******************/
+        private function validateReglement(Request $request, bool $update = false): array
+        {
+            $rules = [
+                'code_projet'         => [$update ? 'sometimes' : 'required','string','exists:projets,code_projet'],
+                'code_acteur'         => ['required','string','exists:acteur,code_acteur'],
+                'reference_facture'   => ['nullable','string','max:100'],
+                'date_facture'        => ['nullable','date'],
+                'montant_facture'     => ['nullable','numeric','min:0'],
+                'montant_regle'       => ['required','numeric','min:0.01'],
+                'devise'              => ['nullable','string','max:10'],
+                'mode_id'             => ['required','integer','exists:mode_paiement,id'],
+                'statut_id'           => ['required','integer','exists:gf_reglement_statuts,id'],
+                'date_reglement'      => ['required','date'],
+                'tranche_no'          => ['nullable','integer','min:1'],
+
+                // Contexte (mutuellement exclusif)
+                'code_travaux_connexe'=> ['nullable','string'],
+                'code_renforcement'   => ['nullable','string'],
+                'commentaire'         => ['nullable','string'],
+            ];
+
+            $data = $request->validate($rules);
+
+            // Règle métier: un seul contexte à la fois (0 ou 1)
+            $ctxCount = (!empty($data['code_travaux_connexe']) ? 1 : 0) + (!empty($data['code_renforcement']) ? 1 : 0);
+            if ($ctxCount > 1) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'code_travaux_connexe' => ['Choisissez soit Travaux connexes, soit Formation, pas les deux.'],
+                    'code_renforcement'    => ['Choisissez soit Formation, soit Travaux connexes, pas les deux.'],
+                ]);
+            }
+
+            return $data;
         }
-    }
-    
-    /** Validation factorisée */
-    private function validateReglement(Request $request, bool $update = false): array
-    {
-        $rules = [
-            'code_projet'       => [$update ? 'sometimes' : 'required','string','exists:projets,code_projet'],
-            'code_acteur'       => ['required','string','exists:acteur,code_acteur'],
-            'reference_facture' => ['nullable','string','max:100'],
-            'date_facture'      => ['nullable','date'],
-            'montant_facture'   => ['nullable','numeric','min:0'],
-            'montant_regle'     => ['required','numeric','min:0.01'],
-            'devise'            => ['nullable','string','max:10'],
-            'mode_id'           => ['required','integer','exists:gf_modes_paiement,id'],
-            'statut_id'         => ['required','integer','exists:gf_reglement_statuts,id'],
-            'date_reglement'    => ['required','date'],
-            'commentaire'       => ['nullable','string'],
-        ];
-    
-        return $request->validate($rules);
-    }
 
-    /** Suppression */
-    public function reglementsDestroy($id)
-    {
-        Log::info('[GF][Reglements] Destroy: start', ['user_id' => auth()->id(), 'id' => $id]);
+        private function computeNextTrancheReglement(string $codeProjet, string $codeActeur, ?string $refFacture = null): int
+        {
+            $q = ReglementPrestataire::where('code_projet',$codeProjet)
+                ->where('code_acteur',$codeActeur);
+            if ($refFacture) $q->where('reference_facture',$refFacture);
 
-        try {
-            $r = ReglementPrestataire::findOrFail($id);
-            $r->delete();
+            $max = (int) $q->max('tranche_no');
+            return $max ? $max + 1 : 1;
+        }
 
-            Log::info('[GF][Reglements] Destroy: success', ['user_id' => auth()->id(), 'id' => $id]);
+        public function reglementsStore(Request $request)
+        {
+            try {
+                $data = $this->validateReglement($request);
+
+                // tranche auto si vide
+                if (empty($data['tranche_no'])) {
+                    $data['tranche_no'] = $this->computeNextTrancheReglement(
+                        $data['code_projet'],
+                        $data['code_acteur'],
+                        $data['reference_facture'] ?? null
+                    );
+                }
+
+                $reg = ReglementPrestataire::create($data + ['created_by' => auth()->id()]);
+
+                return response()->json(['ok'=>true,'message'=>'Règlement enregistré.','id'=>$reg->id]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json(['ok'=>false,'errors'=>$e->errors()], 422);
+            } catch (\Throwable $e) {
+                \Log::error('Reglement create error', ['msg'=>$e->getMessage()]);
+                return response()->json(['ok'=>false,'error'=>"Erreur lors de l’enregistrement."], 500);
+            }
+        }
+
+        public function reglementsUpdate(Request $request, $id)
+        {
+            try {
+                $reg  = ReglementPrestataire::findOrFail($id);
+                $data = $this->validateReglement($request, true);
+
+                if (empty($data['tranche_no'])) {
+                    $data['tranche_no'] = $this->computeNextTrancheReglement(
+                        $data['code_projet'] ?? $reg->code_projet,
+                        $data['code_acteur'],
+                        $data['reference_facture'] ?? $reg->reference_facture
+                    );
+                }
+
+                $reg->update($data);
+
+                return response()->json(['ok'=>true,'message'=>'Règlement mis à jour.','id'=>$reg->id]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json(['ok'=>false,'errors'=>$e->errors()], 422);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                return response()->json(['ok'=>false,'error'=>'Règlement introuvable.'], 404);
+            } catch (\Throwable $e) {
+                \Log::error('Reglement update error', ['msg'=>$e->getMessage()]);
+                return response()->json(['ok'=>false,'error'=>'Erreur lors de la mise à jour.'], 500);
+            }
+        }
+
+        public function contextByProjet(string $codeProjet)
+        {
+            // Travaux connexes
+            $tc = TravauxConnexes::where('code_projet',$codeProjet)
+                ->orderBy('date_debut_previsionnelle','desc')
+                ->get(['codeActivite as code','code_projet','commentaire'])
+                ->map(fn($t)=>[
+                    'code'=>$t->code,
+                    'libelle'=>$t->commentaire ?: 'Travaux connexes',
+                ]);
+
+            // Renforcements (via table pivot)
+            $rf = Renforcement::whereHas('projets', fn($q)=>$q->where('code_projet',$codeProjet))
+                ->orderBy('date_debut','desc')
+                ->get(['code_renforcement as code','titre']);
 
             return response()->json([
-                'ok'      => true,
-                'message' => 'Règlement supprimé.',
+                'travaux'       => $tc,
+                'renforcements' => $rf->map(fn($r)=>['code'=>$r->code,'titre'=>$r->titre]),
             ]);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['ok' => false, 'error' => 'Règlement introuvable.'], 404);
-        } catch (\Throwable $e) {
-            Log::error('[GF][Reglements] Destroy: error', ['id' => $id, 'exception' => $e->getMessage()]);
-            return response()->json(['ok' => false, 'error' => 'Suppression impossible.'], 500);
         }
-    }
 
 
-    
+        public function reglementsIndex(Request $request)
+        {
+            $pays   = session('pays_selectionne');
+            $groupe = session('projet_selectionne');
+
+            $projets = Projet::where('code_projet','like',$pays.$groupe.'%')
+                ->orderBy('code_projet')
+                ->get(['code_projet','libelle_projet','code_devise']);
+
+            // Prestataires = tous acteurs actifs (tu peux filtrer par type si besoin)
+            $prestataires = Acteur::where('code_pays', session('pays_selectionne'))
+            ->orderBy('libelle_long')->get(['code_acteur','libelle_court','libelle_long']);
+
+            $modes   = ModePaiement::orderBy('id')->get();
+            $statuts = ReglementStatut::orderBy('id')->get();
+
+            $reglements = ReglementPrestataire::with(['projet','prestataire','mode','statut'])
+                ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
+                ->orderByDesc('date_reglement')
+                ->paginate(25);
+
+            return view('GestionFinanciere.reglementsPrestataires', compact('projets','prestataires','modes','statuts','reglements'));
+        }
+      
+
+        /** Suppression */
+        public function reglementsDestroy($id)
+        {
+            Log::info('[GF][Reglements] Destroy: start', ['user_id' => auth()->id(), 'id' => $id]);
+
+            try {
+                $r = ReglementPrestataire::findOrFail($id);
+                $r->delete();
+
+                Log::info('[GF][Reglements] Destroy: success', ['user_id' => auth()->id(), 'id' => $id]);
+
+                return response()->json([
+                    'ok'      => true,
+                    'message' => 'Règlement supprimé.',
+                ]);
+            } catch (ModelNotFoundException $e) {
+                return response()->json(['ok' => false, 'error' => 'Règlement introuvable.'], 404);
+            } catch (\Throwable $e) {
+                Log::error('[GF][Reglements] Destroy: error', ['id' => $id, 'exception' => $e->getMessage()]);
+                return response()->json(['ok' => false, 'error' => 'Suppression impossible.'], 500);
+            }
+        }
+    /******************* FIN REGLEMENT ******************/
+
     public function representationGraphique(Request $request)
     {
         $annee  = (int)($request->input('annee') ?? date('Y'));
@@ -925,14 +965,8 @@ class GestionFinanciereController extends Controller
             'decaisseParSecteur'
         ));
     }
-    
 
-
-
-
-
-
-    /*****************************PIB*********************** */
+    /******************* PIB ********************** */
       /** Page unifiée PIB (séries + gestion + graphe par secteur) */
       public function pibIndex(Request $request)
       {
@@ -1056,5 +1090,5 @@ class GestionFinanciereController extends Controller
   
           return back()->with('success', 'PIB supprimé avec succès.');
       }
-
+    /******************* FIN PIB ********************** */
 }

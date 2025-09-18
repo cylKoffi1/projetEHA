@@ -507,6 +507,7 @@ class EtudeProjet extends Controller
                 'code_renforcement'        => $code,
                 'titre'                    => $request->titre,
                 'description'              => $request->description,
+                'public_cible' => $request->public_cible,
                 'actionTypeId'             => $request->actionTypeId,
                 'thematique'               => $request->thematique,
                 'organisme'                => $request->organisme,
@@ -517,8 +518,6 @@ class EtudeProjet extends Controller
                 'cout_previsionnel'        => $request->cout_previsionnel,
                 'cout_reel'                => $request->cout_reel,
                 'source_financement'       => $request->source_financement,
-                'pretest_moy'              => $request->pretest_moy,
-                'posttest_moy'             => $request->posttest_moy,
                 'statutId'                 => 'plan',
                 'date_debut'               => $request->date_debut,
                 'date_fin'                 => $request->date_fin,
@@ -582,10 +581,10 @@ class EtudeProjet extends Controller
             $renfo = Renforcement::where('code_renforcement',$code)->firstOrFail();
 
             $renfo->update($request->only([
-                'titre','description','actionTypeId','thematique','organisme','lieu',
+                'titre','description','actionTypeId','thematique','public_cible','organisme','lieu',
                 'modaliteId','nb_participants_prev','nb_participants_effectif',
                 'cout_previsionnel','cout_reel','source_financement',
-                'pretest_moy','posttest_moy','date_debut','date_fin'
+                'date_debut','date_fin'
             ]));
 
             $renfo->beneficiaires()->sync($request->beneficiaires);

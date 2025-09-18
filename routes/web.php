@@ -589,7 +589,8 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::post  ('admin/reglementsPrestataires',      [GestionFinanciereController::class, 'reglementsStore'])->name('gf.reglements.store');
             Route::put   ('admin/reglementsPrestataires/{id}', [GestionFinanciereController::class, 'reglementsUpdate'])->name('gf.reglements.update');
             Route::delete('admin/reglementsPrestataires/{id}', [GestionFinanciereController::class, 'reglementsDestroy'])->name('gf.reglements.destroy');
-        
+            Route::get('/context/{codeProjet}', [GestionFinanciereController::class, 'contextByProjet'])->name('gf.reglements.contextByProjet');
+            
             Route::get('admin/representationGraphique', [GestionFinanciereController::class, 'representationGraphique'])->name('gf.representation');
             
                 Route::get('admin/pib', [GestionFinanciereController::class, 'pibIndex'])->name('gf.pib.index');

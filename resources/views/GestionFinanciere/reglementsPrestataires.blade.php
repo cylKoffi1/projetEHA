@@ -41,104 +41,167 @@
                 @csrf
                 <input type="hidden" name="_method" value="POST" id="formMethod">
 
-                <div class="row g-3">
-                
-
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label class="form-label">Projet</label>
-                            <select name="code_projet" id="code_projet" class="form-select" required>
-                                <option value="">— Sélectionnez —</option>
-                                @foreach($projets as $p)
-                                    <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
-                                @endforeach
-                            </select>
-                            @error('code_projet') <small class="text-danger">{{ $message }}</small> @enderror
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Prestataire *</label>
-                            <select name="code_acteur" id="code_acteur" class="form-select" required>
-                                <option value="">— Sélectionnez —</option>
-                                @foreach($prestataires as $a)
-                                    <option value="{{ $a->code_acteur }}">{{ trim(($a->libelle_court ?? '').' '.($a->libelle_long ?? '')) }}</option>
-                                @endforeach
-                            </select>
-                            @error('code_acteur') <small class="text-danger">{{ $message }}</small> @enderror
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label">Mt. Facture</label>
-                            <input type="number" step="0.01" min="0" name="montant_facture" id="montant_facture" class="form-control">
-                        </div>
-
-                        <div class="col-md-1">
-                            <label class="form-label">Devise</label>
-                            <input type="text" name="devise" class="form-control" placeholder="XOF">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Statut *</label>
-                            <select name="statut_id" class="form-select" required>
-                                @foreach($statuts as $s)
-                                    <option value="{{ $s->id }}">{{ $s->libelle }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-7"></div>
-                        <div class="col-md-2">
-                            <label class="form-label">Date Facture</label>
-                            <input type="date" name="date_facture" class="form-control">
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Réf. Facture</label>
-                            <input type="text" name="reference_facture" class="form-control">
-                        </div>
-
-                    </div>
-                    <div class="row">
-                        <div class="col-md-2">
-                            <label class="form-label">Date Règlement *</label>
-                            <input type="date" name="date_reglement" class="form-control" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Tranche N°</label>
-                            <input type="number" name="date_reglement" class="form-control" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Mode règlement *</label>
-                            <select name="mode_id" class="form-select" required>
-                                @foreach($modes as $m)
-                                    <option value="{{ $m->id }}">{{ $m->libelle }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Montant réglé *</label>
-                            <input type="number" step="0.01" min="0.01" name="montant_regle" id="montant_regle" class="form-control" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Solde *</label>
-                            <input type="number" step="0.01" min="0.01" name="montant_regle" id="montant_regle" class="form-control" required>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">Commentaire</label>
-                        <textarea name="commentaire" class="form-control" rows="2"></textarea>
+                {{-- Cible du paiement --}}
+                <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Payer *</label>
+                    <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="pay_target" id="pay_prest" value="prestataire" checked>
+                    <label class="btn btn-outline-primary" for="pay_prest">Prestataire</label>
+                    <input type="radio" class="btn-check" name="pay_target" id="pay_benef" value="beneficiaire">
+                    <label class="btn btn-outline-primary" for="pay_benef">Bénéficiaire</label>
                     </div>
                 </div>
 
-                <div class="d-flex gap-3 justify-content-end mt-3">
-                    <div class="text-end me-auto">
-                        <small class="text-muted">Solde facture estimé : <span id="soldeOut">—</span></small>
-                    </div>
+                <div class="col-md-5">
+                    <label class="form-label"><span id="label-acteur">Prestataire</span> *</label>
+                    <select name="code_acteur" id="code_acteur" class="form-select" required>
+                    <option value="">— Sélectionnez —</option>
+                    @foreach($prestataires as $a)
+                        <option value="{{ $a->code_acteur }}">{{ trim(($a->libelle_court ?? '').' '.($a->libelle_long ?? '')) }}</option>
+                    @endforeach
+                    </select>
+                    @error('code_acteur') <small class="text-danger">{{ $message }}</small> @enderror
+                </div>
 
-                    <button type="submit" class="btn btn-primary" id="submitBtn">Enregistrer</button>
-                    <button type="button" class="btn btn-secondary d-none" id="cancelEdit">Annuler édition</button>
+                <div class="col-md-2">
+                    <label class="form-label">Devise</label>
+                    <input type="text" name="devise" id="devise" class="form-control" placeholder="XOF">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Statut *</label>
+                    <select name="statut_id" id="statut_id" class="form-select" required>
+                    @foreach($statuts as $s)
+                        <option value="{{ $s->id }}">{{ $s->libelle }}</option>
+                    @endforeach
+                    </select>
+                </div>
+                </div>
+
+                {{-- ONGLET CONTEXTE --}}
+                <ul class="nav nav-tabs mt-4" id="ctxTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="proj-tab" data-bs-toggle="tab" data-bs-target="#ctx-proj" type="button" role="tab">Projet</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tc-tab" data-bs-toggle="tab" data-bs-target="#ctx-tc" type="button" role="tab">Travaux connexes</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rf-tab" data-bs-toggle="tab" data-bs-target="#ctx-rf" type="button" role="tab">Formation (Renforcement)</button>
+                </li>
+                </ul>
+
+                <div class="tab-content border-start border-end border-bottom p-3 rounded-bottom" id="ctxTabsContent">
+                {{-- Projet --}}
+                <div class="tab-pane fade show active" id="ctx-proj" role="tabpanel">
+                    <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Projet *</label>
+                        <select name="code_projet" id="code_projet" class="form-select" required>
+                        <option value="">— Sélectionnez —</option>
+                        @foreach($projets as $p)
+                            <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
+                        @endforeach
+                        </select>
+                        @error('code_projet') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+                    </div>
+                </div>
+
+                {{-- Travaux connexes --}}
+                <div class="tab-pane fade" id="ctx-tc" role="tabpanel">
+                    <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Projet *</label>
+                        <select id="code_projet_tc" class="form-select">
+                        <option value="">— Sélectionnez —</option>
+                        @foreach($projets as $p)
+                            <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
+                        @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Travaux connexes *</label>
+                        <select name="code_travaux_connexe" id="code_travaux_connexe" class="form-select" disabled>
+                        <option value="">— Sélectionnez un projet d’abord —</option>
+                        </select>
+                    </div>
+                    </div>
+                </div>
+
+                {{-- Formation / Renforcement --}}
+                <div class="tab-pane fade" id="ctx-rf" role="tabpanel">
+                    <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Projet *</label>
+                        <select id="code_projet_rf" class="form-select">
+                        <option value="">— Sélectionnez —</option>
+                        @foreach($projets as $p)
+                            <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
+                        @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Formation (Renforcement) *</label>
+                        <select name="code_renforcement" id="code_renforcement" class="form-select" disabled>
+                        <option value="">— Sélectionnez un projet d’abord —</option>
+                        </select>
+                    </div>
+                    </div>
+                </div>
+                </div>
+
+                {{-- Facture / Règlement --}}
+                <div class="row g-3 mt-3">
+                <div class="col-md-2">
+                    <label class="form-label">Date Facture</label>
+                    <input type="date" name="date_facture" id="date_facture" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Réf. Facture</label>
+                    <input type="text" name="reference_facture" id="reference_facture" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Mt. Facture</label>
+                    <input type="number" step="0.01" min="0" name="montant_facture" id="montant_facture" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date Règlement *</label>
+                    <input type="date" name="date_reglement" id="date_reglement" class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Tranche N°</label>
+                    <input type="number" min="1" name="tranche_no" id="tranche_no" class="form-control" placeholder="auto">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Mode règlement *</label>
+                    <select name="mode_id" id="mode_id" class="form-select" required>
+                    @foreach($modes as $m)
+                        <option value="{{ $m->id }}">{{ $m->libelle }}</option>
+                    @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Montant réglé *</label>
+                    <input type="number" step="0.01" min="0.01" name="montant_regle" id="montant_regle" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Solde</label>
+                    <input type="text" id="solde_affiche" class="form-control" readonly>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Commentaire</label>
+                    <textarea name="commentaire" id="commentaire" class="form-control" rows="2"></textarea>
+                </div>
+                </div>
+
+                <div class="d-flex gap-3 justify-content-end mt-3">
+                <div class="text-end me-auto">
+                    <small class="text-muted">Solde facture estimé : <span id="soldeOut">—</span></small>
+                </div>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Enregistrer</button>
+                <button type="button" class="btn btn-secondary d-none" id="cancelEdit">Annuler édition</button>
                 </div>
             </form>
         </div>
@@ -225,110 +288,174 @@
 
 <script>
 (function(){
-    const fmt = n => (isNaN(n)?0:n).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
-    const $montantFacture = $('#montant_facture');
-    const $montantRegle   = $('#montant_regle');
-    const $soldeOut       = $('#soldeOut');
+  const fmt = n => (isNaN(n)?0:n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const $montantFacture = $('#montant_facture');
+  const $montantRegle   = $('#montant_regle');
+  const $soldeOut       = $('#soldeOut');
+  const $soldeAff       = $('#solde_affiche');
 
-    function recalcSolde(){
-        const f = parseFloat($montantFacture.val());
-        const r = parseFloat($montantRegle.val());
-        if (isNaN(f)) { $soldeOut.text('—'); return; }
-        const s = f - (isNaN(r)?0:r);
-        $soldeOut.text(fmt(s));
+  function recalcSolde(){
+    const f = parseFloat($montantFacture.val());
+    const r = parseFloat($montantRegle.val());
+    if (isNaN(f)) { $soldeOut.text('—'); $soldeAff.val(''); return; }
+    const s = f - (isNaN(r)?0:r);
+    $soldeOut.text(fmt(s));
+    $soldeAff.val(fmt(s));
+  }
+  $montantFacture.on('input', recalcSolde);
+  $montantRegle.on('input', recalcSolde);
+
+  // Prestataire / Bénéficiaire toggle
+  $('input[name="pay_target"]').on('change', function(){
+    const isPrest = $('#pay_prest').is(':checked');
+    $('#label-acteur').text(isPrest ? 'Prestataire' : 'Bénéficiaire');
+    // Optionnel : si tu veux charger une autre source côté serveur, fais-le ici
+  });
+
+  // Chargement listés dépendants (TC et RF) par projet
+  async function loadContextLists(codeProjet){
+    if(!codeProjet) {
+      $('#code_travaux_connexe').prop('disabled',true).html('<option value="">— Sélectionnez un projet d’abord —</option>');
+      $('#code_renforcement').prop('disabled',true).html('<option value="">— Sélectionnez un projet d’abord —</option>');
+      return;
     }
-    $montantFacture.on('input', recalcSolde);
-    $montantRegle.on('input', recalcSolde);
+    try{
+      const url = '{{ route("gf.reglements.contextByProjet","__CP__") }}'.replace('__CP__', encodeURIComponent(codeProjet));
+      const res = await fetch(url, {headers:{'Accept':'application/json'}});
+      const data = await res.json();
 
-    // Édition
-    $('.btn-edit').on('click', function(){
-        const d = this.dataset;
-        $('#regForm').attr('action', '{{ route("gf.reglements.update","__ID__") }}'.replace('__ID__', d.id));
-        $('#formMethod').val('PUT');
-        $('#submitBtn').text('Mettre à jour');
-        $('#cancelEdit').removeClass('d-none');
+      const $tc = $('#code_travaux_connexe');
+      const $rf = $('#code_renforcement');
 
-        $('select[name="code_projet"]').val(d.code_projet);
-        $('select[name="code_acteur"]').val(d.code_acteur);
-        $('select[name="mode_id"]').val(d.mode_id);
-        $('select[name="statut_id"]').val(d.statut_id);
+      // Travaux connexes
+      $tc.prop('disabled', false).empty().append('<option value="">— Sélectionnez —</option>');
+      (data.travaux || []).forEach(t => {
+        $tc.append(new Option(`${t.code} — ${t.libelle}`, t.code));
+      });
 
-        $('input[name="reference_facture"]').val(d.reference_facture || '');
-        $('input[name="date_facture"]').val(d.date_facture || '');
-        $('input[name="montant_facture"]').val(d.montant_facture || '');
-        $('input[name="montant_regle"]').val(d.montant_regle || '');
-        $('input[name="devise"]').val(d.devise || '');
-        $('input[name="date_reglement"]').val(d.date_reglement || '');
-        $('textarea[name="commentaire"]').val(d.commentaire || '');
+      // Renforcements
+      $rf.prop('disabled', false).empty().append('<option value="">— Sélectionnez —</option>');
+      (data.renforcements || []).forEach(r => {
+        $rf.append(new Option(`${r.code} — ${r.titre}`, r.code));
+      });
 
-        recalcSolde();
-    });
+    } catch(e){
+      console.error(e);
+      Swal.fire({icon:'error', title:'Erreur', text:'Chargement du contexte impossible.'});
+    }
+  }
 
-    // Annuler édition
-    $('#cancelEdit').on('click', function(){
-        $('#regForm').attr('action', '{{ route("gf.reglements.store") }}');
-        $('#formMethod').val('POST');
-        $('#submitBtn').text('Enregistrer');
-        $(this).addClass('d-none');
-        $('#regForm')[0].reset();
-        $soldeOut.text('—');
-    });
+  // Quand projet change dans chaque onglet
+  $('#code_projet').on('change', function(){ /* rien ; c’est le contexte Projet */ });
+  $('#code_projet_tc').on('change', function(){ loadContextLists(this.value); });
+  $('#code_projet_rf').on('change', function(){ loadContextLists(this.value); });
 
-    // DataTable (si dispo)
-    $(document).ready(function() {
-        if (typeof initDataTable === 'function') {
-            initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'tableReglements', 'Liste des règlements');
-        }
-    });
-})();
-</script>
-<script>
-(function(){
+  // Soumission AJAX (ton bloc existant amélioré)
   const form = document.getElementById('regForm');
   const methodInput = document.getElementById('formMethod');
 
   form.addEventListener('submit', async function(e){
     e.preventDefault();
 
-    const url    = form.getAttribute('action');
-    const isPUT  = (methodInput.value || 'POST').toUpperCase() === 'PUT';
-    const fd     = new FormData(form);
+    // Mutex de contexte : on poste un seul contexte
+    const activeTab = document.querySelector('#ctxTabs .nav-link.active')?.id || 'proj-tab';
+    const fd = new FormData(form);
 
-    // Toujours poster en POST et envoyer _method=PUT si édition
+    // Normalise code_projet selon l’onglet
+    if (activeTab === 'proj-tab') {
+      // conserve code_projet, vide TC/RF
+      fd.delete('code_travaux_connexe');
+      fd.delete('code_renforcement');
+    } else if (activeTab === 'tc-tab') {
+      const cp = $('#code_projet_tc').val();
+      if (!cp) return Swal.fire({icon:'warning',title:'Projet requis',text:'Sélectionnez un projet.'});
+      fd.set('code_projet', cp);
+      fd.delete('code_renforcement');
+    } else if (activeTab === 'rf-tab') {
+      const cp = $('#code_projet_rf').val();
+      if (!cp) return Swal.fire({icon:'warning',title:'Projet requis',text:'Sélectionnez un projet.'});
+      fd.set('code_projet', cp);
+      fd.delete('code_travaux_connexe');
+    }
+
+    // _method / headers
+    const url   = form.getAttribute('action');
+    const isPUT = (methodInput.value || 'POST').toUpperCase() === 'PUT';
     if (isPUT && !fd.has('_method')) fd.append('_method','PUT');
 
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept':'application/json' },
-        body: fd
-      });
-
+    try{
+      const res  = await fetch(url, { method:'POST', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}, body:fd });
       const data = await res.json();
 
       if (!res.ok) {
         if (data?.errors) {
-          // Agrège les erreurs de validation
-          const lines = Object.values(data.errors).flat().map(s => `<li>${s}</li>`).join('');
-          Swal.fire({ icon:'error', title:'Veuillez corriger les erreurs', html:`<ul style="text-align:left">${lines}</ul>` });
-        } else {
-          Swal.fire({ icon:'error', title:'Erreur', text: data?.error || 'Une erreur est survenue.' });
+          const lines = Object.values(data.errors).flat().map(s=>`<li>${s}</li>`).join('');
+          return Swal.fire({icon:'error',title:'Veuillez corriger les erreurs',html:`<ul style="text-align:left">${lines}</ul>`});
         }
-        return;
+        return Swal.fire({icon:'error',title:'Erreur',text:data?.error||'Une erreur est survenue.'});
       }
 
       if (data.ok) {
-        Swal.fire({ icon:'success', title:data.message || 'Succès', timer:1600, showConfirmButton:false });
-        // recharge la page pour rafraîchir la liste
-        setTimeout(()=>window.location.reload(), 700);
+        Swal.fire({icon:'success',title:data.message||'Succès',timer:1500,showConfirmButton:false});
+        setTimeout(()=>window.location.reload(), 800);
       } else {
-        Swal.fire({ icon:'warning', title:'Info', text:data?.error || 'Traitement non effectué.' });
+        Swal.fire({icon:'warning',title:'Info',text:data?.error||'Traitement non effectué.'});
       }
-    } catch (err) {
-      Swal.fire({ icon:'error', title:'Erreur réseau', text:String(err) });
+    } catch(err){
+      Swal.fire({icon:'error',title:'Erreur réseau',text:String(err)});
+    }
+  });
+
+  // Edition (complète ton code existant avec contextes si tu stockes tranche_no / contextes)
+  $('.btn-edit').on('click', function(){
+    const d = this.dataset;
+
+    $('#regForm').attr('action', '{{ route("gf.reglements.update","__ID__") }}'.replace('__ID__', d.id));
+    $('#formMethod').val('PUT');
+    $('#submitBtn').text('Mettre à jour');
+    $('#cancelEdit').removeClass('d-none');
+
+    // Acteur
+    $('select[name="code_acteur"]').val(d.code_acteur);
+    $('#devise').val(d.devise || '');
+    $('#mode_id').val(d.mode_id);
+    $('#statut_id').val(d.statut_id);
+
+    // Facture / Reglement
+    $('#reference_facture').val(d.reference_facture || '');
+    $('#date_facture').val(d.date_facture || '');
+    $('#montant_facture').val(d.montant_facture || '');
+    $('#montant_regle').val(d.montant_regle || '');
+    $('#date_reglement').val(d.date_reglement || '');
+    $('#tranche_no').val(d.tranche_no || '');
+    $('#commentaire').val(d.commentaire || '');
+
+    // Contexte : par défaut on place dans “Projet”
+    $('#proj-tab').tab('show');
+    $('#code_projet').val(d.code_projet);
+
+    recalcSolde();
+  });
+
+  // Annuler édition
+  $('#cancelEdit').on('click', function(){
+    $('#regForm').attr('action', '{{ route("gf.reglements.store") }}');
+    $('#formMethod').val('POST');
+    $('#submitBtn').text('Enregistrer');
+    $(this).addClass('d-none');
+    $('#regForm')[0].reset();
+    $soldeOut.text('—'); $soldeAff.val('');
+    $('#proj-tab').tab('show');
+  });
+
+  // DataTable init
+  $(document).ready(function() {
+    if (typeof initDataTable === 'function') {
+      initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}','tableReglements','Liste des règlements');
     }
   });
 })();
 </script>
+
 
 @endsection
