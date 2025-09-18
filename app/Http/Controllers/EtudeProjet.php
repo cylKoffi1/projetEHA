@@ -455,10 +455,10 @@ class EtudeProjet extends Controller
             'ecran_id'=> $request->input('ecran_id'),
             'statutFilter' => $request->query('statut')
         ]);
-
+        $financiers = Acteur::where('code_pays', $country)->get();
         $statutFilter = $request->query('statut');
 
-        $query = Renforcement::with(['beneficiaires','projets','modalite','actionType','statut', 'fichiers'])
+        $query = Renforcement::with(['beneficiaires','projets','modalite','actionType','statut', 'fichiers', 'financier'])
             ->where('code_renforcement', 'like', $country.'_'.$group.'%')
             ->when($statutFilter, fn($q) => $q->where('statutId', $statutFilter))
             ->orderByDesc('date_debut');
@@ -486,6 +486,7 @@ class EtudeProjet extends Controller
             'projets',
             'beneficiaires',
             'modalites',
+            'financiers',
             'actionTypes',
             'statuts',
             'stats',

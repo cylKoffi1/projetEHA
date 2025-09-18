@@ -209,7 +209,7 @@
                                 <div class="accordion-body row g-3">
                                     <div class="col-lg-6">
                                         <label class="form-label">Projets associés</label>
-                                        <select name="projets[]" id="projets" multiple class="form-select select2-multiple"" data-placeholder="Sélectionnez des projets liés">
+                                        <select name="projets[]" id="projets" multiple class="form-select select2-multiple" data-placeholder="Sélectionnez des projets liés">
                                             @foreach($projets as $p)
                                                 <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
                                             @endforeach
@@ -217,7 +217,7 @@
                                     </div>
                                     <div class="col-lg-6">
                                         <label class="form-label">Bénéficiaires</label>
-                                        <select name="beneficiaires[]" id="beneficiaires" multiple class="form-select select2-multiple"" data-placeholder="Acteurs ou organisations bénéficiaires" required>
+                                        <select name="beneficiaires[]" id="beneficiaires" multiple class="form-select select2-multiple" data-placeholder="Acteurs ou organisations bénéficiaires" required>
                                             @foreach($beneficiaires as $b)
                                                 <option value="{{ $b->code_acteur }}">{{ $b->libelle_court }} {{ $b->libelle_long }}</option>
                                             @endforeach
@@ -236,25 +236,35 @@
                             </h2>
                             <div id="acc-partfin" class="accordion-collapse collapse" data-bs-parent="#renfoAccordion">
                                 <div class="accordion-body row g-3">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Participants prévus</label>
-                                        <input type="number" name="nb_participants_prev" class="form-control" placeholder="Ex : 50">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Participants prévus</label>
+                                            <input type="number" name="nb_participants_prev" class="form-control" placeholder="Ex : 50">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Coût prévisionnel (XOF)</label>
+                                            <input type="number" step="0.01" name="cout_previsionnel" class="form-control" placeholder="Ex : 2500000">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Bailleur</label>
+                                            <select name="source_financement" id="source_financement" class="form-select">
+                                                @foreach ($financiers as $financier)
+                                                    <option value="{{ $financier->code_acteur }}">
+                                                        {{ $financier->libelle_court }} {{ $financier->libelle_long }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Participants effectifs</label>
-                                        <input type="number" name="nb_participants_effectif" class="form-control" placeholder="Ex : 47">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Coût prévisionnel (XOF)</label>
-                                        <input type="number" step="0.01" name="cout_previsionnel" class="form-control" placeholder="Ex : 2500000">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Coût réel (XOF)</label>
-                                        <input type="number" step="0.01" name="cout_reel" class="form-control" placeholder="Ex : 2350000">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Source de financement</label>
-                                        <input type="text" name="source_financement" class="form-control" placeholder="Ex : Banque mondiale / État">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Participants effectifs</label>
+                                            <input type="number" name="nb_participants_effectif" class="form-control" placeholder="Ex : 47">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Coût réel (XOF)</label>
+                                            <input type="number" step="0.01" name="cout_reel" class="form-control" placeholder="Ex : 2350000">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -488,7 +498,7 @@
                                     </td>
                                 </tr>
                             @empty
-                               
+
                             @endforelse
                         </tbody>
                     </table>
@@ -620,8 +630,10 @@ async function deleteFile(id) {
     $('[name="nb_participants_effectif"]').val(payload.nb_participants_effectif || '');
     $('[name="cout_previsionnel"]').val(payload.cout_previsionnel || '');
     $('[name="cout_reel"]').val(payload.cout_reel || '');
-    $('[name="source_financement"]').val(payload.source_financement || '');
+    //$('[name="source_financement"]').val(payload.source_financement || '');
     $('#statutId').val(payload.statutId || 'plan');
+
+    $('#source_financement').val(payload.source_financement ?? '').trigger('change');
 
     $('#projets').val((payload.projets || []).map(String)).trigger('change');
     $('#beneficiaires').val((payload.beneficiaires || []).map(String)).trigger('change');
@@ -653,7 +665,7 @@ async function deleteFile(id) {
     $('#cancelEdit').on('click', function () {
     const form = document.getElementById('renfoForm');
     form.reset();
-    $('#projets,#beneficiaires,#actionTypeId,#modaliteId').val(null).trigger('change');
+    $('#projets,#beneficiaires,#actionTypeId,#modaliteId, #source_financement').val(null).trigger('change');
     $('#modeBadge').removeClass('bg-warning').addClass('bg-secondary').text('Mode : Création');
     $('#formTitle').text('Formulaire de renforcement');
     $('#cancelEdit').addClass('d-none');

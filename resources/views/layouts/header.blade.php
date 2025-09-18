@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
     <meta name="description" content="GP-INFRAS - Spécialiste en gestion de projet et infrastructure de pays">
-  
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Bootstrap JS (avec Popper.js inclus) -->
     <script src="{{ asset('assets/compiled/js/bootstrap.bundle.min.js') }}"></script>
@@ -200,6 +200,34 @@
     #cancelAction {
         min-width: 100px;
     }
+    .avatar {
+        position: relative;
+        width: 40px;          /* adapte la taille si besoin */
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        user-select: none;
+        }
+        .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        }
+        .avatar .init {
+        position: absolute;
+        inset: 0;
+        display: none;        /* affichée seulement en fallback */
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;      /* ajuste selon la taille */
+        color: #fff;
+        }
+
 </style>
 
 <script>
@@ -219,6 +247,39 @@ function alert(message, type = 'success') {
     });
 }
 
+</script>
+<script>
+    function initSmartSelects(container = document) {
+        $(container).find('select.form-select').each(function () {
+            const $select = $(this);
+
+            // Évite de réinitialiser un Select2 déjà activé
+            if ($select.hasClass('select2-hidden-accessible')) return;
+
+            // Détermine si c’est un select simple ou multiple
+            const isMultiple = $select.prop('multiple');
+
+            $select.select2({
+                placeholder: $select.attr('placeholder') ||
+                             $select.data('placeholder') ||
+                             (isMultiple ? "Sélectionner une ou plusieurs options" : "Sélectionner…"),
+                allowClear: !isMultiple,
+                width: '100%',
+                minimumResultsForSearch: 0, // toujours afficher la barre de recherche
+                language: {
+                    noResults: () => "Aucun résultat",
+                    searching: () => "Recherche…"
+                },
+                // utile si tes selects sont dans un modal ou un accordion
+                dropdownParent: $select.closest('.modal, .accordion, body')
+            });
+        });
+    }
+
+    // Initialisation globale au chargement
+    $(document).ready(function () {
+        initSmartSelects();
+    });
 </script>
 
 <script>
@@ -330,7 +391,29 @@ function confirmDelete(url, onSuccess, messages = {}) {
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
+        @php
+            $user = auth()->user();
+            $name = trim(($user->acteur->libelle_court ?? '') . ' ' . ($user->acteur->libelle_long ?? '')) ?: ($user->login ?? 'Utilisateur');
+            // Initiales (max 2 lettres)
+            $parts = preg_split('/\s+/u', $name, -1, PREG_SPLIT_NO_EMPTY);
+            $initials = collect($parts)->map(fn($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('');
 
+            // Détermine si on a une photo exploitable
+            $photoPath = $user->acteur->Photo ?? null;
+            $hasPhoto = !empty($photoPath);
+
+            // Couleur de fond stable à partir du nom/id
+            $seed = $user->id . '|' . $name;
+            $hash = crc32($seed);
+            $r = ($hash & 0xFF0000) >> 16;
+            $g = ($hash & 0x00FF00) >> 8;
+            $b = ($hash & 0x0000FF);
+            // Légère désaturation + foncer pour garantir lisibilité
+            $r = (int) max(0, $r * 0.8);
+            $g = (int) max(0, $g * 0.8);
+            $b = (int) max(0, $b * 0.8);
+            $bg = "rgb($r, $g, $b)";
+        @endphp
         <!-- Menu Principal -->
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0" style="align-items: center;">
@@ -343,7 +426,16 @@ function confirmDelete(url, onSuccess, messages = {}) {
                             <span class="user-name fw-bold" style="color: #F1C40F;">{{ auth()->user()->login }}</span>
                             <span class="user-group text-sm" style="color: #F1C40F;">{{ auth()->user()->groupeUtilisateur->libelle_groupe }}</span>
                         </div>
-                        <img class="profile-img" src="{{ asset(auth()->user()->acteur?->Photo ?? 'users/user.png') }}" alt="Profile Picture" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                        <div class="avatar profile-img" title="{{ $name }}" style="background: {{ $bg }}">
+                            @if($hasPhoto)
+                                <img
+                                    src="{{ asset($photoPath) }}"
+                                    alt="Photo de {{ $name }}"
+                                    onerror="this.style.display='none'; this.parentElement.querySelector('.init').style.display='flex';"
+                                >
+                            @endif
+                            <span class="init" aria-hidden="true" style="{{ $hasPhoto ? '' : 'display:flex' }}">{{ $initials }}</span>
+                        </div>
                         {{--<img class="profile-img" src="{{ url('/api/fichiers/'.auth()->user()->acteur->Photo) }}" alt="Profile Picture" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover;">--}}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end text-dark" aria-labelledby="navbarDropdown">

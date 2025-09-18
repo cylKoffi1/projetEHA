@@ -41,7 +41,7 @@ class Renforcement extends Model
             ->where('owner_type', 'Renforcement')
             ->orderByDesc('uploaded_at');
     }
-    
+
     /* ================= Relations ================= */
 
 public function beneficiaires()
@@ -64,6 +64,9 @@ public function projets()
     )->withTimestamps();
 }
 
+    public function financier(){
+        return $this->belongsTo(Acteur::class, 'source_financement', 'code_acteur');
+    }
     public function actionType()
     {
         return $this->belongsTo(ActionType::class, 'actionTypeId', 'id');
@@ -72,12 +75,12 @@ public function projets()
     {
         return $this->belongsTo(Modalite::class, 'modaliteId', 'id');
     }
-    
+
     public function statut()
     {
         return $this->belongsTo(StatutOperation::class, 'statutId', 'Id');
     }
-    
+
     /* ================= Utilitaires ================= */
 
     // Générer un code unique type CIV_BTP_RF_2025_08_001
