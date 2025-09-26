@@ -103,8 +103,12 @@
                                     <span style="color: white"></span>
                                 </a>
                                 <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                    @can("modifier_ecran_" . $ecran->id)
                                     <li><a class="dropdown-item" onclick="showEditLocalite('{{ $p->code }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
+                                    @endcan
+                                    @can("supprimer_ecran_" . $ecran->id)
                                     <li><a class="dropdown-item" onclick="deleteLocalite('{{ $p->code }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
+                                    @endcan
                                     <li><a class="dropdown-item" href="#"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
                                 </ul>
                             </div>
@@ -193,7 +197,9 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                                @can("ajouter_ecran_" . $ecran->id)
                                 <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
+                                @endcan
                             </div>
                         </form>
                     </div>
@@ -276,7 +282,9 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                                @can("modifier_ecran_" . $ecran->id)
                                 <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
+                                @endcan
                             </div>
                         </form>
                     </div>
@@ -322,7 +330,8 @@
                 url: '/admin/localite/delete/' + code
                 , method: 'DELETE', // Utilisez la méthode DELETE pour la suppression
                 data: {
-                    _token: '{{ csrf_token() }}' // Assurez-vous d'envoyer le jeton CSRF
+                    _token: '{{ csrf_token() }}', // Assurez-vous d'envoyer le jeton CSRF
+                    ecran_id: '{{ $ecran->id }}'
                 }
                 , success: function(response) {
                     var message = "localité supprimé avec succès.";
@@ -470,4 +479,6 @@
     });
 
 </script>
+    @endcan
+@endisset
 @endsection

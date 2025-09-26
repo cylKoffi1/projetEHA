@@ -59,6 +59,7 @@
                     <form id="annulationForm" method="POST" action="{{ route('projets.annulation.store') }}">
 
                             @csrf
+                            <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                             <div class="row">
                                 <div class="col-md-3">
                                     <label for="code_projet">Projet à annuler *</label>
@@ -115,7 +116,9 @@
                                     <textarea name="motif" class="form-control" rows="2" required placeholder="Expliquez la raison de l’annulation..."></textarea>
                                 </div>
                                 <div class="col text-end" style="top: 23px">
+                                    @can("supprimer_ecran_" . $ecran->id)
                                     <button type="submit" class="btn btn-danger  mt-3">Annuler le projet</button>
+                                    @endcan
                                 </div>
                             </div>
                             

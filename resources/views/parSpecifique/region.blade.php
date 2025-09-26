@@ -2,6 +2,8 @@
 
 
 @section('content')
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 @if (session('success'))
 <script>
     alert("{{ session('success') }}");
@@ -64,7 +66,9 @@
             <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
                 <h5 class="card-title">
                     Ajout d'une région
+                    @can("ajouter_ecran_" . $ecran->id)
                     <a  href="#" data-toggle="modal" data-target="#region-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
+                    @endcan
                 </h5>
                
                 @if (count($errors) > 0)
@@ -104,8 +108,12 @@
                                     <span style="color: white"></span>
                                 </a>
                                 <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                    @can("modifier_ecran_" . $ecran->id)
                                     <li><a class="dropdown-item" onclick="showEditRegion('{{ $p->code }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
+                                    @endcan
+                                    @can("supprimer_ecran_" . $ecran->id)
                                     <li><a class="dropdown-item" onclick="deleteRegion('{{ $p->code }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
+                                    @endcan
                                     <li><a class="dropdown-item" href="#"><i class="bi bi-plus-circle me-3"></i> Détails</a></li>
                                 </ul>
                             </div>
@@ -159,7 +167,9 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                            @can("ajouter_ecran_" . $ecran->id)
                             <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerRegion">
+                            @endcan
                         </div>
                     </form>
                 </div>
@@ -209,7 +219,9 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                            @can("modifier_ecran_" . $ecran->id)
                             <input type="submit" class="btn btn-primary" value="Enregistrer les modifications" id="enregistrerRegion">
+                            @endcan
                         </div>
                     </form>
                 </div>
@@ -276,7 +288,8 @@
                 url: '/admin/region/delete/' + code
                 , method: 'DELETE', // Utilisez la méthode DELETE pour la suppression
                 data: {
-                    _token: '{{ csrf_token() }}' // Assurez-vous d'envoyer le jeton CSRF
+                    _token: '{{ csrf_token() }}', // Assurez-vous d'envoyer le jeton CSRF
+                    ecran_id: '{{ $ecran->id }}'
                 }
                 , success: function(response) {
                     var message = "Région supprimé avec succès.";
@@ -291,4 +304,6 @@
     }
 
 </script>
+    @endcan
+@endisset
 @endsection

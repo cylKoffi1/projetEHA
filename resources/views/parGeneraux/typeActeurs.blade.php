@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 @if (session('success'))
 <script>
     alert("{{ session('success') }}");
@@ -84,7 +86,12 @@
                         </div>
                     </div>
                 </div>
+                @can("ajouter_ecran_" . $ecran->id)
                 <button type="submit" class="btn btn-primary mt-2" id="submit-button">Ajouter</button>
+                @endcan
+                @can("modifier_ecran_" . $ecran->id)
+                <button type="submit" class="btn btn-warning mt-2 d-none" id="update-button">Modifier</button>
+                @endcan
             </form>
 
         </div>
@@ -109,15 +116,17 @@
                         <td>{{ $typeActeur->cd_type_acteur }}</td>
                         <td>{{ $typeActeur->libelle_type_acteur }}</td>
                         <td>
+                            @can("modifier_ecran_" . $ecran->id)
                             <a href="#" class="edit-button" data-id="{{ $typeActeur->id }}" data-cd="{{ $typeActeur->cd_type_acteur }}" data-libelle="{{ $typeActeur->libelle_type_acteur }}">
                                 <i class="bi bi-pencil-square text-primary" style="font-size: 1.2rem; cursor: pointer;"></i>
                             </a>
+                            @endcan
 
+                            @can("supprimer_ecran_" . $ecran->id)
                             <a  href="#" class="delete-button" data-cd="{{ $typeActeur->cd_type_acteur }}" data-toggle="modal" data-target="#deleteModal">
                                 <i class="bi bi-x-circle" style="font-size: 1.2rem; color: red; cursor: pointer;"></i>
                             </a>
-
-
+                            @endcan
                         </td>
                     </tr>
                     @endforeach
@@ -145,7 +154,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    @can("supprimer_ecran_" . $ecran->id)
                     <button type="submit" class="btn btn-danger">Supprimer</button>
+                    @endcan
                 </div>
             </form>
         </div>
@@ -170,7 +181,13 @@ document.addEventListener('DOMContentLoaded', function() {
             form.action = `/type-acteurs/${cd}`;
             document.getElementById('method').value = 'PUT';
 
-            document.getElementById('submit-button').textContent = 'Modifier';
+            // Afficher le bon bouton selon les droits
+            @can("ajouter_ecran_" . $ecran->id)
+            document.getElementById('submit-button').classList.add('d-none');
+            @endcan
+            @can("modifier_ecran_" . $ecran->id)
+            document.getElementById('update-button').classList.remove('d-none');
+            @endcan
         });
     });
 
@@ -180,6 +197,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('method').value === 'POST') {
             form.action = '{{ route("type-acteurs.store") }}';
         }
+        
+        // Afficher le bon bouton selon les droits
+        @can("ajouter_ecran_" . $ecran->id)
+        document.getElementById('submit-button').classList.remove('d-none');
+        @endcan
+        @can("modifier_ecran_" . $ecran->id)
+        document.getElementById('update-button').classList.add('d-none');
+        @endcan
     });
 
     // Suppression
@@ -187,10 +212,12 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const cd = this.getAttribute('data-cd');
             const form = document.getElementById('delete-form');
-            form.action = `/type-acteurs/${cd}`;
+            form.action = `/type-acteurs/${cd}?ecran_id={{ $ecran->id }}`;
         });
     });
 });
 
 </script>
+    @endcan
+@endisset
 @endsection

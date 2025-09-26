@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow d’approbation — Module générique</title>
+  <style>
+    /* ===============================
+       Design system — variables
+    =============================== */
+    :root{
+      --bg: #0f1218;
+      --panel: #141924;
+      --panel-2: #101520;
+      --text: #e8edf3;
+      --muted: #98a2b3;
+      --primary: #4f46e5;    /* indigo */
+      --primary-600:#4338ca;
+      --secondary:#10b981;   /* emerald */
+      --warning:#f59e0b;     /* amber */
+      --danger:#ef4444;      /* red */
+      --info:#06b6d4;        /* cyan */
+      --border:#22283a;
+      --badge:#1f2937;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow-soft: 0 8px 18px rgba(0,0,0,.25);
+      --ring: 0 0 0 3px rgba(79,70,229,.25);
+      --font: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, system-ui, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:linear-gradient(180deg,#0b0e14 0%, #0e131e 100%);
+      color:var(--text); font-family:var(--font); line-height:1.45;
+    }
+    a{color:inherit; text-decoration:none}
+    .app{display:grid; grid-template-columns: 270px 1fr; min-height:100vh}
+
+    /* ===============================
+       Sidebar
+    =============================== */
+    .sidebar{
+      background: radial-gradient(120% 120% at 0 0, #151a27 0, #0f1218 65%);
+      border-right:1px solid var(--border);
+      padding:24px 18px; position:sticky; top:0; height:100vh; overflow:auto;
+    }
+    .brand{display:flex; gap:10px; align-items:center; margin-bottom:22px}
+    .logo{width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:linear-gradient(135deg,#6366f1 0,#06b6d4 100%); box-shadow: var(--shadow-soft)}
+    .logo b{font-weight:800}
+    .brand h1{font-size:16px; margin:0}
+
+    .nav{display:grid; gap:8px; margin:16px 0 28px}
+    .nav a{padding:10px 12px; border-radius:12px; border:1px solid transparent; display:flex; align-items:center; gap:10px; color:var(--muted)}
+    .nav a[aria-current="page"], .nav a:hover{background: linear-gradient(180deg,#171e2c,#121726); color:var(--text); border-color:var(--border)}
+
+    .pill{font-size:12px; color:#cbd5e1; background:#0b1220; border:1px solid #1e293b; display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px}
+
+    .kbd{font-family:var(--mono); font-size:11px; padding:.2rem .4rem; border:1px solid var(--border); background:#0b1019; border-radius:6px; color:#cbd5e1}
+
+    /* ===============================
+       Topbar
+    =============================== */
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 22px; position:sticky; top:0; background:rgba(13,17,26,.75); backdrop-filter: blur(6px); border-bottom:1px solid var(--border); z-index:4}
+    .search{flex:1; display:flex; align-items:center; gap:8px; background:#0d1422; border:1px solid var(--border); border-radius:12px; padding:10px}
+    .search input{flex:1; background:transparent; border:0; color:var(--text); outline:none}
+    .user{display:flex; align-items:center; gap:10px}
+    .avatar{width:34px; height:34px; border-radius:999px; background:linear-gradient(135deg,#10b981,#3b82f6)}
+
+    /* ===============================
+       Content Layout
+    =============================== */
+    .content{min-width:0}
+    .grid{display:grid; gap:16px}
+    .cols-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+    .cols-2{grid-template-columns: repeat(2, minmax(0,1fr))}
+
+    .card{
+      background:linear-gradient(180deg,#121725,#0f141f);
+      border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow: var(--shadow-soft)
+    }
+    .card h3{margin:0 0 10px; font-size:16px}
+    .muted{color:var(--muted)}
+
+    .toolbar{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{--bg: #111827; --bd:#253045; --fg:#e5e7eb; cursor:pointer; display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; border:1px solid var(--bd); background:var(--bg)}
+    .btn:hover{filter:brightness(1.1)}
+    .btn.primary{--bg: linear-gradient(135deg,#6366f1,#06b6d4); --bd: transparent; --fg:white}
+    .btn.soft{--bg:#0e1624}
+    .btn.warn{--bg:#2b1b07; --bd:#3d2b0d}
+
+    .badges{display:flex; gap:6px; flex-wrap:wrap}
+    .badge{padding:5px 10px; border-radius:999px; background:var(--badge); border:1px solid var(--border); font-size:12px; color:#cbd5e1}
+    .badge.success{background:rgba(16,185,129,.15); border-color:#134e4a; color:#d1fae5}
+    .badge.warn{background:rgba(245,158,11,.15); border-color:#78350f; color:#fde68a}
+    .badge.danger{background:rgba(239,68,68,.12); border-color:#7f1d1d; color:#fecaca}
+    .badge.info{background:rgba(6,182,212,.12); border-color:#164e63; color:#a5f3fc}
+
+    /* ===============================
+       Tables
+    =============================== */
+    .table{width:100%; border-collapse:separate; border-spacing:0 10px}
+    .table th{font-size:12px; text-transform:uppercase; letter-spacing:.06em; text-align:left; color:#9aa7bd; padding:0 12px}
+    .table td{padding:14px 12px; background:#0f1524; border-top:1px solid #1b2538; border-bottom:1px solid #1b2538}
+    .table tr td:first-child{border-left:1px solid #1b2538; border-top-left-radius:12px; border-bottom-left-radius:12px}
+    .table tr td:last-child{border-right:1px solid #1b2538; border-top-right-radius:12px; border-bottom-right-radius:12px}
+
+    .status{display:inline-flex; gap:8px; align-items:center}
+    .dot{width:8px; height:8px; border-radius:999px; background:#64748b; box-shadow:0 0 0 3px rgba(100,116,139,.15)}
+    .dot.ok{background:#10b981}
+    .dot.pending{background:#f59e0b}
+    .dot.danger{background:#ef4444}
+
+    /* ===============================
+       Forms
+    =============================== */
+    .form{display:grid; gap:14px}
+    .row{display:grid; gap:12px; grid-template-columns: repeat(12, 1fr)}
+    .col-6{grid-column: span 6}
+    .col-4{grid-column: span 4}
+    .col-3{grid-column: span 3}
+    .input, select, textarea{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--border); background:#0d1422; color:var(--text)
+    }
+    label{font-size:13px; color:#9aa7bd; display:block; margin-bottom:6px}
+
+    /* ===============================
+       Timelines & chips
+    =============================== */
+    .timeline{display:grid; gap:14px}
+    .event{display:grid; grid-template-columns: 20px 1fr; gap:12px}
+    .event .bar{position:relative}
+    .event .bar::before{content:""; position:absolute; left:8px; top:0; bottom:0; width:4px; background:linear-gradient(#1f2937, transparent)}
+    .event .pin{width:20px; height:20px; border-radius:999px; background:linear-gradient(135deg,#6366f1,#06b6d4); box-shadow: var(--shadow); border:2px solid #0b0f17}
+    .chip{display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; background:#0b1019; border:1px solid #1f2a3d; color:#cbd5e1; font-size:12px}
+
+    /* ===============================
+       Accordions (sans JS)
+    =============================== */
+    details{border:1px solid var(--border); border-radius:12px; background:#0e1320; padding:10px 12px}
+    details[open]{box-shadow: var(--shadow-soft)}
+    summary{cursor:pointer; list-style:none}
+    summary::-webkit-details-marker{display:none}
+
+    /* ===============================
+       Modal (CSS-only using :target)
+    =============================== */
+    .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55); z-index:50}
+    .modal:target{display:grid}
+    .dialog{width:min(860px, 94vw); background:linear-gradient(180deg,#121725,#0f141f); border:1px solid var(--border); border-radius:18px; box-shadow: var(--shadow); padding:18px}
+    .dialog header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px}
+
+    /* ===============================
+       Helper utilities
+    =============================== */
+    .flex{display:flex; gap:10px; align-items:center}
+    .space{flex:1}
+    .right{margin-left:auto}
+    .mt-8{margin-top:8px}
+    .mt-16{margin-top:16px}
+    .mt-24{margin-top:24px}
+    .code{font-family:var(--mono); background:#0b1019; border:1px solid #1f2a3d; border-radius:10px; padding:8px 10px; font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- ================= Sidebar ================= -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"><b>WF</b></div>
+        <h1>Workflow · BTP‑Project</h1>
+      </div>
+
+      <div class="pill">Module générique <span class="kbd">subject_type/id</span></div>
+
+      <nav class="nav mt-16">
+        <a href="#" aria-current="page">Tableau de bord</a>
+        <a href="#proc">Processus</a>
+        <a href="#inst">Instances</a>
+        <a href="#tasks">Tâches</a>
+        <a href="#audit">Journal / Audit</a>
+        <a href="#admin">Administration</a>
+      </nav>
+
+      <details class="mt-24">
+        <summary>Raccourcis</summary>
+        <div class="grid mt-8">
+          <a class="btn soft" href="#newProcess">➕ Nouveau processus</a>
+          <a class="btn soft" href="#startInstance">▶️ Démarrer une instance</a>
+        </div>
+      </details>
+    </aside>
+
+    <!-- ================= Main ================= -->
+    <main class="content">
+      <div class="topbar">
+        <div class="search">
+          🔎 <input placeholder="Rechercher un processus, une instance, une tâche…" />
+          <span class="kbd">Ctrl</span><span class="kbd">K</span>
+        </div>
+        <div class="user">
+          <span class="badge info">Environnement · Demo</span>
+          <div class="avatar"></div>
+        </div>
+      </div>
+
+      <section class="grid cols-3" style="padding:18px">
+        <article class="card">
+          <h3>Instances actives</h3>
+          <div class="flex"><div class="status"><span class="dot pending"></span> 42 en revue</div><span class="space"></span><span class="badge info">+8 aujourd’hui</span></div>
+        </article>
+        <article class="card">
+          <h3>Délais (SLA)</h3>
+          <div class="flex"><div class="status"><span class="dot danger"></span> 5 en retard</div><span class="space"></span><span class="badge warn">à surveiller</span></div>
+        </article>
+        <article class="card">
+          <h3>Taux d’approbation</h3>
+          <div class="flex"><div class="status"><span class="dot ok"></span> 94% semaine</div><span class="space"></span><span class="badge success">bon</span></div>
+        </article>
+      </section>
+
+      <!-- ================= Processus (définitions) ================= -->
+      <section id="proc" style="padding: 0 18px 18px">
+        <div class="card">
+          <header class="flex" style="justify-content:space-between">
+            <div>
+              <h3>Processus d’approbation</h3>
+              <p class="muted">Modèles de workflow génériques utilisables par tout module.</p>
+            </div>
+            <a class="btn primary" href="#newProcess">Créer un processus</a>
+          </header>
+
+          <table class="table mt-16">
+            <thead>
+              <tr><th>Nom</th><th>Version</th><th>États</th><th>Règles</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>WF_GENERIC_V1</b><div class="muted">Étude/DAO/Projet (MO/Tech/Bailleur)</div></td>
+                <td>1</td>
+                <td>
+                  <div class="badges">
+                    <span class="badge">DRAFT</span>
+                    <span class="badge">REVIEW</span>
+                    <span class="badge">APPROVAL</span>
+                    <span class="badge">NO_OBJECTION?</span>
+                    <span class="badge">APPROVED</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="badges">
+                    <span class="badge info">SLA</span>
+                    <span class="badge info">Quorum</span>
+                    <span class="badge info">Guards</span>
+                  </div>
+                </td>
+                <td class="right"><a class="btn" href="#viewProcess">Voir</a></td>
+              </tr>
+              <tr>
+                <td><b>WF_SIMPLE_AP</b><div class="muted">Décompte/Facture · 2 étapes</div></td>
+                <td>3</td>
+                <td>
+                  <div class="badges">
+                    <span class="badge">DRAFT</span>
+                    <span class="badge">APPROVAL</span>
+                    <span class="badge">APPROVED</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="badges">
+                    <span class="badge info">SLA</span>
+                  </div>
+                </td>
+                <td class="right"><a class="btn" href="#viewProcess">Voir</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= Instances ================= -->
+      <section id="inst" style="padding: 0 18px 18px">
+        <div class="card">
+          <header class="flex" style="justify-content:space-between">
+            <div>
+              <h3>Instances</h3>
+              <p class="muted">Chaque ligne = 1 approbation en cours, liée à n’importe quel objet (polymorphisme).</p>
+            </div>
+            <a class="btn" href="#startInstance">Démarrer</a>
+          </header>
+
+          <table class="table mt-16">
+            <thead>
+              <tr><th>Objet</th><th>Processus</th><th>État</th><th>Assigné</th><th>Échéance</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <b>ETUDE-2025-0142</b>
+                  <div class="muted">subject_type: Etude | subject_id: 142</div>
+                </td>
+                <td>WF_GENERIC_V1</td>
+                <td><span class="status"><span class="dot pending"></span> REVIEW</span></td>
+                <td>
+                  <div class="badges">
+                    <span class="badge">TECH: K. Oumar</span>
+                    <span class="badge">TECH: L. Traoré</span>
+                  </div>
+                </td>
+                <td><span class="badge warn">J-1</span></td>
+                <td class="right"><a class="btn" href="#viewInstance">Ouvrir</a></td>
+              </tr>
+              <tr>
+                <td><b>DECOMPTE-0007</b><div class="muted">subject_type: Decompte | subject_id: 7</div></td>
+                <td>WF_SIMPLE_AP</td>
+                <td><span class="status"><span class="dot ok"></span> APPROVAL</span></td>
+                <td><span class="badge">MO: Chef Projet</span></td>
+                <td><span class="badge">J+3</span></td>
+                <td class="right"><a class="btn" href="#viewInstance">Ouvrir</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= Tâches ================= -->
+      <section id="tasks" style="padding: 0 18px 18px">
+        <div class="card">
+          <header class="flex" style="justify-content:space-between">
+            <div>
+              <h3>Tâches d’approbation</h3>
+              <p class="muted">À faire par rôle/utilisateur (mode: single / all / quorum).</p>
+            </div>
+            <div class="toolbar">
+              <a class="btn soft" href="#">Mes tâches</a>
+              <a class="btn soft" href="#">Équipe</a>
+              <a class="btn soft" href="#">Toutes</a>
+            </div>
+          </header>
+
+          <table class="table mt-16">
+            <thead>
+              <tr><th>Tâche</th><th>Instance</th><th>Rôle</th><th>Mode</th><th>Échéance</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Revue technique</b></td>
+                <td>ETUDE-2025-0142</td>
+                <td><span class="badge">TECH</span></td>
+                <td><span class="badge info">ALL</span></td>
+                <td><span class="badge warn">Aujourd’hui</span></td>
+                <td class="right">
+                  <a class="btn" href="#viewInstance">Voir</a>
+                </td>
+              </tr>
+              <tr>
+                <td><b>Validation MO</b></td>
+                <td>DECOMPTE-0007</td>
+                <td><span class="badge">MO</span></td>
+                <td><span class="badge info">SINGLE</span></td>
+                <td><span class="badge">J+3</span></td>
+                <td class="right">
+                  <a class="btn" href="#viewInstance">Voir</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= Journal / Audit ================= -->
+      <section id="audit" style="padding: 0 18px 18px">
+        <div class="card">
+          <h3>Journal / Audit</h3>
+          <div class="timeline mt-16">
+            <div class="event">
+              <div class="bar"><div class="pin"></div></div>
+              <div>
+                <b>Transition</b> · ETUDE-2025-0142 · DRAFT ➜ REVIEW · <span class="muted">par K. Oumar, 12:04</span>
+                <div class="mt-8 code">trigger=submit; guards=pass; actions=[lockFiles, notify(TECH)]; hash=7b9c…</div>
+              </div>
+            </div>
+            <div class="event">
+              <div class="bar"><div class="pin"></div></div>
+              <div>
+                <b>SLA breach</b> · Tâche "Revue technique" · <span class="muted">+1j, escalade envoyée</span>
+                <div class="mt-8 chip">notif → Responsable Technique</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Administration ================= -->
+      <section id="admin" style="padding: 0 18px 28px">
+        <div class="grid cols-2">
+          <div class="card">
+            <h3>Rôles & équipes</h3>
+            <p class="muted">Rôles propres au moteur (indépendants des modules).</p>
+            <div class="badges mt-8">
+              <span class="badge">MO</span>
+              <span class="badge">BET/TECH</span>
+              <span class="badge">BAILLEUR</span>
+              <span class="badge">JURIDIQUE</span>
+              <span class="badge">HSE</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Calendriers & jours fériés</h3>
+            <p class="muted">Pour les SLA en jours ouvrés, par pays/tenant.</p>
+            <div class="badges mt-8">
+              <span class="badge">CIV · Jours ouvrés (lun–ven)</span>
+              <span class="badge">MLI · Jours ouvrés (lun–ven)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= Modals ================= -->
+  <!-- Nouveau Processus -->
+  <div class="modal" id="newProcess">
+    <div class="dialog">
+      <header>
+        <h3>Créer un processus</h3>
+        <a class="btn" href="#">✖</a>
+      </header>
+      <div class="form">
+        <div class="row">
+          <div class="col-6">
+            <label>Nom</label>
+            <input class="input" placeholder="WF_GENERIC_V1" />
+          </div>
+          <div class="col-3">
+            <label>Version</label>
+            <input class="input" type="number" value="1" />
+          </div>
+          <div class="col-3">
+            <label>Actif</label>
+            <select><option>Oui</option><option>Non</option></select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label>États (liste)</label>
+            <input class="input" placeholder="DRAFT, REVIEW, APPROVAL, NO_OBJECTION?, APPROVED" />
+          </div>
+          <div class="col-6">
+            <label>Règles (JSON)</label>
+            <textarea rows="4" placeholder='{"sla": {"REVIEW": 5}, "quorum": {"APPROVAL": 0.66}}'></textarea>
+          </div>
+        </div>
+        <details class="mt-8">
+          <summary>Voir exemple de DSL JSON</summary>
+          <pre class="code" style="white-space:pre-wrap">{
+  "states": {
+    "DRAFT": {"type":"initial"},
+    "REVIEW": {"tasks":[{"name":"Revue technique","role":"TECH","mode":"all","sla_days":5}]},
+    "APPROVAL": {"tasks":[{"name":"Validation MO","role":"MO","mode":"single","sla_days":3}]},
+    "NO_OBJECTION?": {"optional":true, "tasks":[{"name":"Non-objection bailleur","role":"BAILLEUR","mode":"single","sla_days":10}]},
+    "APPROVED": {"type":"final"}
+  }
+}</pre>
+        </details>
+        <div class="flex mt-16">
+          <a class="btn" href="#">Annuler</a>
+          <span class="space"></span>
+          <a class="btn primary" href="#">Enregistrer</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Démarrer une instance -->
+  <div class="modal" id="startInstance">
+    <div class="dialog">
+      <header>
+        <h3>Démarrer une instance</h3>
+        <a class="btn" href="#">✖</a>
+      </header>
+      <div class="form">
+        <div class="row">
+          <div class="col-6">
+            <label>Processus</label>
+            <select>
+              <option>WF_GENERIC_V1</option>
+              <option>WF_SIMPLE_AP</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label>Objet (subject_type/id)</label>
+            <input class="input" placeholder="Etude#142" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label>Variables</label>
+            <input class="input" placeholder='{"requires_no_objection": true, "country":"CIV"}' />
+          </div>
+          <div class="col-6">
+            <label>Pièces liées (IDs)</label>
+            <input class="input" placeholder='{"rapport": 812, "plans": 990}' />
+          </div>
+        </div>
+        <div class="flex mt-16">
+          <a class="btn" href="#">Annuler</a>
+          <span class="space"></span>
+          <a class="btn primary" href="#">Démarrer</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voir un processus (lecture seule) -->
+  <div class="modal" id="viewProcess">
+    <div class="dialog">
+      <header>
+        <h3>WF_GENERIC_V1 · Détails</h3>
+        <a class="btn" href="#">✖</a>
+      </header>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>États</h3>
+          <div class="badges mt-8">
+            <span class="badge">DRAFT</span>
+            <span class="badge">REVIEW</span>
+            <span class="badge">APPROVAL</span>
+            <span class="badge">NO_OBJECTION?</span>
+            <span class="badge">APPROVED</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Règles & SLA</h3>
+          <pre class="code" style="white-space:pre-wrap">REVIEW: 5j ouvrés · APPROVAL: 3j · NO_OBJECTION?: 10j (si requis)
+mode(REVIEW)=all, mode(APPROVAL)=single</pre>
+        </div>
+      </div>
+      <details class="mt-16">
+        <summary>JSON (DSL) appliqué</summary>
+        <pre class="code" style="white-space:pre-wrap">{"code":"WF_GENERIC_V1", "version":1, "states":{…}, "transitions":[…]}</pre>
+      </details>
+    </div>
+  </div>
+
+  <!-- Voir une instance -->
+  <div class="modal" id="viewInstance">
+    <div class="dialog">
+      <header>
+        <h3>Instance · ETUDE-2025-0142</h3>
+        <a class="btn" href="#">✖</a>
+      </header>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>État courant</h3>
+          <div class="status mt-8"><span class="dot pending"></span> REVIEW</div>
+          <div class="mt-16">
+            <label>Assignés</label>
+            <div class="badges mt-8">
+              <span class="badge">TECH: K. Oumar</span>
+              <span class="badge">TECH: L. Traoré</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Échéance</h3>
+          <p class="muted">Due: Aujourd’hui · SLA: 5j ouvrés</p>
+          <div class="badges">
+            <span class="badge warn">Rappel envoyé</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-16">
+        <h3>Historique</h3>
+        <div class="timeline mt-8">
+          <div class="event">
+            <div class="bar"><div class="pin"></div></div>
+            <div>
+              <b>submit</b> · DRAFT ➜ REVIEW · <span class="muted">par BET: M. Diarra, 09:10</span>
+              <div class="code mt-8">guards=pass; actions=[lockFiles, notify(TECH)]; hash=7b9c…</div>
+            </div>
+          </div>
+          <div class="event">
+            <div class="bar"><div class="pin"></div></div>
+            <div>
+              <b>comment</b> · TECH: L. Traoré · <span class="muted">10:32</span>
+              <div class="code mt-8">"Plans niveau 2 à corriger"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <details class="mt-16">
+        <summary>Variables & pièces</summary>
+        <pre class="code" style="white-space:pre-wrap">{"requires_no_objection": true, "country":"CIV", "bailleur":"BM", "files":{"rapport":812,"plans":990}}</pre>
+      </details>
+
+      <div class="flex mt-16">
+        <a class="btn" href="#">Refuser</a>
+        <a class="btn primary" href="#">Approuver</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

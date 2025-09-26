@@ -3,6 +3,8 @@
 @extends('layouts.app')
 
 @section('content')
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 @if (session('success'))
 <script>
     $('#alertMessage').text("{{ session('success') }}");
@@ -94,7 +96,12 @@
                                 </div>
 
                                 <div class="text-end mt-3">
+                                    @can("ajouter_ecran_" . $ecran->id)
                                     <button type="submit" class="btn btn-primary" id="btn-save">Enregistrer</button>
+                                    @endcan
+                                    @can("modifier_ecran_" . $ecran->id)
+                                    <button type="submit" class="btn btn-warning d-none" id="btn-update">Modifier</button>
+                                    @endcan
                                     <button type="button" class="btn btn-secondary" onclick="resetForm()">Annuler</button>
                                 </div>
                             </form>
@@ -147,8 +154,12 @@
                                                 <span style="color: white"></span>
                                             </a>
                                             <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                                @can("modifier_ecran_" . $ecran->id)
                                                 <li><a class="dropdown-item" href="#" onclick="showEditDomaine('{{ $domaine->code }}')"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
+                                                @endcan
+                                                @can("supprimer_ecran_" . $ecran->id)
                                                 <li><a class="dropdown-item" href="#" onclick="deleteDomaine('{{ $domaine->code }}')"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
+                                                @endcan
                                             </ul>
                                         </div>
                                     </td>
@@ -240,10 +251,17 @@ $('#domaine-form').on('submit', function(e) {
             success: function(data) {
                 $('#code').val(data.code).prop('readonly', true); // empêche la modification du code
                 $('#libelle').val(data.libelle);
-                $('#code_original').val(data.code); // pour l’identification à la mise à jour
+                $('#code_original').val(data.code); // pour l'identification à la mise à jour
                 $('#domaine-form').attr('action', "{{ route('domaine.update') }}"); // vers la route de MAJ
                 $('#form-method').val('PUT'); // méthode HTTP
-                $('#btn-save').text('Modifier');
+                
+                // Afficher le bon bouton selon les droits
+                @can("ajouter_ecran_" . $ecran->id)
+                $('#btn-save').addClass('d-none');
+                @endcan
+                @can("modifier_ecran_" . $ecran->id)
+                $('#btn-update').removeClass('d-none');
+                @endcan
             },
             error: function(err) {
                 alert("Erreur lors du chargement du domaine.");
@@ -256,12 +274,19 @@ $('#domaine-form').on('submit', function(e) {
         $('#code').prop('readonly', false);
         $('#domaine-form').attr('action', "{{ route('domaine.store') }}");
         $('#form-method').val('POST');
-        $('#btn-save').text('Enregistrer');
+        
+        // Afficher le bon bouton selon les droits
+        @can("ajouter_ecran_" . $ecran->id)
+        $('#btn-save').removeClass('d-none');
+        @endcan
+        @can("modifier_ecran_" . $ecran->id)
+        $('#btn-update').addClass('d-none');
+        @endcan
     }
 
 
     function deleteDomaine(code) {
-        const url = `{{ url("/") }}/admin/domaine/delete/${code}`;
+        const url = `{{ url("/") }}/admin/domaine/delete/${code}?ecran_id={{ $ecran->id }}`;
         confirmDelete(url, () => window.location.reload(), {
             title: 'Supprimer ce domaine ?',
             text: 'Voulez-vous vraiment le supprimer ? Cette action est irréversible.',
@@ -271,4 +296,6 @@ $('#domaine-form').on('submit', function(e) {
     }
 
 </script>
+    @endcan
+@endisset
 @endsection

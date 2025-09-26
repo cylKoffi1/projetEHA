@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Infrastructure;
 use App\Models\FamilleInfrastructure;
 use App\Models\LocalitesPays;
+use App\Models\Ecran;
 use Illuminate\Http\Request;
 
 class InfrastructureMapController extends Controller
 {
-    public function showMap()
+    public function showMap(Request $request)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         $paysSelectionne = session('pays_selectionne');
         $groupeProjetSelectionne = session('projet_selectionne');
 
@@ -22,7 +24,7 @@ class InfrastructureMapController extends Controller
             ->with(['domaine', 'sousdomaine'])
             ->get();
 
-        return view('infrastructureMap', compact('familles'));
+        return view('infrastructureMap', compact('familles', 'ecran'));
     }
 
     public function getInfrastructuresGeoJson()

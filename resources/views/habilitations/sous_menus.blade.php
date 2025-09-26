@@ -1,352 +1,340 @@
-
-
 @extends('layouts.app')
 
 @section('content')
+{{-- ====== Messages non bloquants ====== --}}
 @if (session('success'))
-<script>
-    alert("{{ session('success') }}");
+  <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
+    {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+  </div>
+@endif
 
-</script>
+@if ($errors->any())
+  <div class="alert alert-danger alert-dismissible fade show mt-2" role="alert">
+    <ul class="mb-0">
+      @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+      @endforeach
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+  </div>
 @endif
 
 <style>
-    .invalid-feedback {
-        display: block;
-        width: 100%;
-        margin-top: 6px;
-        font-size: 80%;
-        color: #dc3545;
-        /* Couleur du texte pour les messages d'erreur */
-    }
-
+  .invalid-feedback{display:block;margin-top:6px;font-size:80%;color:#dc3545}
+  .form-section-title{font-weight:700;color:#334}
+  .table-actions .btn{padding:.1rem .35rem}
 </style>
+
 <section id="multiple-column-form">
-    <div class="page-heading">
-        <div class="page-title">
-            <div class="row">
-                <div class="col-sm-12">
-                    <li class="breadcrumb-item" style="list-style: none; text-align: right; padding: 5px; font-family: Arial, Helvetica, sans-serif;"><span id="date-now" style="color: #34495E; font-family: Verdana, Geneva, Tahoma, sans-serif; margin-left: 15px;"></span></li>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-12 col-md-6 order-md-1 order-last">
-                    <h3><i class="bi bi-arrow-return-left return" onclick="goBack()"></i>Plateforme </h3>
-                </div>
-                <div class="col-12 col-md-6 order-md-2 order-first">
-                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="">Gestion des habilitations</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Sous-menus</li>
-
-                        </ol>
-                    </nav>
-                    <div class="row">
-                        <script>
-                            setInterval(function() {
-                                document.getElementById('date-now').textContent = getCurrentDate();
-                            }, 1000);
-
-                            function getCurrentDate() {
-                                // Implémentez la logique pour obtenir la date actuelle au format souhaité
-                                var currentDate = new Date();
-                                return currentDate.toLocaleString(); // Vous pouvez utiliser une autre méthode pour le formatage
-                            }
-
-                        </script>
-
-                    </div>
-                </div>
-            </div>
+  <div class="page-heading">
+    <div class="page-title">
+      <div class="row">
+        <div class="col-sm-12">
+          <li class="breadcrumb-item" style="list-style:none;text-align:right;padding:5px">
+            <span id="date-now" style="color:#34495E"></span>
+          </li>
         </div>
+      </div>
+
+      <div class="row align-items-center">
+        <div class="col-12 col-md-6 order-md-1 order-last">
+          <h3><i class="bi bi-arrow-return-left return" onclick="goBack()"></i> Plateforme</h3>
+        </div>
+        <div class="col-12 col-md-6 order-md-2 order-first">
+          <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="#">Gestion des habilitations</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Sous-menus</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
     </div>
-    <div class="row match-height">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
-                        @can("ajouter_ecran_" . $ecran->id)
-                        <h5 class="card-title">
-                            Ajout d'un sous-menu
-                            <a href="#" data-toggle="modal" data-target="#localite-modal" style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
-                        </h5>
-                         @endcan
+  </div>
 
-
-                        @if (count($errors) > 0)
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                        @endif
-                    </div>
-                    <div style="text-align: center;">
-                        <h5 class="card-title"> Liste des sous-menus</h5>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="card-body">
-
-
-                        <table class="table table-striped table-bordered" cellspacing="0" style="width: 100%" id="table1">
-                            <thead>
-                                <tr>
-                                    <th>Code </th>
-                                    <th>Rubrique</th>
-                                    <th>Sous-menu parent</th>
-                                    <th>Sous-menu</th>
-                                    <th>Ordre</th>
-                                    <th>Niveau</th>
-                                    <th>action</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                @foreach ($sous_menus as $sous_menu)
-                                <tr>
-                                    <td># {{ $sous_menu->code }}</td>
-                                    <td>{{ $sous_menu->rubrique->libelle ?? '' }}</td>
-                                    <td>{{ $sous_menu->sm_parent->libelle ?? "" }}</td>
-                                    <td>{{ $sous_menu->libelle }}</td>
-                                    <td>{{ $sous_menu->ordre }}</td>
-                                    <td>{{ $sous_menu->niveau }}</td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <a href="#" class="btn btn-link dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
-                                                <span style="color: white"></span>
-                                            </a>
-                                            <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
-                                            {{--   @can("modifier_ecran_" . $ecran->id) --}}
-                                                <li><a class="dropdown-item" onclick="showEditRubrique('{{ $sous_menu->code }}')" href="#"><i class="bi bi-pencil-square me-3"></i> Modifier</a></li>
-                                                {{--     @endcan--}}
-                                                    {{--     @can("supprimer_ecran_" . $ecran->id)--}}
-                                                <li><a class="dropdown-item" onclick="deleteRubrique('{{ $sous_menu->code }}')" href="#"> <i class="bi bi-trash3-fill me-3"></i> Supprimer</a></li>
-                                                {{--      @endcan--}}
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-
-                    </div>
-                </div>
-
-
-            </div>
-        </div>
+  {{-- =================== FORMULAIRE (création + édition) =================== --}}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 form-section-title">
+        <span id="form-title">Créer un sous-menu</span>
+      </h6>
+      <div>
+        <button type="button" id="btn-cancel-edit" class="btn btn-sm btn-outline-secondary" style="display:none">
+          Annuler la modification
+        </button>
+      </div>
     </div>
 
+    <div class="card-body">
+      <form id="sm-form" class="row g-3" method="POST" action="{{ route('sous_menu.store') }}">
+        @csrf
+        <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
+        <input type="hidden" id="edit_code" name="" value=""> {{-- sera renommé en mode édition --}}
 
-
-    <!-- Modal -->
-    <div class="modal fade" id="localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Enregistrement d'une rubrique</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form class="form" method="POST" action="{{ route('sous_menu.store') }}" data-parsley-validate>
-                        @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                        <div class="row">
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_libelle">Rubriques :</label>
-                                    <div class="mb-3">
-                                        <select class="form-select" id="code_rubrique" name="code_rubrique">
-                                            <option value="">Sélection une rubrique</option>
-                                            @foreach($rubriques as $rubrique)
-                                            <option value="{{ $rubrique->code }}">{{ $rubrique->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_ordre">Niveau :</label>
-                                    <input type="number" class="form-control" id="niveau" name="niveau" placeholder="Niveaux" min="1" max="3" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="sous_menu_parent">Parent :</label>
-                                    <div class="mb-3">
-                                        <select class="form-select" id="sous_menu_parent" name="sous_menu_parent">
-                                            <option value="">Sélection un sous menu</option>
-                                            @foreach($sous_menus as $sous_menu)
-                                            <option value="{{ $sous_menu->code }}">{{ $sous_menu->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Libellé :</label>
-                                    <input type="text" class="form-control" id="libelle" name="libelle" placeholder="Libellé" required>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="libelle">Ordre :</label>
-                                    <input type="number" class="form-control" id="ordre" name="ordre" value="{{  $smPlusGrandOrdre->ordre + 1 }}" placeholder="Ordre" min="1" required>
-                                </div>
-                            </div>
-                        </div>
-                    {{--    @can("ajouter_ecran_" . $ecran->id)--}}
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                            <input type="submit" class="btn btn-primary" value="Enregistrer" id="enregistrerLocalite">
-                        </div>
-                        {{--    @endcan--}}
-
-                    </form>
-                </div>
-            </div>
+        <div class="col-md-4">
+          <label for="code_rubrique" class="form-label">Rubrique</label>
+          <select class="form-select" id="code_rubrique" name="code_rubrique" required>
+            <option value="">Sélectionner…</option>
+            @foreach($rubriques as $rubrique)
+              <option value="{{ $rubrique->code }}">{{ $rubrique->libelle }}</option>
+            @endforeach
+          </select>
         </div>
+
+        <div class="col-md-2">
+          <label for="niveau" class="form-label">Niveau</label>
+          <input type="number" class="form-control" id="niveau" name="niveau" min="1" max="3" required>
+        </div>
+
+        <div class="col-md-6">
+          <label for="sous_menu_parent" class="form-label">Sous-menu parent (optionnel)</label>
+          <select class="form-select" id="sous_menu_parent" name="sous_menu_parent">
+            <option value="">— Aucun —</option>
+          </select>
+          <div class="form-text">Le parent doit appartenir à la même rubrique et à un niveau inférieur.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="libelle" class="form-label">Libellé</label>
+          <input type="text" class="form-control" id="libelle" name="libelle" required>
+        </div>
+
+        <div class="col-md-2">
+          <label for="ordre" class="form-label">Ordre</label>
+          <input type="number" class="form-control" id="ordre" name="ordre"
+                 value="{{ optional($smPlusGrandOrdre)->ordre ? $smPlusGrandOrdre->ordre + 1 : 1 }}"
+                 min="1" required>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end justify-content-end">
+          @can("ajouter_ecran_" . $ecran->id)
+          <button type="submit" id="submit-btn" class="btn btn-primary">
+            Enregistrer
+          </button>
+          @endcan
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {{-- =================== TABLEAU =================== --}}
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">Liste des sous-menus</h5>
+      <div id="flash-area" style="min-width:280px"></div>
     </div>
 
-    <!-- Modal -->
-    <div class="modal fade" id="edit-localite-modal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Modification de rubrique</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form class="form" method="POST" action="{{ route('sous_menu.update') }}" data-parsley-validate>
-                        @csrf
-                        <input type="hidden" class="form-control" id="ecran_id" value="{{ $ecran->id }}"  name="ecran_id" required>
-                        <input type="hidden" class="form-control" id="edit_code" name="edit_code" required>
-                        <div class="row">
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_libelle">Rubriques :</label>
-                                    <div class="mb-3">
-                                        <select class="form-select" id="edit_code_rubrique" name="edit_code_rubrique">
-                                            <option value="">Sélection une rubrique</option>
-                                            @foreach($rubriques as $rubrique)
-                                            <option value="{{ $rubrique->code }}">{{ $rubrique->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_ordre">Niveau :</label>
-                                    <input type="number" class="form-control" id="edit_niveau" name="edit_niveau" placeholder="Ordre" min="1" max="3" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_sous_menu_parent">Parent :</label>
-                                    <div class="mb-3">
-                                        <select class="form-select" id="edit_sous_menu_parent" name="edit_sous_menu_parent">
-                                            <option value="">Sélection un sous menu</option>
-                                            @foreach($sous_menus as $sous_menu)
-                                            <option value="{{ $sous_menu->code }}">{{ $sous_menu->libelle }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_libelle">Libellé :</label>
-                                    <input type="text" class="form-control" id="edit_libelle" name="edit_libelle" placeholder="Libellé" required>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-12">
-                                <div class="form-group mandatory">
-                                    <label class="form-label" for="edit_ordre">Ordre :</label>
-                                    <input type="number" class="form-control" id="edit_ordre" name="edit_ordre" placeholder="Ordre" min="1" required>
-                                </div>
-                            </div>
-                        </div>
-                        {{-- @can("modifier_ecran_" . $ecran->id)--}}
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                            <input type="submit" class="btn btn-primary" value="Enregistrer" id="edit_enregistrerLocalite">
-                        </div>
-                        {{--  @endcan--}}
-
-                    </form>
-                </div>
-            </div>
-        </div>
+    <div class="card-content">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered align-middle" id="table1" style="width:100%">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Rubrique</th>
+                <th>Parent</th>
+                <th>Sous-menu</th>
+                <th>Ordre</th>
+                <th>Niveau</th>
+                <th style="width:110px">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach ($sous_menus as $sm)
+                <tr data-code="{{ $sm->code }}">
+                  <td># {{ $sm->code }}</td>
+                  <td>{{ $sm->rubrique->libelle ?? '' }}</td>
+                  <td>{{ $sm->sm_parent->libelle ?? '' }}</td>
+                  <td>{{ $sm->libelle }}</td>
+                  <td>{{ $sm->ordre }}</td>
+                  <td>{{ $sm->niveau }}</td>
+                  <td class="table-actions">
+                    @can("modifier_ecran_" . $ecran->id)
+                      <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-edit">Modifier</button>
+                    @endcan
+                    @can("supprimer_ecran_" . $ecran->id)
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-delete">Suppr.</button>
+                    @endcan
+                  </td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div> {{-- /.table-responsive --}}
+      </div>
     </div>
-
+  </div>
 </section>
 
-
-
 <script>
-    /* CODE JAVASCRIPT ICI */
+  /* Horloge */
+  setInterval(() => {
+    const el = document.getElementById('date-now');
+    if (el) el.textContent = new Date().toLocaleString();
+  }, 1000);
 
+  // =================== Références formulaire ===================
+  const form           = document.getElementById('sm-form');
+  const formTitle      = document.getElementById('form-title');
+  const btnCancelEdit  = document.getElementById('btn-cancel-edit');
+  const submitBtn      = document.getElementById('submit-btn');
+  const inputEditCode  = document.getElementById('edit_code');
 
-    $(document).ready(function() {
-        initDataTable('{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}', 'table1', 'Liste des sous-menus')
+  const inputRubrique  = document.getElementById('code_rubrique');
+  const inputNiveau    = document.getElementById('niveau');
+  const inputParent    = document.getElementById('sous_menu_parent');
+  const inputLibelle   = document.getElementById('libelle');
+  const inputOrdre     = document.getElementById('ordre');
+
+  const STORE_URL  = @json(route('sous_menu.store'));
+  const UPDATE_URL = @json(route('sous_menu.update'));
+
+  let mode = 'create'; // 'create' | 'edit'
+
+  function setMode(newMode){
+    mode = newMode;
+    if (mode === 'create'){
+      form.action = STORE_URL;
+      formTitle.textContent = 'Créer un sous-menu';
+      submitBtn.textContent = 'Enregistrer';
+      btnCancelEdit.style.display = 'none';
+
+      inputLibelle.name  = 'libelle';
+      inputOrdre.name    = 'ordre';
+      inputNiveau.name   = 'niveau';
+      inputRubrique.name = 'code_rubrique';
+      inputParent.name   = 'sous_menu_parent';
+      inputEditCode.name = '';
+
+      // Valeur par défaut de l'ordre si vide
+      if (!inputOrdre.value) {
+        inputOrdre.value = {{ optional($smPlusGrandOrdre)->ordre ? $smPlusGrandOrdre->ordre + 1 : 1 }};
+      }
+      // Réinitialise les options "Parent"
+      inputParent.innerHTML = `<option value="">— Aucun —</option>`;
+
+    } else {
+      form.action = UPDATE_URL;
+      formTitle.textContent = 'Modifier un sous-menu';
+      submitBtn.textContent = 'Mettre à jour';
+      btnCancelEdit.style.display = '';
+
+      inputLibelle.name  = 'edit_libelle';
+      inputOrdre.name    = 'edit_ordre';
+      inputNiveau.name   = 'edit_niveau';
+      inputRubrique.name = 'edit_code_rubrique';
+      inputParent.name   = 'edit_sous_menu_parent';
+      inputEditCode.name = 'edit_code';
+    }
+  }
+
+  function resetForm(){
+    form.reset();
+    setMode('create');
+  }
+  btnCancelEdit.addEventListener('click', e => { e.preventDefault(); resetForm(); });
+
+  // =================== API helpers ===================
+  async function fetchSousMenu(code){
+    const r = await fetch(`/admin/sous_menu/get-sous_menu/${code}`);
+    if (!r.ok) throw new Error('Sous-menu introuvable');
+    return await r.json();
+  }
+
+  async function fetchParents(rubriqueCode, niveau, excludeCode = null){
+    const qs = new URLSearchParams({ rubrique: rubriqueCode, niveau: String(niveau) });
+    if (excludeCode) qs.append('exclude', excludeCode);
+    const r = await fetch(`/admin/sous_menu/parents?${qs.toString()}`);
+    if (!r.ok) return [];
+    return await r.json();
+  }
+
+  async function populateParents(rubriqueCode, niveau, excludeCode, selectedValue){
+    const parents = await fetchParents(rubriqueCode, niveau, excludeCode);
+    inputParent.innerHTML = `<option value="">— Aucun —</option>` +
+      parents.map(p => `<option value="${p.code}">${p.libelle} (N${p.niveau})</option>`).join('');
+    if (selectedValue) inputParent.value = selectedValue;
+  }
+
+  // Quand l'utilisateur change manuellement rubrique/niveau en mode création
+  inputRubrique.addEventListener('change', () => {
+    if (mode === 'create') populateParents(inputRubrique.value, parseInt(inputNiveau.value || '0', 10), null, '');
+  });
+  inputNiveau.addEventListener('input', () => {
+    if (mode === 'create') populateParents(inputRubrique.value, parseInt(inputNiveau.value || '0', 10), null, '');
+  });
+
+  // =================== Table: edit & delete ===================
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initDataTable === 'function') {
+      initDataTable('{{ auth()->user()?->acteur?->libelle_court }} {{ auth()->user()?->acteur?->libelle_long }}', 'table1', 'Liste des sous-menus');
+    }
+
+    const $table = $('#table1');
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    // EDIT
+    $table.on('click', '.btn-edit', async function(){
+      const tr = $(this).closest('tr').get(0);
+      const code = tr.dataset.code;
+      try{
+        const sm = await fetchSousMenu(code);
+        setMode('edit');
+        inputEditCode.value = sm.code;
+
+        inputLibelle.value  = sm.libelle ?? '';
+        inputOrdre.value    = sm.ordre ?? '';
+        inputNiveau.value   = sm.niveau ?? '';
+        inputRubrique.value = sm.code_rubrique ?? '';
+
+        await populateParents(sm.code_rubrique, sm.niveau, sm.code, sm.sous_menu_parent ?? '');
+
+        // scroll vers le formulaire
+        window.scrollTo({ top: document.querySelector('#sm-form').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+      }catch(e){
+        console.error(e);
+      }
     });
 
-    // Lorsque l'utilisateur clique sur un bouton "Modifier"
-    function showEditRubrique(code) {
-        $('#edit-localite-modal').modal('show');
-        $.ajax({
-            type: 'GET'
-            , url: '/admin/sous_menu/get-sous_menu/' + code
-            , success: function(data) {
-                console.log(data);
-                // Remplir le formulaire modal avec les données du district
-                $('#edit_code').val(data.code);
-                $('#edit_libelle').val(data.libelle);
-                $('#edit_ordre').val(data.ordre);
-                $('#edit_niveau').val(data.niveau);
-                $('#edit_code_rubrique').val(data.code_rubrique);
-                $('#edit_sous_menu_parent').val(data.sous_menu_parent);
-            }
-        });
-    }
+    // DELETE
+    $table.on('click', '.btn-delete', function(){
+      const tr = $(this).closest('tr');
+      const code = tr.attr('data-code');
+      if (!confirm('Supprimer ce sous-menu ?')) return;
 
-    function deleteRubrique(code) {
-        if (confirm("Êtes-vous sûr de vouloir supprimer ce sous-menu ?")) {
-            $.ajax({
-                url: '/admin/sous_menu/delete/' + code
-                , method: 'DELETE', // Utilisez la méthode DELETE pour la suppression
-                data: {
-                    _token: '{{ csrf_token() }}' // Assurez-vous d'envoyer le jeton CSRF
-                }
-                , success: function(response) {
-                    var message = "sous-menu supprimé avec succès.";
-                    showPopup(message);
-                    // Rechargez la page actuelle en ignorant le cache du navigateur
-                    window.location.reload(true);
-
-                }
-                , error: function() {
-                    // Gérer les erreurs de la requête AJAX
-                    console.log('Erreur lors de la suppression du sous-menu.');
-                }
-            });
+      fetch(`/admin/sous_menu/delete/${code}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': csrf, 'Accept':'application/json' }
+      })
+      .then(r => r.ok ? r.json() : r.json().then(err => Promise.reject(err)))
+      .then((res) => {
+        tr.fadeOut(150, () => tr.remove());
+        const area = document.getElementById('flash-area');
+        if (area) {
+          area.innerHTML = `
+            <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
+              ${res?.success ?? "Sous-menu supprimé avec succès."}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+          `;
         }
-    }
+      })
+      .catch(err => {
+        const area = document.getElementById('flash-area');
+        if (area) {
+          area.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show mt-2" role="alert">
+              ${err?.error ?? "Erreur lors de la suppression du sous-menu."}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+          `;
+        }
+      });
+    });
+  });
 
+  // Init
+  setMode('create');
 </script>
 @endsection

@@ -1,7 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 <div class="page-heading">
     <div class="page-title">
       <div class="row">
@@ -40,6 +41,7 @@
             <form id="regForm" method="POST" action="{{ route('gf.reglements.store') }}">
                 @csrf
                 <input type="hidden" name="_method" value="POST" id="formMethod">
+                <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
 
                 {{-- Cible du paiement --}}
                 <div class="row g-3 align-items-end">
@@ -100,6 +102,7 @@
                         <label class="form-label">Projet *</label>
                         <select name="code_projet" id="code_projet" class="form-select" required>
                         <option value="">— Sélectionnez —</option>
+                        
                         @foreach($projets as $p)
                             <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
                         @endforeach
@@ -137,6 +140,7 @@
                         <label class="form-label">Projet *</label>
                         <select id="code_projet_rf" class="form-select">
                         <option value="">— Sélectionnez —</option>
+                        <option value="">Aucun projet</option>
                         @foreach($projets as $p)
                             <option value="{{ $p->code_projet }}">{{ $p->code_projet }} — {{ $p->libelle_projet }}</option>
                         @endforeach
@@ -205,7 +209,12 @@
                 <div class="text-end me-auto">
                     <small class="text-muted">Solde facture estimé : <span id="soldeOut">—</span></small>
                 </div>
+                @can("ajouter_ecran_" . $ecran->id)
                 <button type="submit" class="btn btn-primary" id="submitBtn">Enregistrer</button>
+                @endcan
+                @can("modifier_ecran_" . $ecran->id)
+                <button type="submit" class="btn btn-primary d-none" id="updateBtn">Mettre à jour</button>
+                @endcan
                 <button type="button" class="btn btn-secondary d-none" id="cancelEdit">Annuler édition</button>
                 </div>
             </form>
@@ -257,6 +266,7 @@
                             <td>{{ $r->date_reglement?->format('d/m/Y') }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    @can("modifier_ecran_" . $ecran->id)
                                     <button class="btn btn-outline-primary btn-edit"
                                         data-id="{{ $r->id }}"
                                         data-code_projet="{{ $r->code_projet }}"
@@ -272,11 +282,14 @@
                                         data-commentaire="{{ $r->commentaire }}">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
+                                    @endcan
+                                    @can("supprimer_ecran_" . $ecran->id)
                                     <button type="button"
                                             class="btn btn-outline-danger btn-sm"
-                                            onclick="confirmDelete('{{ route('gf.reglements.destroy', $r->id) }}', () => location.reload())">
+                                            onclick="confirmDelete('{{ route('gf.reglements.destroy', $r->id) }}?ecran_id={{ $ecran->id }}', () => location.reload())">
                                     <i class="bi bi-trash"></i>
                                     </button>
+                                    @endcan
                                 </div>
                             </td>
                         </tr>
@@ -417,7 +430,14 @@
 
     $('#regForm').attr('action', '{{ route("gf.reglements.update","__ID__") }}'.replace('__ID__', d.id));
     $('#formMethod').val('PUT');
-    $('#submitBtn').text('Mettre à jour');
+    
+    // Afficher le bon bouton selon les droits
+    @can("ajouter_ecran_" . $ecran->id)
+    $('#submitBtn').addClass('d-none');
+    @endcan
+    @can("modifier_ecran_" . $ecran->id)
+    $('#updateBtn').removeClass('d-none');
+    @endcan
     $('#cancelEdit').removeClass('d-none');
 
     // Acteur
@@ -446,7 +466,12 @@
   $('#cancelEdit').on('click', function(){
     $('#regForm').attr('action', '{{ route("gf.reglements.store") }}');
     $('#formMethod').val('POST');
-    $('#submitBtn').text('Enregistrer');
+    
+    // Afficher le bon bouton selon les droits
+    @can("ajouter_ecran_" . $ecran->id)
+    $('#submitBtn').removeClass('d-none');
+    @endcan
+    $('#updateBtn').addClass('d-none');
     $(this).addClass('d-none');
     $('#regForm')[0].reset();
     $soldeOut.text('—'); $soldeAff.val('');
@@ -461,6 +486,6 @@
   });
 })();
 </script>
-
-
+    @endcan
+@endisset
 @endsection

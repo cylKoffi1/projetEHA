@@ -97,49 +97,14 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
 
 
-    // PAYS, DISTRICT, REGIONS, DEPARTEMENTS, SOUS-PREFECTURES, LOCALITES
+    // PAYS
     Route::get('admin/pays', [PaysController::class, 'pays'])->name('pays');
     // Route pour afficher le formulaire d'édition (GET)
     Route::get('/pays/{id}/edit', [PaysController::class, 'edit']);
     Route::put('/pays/{id}', [PaysController::class, 'update'])->name('pays.update');
     Route::post('/pays', [PaysController::class, 'storePays'])->name('pays.store');
     Route::delete('/pays/{id}', [PaysController::class, 'deletePays'])->name('pays.destroy');
-    Route::get('admin/district', [PaysController::class, 'district'])->name('district');
-    Route::get('admin/departement', [PaysController::class, 'departement'])->name('departement');
-    Route::get('admin/sous_prefecture', [PaysController::class, 'sous_prefecture'])->name('sous_prefecture');
-    Route::get('admin/localite', [PaysController::class, 'localite'])->name('localite');
-    Route::get('admin/region', [PaysController::class, 'region'])->name('region');
-    Route::post('/check-district-code', [PaysController::class, 'checkDistrictCode']);
-    Route::post('/check-region-code', [PaysController::class, 'checkRegionCode']);
-    Route::post('/check-pays-code', [PaysController::class, 'checkPaysCode']);
-    Route::post('/check-departement-code', [PaysController::class, 'checkDepartementCode']);
-    Route::post('/check-localite-code', [PaysController::class, 'checkLocaliteCode']);
-    Route::post('/check-sous_prefecture-code', [PaysController::class, 'checkSous_prefectureCode']);
-    Route::post('admin/sous_prefecture', [PaysController::class, 'storeSous_prefecture'])->name('sous_prefecture.store');
-    Route::post('admin/district', [PaysController::class, 'storeDistrict'])->name('district.store');
-    Route::post('admin/departement', [PaysController::class, 'storeDepartement'])->name('departement.store');
-    Route::post('admin/localite', [PaysController::class, 'storeLocalite'])->name('localite.store');
-    Route::post('admin/region', [PaysController::class, 'storeRegion'])->name('region.store');
-    Route::get('admin/district/{code}', [PaysController::class, 'getDistrict'])->name('district.show');
-    Route::get('admin/region/{code}', [PaysController::class, 'getRegion'])->name('region.show');
-    Route::get('admin/localite/{code}', [PaysController::class, 'getLocalite'])->name('localite.show');
-    Route::get('admin/departement/{code}', [PaysController::class, 'getDepartement'])->name('departement.show');
-    Route::get('admin/sous_prefecture/{code}', [PaysController::class, 'getSous_prefecture'])->name('sous_prefecture.show');
-    Route::delete('admin/district/delete/{code}', [PaysController::class, 'deleteDistrict'])->name('district.delete');
-    Route::delete('admin/sous_prefecture/delete/{code}', [PaysController::class, 'deleteSous_prefecture'])->name('sous_prefecture.delete');
-    Route::delete('admin/region/delete/{code}', [PaysController::class, 'deleteRegion'])->name('region.delete');
-    Route::delete('admin/departement/delete/{code}', [PaysController::class, 'deleteDepartement'])->name('departement.delete');
-    Route::delete('admin/localite/delete/{code}', [PaysController::class, 'deleteLocalite'])->name('localite.delete');
-    Route::post('admin/district/update', [PaysController::class, 'updateDistrict'])->name('district.update');
-    Route::post('admin/region/update', [PaysController::class, 'updateRegion'])->name('region.update');
-    Route::post('admin/localite/update', [PaysController::class, 'updateLocalite'])->name('localite.update');
-    Route::post('admin/sous_prefecture/update', [PaysController::class, 'updateSous_prefecture'])->name('sous_prefecture.update');
-    Route::post('admin/departement/update', [PaysController::class, 'updateDepartement'])->name('departement.update');
-    Route::get('admin/get-districts/{pays}', [PaysController::class, 'getDistricts']);
-    Route::get('admin/get-regions/{districtId}', [PaysController::class, 'getRegions']);
-    Route::get('admin/get-departements/{regionId}', [PaysController::class, 'getDepartements']);
-    Route::get('admin/get-sous_prefecture/{departementId}', [PaysController::class, 'getSous_prefectures']);
-
+  
     /**************************** GESTION DE DEMOGRAPHIE **********************************/
     /** Page principale */
     Route::get('admin/nombreHabitants', [GestionDemographieController::class, 'habitantIndex'])
@@ -152,7 +117,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     /** Enregistrement */
     Route::post('admin/demographie', [GestionDemographieController::class, 'storeHabitants'])->name('habitants.store');
 
-    // 👉 Nouveau : stats et liste
+    //  Nouveau : stats et liste
     Route::get('stats', [GestionDemographieController::class, 'stats'])->name('habitants.stats');
     Route::get('entries', [GestionDemographieController::class, 'entries'])->name('habitants.entries');
     /****************************LOCALITE PAYS  ************************************************/
@@ -162,57 +127,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::post('admin/localites',        [GestionDemographieController::class, 'storeLocalite'])->name('localites.store');
     Route::post('admin/localites/import',  [GestionDemographieController::class, 'importLocalite'])->name('localites.import');
     Route::get('admin/localites/template', [GestionDemographieController::class, 'templateLocalite'])->name('localites.template');
-    /* ***********************  Paramètre généraux *******************************/
-    Route::get('admin/statutProjet', [PlateformeController::class, 'statutProjet'])->name('statutProjet');
-    Route::get('admin/typeBailleur', [PlateformeController::class, 'typeBailleur'])->name('typeBailleur');
-    Route::get('admin/typeEtablissement', [PlateformeController::class, 'typeEtablissement'])->name('typeEtablissement');
-    Route::get('admin/typeMateriauxConduite', [PlateformeController::class, 'typeMateriauxConduite'])->name('typeMateriauxConduite');
-    Route::get('admin/typeResaux', [PlateformeController::class, 'typeResaux'])->name('typeResaux');
-    Route::get('admin/typeStation', [PlateformeController::class, 'typeStation'])->name('typeStation');
-    Route::get('admin/typeStockage', [PlateformeController::class, 'typeStockage'])->name('typeStockage');
-    Route::get('admin/uniteStockage', [PlateformeController::class, 'uniteStockage'])->name('uniteStockage');
-    Route::get('admin/uniteDistance', [PlateformeController::class, 'uniteDistance'])->name('uniteDistance');
-    Route::get('admin/uniteMesure', [PlateformeController::class, 'uniteMesure'])->name('uniteMesure');
-    Route::get('admin/uniteSurface', [PlateformeController::class, 'uniteSurface'])->name('uniteSurface');
-    Route::get('admin/uniteTraitement', [PlateformeController::class, 'uniteTraitement'])->name('uniteTraitement');
-    Route::get('admin/uniteVolume', [PlateformeController::class, 'uniteVolume'])->name('uniteVolume');
-    Route::get('admin/typeReservoire', [PlateformeController::class, 'typeReservoire'])->name('typeReservoire');
-    Route::get('admin/typeInstrument', [PlateformeController::class, 'typeInstrument'])->name('typeInstrument');
-
-
-    //***************** Ouvrage de transport ************* */
-    Route::get('admin/ouvrageTransport', [PlateformeController::class, 'ouvrageTransport'])->name('ouvrageTransport');
-    Route::get('admin/ouvrageTransport/{code}', [PlateformeController::class, 'getOuvrageTransport'])->name('ouvrageTransport.show');
-    Route::post('admin/ouvrageTransport', [PlateformeController::class, 'storeOuvrageTransport'])->name('ouvrageTransport.store');
-    Route::post('admin/ouvrageTransport/update', [PlateformeController::class, 'updateOuvrageTransport'])->name('ouvrageTransport.update');
-    Route::delete('admin/ouvrageTransport/delete/{code}', [PlateformeController::class, 'deleteOuvrageTransport'])->name('ouvrageTransport.delete');
-    Route::post('/check-ouvrageTransport-code', [PlateformeController::class, 'checkOuvrageTransportCode']);
-
-
-    //***************** Outils de collecte ************* */
-    Route::get('admin/outilsCollecte', [PlateformeController::class, 'outilsCollecte'])->name('outilsCollecte');
-    Route::get('admin/outilsCollecte/{code}', [PlateformeController::class, 'getOutilsCollecte'])->name('outilsCollecte.show');
-    Route::post('admin/outilsCollecte', [PlateformeController::class, 'storeOutilsCollecte'])->name('outilsCollecte.store');
-    Route::post('admin/outilsCollecte/update', [PlateformeController::class, 'updateOutilsCollecte'])->name('outilsCollecte.update');
-    Route::delete('admin/outilsCollecte/delete/{code}', [PlateformeController::class, 'deleteOutilsCollecte'])->name('outilsCollecte.delete');
-    Route::post('/check-outilsCollecte-code', [PlateformeController::class, 'checkOutilsCollecteCode']);
-
-
-    //***************** Niveau d'accès aux données ************* */
-    Route::get('admin/niveauAccesDonnees', [PlateformeController::class, 'niveauAccesDonnees'])->name('niveauAccesDonnees');
-    Route::get('admin/niveauAccesDonnees/{code}', [PlateformeController::class, 'getNiveauAccesDonnees'])->name('niveauAccesDonnees.show');
-    Route::post('admin/niveauAccesDonnees', [PlateformeController::class, 'storeNiveauAccesDonnees'])->name('niveauAccesDonnees.store');
-    Route::post('admin/niveauAccesDonnees/update', [PlateformeController::class, 'updateNiveauAccesDonnees'])->name('niveauAccesDonnees.update');
-    Route::delete('admin/niveauAccesDonnees/delete/{code}', [PlateformeController::class, 'deleteNiveauAccesDonnees'])->name('niveauAccesDonnees.delete');
-    Route::post('/check-niveauAccesDonnees-code', [PlateformeController::class, 'checkNiveauAccesDonneesCode']);
-
-    //***************** Matériel de stockage ************* */
-    Route::get('admin/materielStockage', [PlateformeController::class, 'materielStockage'])->name('materielStockage');
-    Route::get('admin/materielStockage/{code}', [PlateformeController::class, 'getMaterielStockage'])->name('materielStockage.show');
-    Route::post('admin/materielStockage', [PlateformeController::class, 'storeMaterielStockage'])->name('materielStockage.store');
-    Route::post('admin/materielStockage/update', [PlateformeController::class, 'updateMaterielStockage'])->name('materielStockage.update');
-    Route::delete('admin/materielStockage/delete/{code}', [PlateformeController::class, 'deleteMaterielStockage'])->name('materielStockage.delete');
-    Route::post('/check-materielStockage-code', [PlateformeController::class, 'checkMaterielStockageCode']);
 
     //***************** Genre ************* */
     Route::get('admin/genre', [PlateformeController::class, 'genre'])->name('genre');
@@ -278,14 +192,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     });
     Route::delete('famille-infrastructure/{famille}/structure', [CaracteristiqueStructureController::class, 'destroy'])->name('famille.structure.destroy');
 
-    //***************** Cour d'eau ************* */
-    Route::get('admin/courdeau', [PlateformeController::class, 'courdeau'])->name('courdeau');
-    Route::get('admin/courdeau/{code}', [PlateformeController::class, 'getCourDeau'])->name('courdeau.show');
-    Route::post('admin/courdeau', [PlateformeController::class, 'storeCourDeau'])->name('courdeau.store');
-    Route::post('admin/courdeau/update', [PlateformeController::class, 'updateCourDeau'])->name('courdeau.update');
-    Route::delete('admin/courdeau/delete/{code}', [PlateformeController::class, 'deleteCourDeau'])->name('courdeau.delete');
-    Route::post('/check-courdeau-code', [PlateformeController::class, 'checkCourDeauCode']);
-
     //***************** Action à mener ************* */
     Route::get('admin/actionmener', [PlateformeController::class, 'actionMener'])->name('actionMener');
     Route::get('admin/actionmener/{code}', [PlateformeController::class, 'getActionmener'])->name('actionMener.show');
@@ -293,22 +199,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::post('admin/actionmener/update', [PlateformeController::class, 'updateActionmener'])->name('actionMener.update');
     Route::delete('admin/actionmener/delete/{code}', [PlateformeController::class, 'deleteActionmener'])->name('actionMener.delete');
     Route::post('/check-actionmener-code', [PlateformeController::class, 'checkActionmenerCode']);
-
-    //***************** Acquifère ************* */
-    Route::get('admin/acquifere', [PlateformeController::class, 'acquifere'])->name('acquifere');
-    Route::get('admin/acquifere/{code}', [PlateformeController::class, 'getAcquifere'])->name('acquifere.show');
-    Route::post('admin/acquifere', [PlateformeController::class, 'storeAcquifere'])->name('acquifere.store');
-    Route::post('admin/acquifere/update', [PlateformeController::class, 'updateAcquifere'])->name('acquifere.update');
-    Route::delete('admin/acquifere/delete/{code}', [PlateformeController::class, 'deleteAcquifere'])->name('acquifere.delete');
-    Route::post('/check-acquifere-code', [PlateformeController::class, 'checkAcquifereCode']);
-
-    //***************** Bassins ************* */
-    Route::get('admin/bassin', [PlateformeController::class, 'bassin'])->name('bassin');
-    Route::get('admin/bassin/{code}', [PlateformeController::class, 'getBassin'])->name('bassin.show');
-    Route::post('admin/bassin', [PlateformeController::class, 'storeBassin'])->name('bassin.store');
-    Route::post('admin/bassin/update', [PlateformeController::class, 'updateBassin'])->name('bassin.update');
-    Route::delete('admin/bassin/delete/{code}', [PlateformeController::class, 'deleteBassin'])->name('bassin.delete');
-    Route::post('/check-bassin-code', [PlateformeController::class, 'checkBassinCode']);
 
     //***************** approbation ************* */
     Route::get('admin/commissionValidation', [PlateformeController::class, 'approbation'])->name('approbation');
@@ -344,37 +234,6 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
 
 
-    /* ***********************  Paramètre spécifiques *******************************/
-
-    //***************** AGENCES ************* */
-    Route::get('admin/agences', [PlateformeController::class, 'agences'])->name('agences');
-    Route::get('admin/agences/{code}', [PlateformeController::class, 'getAgence'])->name('agence.show');
-    Route::delete('admin/agences/delete/{code}', [PlateformeController::class, 'deleteAgence'])->name('agence.delete');
-    Route::post('/check-agence-code', [PlateformeController::class, 'checkAgenceCode']);
-    Route::post('admin/agence', [PlateformeController::class, 'storeAgence'])->name('agence.store');
-    Route::post('admin/agence/update', [PlateformeController::class, 'updateAgence'])->name('agence.update');
-
-    //***************** BAILLEURS ************* */
-    Route::get('admin/bailleurs', [PlateformeController::class, 'bailleurs'])->name('bailleurs');
-    Route::get('/admin/bailleur/{code}', [PlateformeController::class, 'getBailleur'])->name('bailleur.show');
-    Route::delete('admin/bailleur/delete/{code}', [PlateformeController::class, 'deleteBailleur'])->name('bailleur.delete');
-    Route::post('/check-bailleur-code', [PlateformeController::class, 'checkBailleurCode']);
-    Route::post('admin/bailleur', [PlateformeController::class, 'storeBailleur'])->name('bailleur.store');
-    Route::post('admin/bailleur/update', [PlateformeController::class, 'updateBailleur'])->name('bailleur.update');
-
-    //***************** ETABLISSEMENTS ************* */
-    Route::get('admin/etablissements', [PlateformeController::class, 'etablissements'])->name('etablissements');
-    Route::get('admin/etablissement/{code}', [PlateformeController::class, 'getEtablissement'])->name('etablissement.show');
-    Route::delete('admin/etablissement/delete/{code}', [PlateformeController::class, 'deleteEtablissement'])->name('etablissement.delete');
-    Route::post('/check-etablissement-code', [PlateformeController::class, 'checkEtablissementCode']);
-    Route::post('admin/etablissement', [PlateformeController::class, 'storeEtablissement'])->name('etablissement.store');
-    Route::post('admin/etablissement/update', [PlateformeController::class, 'updateEtablissement'])->name('etablissement.update');
-    Route::get('admin/get-niveaux/{typeId}', [PlateformeController::class, 'getNiveaux']);
-
-    //***************** BENEFICIAIRES ************* */
-    Route::get('admin/beneficiaires', [PlateformeController::class, 'beneficiaires'])->name('beneficiaires');
-    Route::get('admin/etablissements', [PlateformeController::class, 'etablissements'])->name('etablissements');
-    Route::get('admin/ministeres', [PlateformeController::class, 'ministeres'])->name('ministeres');
 
     //***************** PROJETS ************* */
     Route::get('admin/projets/liste', [ProjetController::class, 'ConsultationProjet'])->name('projets.consultation');
@@ -601,6 +460,12 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                 Route::post('admin/pib/store', [GestionFinanciereController::class, 'storePIB'])->name('pib.store');
                 Route::put('admin/pib/update/{id}', [GestionFinanciereController::class, 'updatePIB'])->name('pib.update');
                 Route::delete('admin/pib/destroy/{id}', [GestionFinanciereController::class, 'destroyPIB'])->name('pib.destroy');
+
+            Route::get('admin/banques', [GestionFinanciereController::class, 'indexBanques'])->name('banques.index');
+            Route::get('/banques/list',   [GestionFinanciereController::class, 'listBanques'])->name('banques.list');
+            Route::post('/banques/store', [GestionFinanciereController::class, 'storeBanques'])->name('banques.store');
+            Route::put('/banques/{id}',   [GestionFinanciereController::class, 'updateBanques'])->name('banques.update');
+            Route::delete('/banques/{id}',[GestionFinanciereController::class, 'destroyBanques'])->name('banques.destroy');
             /**************************** GESTION DES STATISTIQUES **********************************/
 
             Route::prefix('admin')->group(function () {
@@ -729,6 +594,13 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
      Route::post('/admin/rubrique/update', [RoleAssignmentController::class, 'updateRubrique'])->name('rubrique.update');
      Route::delete('admin/rubrique/delete/{code}', [RoleAssignmentController::class, 'deleteRubrique'])->name('rubrique.delete');
      Route::get('/get-sous-menus/{rubrique}', [RoleAssignmentController::class, 'getSousMenus']);
+    // Sous-menu: JSON pour préremplir le formulaire d’édition
+    Route::get('/admin/sous_menu/get-sous_menu/{code}', [RoleAssignmentController::class, 'getSous_menu'])
+    ->name('sous_menu.get');
+
+    // Sous-menus parents possibles (filtrés) pour le <select> Parent
+    Route::get('/admin/sous_menu/parents', [RoleAssignmentController::class, 'getSousMenusParents'])
+    ->name('sous_menu.parents');
 
 
      Route::get('/admin/sous_menu', [RoleAssignmentController::class, 'sous_menus'])->name('sous_menu.index');
@@ -742,7 +614,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
      Route::get('/admin/ecran/get-ecran/{id}', [RoleAssignmentController::class, 'getEcran'])->name('ecran.updateForm');
      Route::post('/admin/ecran/update', [RoleAssignmentController::class, 'updateEcran'])->name('ecran.update');
      Route::delete('admin/ecran/delete/{code}', [RoleAssignmentController::class, 'deleteEcran'])->name('ecran.delete');
-
+     Route::post('/admin/ecran/bulk-delete', [RoleAssignmentController::class, 'bulkDeleteEcrans'])->name('ecran.bulkDelete');
 
 
 

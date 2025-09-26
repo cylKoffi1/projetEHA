@@ -6,6 +6,7 @@ use App\Models\Acteur;
 use App\Models\EtudeProject;
 use App\Models\Infrastructure;
 use App\Models\Projet;
+use App\Models\Ecran;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
@@ -13,9 +14,9 @@ use Illuminate\Support\Facades\Log;
 
 class AnnexeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        
+        $ecran = Ecran::find($request->input('ecran_id'));
         $country = session('pays_selectionne');
         $group = session('projet_selectionne');
         $projets = Projet::with(['statuts.statut', 'maitreOuvrage.acteur'])
@@ -23,7 +24,7 @@ class AnnexeController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
-        return view('projets.Annexe.editionProjet', compact('projets'));
+        return view('projets.Annexe.editionProjet', compact('projets', 'ecran'));
     }
     public function exportProjet($code)
     {

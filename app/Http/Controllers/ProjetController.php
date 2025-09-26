@@ -30,6 +30,7 @@ class ProjetController extends Controller
     /***********************CHEF De PROJET */
     public function projet(Request $request)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         $country = session('pays_selectionne');
         $group = session('projet_selectionne');
 
@@ -60,10 +61,11 @@ class ProjetController extends Controller
             ->get();
 
 
-        return view('projets.DefinitionProjet.projet', compact('chefs', 'projets', 'contrats'));
+        return view('projets.DefinitionProjet.projet', compact('chefs', 'projets', 'contrats', 'ecran'));
     }
     public function store(Request $request)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         try {
             // --- Validation ---
             $validator = Validator::make(
@@ -598,7 +600,7 @@ class ProjetController extends Controller
                     'date_fin' => $data['date_fin'],
                 ]);
 
-                return redirect()->route('projet')->with('success', 'Contrat modifié avec succès.');
+                return redirect()->route('projet', ['ecran_id' => $ecran->id])->with('success', 'Contrat modifié avec succès.');
 
             } catch (\Exception $e) {
                 Log::error('Erreur lors de la mise à jour du contrat: ' . $e->getMessage());
@@ -606,12 +608,13 @@ class ProjetController extends Controller
             }
         }
 
-        public function destroy($id)
+        public function destroy($id, Request $request)
         {
+            $ecran = Ecran::find($request->input('ecran_id'));
             $contrat = controler::findOrFail($id);
             $contrat->delete();
 
-            return redirect()->route('projet')->with('success', 'Contrat supprimé.');
+            return redirect()->route('projet', ['ecran_id' => $ecran->id])->with('success', 'Contrat supprimé.');
         }
     */
 

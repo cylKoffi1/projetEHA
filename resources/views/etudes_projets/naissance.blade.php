@@ -194,6 +194,8 @@
     </style>
 @section('content')
 
+@can("consulter_ecran_" . $ecran->id)
+
 @if (session('success'))
 <script>
     $('#alertMessage').text("{{ session('success') }}");
@@ -272,6 +274,7 @@
                             <div class="progress-bar bg-success" role="progressbar" style="width: 20%;" id="progressBar"></div>
                         </div>
 
+                        @canany(["ajouter_ecran_" . $ecran->id, "modifier_ecran_" . $ecran->id])
                         <form class="col-12" id="projectForm">
                             
                         @include('etudes_projets.steps.document')
@@ -283,12 +286,23 @@
                             @include('etudes_projets.steps.actionAMener')
                             
                         </form>
+                        @else
+                        <div class="alert alert-info mt-3">
+                            Vous pouvez consulter cette page, mais vous n’avez pas les droits pour créer ou modifier ce projet.
+                        </div>
+                        @endcanany
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+@else
+  <div class="alert alert-warning mt-3">
+    Vous n’êtes pas autorisé à consulter cette page (permission requise : <code>consulter_ecran_{{ $ecran->id }}</code>).
+  </div>
+@endcan
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 

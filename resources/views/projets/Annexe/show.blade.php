@@ -305,9 +305,11 @@
                                         <i class="bi bi-file-earmark-text me-2"></i>
                                         <span class="document-name">{{ $doc->file_name }}</span>
                                     </div>
+                                    @can("consulter_ecran_" . $ecran->id)
                                     <a href="{{ asset($doc->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-download"></i>
                                     </a>
+                                    @endcan
                                 </div>
                             @endforeach
                         </div>

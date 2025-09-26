@@ -47,14 +47,17 @@
         <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Édition des projets</h6>
             <div class="dropdown no-arrow">
+                @can("consulter_ecran_" . $ecran->id)
                 <button class="btn btn-primary dropdown-toggle" type="button" id="exportDropdown" 
                         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <i class="fas fa-download fa-sm"></i> Exporter
                 </button>
+                @endcan
                 <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" 
                      aria-labelledby="exportDropdown">
                     <form id="exportForm" action="{{ route('pdf.export.multiple') }}" method="POST">
                         @csrf
+                        <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                         <input type="hidden" name="type" id="exportType" value="projet">
                         <input type="hidden" name="projets" id="selectedProjects">
                         <button class="dropdown-item" type="button" onclick="prepareExport('projet')">
@@ -107,14 +110,18 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    @can("consulter_ecran_" . $ecran->id)
                                     <a href="{{ route('pdf.projet', $projet->code_projet) }}" 
                                        class="btn btn-primary" title="Exporter PDF">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
+                                    @endcan
+                                    @can("consulter_ecran_" . $ecran->id)
                                     <a href="{{ route('projets.show', $projet->code_projet) }}" 
                                        class="btn btn-info" title="Voir détails">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    @endcan
                                 </div>
                             </td>
                         </tr>

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Ecran;
 use App\Models\GroupeUtilisateur;
 use App\Models\GroupProjectPermission;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 

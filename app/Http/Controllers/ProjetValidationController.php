@@ -12,13 +12,15 @@ use App\Mail\NotificationValidationProjet;
 use App\Mail\ProjetRefuseNotification;
 use App\Models\Approbateur;
 use App\Models\Projet;
+use App\Models\Ecran;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
 class ProjetValidationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         try {
             $code_acteur = auth()->user()->acteur_id;
             $country = session('pays_selectionne');
@@ -36,7 +38,7 @@ class ProjetValidationController extends Controller
 
             
         
-            return view('etudes_projets.validation.validation', compact('projets'));
+            return view('etudes_projets.validation.validation', compact('projets', 'ecran'));
         } catch (Exception $e) {
             Log::error('Erreur chargement page validation projets : ' . $e->getMessage());
             return back()->with('error', 'Une erreur est survenue lors du chargement des projets.');
@@ -103,7 +105,8 @@ class ProjetValidationController extends Controller
 
     public function valider(Request $request, $codeProjet)
     {
-        return DB::transaction(function () use ($codeProjet) {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        return DB::transaction(function () use ($codeProjet, $ecran) {
             try {
                 $acteurId = auth()->user()->acteur_id ?? null;
                 Log::info('[VALIDATION] Début', ['codeEtudeProjets' => $codeProjet, 'acteur_id' => $acteurId]);
@@ -172,7 +175,7 @@ class ProjetValidationController extends Controller
                     Log::info('[VALIDATION] Tous validés — étude marquée validée', ['codeEtudeProjets' => $codeProjet]);
                 }
 
-                return redirect()->route('projets.validation.index')->with('success', 'Projet validé.');
+                return redirect()->route('projets.validation.index', ['ecran_id' => $ecran->id])->with('success', 'Projet validé.');
             } catch (\Throwable $e) {
                 Log::error('[VALIDATION] ERREUR — rollback', [
                     'codeEtudeProjets' => $codeProjet,
@@ -188,6 +191,7 @@ class ProjetValidationController extends Controller
 
     public function refuser(Request $request, $codeProjet)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         try {
             $request->validate([
                 'commentaire_refus' => 'required|string|max:1000',
@@ -240,7 +244,7 @@ class ProjetValidationController extends Controller
                 Log::warning('[REFUS] Aucun destinataire email trouvé', ['codeEtudeProjets' => $codeProjet]);
             }
     
-            return redirect()->route('projets.validation.index')->with('error', 'Projet refusé.');
+            return redirect()->route('projets.validation.index', ['ecran_id' => $ecran->id])->with('error', 'Projet refusé.');
         } catch (Exception $e) {
             Log::error("[REFUS] Erreur refus projet [{$codeProjet}] : " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),

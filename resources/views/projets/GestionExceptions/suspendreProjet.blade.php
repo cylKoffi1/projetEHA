@@ -16,6 +16,7 @@
 
             <form  id="suspensionForm" method="POST" action="{{ route('projets.suspension.store') }}">
                 @csrf
+                <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                 <div class="row">
                     <div class="col-md-3">
                         <label for="code_projet">Projet à suspendre *</label>
@@ -74,7 +75,9 @@
                         <textarea name="motif" class="form-control" rows="2" required placeholder="Expliquez la raison de la suspension..."></textarea>
                     </div>
                     <div class="col-3 text-end" style="top: 23px">
+                        @can("modifier_ecran_" . $ecran->id)
                         <button type="submit" class="btn btn-warning mt-3">Suspendre le projet</button>
+                        @endcan
                     </div>
                 </div>
             </form>
@@ -119,6 +122,7 @@
                             </td>
                             <form method="POST" class="form-redemarrage"   action="{{ route('projets.redemarrer') }}">
                                  @csrf
+                                 <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                                  <input type="hidden" name="code_projet" value="{{ $projet->code_projet }}">
                                 <td>
                                     @if($projet->dernierStatut->type_statut == 6) 
@@ -129,7 +133,9 @@
                                 </td>
                                 <td>
                                     @if( $projet->dernierStatut->type_statut == 5 ) 
+                                        @can("modifier_ecran_" . $ecran->id)
                                         <button type="submit" class="btn btn-success" style="font-size: 12px;">Redemarer</button>
+                                        @endcan
                                     @endif
                                 </td>
                                 <td> {{ $projet->dernierStatut->statut->libelle }}</td>

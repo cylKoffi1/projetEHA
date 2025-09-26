@@ -49,6 +49,7 @@
                     <div class="card-body">
                         <form id="moForm" method="POST" action="{{ route('maitre_ouvrage.store') }}">
                             @csrf
+                            <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                             <input type="hidden" name="_method" value="POST">
                             <input type="hidden" name="execution_id" id="execution_id">
 
@@ -168,7 +169,9 @@
                                     <textarea name="motif" id="motif" class="form-control" rows="2" required placeholder="Expliquer la raison de la réattribution."></textarea>
                                 </div>
                                 <div class="col text-end">
+                                    @can("ajouter_ecran_" . $ecran->id)
                                     <button type="submit" class="btn btn-primary mt-3" id="formButton">Enregistrer</button>
+                                    @endcan
                                 </div>
                             </div>
                             
@@ -214,6 +217,7 @@
                                 Actions
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="dropdownMenu{{ $execution->id }}">
+                                @can("modifier_ecran_" . $ecran->id)
                                 <li>
                                 <button
                                     class="dropdown-item text-warning"
@@ -231,11 +235,14 @@
                                     <i class="bi bi-pencil-square"></i> Modifier
                                     </button>
                                 </li>
+                                @endcan
+                                @can("supprimer_ecran_" . $ecran->id)
                                 <li>
                                     <button class="dropdown-item text-danger" type="button" onclick="deleteMO({{ $execution->id }})">
                                         <i class="bi bi-trash"></i> Supprimer
                                     </button>
                                 </li>
+                                @endcan
                             </ul>
                         </div>
                     </td>

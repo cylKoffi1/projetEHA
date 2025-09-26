@@ -248,40 +248,41 @@ function alert(message, type = 'success') {
 }
 
 </script>
-<script>
-    function initSmartSelects(container = document) {
-        $(container).find('select.form-select').each(function () {
-            const $select = $(this);
+{{--
+    <script>
+        function initSmartSelects(container = document) {
+            $(container).find('select.form-select').each(function () {
+                const $select = $(this);
 
-            // Évite de réinitialiser un Select2 déjà activé
-            if ($select.hasClass('select2-hidden-accessible')) return;
+                // Évite de réinitialiser un Select2 déjà activé
+                if ($select.hasClass('select2-hidden-accessible')) return;
 
-            // Détermine si c’est un select simple ou multiple
-            const isMultiple = $select.prop('multiple');
+                // Détermine si c’est un select simple ou multiple
+                const isMultiple = $select.prop('multiple');
 
-            $select.select2({
-                placeholder: $select.attr('placeholder') ||
-                             $select.data('placeholder') ||
-                             (isMultiple ? "Sélectionner une ou plusieurs options" : "Sélectionner…"),
-                allowClear: !isMultiple,
-                width: '100%',
-                minimumResultsForSearch: 0, // toujours afficher la barre de recherche
-                language: {
-                    noResults: () => "Aucun résultat",
-                    searching: () => "Recherche…"
-                },
-                // utile si tes selects sont dans un modal ou un accordion
-                dropdownParent: $select.closest('.modal, .accordion, body')
+                $select.select2({
+                    placeholder: $select.attr('placeholder') ||
+                                $select.data('placeholder') ||
+                                (isMultiple ? "Sélectionner une ou plusieurs options" : "Sélectionner…"),
+                    allowClear: !isMultiple,
+                    width: '100%',
+                    minimumResultsForSearch: 0, // toujours afficher la barre de recherche
+                    language: {
+                        noResults: () => "Aucun résultat",
+                        searching: () => "Recherche…"
+                    },
+                    // utile si tes selects sont dans un modal ou un accordion
+                    dropdownParent: $select.closest('.modal, .accordion, body')
+                });
             });
+        }
+
+        // Initialisation globale au chargement
+        $(document).ready(function () {
+            initSmartSelects();
         });
-    }
-
-    // Initialisation globale au chargement
-    $(document).ready(function () {
-        initSmartSelects();
-    });
-</script>
-
+    </script>
+--}}
 <script>
 /**
  * Fonction générique de suppression avec confirmation via SweetAlert2

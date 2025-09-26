@@ -2,73 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\CodeGenerator;
 use App\Models\Acteur;
-use App\Models\AgenceExecution;
-use App\Models\ApartenirGroupeUtilisateur;
-use App\Models\AvoirExpertise;
-use App\Models\Bailleur;
-use App\Models\CouvrirRegion;
-use App\Models\Departement;
-use App\Models\District;
 use App\Models\Domaine;
 use App\Models\Ecran;
 use App\Models\FonctionUtilisateur;
-use App\Models\Ministere;
-use App\Models\OccuperFonction;
 use App\Models\Pays;
-use App\Models\Personnel;
-use App\Models\Region;
-use App\Models\Sous_prefecture;
 use App\Models\SousDomaine;
 use App\Models\User;
-use App\Models\NiveauAccesDonnees;
-use App\Models\StructureRattachement;
-use App\Models\UtilisateurDomaine;
-use App\Models\PaysUser;
-use App\Models\DecoupageAdministratif;
-use App\Models\DecoupageAdminPays;
-use App\Models\Financer;
 use App\Models\GroupeProjet;
-use App\Models\GroupeUtilisateur;
 use App\Models\LocalitesPays;
 use Exception;
-use Faker\Provider\ar_EG\Person;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
-    /***********************************  PERSONNES  *******************************/
-  
-    public function detailsPersonne(Request $request, $personneId)
-    {
-        $personne = Personnel::find($personneId);
-        $user = User::find($personneId);
-        if (!$personne) {
-            // Gérer le cas où l'utilisateur n'est pas trouvé
-            return redirect()->route('users.personnel', ['ecran_id' => $ecran_id])->with('error', 'Personne non trouvée.');
-        }
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $niveauxAcces = NiveauAccesDonnees::all();
-        $groupe_utilisateur = Role::all();
-        $fonctions = FonctionUtilisateur::all();
-        return view('users.personne-profile', compact('ecran','user','niveauxAcces', 'personne', 'groupe_utilisateur', 'fonctions'));
-    }
-   
-
-
-
-    /*********************************** FIN  PERSONNES  *******************************/
-
-
-
-
 
     // Méthode pour afficher le formulaire de création d'utilisateur
     public function getIndicatif($paysId)
@@ -85,10 +35,6 @@ class UserController extends Controller
             return response()->json(['error' => 'Pays non trouvé'], 404);
         }
     }
-   
-
-    // UserController.php
-
     public function checkUsername(Request $request)
     {
         $username = $request->input('username');
@@ -102,8 +48,8 @@ class UserController extends Controller
         $email = $request->input('email');
 
         // Ajoutez ces journaux pour déboguer
-        \Log::info('Email from request: ' . $email);
-        \Log::info('User exists: ' . (int) User::whereHas('acteur', function ($query) use ($email) {
+        Log::info('Email from request: ' . $email);
+        Log::info('User exists: ' . (int) User::whereHas('acteur', function ($query) use ($email) {
             $query->where('email', $email);
         })->exists());
 
@@ -120,13 +66,6 @@ class UserController extends Controller
         $exists = Acteur::where('email', $email)->exists();
         return response()->json(['exists' => $exists]);
     }
-
-
-
-
-
-
-
 
     public function detailsUser(Request $request, $userId)
     {
@@ -238,7 +177,6 @@ class UserController extends Controller
             ], 500);
         }
     }
-    
     
     // DomaineController.php
     public function getDomainesByGroupeProjet($code)

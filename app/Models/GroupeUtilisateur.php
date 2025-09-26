@@ -37,32 +37,32 @@ class GroupeUtilisateur extends Model implements RoleContract
     /**
      * ✅ Assigner une permission à un groupe utilisateur (équivalent rôle)
      */
-    public function givePermissionTo($permission)
+   /* public function givePermissionTo($permission)
     {
         $permissionModel = Permission::findByName($permission);
         if ($permissionModel && !$this->hasPermissionTo($permission)) {
             $this->permissions()->attach($permissionModel->id);
         }
-    }
+    }*/
 
     /**
      * ✅ Révoquer une permission d'un groupe utilisateur
      */
-    public function revokePermissionTo($permission)
+    /*public function revokePermissionTo($permission)
     {
         $permissionModel = Permission::findByName($permission);
         if ($permissionModel) {
             $this->permissions()->detach($permissionModel->id);
         }
-    }
+    }*/
 
     /**
      * ✅ Vérifier si un groupe utilisateur a une permission
      */
-    public function hasPermissionTo($permission, ?string $guardName = null): bool
+    /*public function hasPermissionTo($permission, ?string $guardName = null): bool
     {
         return $this->permissions()->where('name', $permission)->exists();
-    }
+    }*/
 
     /**
      * ✅ Trouver un rôle par son nom

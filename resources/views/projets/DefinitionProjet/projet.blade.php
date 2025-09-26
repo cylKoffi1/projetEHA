@@ -50,6 +50,7 @@
                         <h4 class="card-title">Chef de projet</h4>
                             <form id="contratForm" action="{{ route('contrats.store') }}" method="POST">
                                 @csrf
+                                <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                                 <input type="hidden" name="contrat_id" id="contrat_id">
 
                                 <div class="row">
@@ -83,7 +84,9 @@
                                         <input type="date" name="date_fin" class="form-control" required>
                                     </div>
                                 </div>
+                                @can("ajouter_ecran_" . $ecran->id)
                                 <button type="submit" id="formButton" class="btn btn-primary mt-3">Enregistrer</button>
+                                @endcan
 
                             </form>
                     </div>
@@ -117,6 +120,7 @@
                                                 Actions
                                             </button>
                                             <ul class="dropdown-menu" aria-labelledby="dropdownMenu{{ $contrat->id }}">
+                                                @can("modifier_ecran_" . $ecran->id)
                                                 <li>
                                                 <button class="dropdown-item text-warning" type="button" onclick="editContrat(@js([
                                                         'id' => $contrat->id,
@@ -130,25 +134,33 @@
                                                 </button>
 
                                                 </li>
+                                                @endcan
+                                                @can("supprimer_ecran_" . $ecran->id)
                                                 <li>
                                                     <form action="{{ route('contrats.destroy', $contrat->id) }}" method="POST" onsubmit="return confirm('Confirmer la suppression ?');">
                                                         @csrf
                                                         @method('DELETE')
+                                                        <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                                                         <button class="dropdown-item text-danger" type="submit">
                                                             <i class="bi bi-trash"></i> Supprimer
                                                         </button>
                                                     </form>
                                                 </li>
+                                                @endcan
+                                                @can("consulter_ecran_" . $ecran->id)
                                                 <li>
                                                     <a class="dropdown-item text-info" href="{{ route('contrats.fiche', $contrat->id) }}">
                                                         <i class="bi bi-file-earmark-text"></i> Voir fiche
                                                     </a>
                                                 </li>
+                                                @endcan
+                                                @can("consulter_ecran_" . $ecran->id)
                                                 <li>
                                                     <a class="dropdown-item text-secondary" href="{{ route('contrats.pdf', $contrat->id) }}">
                                                         <i class="bi bi-download"></i> Télécharger
                                                     </a>
                                                 </li>
+                                                @endcan
                                             </ul>
                                         </div>
                                     </td>

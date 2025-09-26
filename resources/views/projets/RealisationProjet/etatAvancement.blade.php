@@ -367,10 +367,12 @@
 
                         <div class="row mt-3">
                             <div class="col-12">
+                                @can("consulter_ecran_" . $ecran->id)
                                 <a href="#" id="voir-liste-link" class="toggle-list-btn">
                                     <i class="fas fa-list me-2"></i>
                                     Voir la liste complète des projets
                                 </a>
+                                @endcan
                             </div>
                         </div>
                     </div>
@@ -421,9 +423,11 @@
 
                     <div class="modal-footer">
 
+                        @can("consulter_ecran_" . $ecran->id)
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-times me-1"></i> Fermer
                         </button>
+                        @endcan
                     </div>
                 </form>
             </div>
@@ -503,9 +507,11 @@
                     </div>
                     <div class="col-4 ">
                         <label for="">.</label>
+                        @can("ajouter_ecran_" . $ecran->id)
                         <button type="submit" class="btn btn-success w-100">
                             <i class="fas fa-save me-1"></i> Enregistrer
                         </button>
+                        @endcan
                     </div>
                 </div>
 

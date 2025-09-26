@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Projet;
 use App\Models\Acteur;
+use App\Models\Banque;
 use App\Models\Financer;
 use App\Models\Decaissement;
 use App\Models\AchatMateriau;
@@ -26,7 +27,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 class GestionFinanciereController extends Controller
 {
     /*******************DECAISSEMENT ***********************/
@@ -561,6 +563,7 @@ class GestionFinanciereController extends Controller
         private function validateReglement(Request $request, bool $update = false): array
         {
             $rules = [
+                'ecran_id'            => ['required','integer','exists:ecrans,id'],
                 'code_projet'         => [$update ? 'sometimes' : 'required','string','exists:projets,code_projet'],
                 'code_acteur'         => ['required','string','exists:acteur,code_acteur'],
                 'reference_facture'   => ['nullable','string','max:100'],
@@ -572,6 +575,7 @@ class GestionFinanciereController extends Controller
                 'statut_id'           => ['required','integer','exists:gf_reglement_statuts,id'],
                 'date_reglement'      => ['required','date'],
                 'tranche_no'          => ['nullable','integer','min:1'],
+                'banqueId'            => ['nullable','integer','exists:banques,id'],
 
                 // Contexte (mutuellement exclusif)
                 'code_travaux_connexe'=> ['nullable','string'],
@@ -606,7 +610,13 @@ class GestionFinanciereController extends Controller
         public function reglementsStore(Request $request)
         {
             try {
-                $data = $this->validateReglement($request);
+                $data  = $this->validateReglement($request);
+                $ecran = Ecran::find($request->input('ecran_id'));
+
+                // Autorisation: création
+                if (Gate::denies('ajouter_ecran_'.$ecran->id)) {
+                    return response()->json(['ok'=>false,'error'=>"Vous n'êtes pas autorisé à ajouter."], 403);
+                }
 
                 // tranche auto si vide
                 if (empty($data['tranche_no'])) {
@@ -623,7 +633,7 @@ class GestionFinanciereController extends Controller
             } catch (\Illuminate\Validation\ValidationException $e) {
                 return response()->json(['ok'=>false,'errors'=>$e->errors()], 422);
             } catch (\Throwable $e) {
-                \Log::error('Reglement create error', ['msg'=>$e->getMessage()]);
+                Log::error('[GF][Reglements] create error', ['msg'=>$e->getMessage()]);
                 return response()->json(['ok'=>false,'error'=>"Erreur lors de l’enregistrement."], 500);
             }
         }
@@ -631,8 +641,14 @@ class GestionFinanciereController extends Controller
         public function reglementsUpdate(Request $request, $id)
         {
             try {
-                $reg  = ReglementPrestataire::findOrFail($id);
-                $data = $this->validateReglement($request, true);
+                $reg   = ReglementPrestataire::findOrFail($id);
+                $data  = $this->validateReglement($request, true);
+                $ecran = Ecran::find($request->input('ecran_id'));
+
+                // Autorisation: modification
+                if (Gate::denies('modifier_ecran_'.$ecran->id)) {
+                    return response()->json(['ok'=>false,'error'=>"Vous n'êtes pas autorisé à modifier."], 403);
+                }
 
                 if (empty($data['tranche_no'])) {
                     $data['tranche_no'] = $this->computeNextTrancheReglement(
@@ -647,17 +663,16 @@ class GestionFinanciereController extends Controller
                 return response()->json(['ok'=>true,'message'=>'Règlement mis à jour.','id'=>$reg->id]);
             } catch (\Illuminate\Validation\ValidationException $e) {
                 return response()->json(['ok'=>false,'errors'=>$e->errors()], 422);
-            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            } catch (ModelNotFoundException $e) {
                 return response()->json(['ok'=>false,'error'=>'Règlement introuvable.'], 404);
             } catch (\Throwable $e) {
-                \Log::error('Reglement update error', ['msg'=>$e->getMessage()]);
+                Log::error('[GF][Reglements] update error', ['msg'=>$e->getMessage()]);
                 return response()->json(['ok'=>false,'error'=>'Erreur lors de la mise à jour.'], 500);
             }
         }
 
         public function contextByProjet(string $codeProjet)
         {
-            // Travaux connexes
             $tc = TravauxConnexes::where('code_projet',$codeProjet)
                 ->orderBy('date_debut_previsionnelle','desc')
                 ->get(['codeActivite as code','code_projet','commentaire'])
@@ -666,7 +681,6 @@ class GestionFinanciereController extends Controller
                     'libelle'=>$t->commentaire ?: 'Travaux connexes',
                 ]);
 
-            // Renforcements (via table pivot)
             $rf = Renforcement::whereHas('projets', fn($q)=>$q->where('code_projet',$codeProjet))
                 ->orderBy('date_debut','desc')
                 ->get(['code_renforcement as code','titre']);
@@ -677,9 +691,15 @@ class GestionFinanciereController extends Controller
             ]);
         }
 
-
         public function reglementsIndex(Request $request)
         {
+            $ecran = Ecran::find($request->input('ecran_id')); // utilisé par les @can et la vue
+
+            // Autorisation: consultation (optionnel si protégé ailleurs)
+            if ($ecran && Gate::denies('consulter_ecran_'.$ecran->id)) {
+                abort(403);
+            }
+
             $pays   = session('pays_selectionne');
             $groupe = session('projet_selectionne');
 
@@ -687,25 +707,32 @@ class GestionFinanciereController extends Controller
                 ->orderBy('code_projet')
                 ->get(['code_projet','libelle_projet','code_devise']);
 
-            // Prestataires = tous acteurs actifs (tu peux filtrer par type si besoin)
-            $prestataires = Acteur::where('code_pays', session('pays_selectionne'))
-            ->orderBy('libelle_long')->get(['code_acteur','libelle_court','libelle_long']);
+            $prestataires = Acteur::where('code_pays', $pays)
+                ->orderBy('libelle_long')
+                ->get(['code_acteur','libelle_court','libelle_long']);
 
-            $modes   = ModePaiement::orderBy('id')->get();
-            $statuts = ReglementStatut::orderBy('id')->get();
+            $modes    = ModePaiement::orderBy('id')->get();
+            $statuts  = ReglementStatut::orderBy('id')->get();
+            $banques  = Banque::where('actif', true)->orderBy('sigle')->get(['id','sigle','nom','code_pays','est_internationale']);
 
-            $reglements = ReglementPrestataire::with(['projet','prestataire','mode','statut'])
+            $reglements = ReglementPrestataire::with(['projet','prestataire','mode','statut','banque'])
                 ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
                 ->orderByDesc('date_reglement')
                 ->paginate(25);
 
-            return view('GestionFinanciere.reglementsPrestataires', compact('projets','prestataires','modes','statuts','reglements'));
+            return view('GestionFinanciere.reglementsPrestataires', compact(
+                'ecran','projets','prestataires','modes','statuts','banques','reglements'
+            ));
         }
-      
 
-        /** Suppression */
-        public function reglementsDestroy($id)
+        public function reglementsDestroy(Request $request, $id)
         {
+            $ecran = Ecran::find($request->input('ecran_id'));
+
+            if ($ecran && Gate::denies('supprimer_ecran_'.$ecran->id)) {
+                return response()->json(['ok'=>false,'error'=>"Vous n'êtes pas autorisé à supprimer."], 403);
+            }
+
             Log::info('[GF][Reglements] Destroy: start', ['user_id' => auth()->id(), 'id' => $id]);
 
             try {
@@ -714,10 +741,7 @@ class GestionFinanciereController extends Controller
 
                 Log::info('[GF][Reglements] Destroy: success', ['user_id' => auth()->id(), 'id' => $id]);
 
-                return response()->json([
-                    'ok'      => true,
-                    'message' => 'Règlement supprimé.',
-                ]);
+                return response()->json(['ok' => true,'message' => 'Règlement supprimé.']);
             } catch (ModelNotFoundException $e) {
                 return response()->json(['ok' => false, 'error' => 'Règlement introuvable.'], 404);
             } catch (\Throwable $e) {
@@ -726,7 +750,7 @@ class GestionFinanciereController extends Controller
             }
         }
     /******************* FIN REGLEMENT ******************/
-
+   
     public function representationGraphique(Request $request)
     {
         $annee  = (int)($request->input('annee') ?? date('Y'));
@@ -1091,4 +1115,5 @@ class GestionFinanciereController extends Controller
           return back()->with('success', 'PIB supprimé avec succès.');
       }
     /******************* FIN PIB ********************** */
+ 
 }

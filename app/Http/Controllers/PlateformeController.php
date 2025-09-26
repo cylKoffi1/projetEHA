@@ -2,65 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Acquifere;
-use App\Models\Acteur;
 use App\Models\ActionMener;
-use App\Models\AgenceExecution;
-use App\Models\ApartenirGroupeUtilisateur;
 use App\Models\Approbateur;
-use App\Models\Bailleur;
-use App\Models\Bassin;
-use App\Models\CourDeau;
+use App\Models\Banque;
 use App\Models\Devise;
 use App\Models\Domaine;
 use App\Models\Ecran;
-use App\Models\Etablissement;
 use App\Models\FamilleInfrastructure;
 use App\Models\Fonction_groupe_utilisateur;
 use App\Models\FonctionUtilisateur;
 use App\Models\Genre;
-use App\Models\GroupeUtilisateur;
-use App\Models\Localite;
-use App\Models\MaterielStockage;
-use App\Models\Ministere;
-use App\Models\NiveauAccesDonnees;
-use App\Models\NiveauEtablissement;
 use App\Models\OccuperFonction;
-use App\Models\OutilsCollecte;
-use App\Models\OuvrageTransport;
-use App\Models\ProjetEha2;
 use App\Models\SousDomaine;
-use App\Models\TypeBailleur;
-use App\Models\TypeEtablissement;
-use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Pays;
-use App\Models\Personnel;
-use App\Models\StatutProjet;
-use App\Models\StructureRattachement;
-use App\Models\TypeInstrument;
-use App\Models\TypeMateriauxConduite;
-use App\Models\TypeResaux;
-use App\Models\TypeStation;
-use App\Models\TypeStockage;
-use App\Models\UniteDistance;
-use App\Models\UniteMesure;
-use App\Models\UniteStockage;
-use App\Models\UniteSurface;
-use App\Models\UniteTraitement;
-use App\Models\uniteVolume;
 use App\Models\TypeCaracteristique;
 use App\Models\Caracteristique;
 use App\Models\FamilleCaracteristique;
 use App\Models\FamilleDomaine;
 use App\Models\GroupeProjet;
 use App\Models\Infrastructure;
+use App\Models\LocalitesPays;
 use App\Models\Projet;
 use App\Models\Unite;
 use App\Models\ValeurPossible;
 use App\Services\CaracteristiqueBuilderService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Str;
@@ -68,695 +38,455 @@ use Illuminate\Support\Str;
 
 class PlateformeController extends Controller
 {
-    //***************** AGENCES ************* */
-    public function agences(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $agences = AgenceExecution::orderBy('nom_agence', 'asc')->get();
-        return view('parSpecifique.agences', ['agences' => $agences, 'ecran' => $ecran, ]);
-    }
-
-    public function getAgence($code)
-    {
-        $agence = AgenceExecution::find($code);
-
-        if (!$agence) {
-            return response()->json(['error' => 'agence non trouvé'], 404);
+    
+    /******************* BANQUES  ***********************/
+        public function indexBanques(Request $request)
+        {
+            // L’écran est utile pour les permissions en Blade
+            $ecran = Ecran::find($request->input('ecran_id'));
+            $pays = Pays::orderBy('nom_fr_fr')->where('alpha3', session('pays_selectionne'))->first();
+            return view('GestionFinanciere.banques', compact('pays','ecran'));
         }
 
-        return response()->json($agence);
-    }
-
-    public function deleteAgence($code)
-    {
-        $agence = AgenceExecution::find($code);
-
-        if (!$agence) {
-            return response()->json(['error' => 'agence non trouvé'], 404);
+        public function listBanques(Request $request)
+        {
+            try {
+                $banques = Banque::with(['pays:id,alpha3,nom_fr_fr'])
+                ->where('code_pays', session('pays_selectionne'))->orderBy('nom')->get();
+                return response()->json(['ok' => true, 'data' => $banques]);
+            } catch (\Throwable $e) {
+                Log::error('Banque list error', ['ex' => $e]);
+                return response()->json(['ok' => false, 'message' => "Erreur lors du chargement."], 500);
+            }
         }
 
-        $agence->delete();
+        public function storeBanques(Request $request)
+        {
+            try {
+                $ecran = Ecran::find($request->input('ecran_id'));
+                Gate::authorize("ajouter_ecran_{$ecran->id}");
 
-        return response()->json(['success' => 'agence supprimé avec succès']);
-    }
+                $v = Validator::make($request->all(), [
+                    'nom' => 'required|string|max:191',
+                    'sigle' => 'nullable|string|max:50',
+                    'est_internationale' => 'required|boolean',
+                    'code_pays' => 'nullable|string|size:3',
+                    'code_swift' => 'nullable|string|max:11',
+                    'adresse' => 'nullable|string',
+                    'telephone' => 'nullable|string|max:50',
+                    'email' => 'nullable|email|max:191',
+                    'site_web' => 'nullable|url|max:191',
+                    'actif' => 'required|boolean',
+                ]);
+                if ($v->fails()) {
+                    return response()->json(['ok' => false, 'message' => $v->errors()->first()], 422);
+                }
 
-    public function checkAgenceCode(Request $request)
-    {
-        $code = $request->input('code');
+                // Normalisation
+                $data = $v->validated();
+                $data['code_pays'] = $data['est_internationale'] ? null : (isset($data['code_pays']) ? strtoupper($data['code_pays']) : null);
 
-        // Check if a district with the provided code already exists in your database
-        $agence = AgenceExecution::where('code_agence_execution', $code)->exists();
+                $banque = Banque::create($data);
 
-        return response()->json(['exists' => $agence]);
-    }
+                Log::info('Banque created', ['id' => $banque->id, 'by' => $request->user()->id]);
 
-    public function storeAgence(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $agence = new AgenceExecution;
-        $agence->code_agence_execution = $request->input('code');
-        $agence->nom_agence = $request->input('nom_agence');
-        $agence->telephone = $request->input('tel');
-        $agence->email = $request->input('email');
-        $agence->addresse = $request->input('addresse');
-
-        $agence->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parSpecifique.agences', ['ecran_id' => $ecran_id])->with('success', 'Agence enregistré avec succès.');
-    }
-    public function updateAgence(Request $request)
-    {
-
-        $agence = AgenceExecution::find($request->input('edit_code'));
-
-        if (!$agence) {
-            return response()->json(['error' => 'Agence non trouvé'], 404);
+                return response()->json(['ok' => true, 'message' => 'Banque créée avec succès.', 'data' => $banque]);
+            } catch (\Throwable $e) {
+                Log::error('Banque store error', ['ex' => $e, 'payload' => $request->all()]);
+                return response()->json(['ok' => false, 'message' => "Création impossible."], 500);
+            }
         }
 
-        $agence->nom_agence = $request->input('edit_nom_agence');
-        $agence->telephone = $request->input('edit_tel');
-        $agence->email = $request->input('edit_email');
-        $agence->addresse = $request->input('edit_addresse');
+        public function updateBanques($id, Request $request)
+        {
+            try {
+                $ecran = Ecran::find($request->input('ecran_id'));
+                Gate::authorize("modifier_ecran_{$ecran->id}");
 
+                $banque = Banque::findOrFail($id);
 
-        // Vous pouvez également valider les données ici si nécessaire
+                $v = Validator::make($request->all(), [
+                    'nom' => 'required|string|max:191',
+                    'sigle' => 'nullable|string|max:50',
+                    'est_internationale' => 'required|boolean',
+                    'code_pays' => 'nullable|string|size:3',
+                    'code_swift' => 'nullable|string|max:11',
+                    'adresse' => 'nullable|string',
+                    'telephone' => 'nullable|string|max:50',
+                    'email' => 'nullable|email|max:191',
+                    'site_web' => 'nullable|url|max:191',
+                    'actif' => 'required|boolean',
+                ]);
+                if ($v->fails()) {
+                    return response()->json(['ok' => false, 'message' => $v->errors()->first()], 422);
+                }
 
-        $agence->save();
-        $ecran_id = $request->input('ecran_id');
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parSpecifique.agences', ['ecran_id' => $ecran_id])->with('success', 'Agence mis à jour avec succès.');
-    }
+                $data = $v->validated();
+                $data['code_pays'] = $data['est_internationale'] ? null : (isset($data['code_pays']) ? strtoupper($data['code_pays']) : null);
 
+                $banque->update($data);
 
+                Log::info('Banque updated', ['id' => $banque->id, 'by' => $request->user()->id]);
 
-    //***************** BAILLEURS ************* */
-    public function bailleurs(Request $request)
-    {
-        $ecran = Ecran::find($request->input('ecran_id'));
-        $bailleurs = Bailleur::with('pays')->with('type_bailleur')->orderBy('libelle_long', 'asc')->get();
-        $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
-        $type_bailleurs = TypeBailleur::all();
-        $devises = Devise::all();
-        return view('parSpecifique.bailleurs', ['bailleurs' => $bailleurs,'ecran' => $ecran, 'devises' => $devises, 'type_bailleurs' => $type_bailleurs, 'pays' => $pays]);
-    }
-
-    public function getBailleur($code)
-    {
-        $bailleur = Bailleur::find($code);
-
-        if (!$bailleur) {
-            return response()->json(['error' => 'bailleur non trouvé'], 404);
+                return response()->json(['ok' => true, 'message' => 'Banque mise à jour.', 'data' => $banque]);
+            } catch (\Throwable $e) {
+                Log::error('Banque update error', ['ex' => $e, 'id' => $id, 'payload' => $request->all()]);
+                return response()->json(['ok' => false, 'message' => "Mise à jour impossible."], 500);
+            }
         }
 
-        return response()->json($bailleur);
-    }
+        public function destroyBanques($id, Request $request)
+        {
+            try {
+                $ecran = Ecran::find($request->input('ecran_id'));
+                Gate::authorize("supprimer_ecran_{$ecran->id}");
 
-    public function deleteBailleur($code)
-    {
-        $bailleur = Bailleur::find($code);
+                $banque = Banque::findOrFail($id);
+                $banque->delete();
 
-        if (!$bailleur) {
-            return response()->json(['error' => 'bailleur non trouvé'], 404);
+                Log::info('Banque deleted', ['id' => $banque->id, 'by' => $request->user()->id]);
+
+                return response()->json(['ok' => true, 'message' => 'Banque supprimée.']);
+            } catch (\Throwable $e) {
+                Log::error('Banque delete error', ['ex' => $e, 'id' => $id]);
+                return response()->json(['ok' => false, 'message' => "Suppression impossible."], 500);
+            }
         }
-
-        $bailleur->delete();
-
-        return response()->json(['success' => 'bailleur supprimé avec succès']);
-    }
-
-    public function checkBailleurCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $bailleur = Bailleur::where('code', $code)->exists();
-
-        return response()->json(['exists' => $bailleur]);
-    }
-
-    public function storeBailleur(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $bailleur = new Bailleur;
-        $bailleur->code = $request->input('code');
-        $bailleur->nom = $request->input('nom');
-        $bailleur->telephone = $request->input('tel');
-        $bailleur->email = $request->input('email');
-        $bailleur->addresse = $request->input('addresse');
-        $bailleur->code_devise = $request->input('id_devise');
-        $bailleur->code_type_bailleur = $request->input('id_tb');
-        $bailleur->code_pays = $request->input('id_pays');
-        $bailleur->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parSpecifique.bailleurs', ['ecran_id' => $ecran_id])->with('success', 'bailleur enregistré avec succès.');
-    }
-    public function updateBailleur(Request $request)
-    {
-
-        $bailleur = Bailleur::find($request->input('edit_code'));
-
-        if (!$bailleur) {
-            return response()->json(['error' => 'Agence non trouvé'], 404);
-        }
-
-        $bailleur->nom = $request->input('nom');
-        $bailleur->telephone = $request->input('tel');
-        $bailleur->email = $request->input('email');
-        $bailleur->addresse = $request->input('addresse');
-        $bailleur->code_devise = $request->input('edit_id_devise');
-        $bailleur->code_type_bailleur = $request->input('edit_id_tb');
-        $bailleur->code_pays = $request->input('edit_id_pays');
-
-
-        // Vous pouvez également valider les données ici si nécessaire
-
-        $bailleur->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parSpecifique.bailleurs', ['ecran_id' => $ecran_id])->with('success', 'bailleur mis à jour avec succès.');
-    }
-
-
-
-
-
-
-    //***************** ETABLISSEMENTS ************* */
-    public function etablissements(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $etablissements = Etablissement::with('localite')->with('genre')->with('niveaux')->orderBy('nom_etablissement', 'asc')->get();
-        $genres = Genre::orderBy('libelle_genre', 'asc')->get();
-        $niveaux = NiveauEtablissement::all();
-        $type_etablissements = TypeEtablissement::all();
-        $localites = Localite::orderBy('localite', 'asc')->get();
-        return view('etablissements', ['etablissements' => $etablissements,'ecran' => $ecran, 'genres' => $genres, 'type_etablissements' => $type_etablissements, 'niveaux' => $niveaux, 'localites' => $localites]);
-    }
-    public function getEtablissement($code)
-    {
-        $etablissement = Etablissement::with('niveaux')->find($code);
-
-        if (!$etablissement) {
-            return response()->json(['error' => 'Etablissement non trouvé'], 404);
-        }
-
-        return response()->json($etablissement);
-    }
-
-
-    public function deleteEtablissement($code)
-    {
-        $etablissement = Etablissement::find($code);
-
-        if (!$etablissement) {
-            return response()->json(['error' => 'Etablissement non trouvé'], 404);
-        }
-
-        $etablissement->delete();
-
-        return response()->json(['success' => 'Etablissement supprimé avec succès']);
-    }
-
-    public function checkEtablissementCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $etablissement = Etablissement::where('code', $code)->exists();
-
-        return response()->json(['exists' => $etablissement]);
-    }
-
-    public function storeEtablissement(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $etablissement = new Etablissement;
-        $etablissement->code = $request->input('code');
-        $etablissement->nom_etablissement = $request->input('nom_etablissement');
-        $etablissement->nom_court = $request->input('nom_court');
-        $etablissement->public = $request->boolean('public');
-        $etablissement->code_genre = $request->input('code_genre');
-        $etablissement->code_localite = $request->input('code_localite');
-        $etablissement->code_niveau = $request->input('code_niveau');
-        $etablissement->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('etablissements', ['ecran_id' => $ecran_id])->with('success', 'Etablissement enregistré avec succès.');
-    }
-    public function updateEtablissement(Request $request)
-    {
-
-        $etablissement = Etablissement::find($request->input('edit_code'));
-
-        if (!$etablissement) {
-            return response()->json(['error' => 'Etablissement non trouvé'], 404);
-        }
-
-        $etablissement->nom_etablissement = $request->input('edit_nom_etablissement');
-        $etablissement->nom_court = $request->input('edit_nom_court');
-        $etablissement->public = $request->input('edit_public');
-        $etablissement->code_genre = $request->input('edit_code_genre');
-        $etablissement->code_localite = $request->input('edit_code_localite');
-        $etablissement->code_niveau = $request->input('edit_code_niveau');
-        $etablissement->save();
-
-
-        // Vous pouvez également valider les données ici si nécessaire
-
-        $etablissement->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('etablissements', ['ecran_id' => $ecran_id])->with('success', 'Etablissement mis à jour avec succès.');
-    }
-
-    public function getNiveaux(Request $request, $typeId)
-    {
-        // Utilisez le modèle District pour récupérer les districts en fonction du pays
-        $niveaux = NiveauEtablissement::where('code_type_etablissement', $typeId)->get();
-
-        // Créez un tableau d'options pour les districts
-        $niveauxOptions = [];
-        foreach ($niveaux as $niveau) {
-            $niveauxOptions[$niveau->code] = $niveau->libelle_long;
-        }
-
-        return response()->json(['niveaux' => $niveauxOptions]);
-    }
-
-    //***************** MINISTÈRES ************* */
-    public function ministeres(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $ministeres = Ministere::orderBy('libelle', 'asc')->get();
-        return view('parSpecifique.ministeres', ['ministeres' => $ministeres, 'ecran' => $ecran,]);
-    }
-
-
-
-
+    /******************* FIN BANQUES  ***********************/   
+   
     // ********************* GESTION DOMAINES ET SOUS-DOMAINES *************************//
 
 
-    public function checkDomaineCode(Request $request)
-    {
-        $code = $request->input('code');
+        public function checkDomaineCode(Request $request)
+        {
+            $code = $request->input('code');
 
-        // Check if a district with the provided code already exists in your database
-        $exists = Domaine::where('code', $code)->exists();
+            // Check if a district with the provided code already exists in your database
+            $exists = Domaine::where('code', $code)->exists();
 
-        return response()->json(['exists' => $exists]);
-    }
-    public function checkSousDomaineCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = SousDomaine::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-    public function storeDomaine(Request $request)
-    {
-        try {
-            $request->validate([
-                'code' => 'required|string|max:20|unique:domaine_intervention,code',
-                'libelle' => 'required|string|max:255',
-                'ecran_id' => 'required'
-            ]);
-    
-            $domaine = new Domaine;
-            $domaine->code = $request->input('code');
-            $domaine->libelle = $request->input('libelle');
-            $domaine->groupe_projet_code = session('projet_selectionne');
-            $domaine->save();
-    
-            return response()->json(['success' => 'Domaine enregistré avec succès.']);
-        } catch (\Throwable $e) {
-            Log::error($e);
-            return response()->json(['error' => 'Erreur lors de l\'enregistrement du domaine.'], 500);
+            return response()->json(['exists' => $exists]);
         }
-    }
+        public function checkSousDomaineCode(Request $request)
+        {
+            $code = $request->input('code');
+
+            // Check if a district with the provided code already exists in your database
+            $exists = SousDomaine::where('code', $code)->exists();
+
+            return response()->json(['exists' => $exists]);
+        }
+        public function storeDomaine(Request $request)
+        {
+            try {
+                $request->validate([
+                    'code' => 'required|string|max:20|unique:domaine_intervention,code',
+                    'libelle' => 'required|string|max:255',
+                    'ecran_id' => 'required'
+                ]);
         
-    public function updateDomaine(Request $request)
-    {
-        try {
-            $request->validate([
-                'code' => 'required|string',
-                'libelle' => 'required|string|max:255'
+                $domaine = new Domaine;
+                $domaine->code = $request->input('code');
+                $domaine->libelle = $request->input('libelle');
+                $domaine->groupe_projet_code = session('projet_selectionne');
+                $domaine->save();
+        
+                return response()->json(['success' => 'Domaine enregistré avec succès.']);
+            } catch (\Throwable $e) {
+                Log::error($e);
+                return response()->json(['error' => 'Erreur lors de l\'enregistrement du domaine.'], 500);
+            }
+        }
+            
+        public function updateDomaine(Request $request)
+        {
+            try {
+                $request->validate([
+                    'code' => 'required|string',
+                    'libelle' => 'required|string|max:255'
+                ]);
+        
+                $domaine = Domaine::where('code', $request->input('code'))
+                ->where('groupe_projet_code', session('projet_selectionne'))
+                ->first();
+        
+                if (!$domaine) {
+                    return response()->json(['error' => 'Domaine non trouvé.'], 404);
+                }
+        
+                $domaine->libelle = $request->input('libelle');
+                $domaine->save();
+        
+                return response()->json(['success' => 'Domaine mis à jour avec succès.']);
+            } catch (\Throwable $e) {
+                Log::error($e);
+                return response()->json(['error' => 'Erreur lors de la mise à jour du domaine.'], 500);
+            }
+        }
+        
+        public function storeSousDomaine(Request $request)
+        {
+            try {
+                $request->validate([
+                    'code' => [
+                        'required',
+                        'string',
+                        'max:20',
+                        Rule::unique('sous_domaine', 'code_sous_domaine')
+                            ->where(function ($query) {
+                                return $query->where('code_groupe_projet', session('projet_selectionne'));
+                            }),
+                    ],
+                    'libelle' => 'required|string|max:255',
+                    'domaine' => 'required|string|exists:domaine_intervention,code'
+                ]);
+        
+                $sousDomaine = new SousDomaine;
+                $sousDomaine->code_sous_domaine = $request->input('code');
+                $sousDomaine->lib_sous_domaine = $request->input('libelle');
+                $sousDomaine->code_domaine = $request->input('domaine');
+                $sousDomaine->code_groupe_projet = session('projet_selectionne');
+                $sousDomaine->save();
+        
+                return response()->json(['success' => 'Sous-domaine enregistré avec succès.']);
+            } catch (\Throwable $e) {
+                Log::error($e);
+                return response()->json(['error' => 'Erreur lors de l\'enregistrement du sous-domaine.'], 500);
+            }
+        }
+        
+        public function updateSousDomaine(Request $request)
+        {
+            try {
+                $request->validate([
+                    'libelle_edit' => 'required|string|max:255',
+                    'domaine_edit' => 'required|string|exists:domaine_intervention,code'
+                ]);
+        
+                $sousDomaine = SousDomaine::where('code_sous_domaine', $request->input('code'))
+                    ->where('code_groupe_projet', session('projet_selectionne'))
+                    ->first();
+        
+                if (!$sousDomaine) {
+                    return response()->json(['error' => 'Sous-domaine non trouvé.'], 404);
+                }
+        
+                $sousDomaine->lib_sous_domaine = $request->input('libelle');
+                $sousDomaine->save();
+        
+                return response()->json(['success' => 'Sous-domaine mis à jour avec succès.']);
+            } catch (\Throwable $e) {
+                Log::error($e);
+                return response()->json(['error' => 'Erreur lors de la mise à jour du sous-domaine.'], 500);
+            }
+        }
+        public function domaines(Request $request)
+        {
+        $ecran = Ecran::find($request->input('ecran_id'));
+            $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))
+            ->orderBy('libelle', 'asc')->get();
+            return view('parGeneraux.domaines', ['domaines' => $domaines,'ecran' => $ecran, ]);
+        }
+
+
+        public function sousDomaines(Request $request)
+        {
+            $ecran = Ecran::find($request->ecran_id); // ou autre logique
+            $sous_domaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
+            ->orderBy('lib_sous_domaine', 'asc')->get();
+            $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))
+            ->orderBy('libelle', 'asc')->get();
+
+            return view('parGeneraux.sous_domaines', [
+                'ecran' => $ecran,
+                'domaines' => $domaines,
+                'sous_domaines' => $sous_domaines,
             ]);
-    
-            $domaine = Domaine::where('code', $request->input('code'))
+        }
+        
+        public function deleteDomaine($code)
+        {
+            $domaine = Domaine::where('code',$code)
             ->where('groupe_projet_code', session('projet_selectionne'))
             ->first();
-    
+
             if (!$domaine) {
-                return response()->json(['error' => 'Domaine non trouvé.'], 404);
+                return response()->json(['error' => 'Domaine non trouvé'], 404);
             }
-    
-            $domaine->libelle = $request->input('libelle');
-            $domaine->save();
-    
-            return response()->json(['success' => 'Domaine mis à jour avec succès.']);
-        } catch (\Throwable $e) {
-            Log::error($e);
-            return response()->json(['error' => 'Erreur lors de la mise à jour du domaine.'], 500);
-        }
-    }
-    
-    public function storeSousDomaine(Request $request)
-    {
-        try {
-            $request->validate([
-                'code' => [
-                    'required',
-                    'string',
-                    'max:20',
-                    Rule::unique('sous_domaine', 'code_sous_domaine')
-                        ->where(function ($query) {
-                            return $query->where('code_groupe_projet', session('projet_selectionne'));
-                        }),
-                ],
-                'libelle' => 'required|string|max:255',
-                'domaine' => 'required|string|exists:domaine_intervention,code'
-            ]);
-    
-            $sousDomaine = new SousDomaine;
-            $sousDomaine->code_sous_domaine = $request->input('code');
-            $sousDomaine->lib_sous_domaine = $request->input('libelle');
-            $sousDomaine->code_domaine = $request->input('domaine');
-            $sousDomaine->code_groupe_projet = session('projet_selectionne');
-            $sousDomaine->save();
-    
-            return response()->json(['success' => 'Sous-domaine enregistré avec succès.']);
-        } catch (\Throwable $e) {
-            Log::error($e);
-            return response()->json(['error' => 'Erreur lors de l\'enregistrement du sous-domaine.'], 500);
-        }
-    }
-    
-    public function updateSousDomaine(Request $request)
-    {
-        try {
-            $request->validate([
-                'libelle_edit' => 'required|string|max:255',
-                'domaine_edit' => 'required|string|exists:domaine_intervention,code'
-            ]);
-    
-            $sousDomaine = SousDomaine::where('code_sous_domaine', $request->input('code'))
-                ->where('code_groupe_projet', session('projet_selectionne'))
-                ->first();
-    
-            if (!$sousDomaine) {
-                return response()->json(['error' => 'Sous-domaine non trouvé.'], 404);
+        
+            $groupeProjet = session('projet_selectionne');
+
+            // Vérifie si des sous-domaines sont liés à ce domaine
+            $hasSousDomaines = SousDomaine::where('code_domaine', $code)->exists();
+            if ($hasSousDomaines) {
+                return response()->json([
+                    'error' => 'Suppression interdite : Des sous-domaines sont rattachés à ce domaine.'
+                ], 403);
             }
-    
-            $sousDomaine->lib_sous_domaine = $request->input('libelle');
-            $sousDomaine->save();
-    
-            return response()->json(['success' => 'Sous-domaine mis à jour avec succès.']);
-        } catch (\Throwable $e) {
-            Log::error($e);
-            return response()->json(['error' => 'Erreur lors de la mise à jour du sous-domaine.'], 500);
+
+            $projet = Projet::whereRaw("SUBSTRING(code_sous_domaine, 1, 2) = ?", [$code])
+            ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
+            ->first();
+        
+
+            if ($projet) {
+                return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
+            }
+            $domaine->delete();
+
+            return response()->json(['success' => 'Domaine supprimé avec succès']);
         }
-    }
-    public function domaines(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))
-        ->orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.domaines', ['domaines' => $domaines,'ecran' => $ecran, ]);
-    }
+        public function deleteSousDomaine($code)
+        {
+            $s_domaine = SousDomaine::where('code_sous_domaine',$code)
+            ->where('code_groupe_projet', session('projet_selectionne'))->first();
+
+            if (!$s_domaine) {
+                return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
+            }
+            $projet = Projet::where('code_sous_domaine', $code)
+            ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [session('projet_selectionne')])
+            ->first();
 
 
-    public function sousDomaines(Request $request)
-    {
-        $ecran = Ecran::find($request->ecran_id); // ou autre logique
-        $sous_domaines = SousDomaine::where('code_groupe_projet', session('projet_selectionne'))
-        ->orderBy('lib_sous_domaine', 'asc')->get();
-        $domaines = Domaine::where('groupe_projet_code', session('projet_selectionne'))
-        ->orderBy('libelle', 'asc')->get();
+            if ($projet) {
+                return response()->json(['error' => "Suppression interdite : Le Sous-domaine est utilisé dans d'autres tables"], 404);
+            }
+            $s_domaine->delete();
 
-        return view('parGeneraux.sous_domaines', [
-            'ecran' => $ecran,
-            'domaines' => $domaines,
-            'sous_domaines' => $sous_domaines,
-        ]);
-    }
-    
-    public function deleteDomaine($code)
-    {
-        $domaine = Domaine::where('code',$code)
-        ->where('groupe_projet_code', session('projet_selectionne'))
-        ->first();
-
-        if (!$domaine) {
-            return response()->json(['error' => 'Domaine non trouvé'], 404);
-        }
-       
-        $groupeProjet = session('projet_selectionne');
-
-        // Vérifie si des sous-domaines sont liés à ce domaine
-        $hasSousDomaines = SousDomaine::where('code_domaine', $code)->exists();
-        if ($hasSousDomaines) {
-            return response()->json([
-                'error' => 'Suppression interdite : Des sous-domaines sont rattachés à ce domaine.'
-            ], 403);
+            return response()->json(['success' => 'Sous-domaine supprimé avec succès']);
         }
 
-        $projet = Projet::whereRaw("SUBSTRING(code_sous_domaine, 1, 2) = ?", [$code])
-        ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [$groupeProjet])
-        ->first();
-    
 
-        if ($projet) {
-            return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
-        }
-        $domaine->delete();
+        public function getDomaine($code)
+        {
+            $domaine = Domaine::where('code', $code)
+            ->where('groupe_projet_code', session('projet_selectionne'))
+            ->first();
 
-        return response()->json(['success' => 'Domaine supprimé avec succès']);
-    }
-    public function deleteSousDomaine($code)
-    {
-        $s_domaine = SousDomaine::where('code_sous_domaine',$code)
-        ->where('code_groupe_projet', session('projet_selectionne'))->first();
+            if (!$domaine) {
+                return response()->json(['error' => 'Domaine non trouvé'], 404);
+            }
 
-        if (!$s_domaine) {
-            return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
-        }
-        $projet = Projet::where('code_sous_domaine', $code)
-        ->whereRaw("SUBSTRING(code_projet, 4, 3) = ?", [session('projet_selectionne')])
-        ->first();
-
-
-        if ($projet) {
-            return response()->json(['error' => "Suppression interdite : Le Sous-domaine est utilisé dans d'autres tables"], 404);
-        }
-        $s_domaine->delete();
-
-        return response()->json(['success' => 'Sous-domaine supprimé avec succès']);
-    }
-
-
-    public function getDomaine($code)
-    {
-        $domaine = Domaine::where('code', $code)
-        ->where('groupe_projet_code', session('projet_selectionne'))
-        ->first();
-
-        if (!$domaine) {
-            return response()->json(['error' => 'Domaine non trouvé'], 404);
+            return response()->json($domaine);
         }
 
-        return response()->json($domaine);
-    }
+        public function getSousDomaine($code)
+        {
+            $s_domaine = SousDomaine::where('code_sous_domaine', $code)
+            ->where('code_groupe_projet', session('projet_selectionne'))
+            ->first();
 
-    public function getSousDomaine($code)
-    {
-        $s_domaine = SousDomaine::where('code_sous_domaine', $code)
-        ->where('code_groupe_projet', session('projet_selectionne'))
-        ->first();
+            if (!$s_domaine) {
+                return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
+            }
 
-        if (!$s_domaine) {
-            return response()->json(['error' => 'Sous-domaine non trouvé'], 404);
+            return response()->json($s_domaine);
         }
 
-        return response()->json($s_domaine);
-    }
 
 
+        //***************** DÉVISES ************* */
+        public function devises(Request $request)
+        {
+            $ecran   = Ecran::find($request->input('ecran_id'));
+            $devises = Devise::orderBy('libelle', 'asc')->get();
 
-    //***************** DÉVISES ************* */
-    public function devises(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $devises = Devise::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.devises', ['devises' => $devises,'ecran' => $ecran, ]);
-    }
-    public function getDevise($code)
-    {
-        $devise = Devise::find($code);
+            // Pays disponibles + mapping devise -> pays
+            $pays = Pays::orderBy('nom_fr_fr', 'asc')->get();
+            $paysParDevise = $pays->groupBy('code_devise'); // ['XOF' => [pays...], ...]
 
-        if (!$devise) {
-            return response()->json(['error' => 'Dévise non trouvé'], 404);
+            return view('parGeneraux.devises', [
+                'devises'       => $devises,
+                'ecran'         => $ecran,
+                'pays'          => $pays,
+                'paysParDevise' => $paysParDevise,
+            ]);
         }
 
-        return response()->json($devise);
-    }
+        public function getDevise($code)
+        {
+            $devise = Devise::find($code);
+            if (!$devise) {
+                return response()->json(['error' => 'Dévise non trouvé'], 404);
+            }
 
-    public function storeDevise(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
+            // IDs des pays actuellement liés à cette dévise
+            $paysIds = Pays::where('code_devise', $devise->code)->pluck('id')->all();
 
-        // Créez un nouveau district dans la base de données.
-        $devise = new Devise;
-        $devise->code = $request->input('code');
-        $devise->libelle = $request->input('libelle');
-        $devise->monnaie = $request->input('monnaie');
-        $devise->code_long = $request->input('code_long');
-        $devise->code_court = $request->input('code_court');
+            // On renvoie la dévise + la liste des pays liés (IDs) pour pré-sélection
+            $payload = $devise->toArray();
+            $payload['pays_ids'] = $paysIds;
 
-        $devise->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.devises', ['ecran_id' => $ecran_id])->with('success', 'Dévises enregistré avec succès.');
-    }
-
-    public function updateDevise(Request $request)
-    {
-        $devise = Devise::find($request->input('code_edit'));
-
-        if (!$devise) {
-            return response()->json(['error' => 'Dévise non trouvé'], 404);
+            return response()->json($payload);
         }
 
-        $devise->libelle = $request->input('libelle_edit');
-        $devise->monnaie = $request->input('monnaie_edit');
-        $devise->code_long = $request->input('code_long_edit');
-        $devise->code_court = $request->input('code_court_edit');
-        $devise->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.devises', ['ecran_id' => $ecran_id])->with('success', 'Dévise mise à jour avec succès.');
-    }
-    public function deleteDevise($code)
-    {
-        $devise = Devise::find($code);
+        public function storeDevise(Request $request)
+        {
+            $request->validate([
+                'code'       => 'required|string|max:10|unique:devise,code',
+                'libelle'    => 'required|string|max:255',
+                'monnaie'    => 'required|string|max:255',
+                'code_long'  => 'required|string|max:255',
+                'code_court' => 'required|string|max:255',
+                'pays_ids'   => 'array',
+                'pays_ids.*' => 'integer|exists:pays,id',
+            ]);
 
-        if (!$devise) {
-            return response()->json(['error' => 'Dévise non trouvé'], 404);
-        }
-        $projet = ProjetEha2::where('code_devise', $code)->first();
+            $devise = new Devise;
+            $devise->code       = $request->input('code');
+            $devise->libelle    = $request->input('libelle');
+            $devise->monnaie    = $request->input('monnaie');
+            $devise->code_long  = $request->input('code_long');
+            $devise->code_court = $request->input('code_court');
+            $devise->save();
 
-        if ($projet) {
-            return response()->json(['error' => "Suppression interdite : La dévise est utilisé dans d'autres tables"], 404);
-        }
-        $devise->delete();
+            // Associer aux pays sélectionnés (on ne détache pas les autres)
+            $paysIds = $request->input('pays_ids', []);
+            if (!empty($paysIds)) {
+                Pays::whereIn('id', $paysIds)->update(['code_devise' => $devise->code]);
+            }
 
-        return response()->json(['success' => 'Dévise supprimé avec succès']);
-    }
-
-    public function checkDeviseCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = Devise::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-    //***************** ACQUIFERE ************* */
-    public function acquifere(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $acquifere = Acquifere::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.acquifere', ['acquifere' => $acquifere,  'ecran' => $ecran]);
-    }
-
-
-    public function getAcquifere($code)
-    {
-        $acquifere = Acquifere::find($code);
-
-        if (!$acquifere) {
-            return response()->json(['error' => 'Acquifère non trouvé'], 404);
+            $ecran_id = $request->input('ecran_id');
+            return redirect()->route('parGeneraux.devises', ['ecran_id' => $ecran_id])
+                ->with('success', 'Dévise enregistrée avec succès.');
         }
 
-        return response()->json($acquifere);
-    }
+        public function updateDevise(Request $request)
+        {
+            $request->validate([
+                'code_edit'   => 'required|exists:devise,code',
+                'libelle_edit'=> 'required|string|max:255',
+                'monnaie_edit'=> 'required|string|max:255',
+                'code_long_edit' => 'required|string|max:255',
+                'code_court_edit'=> 'required|string|max:255',
+                'pays_ids'    => 'array',
+                'pays_ids.*'  => 'integer|exists:pays,id',
+            ]);
 
-    public function storeAcquifere(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
+            $devise = Devise::find($request->input('code_edit'));
+            if (!$devise) {
+                return response()->json(['error' => 'Dévise non trouvé'], 404);
+            }
 
-        // Créez un nouveau district dans la base de données.
-        $acquifere = new Acquifere;
-        $acquifere->code = $request->input('code');
-        $acquifere->libelle = $request->input('libelle');
+            $devise->libelle    = $request->input('libelle_edit');
+            $devise->monnaie    = $request->input('monnaie_edit');
+            $devise->code_long  = $request->input('code_long_edit');
+            $devise->code_court = $request->input('code_court_edit');
+            $devise->save();
 
-        $acquifere->save();
-        $ecran_id = $request->input('ecran_id');
+            // Associer aux pays sélectionnés (sans détacher par défaut)
+            $paysIds = $request->input('pays_ids', []);
+            if (!empty($paysIds)) {
+                Pays::whereIn('id', $paysIds)->update(['code_devise' => $devise->code]);
+            }
 
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.acquifere', ['ecran_id' => $ecran_id])->with('success', 'Acquifère enregistré avec succès.');
-    }
-    public function updateAcquifere(Request $request)
-    {
-        $acquifere = Acquifere::find($request->input('code_edit'));
-
-        if (!$acquifere) {
-            return response()->json(['error' => 'Acquifère non trouvé'], 404);
+            $ecran_id = $request->input('ecran_id');
+            return redirect()->route('parGeneraux.devises', ['ecran_id' => $ecran_id])
+                ->with('success', 'Dévise mise à jour avec succès.');
         }
 
-        $acquifere->libelle = $request->input('libelle_edit');
 
-
-        $acquifere->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.acquifere', ['ecran_id' => $ecran_id])->with('success', 'Acquifère mis à jour avec succès.');
-    }
-
-    public function deleteAcquifere($code)
-    {
-        $acquifere = Acquifere::find($code);
-
-        if (!$acquifere) {
-            return response()->json(['error' => 'Acquifere non trouvé'], 404);
-        }
-        //$projet = ProjetEha2::where('code_domaine', $code)->first();
-
-        // if ($projet) {
-        //     return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
-        // }
-        $acquifere->delete();
-
-        return response()->json(['success' => 'Acquifere supprimé avec succès']);
-    }
-
-    public function checkAcquifereCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = Acquifere::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-        //***************** ACQUIFERE ************* */
+    //***************** ACTIONS A MENER ************* */
         public function actionMener(Request $request)
         {
            $ecran = Ecran::find($request->input('ecran_id'));
@@ -835,114 +565,7 @@ class PlateformeController extends Controller
             return response()->json(['exists' => $exists]);
         }
 
-    //***************** BASSIN ************* */
-    public function bassin(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $bassin = Bassin::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.bassin', ['bassin' => $bassin, 'ecran' => $ecran,]);
-    }
-
-    public function getBassin($code)
-    {
-        $bassin = Bassin::find($code);
-
-        if (!$bassin) {
-            return response()->json(['error' => 'BAssin non trouvé'], 404);
-        }
-
-        return response()->json($bassin);
-    }
-
-    public function storeBassin(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $bassin = new Bassin;
-        $bassin->code = $request->input('code');
-        $bassin->libelle = $request->input('libelle');
-
-        $bassin->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.bassin', ['ecran_id' => $ecran_id])->with('success', 'Bassin enregistré avec succès.');
-    }
-    public function updateBassin(Request $request)
-    {
-        $bassin = bassin::find($request->input('code_edit'));
-
-        if (!$bassin) {
-            return response()->json(['error' => 'Bassin non trouvé'], 404);
-        }
-
-        $bassin->libelle = $request->input('libelle_edit');
-
-
-        $bassin->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.bassin', ['ecran_id' => $ecran_id])->with('success', 'Bassin mis à jour avec succès.');
-    }
-
-    public function deleteBassin($code)
-    {
-        $bassin = Bassin::find($code);
-
-        if (!$bassin) {
-            return response()->json(['error' => 'Bassin non trouvé'], 404);
-        }
-        //$projet = ProjetEha2::where('code_domaine', $code)->first();
-
-        // if ($projet) {
-        //     return response()->json(['error' => "Suppression interdite : Le domaine est utilisé dans d'autres tables"], 404);
-        // }
-        $bassin->delete();
-
-        return response()->json(['success' => 'Bassin supprimé avec succès']);
-    }
-
-    public function checkBassinCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = Bassin::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-    //*****************Approbation***************/
-    // Page Commission d'approbation
-    public function approbation(Request $request)
-    {
-        $pays   = session('pays_selectionne');
-        $projet = session('projet_selectionne');
-
-        if (!$pays || !$projet) {
-            return back()->withErrors(['Session invalide : pays ou projet non défini.']);
-        }
-
-        $ecran = Ecran::find($request->input('ecran_id'));
-
-        $acteurs = Acteur::where('type_acteur', 'etp')
-            ->where('code_pays', $pays)
-            ->get();
-
-        $lastOrder = Approbateur::scoped($pays, $projet)
-            ->orderByDesc('numOrdre')
-            ->first();
-
-        $nextOrder = $lastOrder ? ($lastOrder->numOrdre + 1) : 1;
-
-        $approbateurs = Approbateur::with('Acteur')
-            ->scoped($pays, $projet)
-            ->orderBy('numOrdre')
-            ->get();
-
-        return view('parGeneraux.approbateur', compact('nextOrder', 'ecran', 'acteurs', 'approbateurs'));
-    }
+   
 
     // Enregistrer une liste d’approbateurs
     public function storeApprobation(Request $request)
@@ -1090,80 +713,6 @@ class PlateformeController extends Controller
 
 
    
-
-    //***************** COURS D'EAU ************* */
-    public function courdeau(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $courdeau = CourDeau::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.courdeau', ['courdeau' => $courdeau,'ecran' => $ecran, ]);
-    }
-
-    public function getCourDeau($code)
-    {
-        $courdeau = CourDeau::find($code);
-
-        if (!$courdeau) {
-            return response()->json(['error' => 'Cour d\'eau non trouvé'], 404);
-        }
-
-        return response()->json($courdeau);
-    }
-
-    public function storeCourDeau(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $courdeau = new CourDeau;
-        $courdeau->code = $request->input('code');
-        $courdeau->libelle = $request->input('libelle');
-
-        $courdeau->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.courdeau', ['ecran_id' => $ecran_id])->with('success', 'Cour d\'eau enregistré avec succès.');
-    }
-    public function updateCourDeau(Request $request)
-    {
-        $courdeau = CourDeau::find($request->input('code_edit'));
-
-        if (!$courdeau) {
-            return response()->json(['error' => 'Bassin non trouvé'], 404);
-        }
-
-        $courdeau->libelle = $request->input('libelle_edit');
-
-
-        $courdeau->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.courdeau', ['ecran_id' => $ecran_id])->with('success', 'Cour d\'eau mis à jour avec succès.');
-    }
-
-    public function deleteCourDeau($code)
-    {
-        $courdeau = CourDeau::find($code);
-
-        if (!$courdeau) {
-            return response()->json(['error' => 'Cour d\'eau non trouvé'], 404);
-        }
-
-        $courdeau->delete();
-
-        return response()->json(['success' => 'Cour d\'eau supprimé avec succès']);
-    }
-
-    public function checkCourDeauCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = CourDeau::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
 
 
     private function genererCodeFamilleUnique()
@@ -1628,7 +1177,7 @@ class PlateformeController extends Controller
     public function create()
     {
         $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
-        $localites = Localite::all(); // Assuming you have a Localite model
+        $localites = LocalitesPays::all(); // Assuming you have a Localite model
         
         return view('infrastructures.create', compact('familles', 'localites'));
     }
@@ -1664,7 +1213,7 @@ class PlateformeController extends Controller
     {
         $infrastructure = Infrastructure::findOrFail($id);
         $familles = FamilleInfrastructure::where('code_groupe_projet', session('projet_selectionne'))->get();
-        $localites = Localite::all();
+        $localites = LocalitesPays::all();
         
         return view('infrastructures.edit', compact('infrastructure', 'familles', 'localites'));
     }
@@ -1756,7 +1305,7 @@ class PlateformeController extends Controller
        $ecran = Ecran::find($request->input('ecran_id'));
         $fonctionGroupe = Fonction_groupe_utilisateur::with('groupeUtilisateur')->with('fonction')->get();
         $fonctions = FonctionUtilisateur::orderBy('libelle_fonction', 'asc')->get();
-        $groupes = Role::orderBy('name', 'asc')->get();
+        $groupes = Role::orderBy('libelle_groupe', 'asc')->get();
         return view('parGeneraux.fonctionGroupe', ['fonctionGroupe' => $fonctionGroupe,'ecran' => $ecran,  'fonctions' => $fonctions, 'groupes' => $groupes,]);
     }
     public function storeFonctionGroupe(Request $request)
@@ -1880,439 +1429,5 @@ class PlateformeController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-
-    //*****************UNITE TRAITEMENT  ************* */
-    public function uniteTraitement(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $uniteTraitement = UniteTraitement::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.uniteTraitement', ['uniteTraitement' => $uniteTraitement,'ecran' => $ecran, ]);
-    }
-
-
-
-
-
-    //*****************MATERIEL STOCKAGE  ************* */
-    public function materielStockage(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $materielStockage = MaterielStockage::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.materielStockage', ['materielStockage' => $materielStockage,'ecran' => $ecran, ]);
-    }
-
-    public function getMaterielStockage($code)
-    {
-        $materielStockage = MaterielStockage::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Materiel de Stockage non trouvé'], 404);
-        }
-
-        return response()->json($materielStockage);
-    }
-
-    public function storeMaterielStockage(Request $request)
-    {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
-
-        // Créez un nouveau district dans la base de données.
-        $materielStockage = new MaterielStockage;
-        $materielStockage->code = $request->input('code');
-        $materielStockage->libelle = $request->input('libelle');
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.materielStockage', ['ecran_id' => $ecran_id])->with('success', 'Materiel de Stockage enregistré avec succès.');
-    }
-    public function updateMaterielStockage(Request $request)
-    {
-        $materielStockage = MaterielStockage::find($request->input('code_edit'));
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Materiel de Stockage non trouvé'], 404);
-        }
-
-        $materielStockage->libelle = $request->input('libelle_edit');
-
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.materielStockage', ['ecran_id' => $ecran_id])->with('success', 'Materiel de Stockage mis à jour avec succès.');
-    }
-
-    public function deleteMaterielStockage($code)
-    {
-        $materielStockage = MaterielStockage::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'MaterielStockage non trouvé'], 404);
-        }
-        // $apartenirGroupeUtilisateur = ApartenirGroupeUtilisateur::where('code_groupe_utilisateur', $code)->first();
-
-        // if ($apartenirGroupeUtilisateur) {
-        //      return response()->json(['error' => "Suppression interdite : Le Groupe Utilisateur est utilisé dans d'autres tables"], 404);
-        //  }
-        $materielStockage->delete();
-
-        return response()->json(['success' => 'Materiel de Stockage supprimé avec succès']);
-    }
-
-    public function checkMaterielStockageCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = MaterielStockage::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-
-    //*****************NIVEAU ACCES AU DONNEES  ************* */
-    public function niveauAccesDonnees(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $niveauAccesDonnees = NiveauAccesDonnees::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.niveauAccesDonnees', ['niveauAccesDonnees' => $niveauAccesDonnees,'ecran' => $ecran, ]);
-    }
-
-
-    public function getNiveauAccesDonnees($code)
-    {
-        $materielStockage = NiveauAccesDonnees::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Niveau non trouvé'], 404);
-        }
-
-        return response()->json($materielStockage);
-    }
-
-    public function storeNiveauAccesDonnees(Request $request)
-    {
-        $materielStockage = new NiveauAccesDonnees;
-        $materielStockage->id = $request->input('code');
-        $materielStockage->libelle = $request->input('libelle');
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.niveauAccesDonnees', ['ecran_id' => $ecran_id])->with('success', 'Niveau enregistré avec succès.');
-    }
-    public function updateNiveauAccesDonnees(Request $request)
-    {
-        $materielStockage = NiveauAccesDonnees::find($request->input('code_edit'));
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Niveau non trouvé'], 404);
-        }
-
-        $materielStockage->libelle = $request->input('libelle_edit');
-
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.niveauAccesDonnees', ['ecran_id' => $ecran_id])->with('success', 'Niveau mis à jour avec succès.');
-    }
-
-    public function deleteNiveauAccesDonnees($code)
-    {
-        $materielStockage = NiveauAccesDonnees::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Niveau non trouvé'], 404);
-        }
-        $user = User::where('niveau_acces_id', $code)->first();
-
-        if ($user) {
-            return response()->json(['error' => "Suppression interdite : Le niveau est utilisé dans d'autres tables"], 404);
-        }
-        $materielStockage->delete();
-
-        return response()->json(['success' => 'Niveau supprimé avec succès']);
-    }
-
-    public function checkNiveauAccesDonneesCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = NiveauAccesDonnees::where('id', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-
-
-
-    //***************** OUTILS DE COLLECTE  ************* */
-    public function outilsCollecte(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $outilsCollecte = OutilsCollecte::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.outilsCollecte', ['outilsCollecte' => $outilsCollecte, 'ecran' => $ecran,]);
-    }
-
-    public function getOutilsCollecte($code)
-    {
-        $materielStockage = OutilsCollecte::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Outils de Collecte non trouvé'], 404);
-        }
-
-        return response()->json($materielStockage);
-    }
-
-    public function storeOutilsCollecte(Request $request)
-    {
-        $materielStockage = new OutilsCollecte;
-        $materielStockage->code = $request->input('code');
-        $materielStockage->libelle = $request->input('libelle');
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.outilsCollecte', ['ecran_id' => $ecran_id])->with('success', 'Outils de Collecte enregistré avec succès.');
-    }
-    public function updateOutilsCollecte(Request $request)
-    {
-        $materielStockage = OutilsCollecte::find($request->input('code_edit'));
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Outils de Collecte non trouvé'], 404);
-        }
-
-        $materielStockage->libelle = $request->input('libelle_edit');
-
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.outilsCollecte', ['ecran_id' => $ecran_id])->with('success', 'Outils de Collecte mis à jour avec succès.');
-    }
-
-    public function deleteOutilsCollecte($code)
-    {
-        $materielStockage = OutilsCollecte::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Outils de Collecte non trouvé'], 404);
-        }
-        // $user = User::where('niveau_acces_id', $code)->first();
-
-        // if ($user) {
-        //     return response()->json(['error' => "Suppression interdite : Le niveau est utilisé dans d'autres tables"], 404);
-        // }
-        $materielStockage->delete();
-
-        return response()->json(['success' => 'Outils de Collecte supprimé avec succès']);
-    }
-
-    public function checkOutilsCollecteCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = OutilsCollecte::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-
-    //***************** OUVRAGE DE TRANSPORT  ************* */
-    public function ouvrageTransport(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $ouvrageTransport = OuvrageTransport::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.ouvrageTransport', ['ouvrageTransport' => $ouvrageTransport, 'ecran' => $ecran,]);
-    }
-
-
-    public function getOuvrageTransport($code)
-    {
-        $materielStockage = OuvrageTransport::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Ouvrage de Transport non trouvé'], 404);
-        }
-
-        return response()->json($materielStockage);
-    }
-
-    public function storeOuvrageTransport(Request $request)
-    {
-        $materielStockage = new OuvrageTransport;
-        $materielStockage->code = $request->input('code');
-        $materielStockage->libelle = $request->input('libelle');
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.ouvrageTransport', ['ecran_id' => $ecran_id])->with('success', 'Ouvrage de Transport enregistré avec succès.');
-    }
-    public function updateOuvrageTransport(Request $request)
-    {
-        $materielStockage = OuvrageTransport::find($request->input('code_edit'));
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Outils de Collecte non trouvé'], 404);
-        }
-
-        $materielStockage->libelle = $request->input('libelle_edit');
-
-
-        $materielStockage->save();
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('parGeneraux.ouvrageTransport', ['ecran_id' => $ecran_id])->with('success', 'Ouvrage de Transport mis à jour avec succès.');
-    }
-
-    public function deleteOuvrageTransport($code)
-    {
-        $materielStockage = OuvrageTransport::find($code);
-
-        if (!$materielStockage) {
-            return response()->json(['error' => 'Ouvrage de Transport non trouvé'], 404);
-        }
-        // $user = User::where('niveau_acces_id', $code)->first();
-
-        // if ($user) {
-        //     return response()->json(['error' => "Suppression interdite : Le niveau est utilisé dans d'autres tables"], 404);
-        // }
-        $materielStockage->delete();
-
-        return response()->json(['success' => 'Ouvrage de Transport supprimé avec succès']);
-    }
-
-    public function checkOuvrageTransportCode(Request $request)
-    {
-        $code = $request->input('code');
-
-        // Check if a district with the provided code already exists in your database
-        $exists = OuvrageTransport::where('code', $code)->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
-
-
-
-
-    //*****************  STATUT PROJET  ************* */
-    public function statutProjet(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $statutProjet = StatutProjet::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.statutProjet', ['statutProjet' => $statutProjet,'ecran' => $ecran, ]);
-    }
-
-    //*****************  TYPE BAILLEUR  ************* */
-    public function typeBailleur(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeBailleur = typeBailleur::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeBailleur', ['typeBailleur' => $typeBailleur, 'ecran' => $ecran,]);
-    }
-
-    //*****************  TYPE ETABLISSEMENT  ************* */
-    public function typeEtablissement(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeEtablissement = TypeEtablissement::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeEtablissement', ['typeEtablissement' => $typeEtablissement,'ecran' => $ecran, ]);
-    }
-
-    //*****************  TYPE MATERIAUX DE CONDUITE  ************* */
-    public function typeMateriauxConduite(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeMateriauxConduite = TypeMateriauxConduite::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeMateriauxConduite', ['typeMateriauxConduite' => $typeMateriauxConduite,'ecran' => $ecran, ]);
-    }
-    //*****************  TYPE RESEAUX  ************* */
-    public function typeResaux(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeResaux = TypeResaux::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeResaux', ['typeResaux' => $typeResaux, 'ecran' => $ecran,]);
-    }
-
-    //*****************  TYPE STATTION  ************* */
-    public function typeStation(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeStation = TypeStation::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeStation', ['typeStation' => $typeStation,'ecran' => $ecran, ]);
-    }
-
-
-    //*****************  TYPE STOCKAGE  ************* */
-    public function typeStockage(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeStockage = TypeStockage::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeStockage', ['typeStockage' => $typeStockage, 'ecran' => $ecran,]);
-    }
-
-    //*****************  UNITE RESEAUX  ************* */
-    public function uniteStockage(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        //$uniteStockage = UniteStockage::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.uniteStockage', [ /*'uniteStockage' => $uniteStockage, */'ecran' => $ecran,]);
-    }
-    //*****************  UNITE DISTANCE  ************* */
-    public function uniteDistance(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $uniteDistance = UniteDistance::orderBy('libelle_long', 'asc')->get();
-        return view('parGeneraux.uniteDistance', ['uniteDistance' => $uniteDistance,'ecran' => $ecran, ]);
-    }
-
-    //*****************  UNITE DE MESURE  ************* */
-    public function uniteMesure(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $uniteMesure = UniteMesure::orderBy('libelle_long', 'asc')->get();
-        return view('parGeneraux.uniteMesure', ['uniteMesure' => $uniteMesure, 'ecran' => $ecran,]);
-    }
-
-    //*****************  UNITE DE SURFACE  ************* */
-    public function uniteSurface(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $uniteSurface = UniteSurface::orderBy('libelle_long', 'asc')->get();
-        return view('parGeneraux.uniteSurface', ['uniteSurface' => $uniteSurface, 'ecran' => $ecran,]);
-    }
-    //*****************  UNITE DE VOLUME  ************* */
-    public function uniteVolume(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $uniteVolume = uniteVolume::orderBy('libelle_long', 'asc')->get();
-        return view('parGeneraux.uniteVolume', ['uniteVolume' => $uniteVolume, 'ecran' => $ecran,]);
-    }
-    //*****************  TYPE DE RESERVOUR  ************* */
-    public function typeReservoire(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        //$typeReservoire = TypeReservoire::orderBy('libelle', 'asc')->get();
-        return view('parGeneraux.typeReservoire', [ /*'typeReservoire' => $typeReservoire, */'ecran' => $ecran,]);
-    }
-
-    //*****************  TYPE D'INSTRUMENT  ************* */
-    public function typeInstrument(Request $request)
-    {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $typeInstrument = TypeInstrument::orderBy('code', 'asc')->get();
-        return view('parGeneraux.typeInstrument', ['typeInstrument' => $typeInstrument, 'ecran' => $ecran,]);
-    }
 
 }

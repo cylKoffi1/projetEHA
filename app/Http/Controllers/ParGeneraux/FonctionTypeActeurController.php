@@ -17,7 +17,7 @@ class FonctionTypeActeurController extends Controller
         try {
             $ecran = Ecran::find($request->input('ecran_id'));
             if (!$ecran) {
-                return redirect()->route('admin')->withErrors('Écran introuvable.');
+                return redirect()->route('admin', ['ecran_id' => $request->input('ecran_id')])->withErrors('Écran introuvable.');
             }
 
             $fonctionTypeActeurs = FonctionTypeActeur::with(['fonction', 'typeActeur'])->get();

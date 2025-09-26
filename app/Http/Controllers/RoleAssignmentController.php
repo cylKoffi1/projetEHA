@@ -1,68 +1,839 @@
 <?php
 
-// app/Http/Controllers/RoleAssignmentController.php
-
 namespace App\Http\Controllers;
 
 use App\Models\Ecran;
 use App\Models\GroupeUtilisateur;
-use App\Models\Pays;
 use App\Models\RoleHasRubrique;
 use App\Models\Rubriques;
 use App\Models\SousMenu;
 use App\Models\View;
 use Illuminate\Http\Request;
-use App\Models\Permission;
-use App\Models\User;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 
 class RoleAssignmentController extends Controller
 {
+    /* ===================== Helpers ===================== */
 
-    public function index(Request $request)
+    private function makeBaseName(string $label): string
     {
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $groupes = GroupeUtilisateur::all();
-        $roles = GroupeUtilisateur::all();
-       
-
-
-        return view('habilitations.role-assignment', compact('groupes', 'ecran',  'roles'));
+        return Str::upper(Str::slug(Str::ascii($label), '_'));
     }
-        /******************** HABILITATIONS ******************* */
 
-        public function habilitations(Request $request)
-        {
-            $views = View::all();
-            $ecran = Ecran::find($request->input('ecran_id'));
-            $groupes = GroupeUtilisateur::all();
-            $roles = GroupeUtilisateur::all();
-        
-            return view('habilitations.habilitations', compact('groupes', 'ecran', 'roles',  'views'));
+    private function makePermissionName(string $label, string|int $suffix = null): string
+    {
+        $base = $this->makeBaseName($label);
+        return $suffix ? "{$base}_{$suffix}" : $base;
+    }
+
+    private function deletePermissionById(?int $permissionId): void
+    {
+        if (!$permissionId) return;
+        try {
+            if ($perm = Permission::find($permissionId)) {
+                $perm->roles()->detach();
+                $perm->users()->detach();
+                $perm->delete();
+            }
+        } catch (\Throwable $e) {
+            Log::error('deletePermissionById failed', ['permission_id' => $permissionId, 'error' => $e->getMessage()]);
         }
+    }
+
+    private function deletePermissionByName(string $name, string $guard = 'web'): void
+    {
+        try {
+            if ($perm = Permission::where('name', $name)->where('guard_name', $guard)->first()) {
+                $perm->roles()->detach();
+                $perm->users()->detach();
+                $perm->delete();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('deletePermissionByName failed', ['name' => $name, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /* ===================== Vue ===================== */
+
+    public function habilitations(Request $request)
+    {
+        try {
+            $views     = View::all();
+            $ecran     = Ecran::find($request->input('ecran_id')) ?? Ecran::first();
+            $roles     = GroupeUtilisateur::all();   // ⚠️ ton modèle "rôle" custom
+            $rubriques = Rubriques::with(['ecrans', 'sousMenus.ecrans', 'sousMenus.sousSousMenusRecursive'])
+                ->orderBy('ordre')->get();
+
+            return view('habilitations.habilitations', compact('roles', 'ecran', 'views', 'rubriques'));
+        } catch (\Throwable $e) {
+            Log::error('Erreur chargement habilitations', ['error' => $e->getMessage()]);
+            return redirect()->back()->withErrors("Impossible de charger la page d’habilitations.");
+        }
+    }
+
+    /* ===================== Enregistrement (optimisé + logs) ===================== */
 
     public function assignRoles(Request $request)
     {
+        $request->validate([
+            'role'                       => 'required|string|exists:groupe_utilisateur,code',
+            'consulterRubrique'          => 'nullable|array',
+            'consulterRubrique.*'        => 'string',
+            'consulterRubriqueEcran'     => 'nullable|array',
+            'consulterRubriqueEcran.*'   => 'integer',
+            'consulterSousMenu'          => 'nullable|array',
+            'consulterSousMenu.*'        => 'string',
+            'consulterSousMenuEcran'     => 'nullable|array',
+            'consulterSousMenuEcran.*'   => 'integer',
+            'ajouterRubriqueEcran'       => 'nullable|array',
+            'ajouterRubriqueEcran.*'     => 'integer',
+            'modifierRubriqueEcran'      => 'nullable|array',
+            'modifierRubriqueEcran.*'    => 'integer',
+            'supprimerRubriqueEcran'     => 'nullable|array',
+            'supprimerRubriqueEcran.*'   => 'integer',
+            'ajouterSousMenuEcran'       => 'nullable|array',
+            'ajouterSousMenuEcran.*'     => 'integer',
+            'modifierSousMenuEcran'      => 'nullable|array',
+            'modifierSousMenuEcran.*'    => 'integer',
+            'supprimerSousMenuEcran'     => 'nullable|array',
+            'supprimerSousMenuEcran.*'   => 'integer',
+            'ecran_id'                   => 'nullable',
+        ]);
+    
+        $t0 = microtime(true);
+    
+        $role = GroupeUtilisateur::where('code', $request->input('role'))->firstOrFail();
+    
+        // ==== Normalisation des tableaux
+        $rubriqueCodes    = $request->input('consulterRubrique', []);
+        $sousMenuCodes    = $request->input('consulterSousMenu', []);
+        $ecranConsulter   = array_values(array_unique(array_merge(
+            $request->input('consulterRubriqueEcran', []),
+            $request->input('consulterSousMenuEcran', [])
+        )));
+        $ecranAjouter     = array_values(array_unique(array_merge(
+            $request->input('ajouterRubriqueEcran', []),
+            $request->input('ajouterSousMenuEcran', [])
+        )));
+        $ecranModifier    = array_values(array_unique(array_merge(
+            $request->input('modifierRubriqueEcran', []),
+            $request->input('modifierSousMenuEcran', [])
+        )));
+        $ecranSupprimer   = array_values(array_unique(array_merge(
+            $request->input('supprimerRubriqueEcran', []),
+            $request->input('supprimerSousMenuEcran', [])
+        )));
+    
+        $t1 = microtime(true);
+    
+        DB::transaction(function () use (
+            $role, $rubriqueCodes, $sousMenuCodes,
+            $ecranConsulter, $ecranAjouter, $ecranModifier, $ecranSupprimer
+        ) {
+            // ---------- 0) Assainissement / création des permissions manquantes (guard web) ----------
+            $guard = 'web';
+    
+            // Rubriques → s'assurer que permission_id pointe vers une permission existante sinon créer
+            if (!empty($rubriqueCodes)) {
+                $rubriques = Rubriques::whereIn('code', $rubriqueCodes)->get();
+                foreach ($rubriques as $r) {
+                    $perm = $r->permission_id ? Permission::find($r->permission_id) : null;
+                    if (!$perm) {
+                        // même naming helper que dans ton code backend
+                        $name = $this->makePermissionName($r->libelle, $r->code);
+                        $perm = Permission::firstOrCreate(['name' => $name, 'guard_name' => $guard]);
+                        $r->permission_id = $perm->id;
+                        $r->save();
+                        Log::info('[assignRoles] Permission rubrique créée/réparée', ['rubrique' => $r->code, 'perm' => $perm->name]);
+                    } elseif ($perm->guard_name !== $guard) {
+                        $perm->guard_name = $guard; $perm->save();
+                        Log::warning('[assignRoles] Guard corrigé (rubrique)', ['rubrique' => $r->code, 'perm' => $perm->name]);
+                    }
+                }
+            }
+    
+            // Sous-menus → idem
+            if (!empty($sousMenuCodes)) {
+                $sms = SousMenu::whereIn('code', $sousMenuCodes)->get();
+                foreach ($sms as $sm) {
+                    $perm = $sm->permission_id ? Permission::find($sm->permission_id) : null;
+                    if (!$perm) {
+                        $name = $this->makePermissionName($sm->libelle, $sm->code);
+                        $perm = Permission::firstOrCreate(['name' => $name, 'guard_name' => $guard]);
+                        $sm->permission_id = $perm->id;
+                        $sm->save();
+                        Log::info('[assignRoles] Permission sous-menu créée/réparée', ['sm' => $sm->code, 'perm' => $perm->name]);
+                    } elseif ($perm->guard_name !== $guard) {
+                        $perm->guard_name = $guard; $perm->save();
+                        Log::warning('[assignRoles] Guard corrigé (sous-menu)', ['sm' => $sm->code, 'perm' => $perm->name]);
+                    }
+                }
+            }
+    
+            // Écrans → s’assurer de la permission consulter + CRUD si demandés
+            $ecranIdsTouches = array_values(array_unique(array_merge(
+                $ecranConsulter, $ecranAjouter, $ecranModifier, $ecranSupprimer
+            )));
+    
+            if (!empty($ecranIdsTouches)) {
+                $ecrans = Ecran::whereIn('id', $ecranIdsTouches)->get();
+    
+                foreach ($ecrans as $e) {
+                    // a) CONSULTER : permission liée à l'écran via permission_id
+                    $perm = $e->permission_id ? Permission::find($e->permission_id) : null;
+                    if (!$perm) {
+                        $name = "consulter_ecran_{$e->id}";
+                        $perm = Permission::firstOrCreate(['name' => $name, 'guard_name' => $guard]);
+                        $e->permission_id = $perm->id; $e->save();
+                        Log::info('[assignRoles] Permission consulter écran créée/réparée', ['ecran' => $e->id, 'perm' => $perm->name]);
+                    } elseif ($perm->guard_name !== $guard) {
+                        $perm->guard_name = $guard; $perm->save();
+                        Log::warning('[assignRoles] Guard corrigé (écran consulter)', ['ecran' => $e->id, 'perm' => $perm->name]);
+                    }
+    
+                    // b) CRUD : on s'assure de l'existence si l'action a été sélectionnée
+                    if (in_array($e->id, $ecranAjouter)) {
+                        Permission::firstOrCreate(['name' => "ajouter_ecran_{$e->id}", 'guard_name' => $guard]);
+                    }
+                    if (in_array($e->id, $ecranModifier)) {
+                        Permission::firstOrCreate(['name' => "modifier_ecran_{$e->id}", 'guard_name' => $guard]);
+                    }
+                    if (in_array($e->id, $ecranSupprimer)) {
+                        Permission::firstOrCreate(['name' => "supprimer_ecran_{$e->id}", 'guard_name' => $guard]);
+                    }
+                }
+            }
+    
+            // ---------- 1) Construire la LISTE DES NOMS à accorder ----------
+            $names = collect();
+    
+            if (!empty($rubriqueCodes)) {
+                $names = $names->merge(
+                    Rubriques::whereIn('code', $rubriqueCodes)
+                        ->with('permission:id,name')
+                        ->get()->pluck('permission.name')->filter()
+                );
+            }
+            if (!empty($sousMenuCodes)) {
+                $names = $names->merge(
+                    SousMenu::whereIn('code', $sousMenuCodes)
+                        ->with('permission:id,name')
+                        ->get()->pluck('permission.name')->filter()
+                );
+            }
+            if (!empty($ecranConsulter)) {
+                $names = $names->merge(
+                    Ecran::whereIn('id', $ecranConsulter)
+                        ->with('permission:id,name')
+                        ->get()->pluck('permission.name')->filter()
+                );
+            }
+    
+            // CRUD choisis
+            foreach ($ecranAjouter as $id)   { $names->push("ajouter_ecran_$id"); }
+            foreach ($ecranModifier as $id)  { $names->push("modifier_ecran_$id"); }
+            foreach ($ecranSupprimer as $id) { $names->push("supprimer_ecran_$id"); }
+    
+            $names = $names->unique()->values();
+    
+            // ---------- 2) role_has_rubrique (pivot) ----------
+            if (!is_null($rubriqueCodes)) {
+                RoleHasRubrique::where('role_id', $role->getKey())
+                    ->whereNotIn('rubrique_id', $rubriqueCodes)
+                    ->delete();
+    
+                $existing = RoleHasRubrique::where('role_id', $role->getKey())->pluck('rubrique_id')->all();
+                $toInsert = array_diff($rubriqueCodes, $existing);
+                foreach ($toInsert as $code) {
+                    RoleHasRubrique::firstOrCreate([
+                        'role_id'     => $role->getKey(),
+                        'rubrique_id' => $code,
+                    ]);
+                }
+            }
+    
+            // ---------- 3) Sync des permissions par IDs ----------
+            $permIdMap = Permission::whereIn('name', $names)
+                ->where('guard_name', $guard)
+                ->pluck('id', 'name');
+    
+            // petit log si un nom n'a pas été résolu en ID
+            $unresolved = $names->reject(fn($n) => isset($permIdMap[$n]))->values();
+            if ($unresolved->isNotEmpty()) {
+                Log::warning('[assignRoles] Permissions introuvables au moment du sync', [
+                    'names' => $unresolved,
+                    'guard'=> $guard,
+                ]);
+            }
+    
+            $permIds = $names->map(fn($n) => $permIdMap[$n] ?? null)->filter()->values()->all();
+    
+            $role->permissions()->sync($permIds);
+        });
+    
+        // ---------- 4) Cache Spatie
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    
+        $t6 = microtime(true);
+    
+        Log::info('[assignRoles OK]', [
+            'role' => $request->input('role'),
+            'counts' => [
+                'rubriques'        => count($rubriqueCodes),
+                'sousMenus'        => count($sousMenuCodes),
+                'ecrans_consulter' => count($ecranConsulter),
+                'ecrans_ajouter'   => count($ecranAjouter),
+                'ecrans_modifier'  => count($ecranModifier),
+                'ecrans_supprimer' => count($ecranSupprimer),
+            ],
+            'timing_ms' => round(1000*($t6 - $t0)),
+        ]);
+    
+        return redirect()->route('habilitations.index', ['ecran_id' => $request->input('ecran_id')])
+            ->with('success', 'Habilitations enregistrées avec succès.');
+    }
+    
+
+    /* ===================== Pré-cochage (lecture des droits d’un rôle) ===================== */
+
+    public function getRolePermissions($roleId)
+    {
+        try {
+            $role = GroupeUtilisateur::findOrFail($roleId);
+
+            // IDs de permissions déjà associées au rôle
+            $permNames = $role->permissions()->pluck('name')->all();
+
+            // Regrouper par action
+            $ecransConsulter = Ecran::whereHas('permission', function($q) use ($permNames){
+                    $q->whereIn('name', $permNames);
+                })
+                ->pluck('id'); // ceux qui ont la perm "consulter" via permission_id
+
+            $ecransAjouter   = Ecran::whereIn('id', $this->extractIdsByPrefix($permNames, 'ajouter_ecran_'))->pluck('id');
+            $ecransModifier  = Ecran::whereIn('id', $this->extractIdsByPrefix($permNames, 'modifier_ecran_'))->pluck('id');
+            $ecransSupprimer = Ecran::whereIn('id', $this->extractIdsByPrefix($permNames, 'supprimer_ecran_'))->pluck('id');
+
+            // Rubriques / Sous-menus cochés (via leurs permission_id)
+            $rubriques = Rubriques::whereHas('permission', function($q) use ($permNames){
+                    $q->whereIn('name', $permNames);
+                })->pluck('code');
+
+            $sousMenus = SousMenu::whereHas('permission', function($q) use ($permNames){
+                    $q->whereIn('name', $permNames);
+                })->pluck('code');
+
+            return response()->json([
+                'rubriques'        => $rubriques,
+                'sous_menus'       => $sousMenus,
+                'ecrans_consulter' => $ecransConsulter,
+                'ecrans_ajouter'   => $ecransAjouter,
+                'ecrans_modifier'  => $ecransModifier,
+                'ecrans_supprimer' => $ecransSupprimer,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('getRolePermissions error', ['roleId' => $roleId, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Impossible de récupérer les permissions du rôle.'], 500);
+        }
+    }
+
+    private function extractIdsByPrefix(array $names, string $prefix): array
+    {
+        $ids = [];
+        $len = strlen($prefix);
+        foreach ($names as $n) {
+            if (strncmp($n, $prefix, $len) === 0) {
+                $id = substr($n, $len);
+                if (ctype_digit((string)$id)) $ids[] = (int)$id;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+
+    
+        /* ===================== Rubriques ===================== */
+    
+        public function rubriques(Request $request)
+        {
+            try {
+                $ecran = Ecran::find($request->input('ecran_id'));
+                $rubriques = Rubriques::orderBy('ordre')->get();
+                $rubriquePlusGrandOrdre = Rubriques::orderBy('ordre', 'desc')->first();
+    
+                return view('habilitations.rubriques', compact('rubriques', 'ecran', 'rubriquePlusGrandOrdre'));
+            } catch (\Throwable $e) {
+                Log::error('Erreur chargement rubriques', ['error' => $e->getMessage()]);
+                return redirect()->back()->withErrors("Impossible de charger les rubriques.");
+            }
+        }
+        public function getRubrique($code)
+        {
+            $rubrique = Rubriques::find($code);
+
+            if (!$rubrique) {
+                return response()->json(['error' => 'Rubrique non trouvé'], 404);
+            }
+
+            return response()->json($rubrique);
+        }
+        public function storeRubrique(Request $request)
+        {
+            try {
+                $request->validate([
+                    'libelle'     => 'required|string|max:255',
+                    'ordre'       => 'required|integer|min:1',
+                    'class_icone' => 'nullable|string|max:255',
+                    'ecran_id'    => 'required',
+                ]);
+    
+                DB::transaction(function () use ($request) {
+                    $rubrique = new Rubriques;
+    
+                    if ($request->filled('code')) {
+                        $request->validate(['code' => 'string|max:50|unique:rubriques,code']);
+                        $rubrique->code = $request->input('code');
+                    } else {
+                        $rubrique->code = Str::upper(Str::random(8));
+                    }
+    
+                    $rubrique->libelle     = $request->input('libelle');
+                    $rubrique->ordre       = $request->input('ordre');
+                    $rubrique->class_icone = $request->input('class_icone', null);
+                    $rubrique->save();
+    
+                    $permissionName = $this->makePermissionName($rubrique->libelle, $rubrique->code);
+                    $perm = Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
+                    $rubrique->permission_id = $perm->id;
+                    $rubrique->save();
+                });
+    
+                return redirect()->route('rubriques.index', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('success', 'Rubrique enregistrée avec succès.');
+            } catch (\Throwable $e) {
+                Log::error('Erreur storeRubrique', [
+                    'payload' => $request->all(),
+                    'error'   => $e->getMessage(),
+                ]);
+                return redirect()->back()->withInput()->withErrors("Échec de l’enregistrement de la rubrique.");
+            }
+        }
+    
+        public function updateRubrique(Request $request)
+        {
+            try {
+                $request->validate([
+                    'edit_libelle'     => 'required|string|max:255',
+                    'edit_ordre'       => 'required|integer|min:1',
+                    'edit_class_icone' => 'nullable|string|max:255',
+                    'ecran_id'         => 'required',
+                ]);
+    
+                $rubrique = Rubriques::find($request->input('edit_code'));
+                if (!$rubrique) {
+                    return redirect()->back()->withErrors("Rubrique introuvable.");
+                }
+    
+                $rubrique->libelle     = $request->input('edit_libelle');
+                $rubrique->ordre       = $request->input('edit_ordre');
+                $rubrique->class_icone = $request->input('edit_class_icone');
+                $rubrique->save();
+    
+                return redirect()->route('rubriques.index', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('success', 'Rubrique mise à jour avec succès.');
+            } catch (\Throwable $e) {
+                Log::error('Erreur updateRubrique', [
+                    'payload' => $request->all(),
+                    'error'   => $e->getMessage(),
+                ]);
+                return redirect()->back()->withInput()->withErrors("Échec de la mise à jour de la rubrique.");
+            }
+        }
+    
+        public function deleteRubrique($code)
+        {
+            try {
+                $rubrique = Rubriques::with(['sousMenus.ecrans'])->find($code);
+                if (!$rubrique) {
+                    return response()->json(['error' => 'Rubrique non trouvée'], 404);
+                }
+    
+                DB::transaction(function () use ($rubrique) {
+                    foreach ($rubrique->sousMenus as $sm) {
+                        foreach ($sm->ecrans as $ecran) {
+                            $id = $ecran->id;
+                            foreach (["consulter_ecran_$id", "ajouter_ecran_$id", "modifier_ecran_$id", "supprimer_ecran_$id"] as $name) {
+                                $this->deletePermissionByName($name);
+                            }
+                            $this->deletePermissionById($ecran->permission_id);
+                            $ecran->delete();
+                        }
+                        $this->deletePermissionById($sm->permission_id);
+                        $sm->delete();
+                    }
+                    $this->deletePermissionById($rubrique->permission_id);
+                    $rubrique->delete();
+                });
+    
+                return response()->json(['success' => 'Rubrique supprimée avec succès']);
+            } catch (\Throwable $e) {
+                Log::error('Erreur deleteRubrique', [
+                    'code'  => $code,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json(['error' => "Impossible de supprimer la rubrique."], 500);
+            }
+        }
+    
+        /* ===================== Sous-menus ===================== */
+    
+        public function sous_menus(Request $request)
+        {
+            try {
+                $ecran = Ecran::find($request->input('ecran_id'));
+                $sous_menus = SousMenu::orderBy('ordre')->get();
+                $smPlusGrandOrdre = SousMenu::orderBy('ordre', 'desc')->first();
+    
+                return view('habilitations.sous_menus', compact('ecran', 'sous_menus', 'smPlusGrandOrdre'));
+            } catch (\Throwable $e) {
+                Log::error('Erreur chargement sous-menus', ['error' => $e->getMessage()]);
+                return redirect()->back()->withErrors("Impossible de charger les sous-menus.");
+            }
+        }
+        // Renvoie un sous-menu par code (clé primaire string)
+        public function getSous_menu($code)
+        {
+            $sm = SousMenu::find($code); // primaryKey = 'code'
+            if (!$sm) {
+                return response()->json(['error' => 'Sous-menu introuvable'], 404);
+            }
+            // Tu peux joindre des infos utiles au front
+            return response()->json([
+                'code'           => $sm->code,
+                'libelle'        => $sm->libelle,
+                'ordre'          => $sm->ordre,
+                'niveau'         => $sm->niveau,
+                'code_rubrique'  => $sm->code_rubrique,
+                'sous_menu_parent'=> $sm->sous_menu_parent,
+            ]);
+        }
+
+        // Liste les parents possibles: même rubrique, niveau < niveau courant, exclure le code courant optionnellement
+        public function getSousMenusParents(Request $request)
+        {
+            $request->validate([
+                'niveau'   => 'required|integer|min:1',
+            ]);
+
+            $rubrique = $request->query('rubrique');
+            $niveau   = (int) $request->query('niveau');
+            $exclude  = $request->query('exclude');
+
+            $query = SousMenu::where('code_rubrique', $rubrique)
+                ->where('niveau', '<', $niveau)
+                ->orderBy('libelle');
+
+            if ($exclude) {
+                $query->where('code', '!=', $exclude);
+            }
+
+            $parents = $query->get(['code', 'libelle', 'niveau']);
+
+            return response()->json($parents);
+        }
+
+        public function getSousMenus($rubriqueId)
+        {
+            $sousMenus = SousMenu::where('code_rubrique', $rubriqueId)->where('niveau', 1)
+                ->with('sousSousMenusRecursive')->with('sousSousMenus')->with('ecrans')
+                ->get();
+            return response()->json($sousMenus);
+        }
+        public function storeSous_menu(Request $request)
+        {
+            try {
+                $request->validate([
+                    'libelle'           => 'required|string|max:255',
+                    'ordre'             => 'required|integer|min:1',
+                    'niveau'            => 'required|integer|min:0',
+                    'ecran_id'          => 'required',
+                ]);
+    
+                DB::transaction(function () use ($request) {
+                    $sm = new SousMenu;
+    
+                    if ($request->filled('code')) {
+                        $request->validate(['code' => 'string|max:50|unique:sous_menus,code']);
+                        $sm->code = $request->input('code');
+                    } else {
+                        $sm->code = Str::upper(Str::random(8));
+                    }
+    
+                    $sm->libelle          = $request->input('libelle');
+                    $sm->ordre            = $request->input('ordre');
+                    $sm->niveau           = $request->input('niveau');
+                    $sm->code_rubrique    = $request->input('code_rubrique');
+                    $sm->sous_menu_parent = $request->input('sous_menu_parent');
+                    $sm->save();
+    
+                    $permissionName = $this->makePermissionName($sm->libelle, $sm->code);
+                    $perm = Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
+                    $sm->permission_id = $perm->id;
+                    $sm->save();
+                });
+    
+                return redirect()->route('sous_menu.index', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('success', 'Sous-menu enregistré avec succès.');
+            } catch (\Throwable $e) {
+                Log::error('Erreur storeSous_menu', [
+                    'payload' => $request->all(),
+                    'error'   => $e->getMessage(),
+                ]);
+                return redirect()->back()->withInput()->withErrors("Échec de l’enregistrement du sous-menu.");
+            }
+        }
+    
+        public function updateSous_menu(Request $request)
+        {
+            try {
+                $request->validate([
+                    'edit_code'            => 'required|string|exists:sous_menus,code',
+                    'edit_libelle'         => 'required|string|max:255',
+                    'edit_ordre'           => 'required|integer|min:1',
+                    'edit_niveau'          => 'required|integer|min:0',
+                    'ecran_id'             => 'required',
+                ]);
+    
+                $sm = SousMenu::find($request->input('edit_code'));
+                if (!$sm) {
+                    return redirect()->back()->withErrors("Sous-menu introuvable.");
+                }
+    
+                $sm->libelle          = $request->input('edit_libelle');
+                $sm->ordre            = $request->input('edit_ordre');
+                $sm->niveau           = $request->input('edit_niveau');
+                $sm->code_rubrique    = $request->input('edit_code_rubrique');
+                $sm->sous_menu_parent = $request->input('edit_sous_menu_parent');
+                $sm->save();
+    
+                return redirect()->route('sous_menu.index', ['ecran_id' => $request->input('ecran_id')])
+                    ->with('success', 'Sous-menu mis à jour avec succès.');
+            } catch (\Throwable $e) {
+                Log::error('Erreur updateSous_menu', [
+                    'payload' => $request->all(),
+                    'error'   => $e->getMessage(),
+                ]);
+                return redirect()->back()->withInput()->withErrors("Échec de la mise à jour du sous-menu.");
+            }
+        }
+    
+        public function deleteSous_menu($code)
+        {
+            try {
+                $sm = SousMenu::with('ecrans')->find($code);
+                if (!$sm) {
+                    return response()->json(['error' => 'Sous-menu non trouvé'], 404);
+                }
+    
+                DB::transaction(function () use ($sm) {
+                    foreach ($sm->ecrans as $ecran) {
+                        $id = $ecran->id;
+                        foreach (["consulter_ecran_$id", "ajouter_ecran_$id", "modifier_ecran_$id", "supprimer_ecran_$id"] as $name) {
+                            $this->deletePermissionByName($name);
+                        }
+                        $this->deletePermissionById($ecran->permission_id);
+                        $ecran->delete();
+                    }
+                    $this->deletePermissionById($sm->permission_id);
+                    $sm->delete();
+                });
+    
+                return response()->json(['success' => 'Sous-menu supprimé avec succès']);
+            } catch (\Throwable $e) {
+                Log::error('Erreur deleteSous_menu', [
+                    'code'  => $code,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json(['error' => "Impossible de supprimer le sous-menu."], 500);
+            }
+        }
+    /* ===================== Écrans ===================== */
+
+    public function ecrans(Request $request)
+    {
+        try {
+            $ecran       = Ecran::find($request->input('ecran_id'));
+            $ecrans      = Ecran::with(['rubrique', 'sousMenu', 'permission'])->orderBy('id')->get();
+            $rubriques   = Rubriques::orderBy('libelle')->get();
+            $sous_menus  = SousMenu::orderBy('libelle')->get();
+            $permissions = Permission::orderBy('name', 'asc')->get();
+
+            return view('habilitations.ecrans', compact('ecran', 'ecrans', 'rubriques', 'sous_menus', 'permissions'));
+        } catch (\Throwable $e) {
+            Log::error('Erreur chargement écrans', ['error' => $e->getMessage()]);
+            return redirect()->back()->withErrors("Impossible de charger les écrans.");
+        }
+    }
+
+    public function storeEcran(Request $request)
+    {
+        try {
+            $request->validate([
+                'libelle'        => 'required|string|max:255',
+                'ordre'          => 'required|integer|min:1',
+                'path'           => 'required|string|max:255',
+                'ecran_id'       => 'required',
+            ]);
+
+            DB::transaction(function () use ($request) {
+                $e = new Ecran;
+                $e->libelle        = $request->input('libelle');
+                $e->ordre          = $request->input('ordre');
+                $e->path           = $request->input('path');
+                $e->code_sous_menu = $request->input('code_sous_menu');
+                $e->code_rubrique  = $request->input('code_rubrique');
+                $e->save();
+
+                $permName = "consulter_ecran_{$e->id}";
+                $perm = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                $e->permission_id = $perm->id;
+                $e->save();
+
+                foreach (["ajouter", "modifier", "supprimer"] as $action) {
+                    Permission::firstOrCreate(['name' => "{$action}_ecran_{$e->id}", 'guard_name' => 'web']);
+                }
+            });
+
+            return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
+                ->with('success', 'Écran enregistré avec succès.');
+        } catch (\Throwable $e) {
+            Log::error('Erreur storeEcran', [
+                'payload' => $request->all(),
+                'error'   => $e->getMessage(),
+            ]);
+            return redirect()->back()->withInput()->withErrors("Échec de l’enregistrement de l’écran.");
+        }
+    }
+
+    public function updateEcran(Request $request)
+    {
+        try {
+            $request->validate([
+                'edit_code'          => 'required|integer|exists:views,id',
+                'edit_libelle'       => 'required|string|max:255',
+                'edit_ordre'         => 'required|integer|min:1',
+                'edit_path'          => 'required|string|max:255',
+                'ecran_id'           => 'required',
+            ]);
+
+            $e = Ecran::find($request->input('edit_code'));
+            if (!$e) {
+                return redirect()->back()->withErrors("Écran introuvable.");
+            }
+
+            $e->libelle        = $request->input('edit_libelle');
+            $e->ordre          = $request->input('edit_ordre');
+            $e->path           = $request->input('edit_path');
+            $e->code_sous_menu = $request->input('edit_code_sous_menu');
+            $e->code_rubrique  = $request->input('edit_code_rubrique');
+            $e->save();
+
+            return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
+                ->with('success', 'Écran mis à jour avec succès.');
+        } catch (\Throwable $e) {
+            Log::error('Erreur updateEcran', [
+                'payload' => $request->all(),
+                'error'   => $e->getMessage(),
+            ]);
+            return redirect()->back()->withInput()->withErrors("Échec de la mise à jour de l’écran.");
+        }
+    }
+
+    public function deleteEcran($id)
+    {
+        try {
+            $ecran = Ecran::find($id);
+            if (!$ecran) {
+                return response()->json(['error' => 'Écran non trouvé'], 404);
+            }
+
+            DB::transaction(function () use ($ecran) {
+                $eid = $ecran->id;
+                foreach (["consulter_ecran_$eid", "ajouter_ecran_$eid", "modifier_ecran_$eid", "supprimer_ecran_$eid"] as $name) {
+                    $this->deletePermissionByName($name);
+                }
+                $this->deletePermissionById($ecran->permission_id);
+                $ecran->delete();
+            });
+
+            return response()->json(['success' => 'Écran supprimé avec succès']);
+        } catch (\Throwable $e) {
+            Log::error('Erreur deleteEcran', [
+                'id'    => $id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['error' => "Impossible de supprimer l’écran."], 500);
+        }
+    }
+
+    public function bulkDeleteEcrans(Request $request)
+    {
+        try {
+            $request->validate([
+                'ids'      => 'required|array|min:1',
+                'ids.*'    => 'integer|exists:views,id',
+                'ecran_id' => 'required',
+            ]);
+
+            DB::transaction(function () use ($request) {
+                $ids = $request->input('ids');
+
+                $ecrans = Ecran::whereIn('id', $ids)->get();
+                foreach ($ecrans as $ecran) {
+                    $eid = $ecran->id;
+                    foreach (["consulter_ecran_$eid", "ajouter_ecran_$eid", "modifier_ecran_$eid", "supprimer_ecran_$eid"] as $name) {
+                        $this->deletePermissionByName($name);
+                    }
+                    $this->deletePermissionById($ecran->permission_id);
+                    $ecran->delete();
+                }
+            });
+
+            return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
+                ->with('success', 'Écrans supprimés avec succès.');
+        } catch (\Throwable $e) {
+            Log::error('Erreur bulkDeleteEcrans', [
+                'payload' => $request->all(),
+                'error'   => $e->getMessage(),
+            ]);
+            return redirect()->back()->withErrors("Échec de la suppression multiple des écrans.");
+        }
+    }  
+}  
+    /*public function assignRoles(Request $request)
+    {
+        $r  = $request;
         // Récupérer les données du formulaire
         $role_id = $request->input('role');
-        $consulterRubrique = json_decode($request->input('consulterRubrique'));
-        $consulterRubriqueEcran = json_decode($request->input('consulterRubriqueEcran'));
-        $consulterSousMenu = json_decode($request->input('consulterSousMenu'));
-        $consulterSousMenuEcran = json_decode($request->input('consulterSousMenuEcran'));
+        $consulterRubrique = $r->input('consulterRubrique');
+        $consulterRubriqueEcran = $r->input('consulterRubriqueEcran');
+        $consulterSousMenu = $r->input('consulterSousMenu');
+        $consulterSousMenuEcran = $r->input('consulterSousMenuEcran');
 
-        $ajouterRubriqueEcran = json_decode($request->input('ajouterRubriqueEcran'));
-        $modifierRubriqueEcran = json_decode($request->input('modifierRubriqueEcran'));
-        $supprimerRubriqueEcran = json_decode($request->input('supprimerRubriqueEcran'));
+        $ajouterRubriqueEcran = $r->input('ajouterRubriqueEcran');
+        $modifierRubriqueEcran = $r->input('modifierRubriqueEcran');
+        $supprimerRubriqueEcran = $r->input('supprimerRubriqueEcran');
 
-        $ajouterSousMenuEcran = json_decode($request->input('ajouterSousMenuEcran'));
-        $modifierSousMenuEcran = json_decode($request->input('modifierSousMenuEcran'));
-        $supprimerSousMenuEcran = json_decode($request->input('supprimerSousMenuEcran'));
+        $ajouterSousMenuEcran = $r->input('ajouterSousMenuEcran');
+        $modifierSousMenuEcran = $r->input('modifierSousMenuEcran');
+        $supprimerSousMenuEcran = $r->input('supprimerSousMenuEcran');
 
 
-        $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer'));
+        $permissionsAsupprimer = $r->input('permissionsAsupprimer');
 
 
         // Récupérer le rôle
@@ -94,7 +865,11 @@ class RoleAssignmentController extends Controller
         }
 
         // 3. Gestion des écrans
-        $allEcransIds = array_merge($consulterRubriqueEcran, $consulterSousMenuEcran);
+        //$allEcransIds = array_merge($consulterRubriqueEcran, $consulterSousMenuEcran);
+        $allEcransIds = array_values(array_unique(array_merge($consulterRubriqueEcran, $consulterSousMenuEcran)));
+        Log::info('AssignRoles', ['role' => $r->role, 'counts' => [
+        'rubriques'=>count($consulterRubrique), 'sousMenus'=>count($consulterSousMenu), 'ecrans'=>count($allEcransIds)
+        ]]);
         $ecransToRevoke = Ecran::whereNotIn('id', $allEcransIds)->get();
         foreach ($ecransToRevoke as $ecran) {
             if ($ecran->permission) {
@@ -103,7 +878,7 @@ class RoleAssignmentController extends Controller
         }
 
         // 4. Gestion des permissions d'actions (ajouter/modifier/supprimer)
-        $permissionsAsupprimer = json_decode($request->input('permissionsAsupprimer', '[]'));
+        $permissionsAsupprimer = $r->input('permissionsAsupprimer', '[]');
         foreach ($permissionsAsupprimer as $permissionClass) {
             // Convertir le nom de classe en nom de permission
             // Ex: "ajouter_ecran_1" devient "ajouter_ecran_1"
@@ -124,7 +899,7 @@ class RoleAssignmentController extends Controller
         // Parcourir et enregistrer chaque ID dans le tableau consulterRubrique
         foreach ($consulterRubrique as $id) {
             // Vérifier si une association existe déjà pour ce rôle et cette rubrique
-            $existingAssociation = RoleHasRubrique::where('role_id', $role_id)
+            /*$existingAssociation = RoleHasRubrique::where('role_id', $role_id)
                 ->where('rubrique_id', $id)
                 ->get();
 
@@ -154,7 +929,13 @@ class RoleAssignmentController extends Controller
                     //$user->givePermissionTo($permission->name);
                     $user->assignRole($role->name);
                 }
+            }*/
+            /*
+            $exists = RoleHasRubrique::where('role_id',$role_id)->where('rubrique_id',$id)->exists();
+            if (!$exists) {
+            RoleHasRubrique::create(['role_id'=>$role_id,'rubrique_id'=>$id]);
             }
+
         }
 
 
@@ -303,32 +1084,31 @@ class RoleAssignmentController extends Controller
             'message' => 'Données enregistrées avec succès.',
             'donnee' => $permissionsAsupprimer,
         ]);
-    }
-
-    public function getRolePermissions($roleId)
+    } public function getRolePermissions($roleId)
     {
-    // Récupérer le rôle
-    $role = GroupeUtilisateur::findOrFail($roleId);
+        // Récupérer le rôle
+        $role = GroupeUtilisateur::findOrFail($roleId);
 
 
-    // Récupérer les autorisations du rôle
-    $permissions = $role->permissions()->pluck('name');
-    $permissions_id = $role->permissions()->pluck('id');
+        // Récupérer les autorisations du rôle
+        $permissions = $role->permissions()->pluck('name');
+        $permissions_id = $role->permissions()->pluck('id');
 
-    $sous_menusAcocher = SousMenu::whereIn('permission_id', $permissions_id)->get();
-    $ecransAcocher = Ecran::whereIn('permission_id', $permissions_id)->get();
-    $rubriquesAcocher = Rubriques::whereIn('permission_id', $permissions_id)->get();
+        $sous_menusAcocher = SousMenu::whereIn('permission_id', $permissions_id)->get();
+        $ecransAcocher = Ecran::whereIn('permission_id', $permissions_id)->get();
+        $rubriquesAcocher = Rubriques::whereIn('permission_id', $permissions_id)->get();
 
 
-    // Renvoyer les autorisations et les ID des rubriques à cocher au format JSON
-    return response()->json([
-        'permissions' => $permissions,
-        'rubriquesAcocher' =>  $rubriquesAcocher,
-        'sous_menusAcocher' => $sous_menusAcocher,
-        'ecransAcocher' => $ecransAcocher
-    ]);
+        // Renvoyer les autorisations et les ID des rubriques à cocher au format JSON
+        return response()->json([
+            'permissions' => $permissions,
+            'rubriquesAcocher' =>  $rubriquesAcocher,
+            'sous_menusAcocher' => $sous_menusAcocher,
+            'ecransAcocher' => $ecransAcocher
+        ]);
     }
 
+    
 
 
 
@@ -342,7 +1122,7 @@ class RoleAssignmentController extends Controller
 
 
     /******************** RUBRIQUES ******************* */
-    public function rubriques(Request $request)
+   /* public function rubriques(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $rubriques = Rubriques::all();
@@ -457,7 +1237,7 @@ class RoleAssignmentController extends Controller
 
     /******************** SOUS-MENUS ******************* */
 
-    public function sous_menus(Request $request)
+    /*public function sous_menus(Request $request)
     {
        $ecran = Ecran::find($request->input('ecran_id'));
         $sous_menus = SousMenu::all();
@@ -561,105 +1341,122 @@ class RoleAssignmentController extends Controller
 
     /******************** ECRANS ******************* */
 
-    public function ecrans(Request $request)
+    /*public function ecrans(Request $request)
     {
-        $sous_menus = SousMenu::all();
-       $ecran = Ecran::find($request->input('ecran_id'));
-        $ecrans = Ecran::all();
-        $permissions = Permission::orderBy('name', 'desc')->get();
-        return view('habilitations.ecrans', compact('ecran','ecrans',  'sous_menus', 'permissions'));
+        $ecran       = Ecran::find($request->input('ecran_id'));
+        $ecrans      = Ecran::with(['rubrique','sousMenu','permission'])->orderBy('id')->get();
+        $rubriques   = Rubriques::orderBy('libelle')->get();           // ← manquait dans ton code
+        $sous_menus  = SousMenu::orderBy('libelle')->get();
+        $permissions = Permission::orderBy('name', 'asc')->get();
+
+        return view('habilitations.ecrans', compact('ecran','ecrans','rubriques','sous_menus','permissions'));
     }
-
-
 
     public function storeEcran(Request $request)
     {
-        // Validez les données du formulaire ici (par exemple, en utilisant les règles de validation).
+        $request->validate([
+            'libelle'        => 'required|string|max:255',
+            'ordre'          => 'required|integer|min:1',
+            'path'           => 'required|string|max:255',
+            'code_sous_menu' => 'required|string',
+            'code_rubrique'  => 'required|string',
+            'ecran_id'       => 'required',
+        ]);
 
-        // Créez un nouveau district dans la base de données.
-        $ecran = new Ecran;
-        $ecran->libelle = $request->input('libelle');
-        $ecran->ordre = $request->input('ordre');
-        $ecran->path = $request->input('path');
-        $ecran->code_sous_menu = $request->input('code_sous_menu');
-        $ecran->code_rubrique = $request->input('code_rubrique');
+        // 1) Créer l’écran pour obtenir son ID
+        $e = new Ecran;
+        $e->libelle        = $request->input('libelle');
+        $e->ordre          = $request->input('ordre');
+        $e->path           = $request->input('path');
+        $e->code_sous_menu = $request->input('code_sous_menu');
+        $e->code_rubrique  = $request->input('code_rubrique');
+        $e->save();
 
-        $permissionName = 'consulter_ecran_' . $ecran->id;
-        $permission = Permission::where('name', $permissionName)->where('guard_name', 'web')->first();
+        // 2) Créer / associer les permissions basées sur l’ID
+        $permissionName = 'consulter_ecran_' . $e->id;
+        $permission = Permission::where('name', $permissionName)->where('guard_name','web')->first();
         if (!$permission) {
             $permission = Permission::create(['name' => $permissionName, 'guard_name' => 'web']);
         }
-
-        $ecran->permission_id = $permission->id;
+        $e->permission_id = $permission->id;
+        $e->save();
 
         try {
-            Permission::findOrCreate('ajouter_ecran_' . $ecran->id);
-            Permission::findOrCreate('modifier_ecran_' . $ecran->id);
-            Permission::findOrCreate('supprimer_ecran_' . $ecran->id);
+            Permission::findOrCreate('ajouter_ecran_'  . $e->id, 'web');
+            Permission::findOrCreate('modifier_ecran_' . $e->id, 'web');
+            Permission::findOrCreate('supprimer_ecran_'. $e->id, 'web');
         } catch (\Throwable $th) {
-            //throw $th;
+            // silencieux
         }
-        $ecran->save();
 
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('ecran.index', ['ecran_id' => $ecran_id])->with('success', 'Ecran enregistré avec succès.');
+        return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
+            ->with('success', 'Écran enregistré avec succès.');
     }
 
-
-    public function getEcran($code)
+    public function getEcran($id)
     {
-        $ecran = Ecran::find($code);
-
-        if (!$ecran) {
-            return response()->json(['error' => 'Ecran non trouvé'], 404);
-        }
-
+        $ecran = Ecran::find($id);
+        if (!$ecran) return response()->json(['error' => 'Écran non trouvé'], 404);
         return response()->json($ecran);
     }
 
     public function updateEcran(Request $request)
     {
+        $request->validate([
+            'edit_code'       => 'required|integer|exists:ecrans,id',
+            'edit_libelle'    => 'required|string|max:255',
+            'edit_ordre'      => 'required|integer|min:1',
+            'edit_path'       => 'required|string|max:255',
+            'edit_code_sous_menu' => 'required|string',
+            'edit_code_rubrique'  => 'required|string',
+            'ecran_id'        => 'required',
+        ]);
 
-        $ecran = Ecran::find($request->input('edit_code'));
+        $e = Ecran::find($request->input('edit_code'));
+        if (!$e) return response()->json(['error'=>'Écran non trouvé'],404);
 
-        if (!$ecran) {
-            return response()->json(['error' => 'Ecran non trouvé'], 404);
+        $e->libelle        = $request->input('edit_libelle');
+        $e->ordre          = $request->input('edit_ordre');
+        $e->path           = $request->input('edit_path');
+        $e->code_sous_menu = $request->input('edit_code_sous_menu');
+        $e->code_rubrique  = $request->input('edit_code_rubrique');
+
+        // Permission “consulter_ecran_{id}”
+        $permissionName = 'consulter_ecran_' . $e->id;
+        $permission = Permission::where('name', $permissionName)->where('guard_name','web')->first();
+        if (!$permission) {
+            $permission = Permission::create(['name' => $permissionName, 'guard_name'=>'web']);
         }
+        $e->permission_id = $permission->id;
 
-        $ecran->libelle = $request->input('edit_libelle');
-        $ecran->ordre = $request->input('edit_ordre');
-        $ecran->path = $request->input('edit_path');
-        $ecran->code_sous_menu = $request->input('edit_code_sous_menu');
-        $ecran->code_rubrique = $request->input('edit_code_rubrique');
-
-        $permissionName = 'consulter_ecran_' . $request->input('edit_code');
-        $permission = Permission::findOrCreate($permissionName, 'web');
-        $ecran->permission_id = $permission->id;
         try {
-            Permission::findOrCreate('ajouter_ecran_' . $ecran->code);
-            Permission::findOrCreate('modifier_ecran_' . $ecran->code);
-            Permission::findOrCreate('supprimer_ecran_' . $ecran->code);
-        } catch (\Throwable $th) {
-            //throw $th;
-        }
-        $ecran->save();
+            Permission::findOrCreate('ajouter_ecran_'  . $e->id, 'web');
+            Permission::findOrCreate('modifier_ecran_' . $e->id, 'web');
+            Permission::findOrCreate('supprimer_ecran_'. $e->id, 'web');
+        } catch (\Throwable $th) {}
 
-        $ecran_id = $request->input('ecran_id');
-        // Redirigez l'utilisateur vers une page de succès ou d'affichage du district.
-        return redirect()->route('ecran.index', ['ecran_id' => $ecran_id])->with('success', 'Ecran mis à jour avec succès.');
+        $e->save();
+
+        return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
+            ->with('success', 'Écran mis à jour avec succès.');
     }
 
-
-    public function deleteEcran($code)
+    public function deleteEcran($id)
     {
-        $ecran = Ecran::find($code);
-
-        if (!$ecran) {
-            return response()->json(['error' => 'ecran non trouvé'], 404);
-        }
+        $ecran = Ecran::find($id);
+        if (!$ecran) return response()->json(['error' => 'Écran non trouvé'], 404);
         $ecran->delete();
-
-        return response()->json(['success' => 'Ecran supprimé avec succès']);
+        return response()->json(['success' => 'Écran supprimé avec succès']);
     }
-}
+
+    /** Suppression multiple */
+   /* public function bulkDeleteEcrans(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('success', 'Aucun élément sélectionné.');
+        }
+        Ecran::whereIn('id', $ids)->delete();
+        return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
+            ->with('success', count($ids) . ' écran(s) supprimé(s) avec succès.');
+    }*/

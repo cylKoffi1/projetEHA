@@ -17,6 +17,7 @@ use App\Models\ProjetInfrastructure;
 use App\Models\TypeCaracteristique;
 use App\Models\UniteDerivee;
 use App\Models\ValeurCaracteristique;
+use App\Models\Ecran;
 use App\Services\FileProcService;
 use App\Services\GridFsService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -37,8 +38,9 @@ class InfrastructureController extends Controller
 
 
     // Afficher la liste des infrastructures
-    public function index()
+    public function index(Request $request)
     {
+        $ecran = Ecran::find($request->input('ecran_id'));
         $infrastructures = Infrastructure::with(['familleInfrastructure.familleDomaine', 'localisation', 'projetInfra'])
             ->where('code_groupe_projet', session('projet_selectionne'))
             ->where('code_pays', session('pays_selectionne'))
@@ -687,12 +689,13 @@ class InfrastructureController extends Controller
 
      
      // Supprimer une infrastructure
-     public function destroy($id)
+     public function destroy($id, Request $request)
      {
+         $ecran = Ecran::find($request->input('ecran_id'));
          $infrastructure = Infrastructure::findOrFail($id);
          $infrastructure->delete();
  
-         return redirect()->route('infrastructures.index')
+         return redirect()->route('infrastructures.index', ['ecran_id' => $ecran->id])
              ->with('success', 'Infrastructure supprimée avec succès.');
      }
  

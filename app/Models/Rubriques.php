@@ -9,6 +9,7 @@ class Rubriques extends Model
 {
     protected $table = 'rubriques';
     protected $primaryKey = 'code';
+    public $incrementing = false;       // ✅ clé string
     public $timestamps = false;
     protected $fillable = ['code', 'libelle','ordre', 'permission_id', 'class_icone'];
 

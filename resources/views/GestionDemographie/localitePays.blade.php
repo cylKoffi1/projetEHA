@@ -2,6 +2,8 @@
 @extends('layouts.app')
 
 @section('content')
+@can("consulter_ecran_" . $ecran->id)
+
 <div class="page-heading">
   <div class="row align-items-center">
     <div class="col-12 col-md-6">
@@ -107,9 +109,11 @@
           </div>
 
           <div class="col-12 text-end">
-            <button class="btn btn-primary" type="submit">
-              <i class="bi bi-save me-1"></i> Enregistrer
-            </button>
+            @can("ajouter_ecran_" . $ecran->id)
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-save me-1"></i> Enregistrer
+              </button>
+            @endcan
           </div>
         </form>
 
@@ -137,9 +141,11 @@
               <input type="file" name="fichier" class="form-control" accept=".xlsx, .xls" required>
 
               <div class="text-end mt-3">
-                <button class="btn btn-success">
-                  <i class="bi bi-upload"></i> Importer
-                </button>
+                @can("ajouter_ecran_" . $ecran->id)
+                  <button class="btn btn-success">
+                    <i class="bi bi-upload"></i> Importer
+                  </button>
+                @endcan
               </div>
             </form>
 
@@ -365,8 +371,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Bouton → état "en cours"
     const btn = form.querySelector('button[type="submit"]');
-    const oldHtml = btn.innerHTML;
-    btn.disabled = true; btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Enregistrement…`;
+    const oldHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Enregistrement…`; }
 
     try {
       const fd = new FormData(form);
@@ -395,7 +401,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       showMsg('Erreur réseau / serveur.', 'danger');
     } finally {
-      btn.disabled = false; btn.innerHTML = oldHtml;
+      if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
     }
   });
 
@@ -418,4 +424,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 </script>
+
+@else
+  <div class="alert alert-warning mt-3">
+    Vous n’êtes pas autorisé à consulter cette page (permission requise : <code>consulter_ecran_{{ $ecran->id }}</code>).
+  </div>
+@endcan
 @endsection

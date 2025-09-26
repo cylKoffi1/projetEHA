@@ -67,7 +67,9 @@
                     <div  style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
                         <h5 class="card-title">
                             Ajout d'un chef de projet
+                            @can("ajouter_ecran_" . $ecran->id)
                             <a href="{{ route('projet') }}"  style="margin-left: 15px;"><i class="bi bi-plus-circle me-1"></i></a>
+                            @endcan
                         </h5>
 
                         @if (count($errors) > 0)
@@ -120,9 +122,11 @@
                                 <td style="width: 12%; text-align: right;">{{ number_format($projet->cout_projet, 0, ',', ' ') }}</td>
                                 <td>{{ $projet->devise->code_long ?? '' }}</td>
                                 <td>
+                                @can("consulter_ecran_" . $ecran->id)
                                 <a href="{{ route('projets.show', $projet->CodeProjet) }}" class="btn btn-outline-primary btn-sm">
     <i class="bi bi-eye me-1"></i> Détails
 </a>
+                                @endcan
                                 </td>
                             </tr>
                             @endforeach

@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 <div class="page-heading">
     <div class="page-title">
         <div class="row">
@@ -144,7 +146,12 @@
                                         </div>
                                         <div class="row">
                                             <div class="col-12 d-flex justify-content-end">
+                                                @can("ajouter_ecran_" . $ecran->id)
                                                 <button type="submit" class="btn btn-primary me-1 mb-1" id="submitBtn">Enregistrer</button>
+                                                @endcan
+                                                @can("modifier_ecran_" . $ecran->id)
+                                                <button type="submit" class="btn btn-warning me-1 mb-1 d-none" id="updateBtn">Modifier</button>
+                                                @endcan
                                                 <button type="button" onclick="resetForm()" class="btn btn-light-secondary me-1 mb-1">Réinitialiser</button>
                                             </div>
                                         </div>
@@ -201,20 +208,25 @@
                                         <span style="color: white"></span>
                                     </a>
                                     <ul class="dropdown-menu z-3" aria-labelledby="userDropdown">
+                                        @can("modifier_ecran_" . $ecran->id)
                                         <li>
                                             <a class="dropdown-item" onclick="loadPaysData({{ $p->id }})">
                                                 <i class="bi bi-pencil-square me-3"></i> Modifier
                                             </a>
                                         </li>
+                                        @endcan
+                                        @can("supprimer_ecran_" . $ecran->id)
                                         <li>
                                             <form method="POST" action="{{ route('pays.destroy', $p->id) }}" style="display: inline;">
                                                 @csrf
                                                 @method('DELETE')
+                                                <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                                                 <button type="button" class="dropdown-item btn-supprimer" onclick="return confirms(event,'Êtes-vous sûr de vouloir supprimer ce pays ?')">
                                                     <i class="bi bi-trash3-fill me-3"></i> Supprimer
                                                 </button>
                                             </form>
                                         </li>
+                                        @endcan
                                     </ul>
                                 </div>
                             </td>
@@ -266,11 +278,13 @@ function loadPaysData(id) {
             document.getElementById('zoomMa').value = data.maxZoom;
             document.getElementById('zoomMi').value = data.minZoom;
             
-            // Changer le texte et la classe du bouton submit
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.textContent = 'Modifier';
-            submitBtn.classList.remove('btn-primary');
-            submitBtn.classList.add('btn-warning');
+            // Afficher le bon bouton selon les droits
+            @can("ajouter_ecran_" . $ecran->id)
+            document.getElementById('submitBtn').classList.add('d-none');
+            @endcan
+            @can("modifier_ecran_" . $ecran->id)
+            document.getElementById('updateBtn').classList.remove('d-none');
+            @endcan
             
             // Ajouter un champ caché pour l'ID
             if (!document.getElementById('pays_id')) {
@@ -338,10 +352,13 @@ function resetForm() {
     document.getElementById('paysForm').reset();
     document.getElementById('paysForm').action = '/pays';
     
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.textContent = 'Enregistrer';
-    submitBtn.classList.remove('btn-warning');
-    submitBtn.classList.add('btn-primary');
+    // Afficher le bon bouton selon les droits
+    @can("ajouter_ecran_" . $ecran->id)
+    document.getElementById('submitBtn').classList.remove('d-none');
+    @endcan
+    @can("modifier_ecran_" . $ecran->id)
+    document.getElementById('updateBtn').classList.add('d-none');
+    @endcan
     
     const idInput = document.getElementById('pays_id');
     if (idInput) idInput.remove();
@@ -376,4 +393,6 @@ function resetForm() {
 
 
 </script>
+    @endcan
+@endisset
 @endsection

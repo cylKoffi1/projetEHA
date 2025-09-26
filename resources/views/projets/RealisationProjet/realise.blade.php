@@ -253,9 +253,11 @@
                                     </div>
                                 </div>
                                 <div class="col-3">
+                                    @can("ajouter_ecran_" . $ecran->id)
                                     <button class="btn btn-success float-end" data-bs-toggle="modal" data-bs-target="#modalDemarrerProjet">
                                         <i class="fas fa-play-circle me-1"></i> Démarrer un projet
                                     </button>
+                                    @endcan
                                     <div class="modal fade" id="modalDemarrerProjet" tabindex="-1" aria-hidden="true">
                                         <div class="modal-dialog modal-lg">
 
@@ -288,12 +290,16 @@
                                                         </div>
 
                                                         <div class="modal-footer">
+                                                            @can("ajouter_ecran_" . $ecran->id)
                                                             <button type="submit" class="btn btn-success">
                                                                 <i class="fas fa-check me-1"></i> Enregistrer
                                                             </button>
+                                                            @endcan
+                                                            @can("consulter_ecran_" . $ecran->id)
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                                                 <i class="fas fa-times me-1"></i> Annuler
                                                             </button>
+                                                            @endcan
                                                         </div>
                                                     </form>
                                                 </div>
@@ -385,10 +391,12 @@
 
                         <div class="row mt-3">
                             <div class="col-12">
+                                @can("consulter_ecran_" . $ecran->id)
                                 <a href="#" id="voir-liste-link" class="toggle-list-btn">
                                     <i class="fas fa-list me-2"></i>
                                     Voir la liste complète des projets
                                 </a>
+                                @endcan
                             </div>
                         </div>
                     </div>
@@ -462,12 +470,16 @@
                             </div>
 
                             <div class="col-md-6">
+                                @can("ajouter_ecran_" . $ecran->id)
                                 <button type="button" class="btn btn-primary me-2" id="addBtn">
                                      Ajouter
                                 </button>
+                                @endcan
+                                @can("supprimer_ecran_" . $ecran->id)
                                 <button type="button" class="btn btn-danger" id="deleteBtn">
                                     Supprimer
                                 </button>
+                                @endcan
                             </div>
                         </div>
 
@@ -493,12 +505,16 @@
                     </div>
 
                     <div class="modal-footer">
+                        @can("ajouter_ecran_" . $ecran->id)
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-save me-1"></i> Enregistrer
                         </button>
+                        @endcan
+                        @can("consulter_ecran_" . $ecran->id)
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-times me-1"></i> Fermer
                         </button>
+                        @endcan
                     </div>
                 </form>
             </div>

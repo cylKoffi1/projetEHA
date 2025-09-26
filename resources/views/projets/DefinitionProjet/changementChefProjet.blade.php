@@ -75,6 +75,7 @@
                         <h4 class="card-title">Changement de Chef de projet</h4>
                         <form action="{{ route('contrats.chef.update') }}" method="POST">
                             @csrf
+                            <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                             <div class="row">
                                 <div class="col">
                                     <label for="contrat_id_chef">Contrat concerné</label>
@@ -106,7 +107,9 @@
                                 <textarea name="motif" id="motif" class="form-control" rows="3" placeholder="Expliquer pourquoi ce changement est effectué..." required></textarea>
                             </div>
 
+                            @can("modifier_ecran_" . $ecran->id)
                             <button type="submit" class="btn btn-warning mt-3">Valider le changement</button>
+                            @endcan
                         </form>
                     </div>
                 </div>                

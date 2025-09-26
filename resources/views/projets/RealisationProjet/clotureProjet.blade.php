@@ -334,19 +334,23 @@
                                 </div>
                                 
                                 <div class="col-md-3 d-flex align-items-end">
+                                    @can("modifier_ecran_" . $ecran->id)
                                     <button type="button" class="btn btn-danger cloture-btn w-100" onclick="cloturerProjet()">
                                         <i class="fas fa-lock me-2"></i> Clôturer le projet
                                     </button>
+                                    @endcan
                                 </div>
                             </div>
                         </div>
                         
                         <div class="row mt-3">
                             <div class="col-12">
+                                @can("consulter_ecran_" . $ecran->id)
                                 <a href="#" id="voir-liste-link" class="toggle-list-btn">
                                     <i class="fas fa-list me-2"></i>
                                     Voir la liste complète des projets clôturés
                                 </a>
+                                @endcan
                             </div>
                         </div>
                     </div>
@@ -446,9 +450,11 @@
 
                     <div class="modal-footer">
 
+                        @can("consulter_ecran_" . $ecran->id)
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-times me-1"></i> Fermer
                         </button>
+                        @endcan
                     </div>
                 </form>
             </div>
@@ -469,12 +475,16 @@
                     <p id="confirmationMessage">Êtes-vous sûr de vouloir clôturer ce projet ? Cette action est irréversible.</p>
                 </div>
                 <div class="modal-footer">
+                    @can("consulter_ecran_" . $ecran->id)
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i> Annuler
                     </button>
+                    @endcan
+                    @can("modifier_ecran_" . $ecran->id)
                     <button type="button" class="btn btn-danger" id="confirmCloture">
                         <i class="fas fa-check me-1"></i> Confirmer
                     </button>
+                    @endcan
                 </div>
             </div>
         </div>

@@ -1,7 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 <div class="page-heading">
     <div class="page-title">
       <div class="row">
@@ -77,7 +78,7 @@
     {{-- GRAPHIQUE PAR SECTEUR --}}
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Montants par secteur & part du PIB</strong>
+            <strong>Montants par domaine & part du PIB</strong>
             <div class="d-flex gap-2">
                 <button type="button" id="btnExportPng" class="btn btn-sm btn-outline-secondary">
                     Export PNG
@@ -155,6 +156,7 @@
                 <div id="formPIB" class="collapse show mt-3">
                     <form class="form" method="POST" action="{{ route('pib.store') }}">
                         @csrf
+                        <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                         <div class="row">
                             <div class="col-md-4 col-12">
                                 <label>Année :</label>
@@ -174,7 +176,9 @@
                             </div>
                         </div>
                         <div class="col text-end">
+                            @can("ajouter_ecran_" . $ecran->id)
                             <button type="submit" class="btn btn-primary mt-2">Enregistrer</button>
+                            @endcan
                         </div>
                     </form>
                 </div>
@@ -200,16 +204,21 @@
                                 <td class="col-3 text-end">{{ number_format($pib->montant_pib, 0, ',', ' ') }}</td>
                                 <td class="col-2">
                                     <div class="btn-group btn-group-sm">
+                                        @can("modifier_ecran_" . $ecran->id)
                                         <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#edit-modal-{{ $pib->code }}">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
+                                        @endcan
+                                        @can("supprimer_ecran_" . $ecran->id)
                                         <form method="POST" action="{{ route('pib.destroy', $pib->code) }}" onsubmit="return confirm('Supprimer ce PIB ?');">
                                             @csrf
                                             @method('DELETE')
+                                            <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                                             <button type="submit" class="btn btn-outline-danger">
                                                 <i class="bi bi-trash3"></i>
                                             </button>
                                         </form>
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>
@@ -220,6 +229,7 @@
                                     <form method="POST" action="{{ route('pib.update', $pib->code) }}">
                                         @csrf
                                         @method('PUT')
+                                        <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Modifier PIB</h5>
@@ -240,7 +250,9 @@
                                                 </select>
                                             </div>
                                             <div class="modal-footer">
+                                                @can("modifier_ecran_" . $ecran->id)
                                                 <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                                @endcan
                                             </div>
                                         </div>
                                     </form>
@@ -448,5 +460,6 @@
 
 })();
 </script>
-
+    @endcan
+@endisset
 @endsection

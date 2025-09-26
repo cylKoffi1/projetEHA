@@ -5,18 +5,21 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Ecran;
 
 class ProfilController extends Controller
 {
-    public function index()
+    public function index(Request $request)
 {
+    $ecran = Ecran::find($request->input('ecran_id'));
     $user = Auth::user();
     $acteur = $user->acteur()->with(['personnePhysique', 'pays'])->first();
-    return view('utilisateur.profil', compact('user', 'acteur'));
+    return view('utilisateur.profil', compact('user', 'acteur', 'ecran'));
 }
 
 public function update(Request $request)
 {
+    $ecran = Ecran::find($request->input('ecran_id'));
     $user = Auth::user();
     $acteur = $user->acteur;
 
@@ -43,7 +46,7 @@ public function update(Request $request)
         ]);
     }
 
-    return redirect()->route('profil.index')->with('success', 'Profil mis à jour avec succès.');
+    return redirect()->route('profil.index', ['ecran_id' => $ecran->id])->with('success', 'Profil mis à jour avec succès.');
 }
 
 }

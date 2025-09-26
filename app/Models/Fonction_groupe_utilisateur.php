@@ -24,7 +24,7 @@ class Fonction_groupe_utilisateur extends Model
     ];
     public function groupeUtilisateur()
     {
-        return $this->belongsTo(Role::class, 'code_groupe_utilisateur', 'id');
+        return $this->belongsTo(Role::class, 'code_groupe_utilisateur', 'code');
     }
 
     public function fonction()

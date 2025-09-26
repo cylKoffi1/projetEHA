@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+@isset($ecran)
+    @can("consulter_ecran_" . $ecran->id)
 <div class="page-heading">
     <div class="page-title">
       <div class="row">
@@ -41,6 +43,7 @@
             <form id="achatForm" method="POST" action="{{ route('gf.achats.store') }}">
                 @csrf
                 <input type="hidden" name="_method" value="POST" id="formMethod">
+                <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">Projet *</label>
@@ -137,7 +140,12 @@
                 </div>
 
                 <div class="text-end mt-3">
+                    @can("ajouter_ecran_" . $ecran->id)
                     <button type="submit" class="btn btn-primary" id="submitBtn">Enregistrer</button>
+                    @endcan
+                    @can("modifier_ecran_" . $ecran->id)
+                    <button type="submit" class="btn btn-primary d-none" id="updateBtn">Mettre à jour</button>
+                    @endcan
                     <button type="button" class="btn btn-secondary d-none" id="cancelEdit">Annuler édition</button>
                 </div>
             </form>
@@ -186,6 +194,7 @@
                             <td>{{ number_format($a->total_ttc, 2, ',', ' ') }} {{ $a->devise }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    @can("modifier_ecran_" . $ecran->id)
                                     <button class="btn btn-outline-primary btn-edit"
                                         data-id="{{ $a->id }}"
                                         data-code_projet="{{ $a->code_projet }}"
@@ -198,16 +207,18 @@
                                         data-lignes='@json($lines)'>
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
+                                    @endcan
+                                    @can("supprimer_ecran_" . $ecran->id)
                                     <button type="button"
                                             class="btn btn-outline-danger btn-sm"
-                                            onclick="confirmDelete('{{ route('gf.achats.destroy', $a->id) }}', () => location.reload(), {
+                                            onclick="confirmDelete('{{ route('gf.achats.destroy', $a->id) }}?ecran_id={{ $ecran->id }}', () => location.reload(), {
                                                 title: 'Supprimer cet achat ?',
                                                 text:  'Cette action est irréversible.',
                                                 successMessage: 'Achat supprimé avec succès.'
                                             })">
                                     <i class="bi bi-trash"></i>
                                     </button>
-
+                                    @endcan
                                 </div>
                             </td>
                         </tr>
@@ -352,7 +363,14 @@
 
         $('#achatForm').attr('action', '{{ route("gf.achats.update","__ID__") }}'.replace('__ID__', d.id));
         $('#formMethod').val('PUT');
-        $('#submitBtn').text('Mettre à jour');
+        
+        // Afficher le bon bouton selon les droits
+        @can("ajouter_ecran_" . $ecran->id)
+        $('#submitBtn').addClass('d-none');
+        @endcan
+        @can("modifier_ecran_" . $ecran->id)
+        $('#updateBtn').removeClass('d-none');
+        @endcan
         $('#cancelEdit').removeClass('d-none');
 
         $('select[name="code_projet"]').val(d.code_projet);
@@ -389,7 +407,12 @@
     $('#cancelEdit').on('click', function(){
         $('#achatForm').attr('action', '{{ route("gf.achats.store") }}');
         $('#formMethod').val('POST');
-        $('#submitBtn').text('Enregistrer');
+        
+        // Afficher le bon bouton selon les droits
+        @can("ajouter_ecran_" . $ecran->id)
+        $('#submitBtn').removeClass('d-none');
+        @endcan
+        $('#updateBtn').addClass('d-none');
         $(this).addClass('d-none');
         $('#achatForm')[0].reset();
         $body.empty();
@@ -444,6 +467,6 @@
     });
 })();
 </script>
-
-
+    @endcan
+@endisset
 @endsection

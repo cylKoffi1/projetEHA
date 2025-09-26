@@ -13,7 +13,7 @@ class ReglementPrestataire extends Model
         'code_projet','code_acteur',
         'reference_facture','date_facture','tranche_no',
         'montant_facture','montant_regle','devise',
-        'mode_id','statut_id','date_reglement',
+        'mode_id','statut_id','date_reglement','banqueId',
         'commentaire','created_by'
     ];
 
@@ -29,7 +29,7 @@ class ReglementPrestataire extends Model
     public function prestataire() { return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur'); }
     public function mode()        { return $this->belongsTo(ModePaiement::class, 'mode_id'); }
     public function statut()      { return $this->belongsTo(ReglementStatut::class, 'statut_id'); }
-
+    public function banque()      { return $this->belongsTo(Banque::class, 'banqueId'); }
     public function getSoldeAttribute()
     {
         if (is_null($this->montant_facture)) return null;
