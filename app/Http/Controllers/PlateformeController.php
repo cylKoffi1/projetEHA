@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Acteur;
 use App\Models\ActionMener;
 use App\Models\Approbateur;
 use App\Models\Banque;
@@ -40,19 +41,31 @@ class PlateformeController extends Controller
 {
     
     /******************* BANQUES  ***********************/
-        public function indexBanques(Request $request)
+        public function indexBanque(Request $request)
         {
-            // L’écran est utile pour les permissions en Blade
-            $ecran = Ecran::find($request->input('ecran_id'));
-            $pays = Pays::orderBy('nom_fr_fr')->where('alpha3', session('pays_selectionne'))->first();
-            return view('GestionFinanciere.banques', compact('pays','ecran'));
+            $ecranId = $request->input('ecran_id');
+            $ecran   = Ecran::findOrFail($ecranId); 
+
+            $pays = Pays::orderBy('nom_fr_fr')
+                ->where('alpha3', session('pays_selectionne'))
+                ->first();
+
+            return view('parGeneraux.banques', compact('pays', 'ecran'));
         }
 
-        public function listBanques(Request $request)
+        public function listBanque(Request $request)
         {
             try {
+                $alpha3 = session('pays_selectionne');
+
                 $banques = Banque::with(['pays:id,alpha3,nom_fr_fr'])
-                ->where('code_pays', session('pays_selectionne'))->orderBy('nom')->get();
+                    ->where(function ($q) use ($alpha3) {
+                        $q->where('code_pays', $alpha3)
+                        ->orWhere('est_internationale', true);
+                    })
+                    ->orderBy('nom')
+                    ->get();
+
                 return response()->json(['ok' => true, 'data' => $banques]);
             } catch (\Throwable $e) {
                 Log::error('Banque list error', ['ex' => $e]);
@@ -60,74 +73,117 @@ class PlateformeController extends Controller
             }
         }
 
-        public function storeBanques(Request $request)
+        public function storeBanque(Request $request)
         {
             try {
-                $ecran = Ecran::find($request->input('ecran_id'));
+                $ecran = Ecran::findOrFail($request->input('ecran_id'));
                 Gate::authorize("ajouter_ecran_{$ecran->id}");
-
-                $v = Validator::make($request->all(), [
-                    'nom' => 'required|string|max:191',
-                    'sigle' => 'nullable|string|max:50',
-                    'est_internationale' => 'required|boolean',
-                    'code_pays' => 'nullable|string|size:3',
-                    'code_swift' => 'nullable|string|max:11',
-                    'adresse' => 'nullable|string',
-                    'telephone' => 'nullable|string|max:50',
-                    'email' => 'nullable|email|max:191',
-                    'site_web' => 'nullable|url|max:191',
-                    'actif' => 'required|boolean',
+        
+                // 1) Normaliser le booléen
+                $estIntl = filter_var($request->input('est_internationale'), FILTER_VALIDATE_BOOL);
+        
+                // 2) Imposer code_pays depuis la session (ou null si internationale)
+                $autoAlpha3 = $estIntl ? null : session('pays_selectionne');
+                $request->merge([
+                    'est_internationale' => $estIntl ? 1 : 0,
+                    'code_pays'          => $autoAlpha3,
                 ]);
+        
+                // 3) Valider
+                $v = Validator::make($request->all(), [
+                    'nom'                 => ['required','string','max:191'],
+                    'sigle'               => ['nullable','string','max:50'],
+                    'est_internationale'  => ['required','boolean'],
+                    'code_pays'           => [
+                        // obligatoire si pas internationale (mais déjà injecté ci-dessus)
+                        'required_if:est_internationale,0',
+                        'nullable','string','size:3',
+                        Rule::exists('pays','alpha3'),
+                        // s’il y a un pays en session, verrouiller dessus pour éviter l’injection
+                        Rule::in(array_filter([session('pays_selectionne')])),
+                    ],
+                    'code_swift'          => [
+                        'nullable','string','max:11',
+                        'regex:/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/',
+                        Rule::unique('banques','code_swift')->whereNull('deleted_at'),
+                    ],
+                    'adresse'             => ['nullable','string'],
+                    'telephone'           => ['nullable','string','max:50'],
+                    'email'               => ['nullable','email:rfc,dns','max:191'],
+                    'site_web'            => ['nullable','url','max:191'],
+                    'actif'               => ['required','boolean'],
+                ], [
+                    'code_pays.required_if' => 'Le pays est obligatoire pour une banque non internationale.',
+                    'code_swift.regex'      => 'Le code SWIFT doit contenir 8 ou 11 caractères valides (A–Z, 0–9).',
+                ]);
+        
                 if ($v->fails()) {
                     return response()->json(['ok' => false, 'message' => $v->errors()->first()], 422);
                 }
-
-                // Normalisation
+        
                 $data = $v->validated();
-                $data['code_pays'] = $data['est_internationale'] ? null : (isset($data['code_pays']) ? strtoupper($data['code_pays']) : null);
-
+                $data['code_swift'] = isset($data['code_swift']) ? strtoupper(trim($data['code_swift'])) : null;
+        
                 $banque = Banque::create($data);
-
+        
                 Log::info('Banque created', ['id' => $banque->id, 'by' => $request->user()->id]);
-
                 return response()->json(['ok' => true, 'message' => 'Banque créée avec succès.', 'data' => $banque]);
             } catch (\Throwable $e) {
                 Log::error('Banque store error', ['ex' => $e, 'payload' => $request->all()]);
                 return response()->json(['ok' => false, 'message' => "Création impossible."], 500);
             }
         }
-
-        public function updateBanques($id, Request $request)
+        
+        public function updateBanque($id, Request $request)
         {
             try {
-                $ecran = Ecran::find($request->input('ecran_id'));
+                $ecran = Ecran::findOrFail($request->input('ecran_id'));
                 Gate::authorize("modifier_ecran_{$ecran->id}");
-
+        
                 $banque = Banque::findOrFail($id);
-
-                $v = Validator::make($request->all(), [
-                    'nom' => 'required|string|max:191',
-                    'sigle' => 'nullable|string|max:50',
-                    'est_internationale' => 'required|boolean',
-                    'code_pays' => 'nullable|string|size:3',
-                    'code_swift' => 'nullable|string|max:11',
-                    'adresse' => 'nullable|string',
-                    'telephone' => 'nullable|string|max:50',
-                    'email' => 'nullable|email|max:191',
-                    'site_web' => 'nullable|url|max:191',
-                    'actif' => 'required|boolean',
+        
+                $estIntl    = filter_var($request->input('est_internationale'), FILTER_VALIDATE_BOOL);
+                $autoAlpha3 = $estIntl ? null : session('pays_selectionne');
+                $request->merge([
+                    'est_internationale' => $estIntl ? 1 : 0,
+                    'code_pays'          => $autoAlpha3,
                 ]);
+        
+                $v = Validator::make($request->all(), [
+                    'nom'                 => ['required','string','max:191'],
+                    'sigle'               => ['nullable','string','max:50'],
+                    'est_internationale'  => ['required','boolean'],
+                    'code_pays'           => [
+                        'required_if:est_internationale,0',
+                        'nullable','string','size:3',
+                        Rule::exists('pays','alpha3'),
+                        Rule::in(array_filter([session('pays_selectionne')])),
+                    ],
+                    'code_swift'          => [
+                        'nullable','string','max:11',
+                        'regex:/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/',
+                        Rule::unique('banques','code_swift')->ignore($banque->id)->whereNull('deleted_at'),
+                    ],
+                    'adresse'             => ['nullable','string'],
+                    'telephone'           => ['nullable','string','max:50'],
+                    'email'               => ['nullable','email:rfc,dns','max:191'],
+                    'site_web'            => ['nullable','url','max:191'],
+                    'actif'               => ['required','boolean'],
+                ], [
+                    'code_pays.required_if' => 'Le pays est obligatoire pour une banque non internationale.',
+                    'code_swift.regex'      => 'Le code SWIFT doit contenir 8 ou 11 caractères valides (A–Z, 0–9).',
+                ]);
+        
                 if ($v->fails()) {
                     return response()->json(['ok' => false, 'message' => $v->errors()->first()], 422);
                 }
-
+        
                 $data = $v->validated();
-                $data['code_pays'] = $data['est_internationale'] ? null : (isset($data['code_pays']) ? strtoupper($data['code_pays']) : null);
-
+                $data['code_swift'] = isset($data['code_swift']) ? strtoupper(trim($data['code_swift'])) : null;
+        
                 $banque->update($data);
-
+        
                 Log::info('Banque updated', ['id' => $banque->id, 'by' => $request->user()->id]);
-
                 return response()->json(['ok' => true, 'message' => 'Banque mise à jour.', 'data' => $banque]);
             } catch (\Throwable $e) {
                 Log::error('Banque update error', ['ex' => $e, 'id' => $id, 'payload' => $request->all()]);
@@ -135,10 +191,13 @@ class PlateformeController extends Controller
             }
         }
 
-        public function destroyBanques($id, Request $request)
+        /**
+         * Suppression (SoftDelete) d’une banque.
+         */
+        public function destroyBanque($id, Request $request)
         {
             try {
-                $ecran = Ecran::find($request->input('ecran_id'));
+                $ecran = Ecran::findOrFail($request->input('ecran_id'));
                 Gate::authorize("supprimer_ecran_{$ecran->id}");
 
                 $banque = Banque::findOrFail($id);
@@ -568,6 +627,17 @@ class PlateformeController extends Controller
    
 
     // Enregistrer une liste d’approbateurs
+    public function approbation(Request $request){
+        $ecran = Ecran::find($request->input('ecran_id'));
+        $acteurs = Acteur::where('type_acteur', 'etp')
+        ->whereIn('code_pays', [session('pays_selectionne')])->get();
+        // Récupérer le dernier numéro d'ordre enregistré
+        $lastOrder = Approbateur::orderBy('numOrdre', 'desc')->first();
+        $nextOrder = $lastOrder ? $lastOrder->numOrdre + 1 : 1;
+
+        $approbateurs = Approbateur::with('acteur')->get();
+        return view('parGeneraux.approbateur', compact('nextOrder','ecran', 'acteurs', 'approbateurs'));
+    }
     public function storeApprobation(Request $request)
     {
         $request->validate([

@@ -32,10 +32,12 @@ class SousMenu extends Model
         return $this->hasMany(SousMenu::class, 'sous_menu_parent', 'code')
                     ->with('sousSousMenusRecursive', 'ecrans');
     }
+
     public function sm_parent()
     {
         return $this->belongsTo(SousMenu::class, 'sous_menu_parent', 'code');
     }
+    
     public function permission()
     {
         return $this->belongsTo(Permission::class, 'permission_id', 'id');

@@ -566,12 +566,6 @@ class RoleAssignmentController extends Controller
                 DB::transaction(function () use ($request) {
                     $sm = new SousMenu;
     
-                    if ($request->filled('code')) {
-                        $request->validate(['code' => 'string|max:50|unique:sous_menus,code']);
-                        $sm->code = $request->input('code');
-                    } else {
-                        $sm->code = Str::upper(Str::random(8));
-                    }
     
                     $sm->libelle          = $request->input('libelle');
                     $sm->ordre            = $request->input('ordre');
@@ -601,7 +595,7 @@ class RoleAssignmentController extends Controller
         {
             try {
                 $request->validate([
-                    'edit_code'            => 'required|string|exists:sous_menus,code',
+                    'edit_code'            => 'required|exists:sous_menus,code',
                     'edit_libelle'         => 'required|string|max:255',
                     'edit_ordre'           => 'required|integer|min:1',
                     'edit_niveau'          => 'required|integer|min:0',
@@ -724,9 +718,9 @@ class RoleAssignmentController extends Controller
         try {
             $request->validate([
                 'edit_code'          => 'required|integer|exists:views,id',
-                'edit_libelle'       => 'required|string|max:255',
-                'edit_ordre'         => 'required|integer|min:1',
-                'edit_path'          => 'required|string|max:255',
+                'libelle'       => 'required|string|max:255',
+                'ordre'         => 'required|integer|min:1',
+                'path'          => 'required|string|max:255',
                 'ecran_id'           => 'required',
             ]);
 
@@ -735,11 +729,11 @@ class RoleAssignmentController extends Controller
                 return redirect()->back()->withErrors("Écran introuvable.");
             }
 
-            $e->libelle        = $request->input('edit_libelle');
-            $e->ordre          = $request->input('edit_ordre');
-            $e->path           = $request->input('edit_path');
-            $e->code_sous_menu = $request->input('edit_code_sous_menu');
-            $e->code_rubrique  = $request->input('edit_code_rubrique');
+            $e->libelle        = $request->input('libelle');
+            $e->ordre          = $request->input('ordre');
+            $e->path           = $request->input('path');
+            $e->code_sous_menu = $request->input('code_sous_menu');
+            $e->code_rubrique  = $request->input('code_rubrique');
             $e->save();
 
             return redirect()->route('ecran.index', ['ecran_id' => $request->input('ecran_id')])
@@ -779,7 +773,12 @@ class RoleAssignmentController extends Controller
             return response()->json(['error' => "Impossible de supprimer l’écran."], 500);
         }
     }
-
+    public function getEcran($id)
+    {
+        $ecran = Ecran::find($id);
+        if (!$ecran) return response()->json(['error' => 'Écran non trouvé'], 404);
+        return response()->json($ecran);
+    }
     public function bulkDeleteEcrans(Request $request)
     {
         try {

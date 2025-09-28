@@ -22,6 +22,7 @@ use App\Models\Renforcement;
 use App\Models\TravauxConnexes;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -31,80 +32,110 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 class GestionFinanciereController extends Controller
 {
-    /*******************DECAISSEMENT ***********************/
+  
+    /******************* DECAISSEMENTS ***********************/
         /** Liste + écran principal */
         public function decaissementsIndex(Request $request)
         {
             $pays   = session('pays_selectionne');
             $groupe = session('projet_selectionne');
-
+    
+            $ecranId = $request->input('ecran_id');
+            $ecran   = $ecranId ? Ecran::find($ecranId) : null;
+    
+            if ($ecran && Gate::denies('consulter_ecran_'.$ecran->id)) {
+                abort(403);
+            }
+    
             $projets = Projet::where('code_projet', 'like', $pays.$groupe.'%')
                 ->orderBy('code_projet')
                 ->get(['code_projet','libelle_projet','code_devise']);
-
-
-            $decaissements = Decaissement::with(['projet','bailleur','financer.bailleur'])
+    
+            $decaissements = Decaissement::with(['projet','bailleur'])
                 ->whereHas('projet', fn($q)=>$q->where('code_projet','like',$pays.$groupe.'%'))
                 ->orderByDesc('date_decaissement')
                 ->paginate(25);
-
-            return view('GestionFinanciere.decaissementBailleurs', compact('projets','decaissements'));
+    
+                $alpha3 = session('pays_selectionne');
+            // nécessaires à la vue
+            $banques = Banque::where('actif', true)
+            ->where(function ($q) use ($alpha3) {
+                $q->where('code_pays', $alpha3)
+                ->orWhere('est_internationale', true);
+            })
+                ->orderBy('sigle')
+                ->get(['id','sigle','nom','code_pays','est_internationale']);
+    
+            $modes = ModePaiement::all(['id','libelle']); // si tu en as besoin dans cette vue
+    
+            return view('GestionFinanciere.decaissementBailleurs', compact(
+                'ecran','projets','decaissements','banques','modes'
+            ));
         }
-
+    
+        /** Dernière date de décaissement pour (projet, bailleur), optionnellement en excluant un id. */
+        private function getLastDecaissementDate(string $codeProjet, string $codeActeur, ?int $excludeId = null): ?Carbon
+        {
+            $q = Decaissement::where('code_projet', $codeProjet)
+                ->where('code_acteur', $codeActeur);
+    
+            if ($excludeId) {
+                $q->where('id', '!=', $excludeId);
+            }
+    
+            $last = $q->max('date_decaissement');
+            return $last ? Carbon::parse($last) : null;
+        }
+    
         public function getNextTranche(Request $request)
         {
             $code_projet = $request->get('code_projet');
             $financer_id = $request->get('financer_id'); // peut être null
-        
-            // On résout le bailleur (code_acteur) si un financer_id est fourni
+    
+            // Résoudre le bailleur si financer_id fourni
             $codeActeur = null;
             if (!empty($financer_id)) {
                 $fin = Financer::with('bailleur')->find($financer_id);
                 $codeActeur = $fin?->bailleur?->code_acteur;
             }
-        
+    
             $max = Decaissement::where('code_projet', $code_projet)
                 ->when($codeActeur, fn($q) => $q->where('code_acteur', $codeActeur))
                 ->max('tranche_no');
-        
+    
             $next = $max ? ((int)$max + 1) : 1;
-        
+    
             return response()->json(['next' => $next]);
         }
-        
+    
         private function computeNextTranche(string $codeProjet, $financerId = null, $codeActeur = null): int
         {
-            // priorité au codeActeur si fourni (ex: tu peux l’appeler avec code_acteur directement)
             if (!$codeActeur && $financerId) {
                 $fin = Financer::with('bailleur')->find($financerId);
                 $codeActeur = $fin?->bailleur?->code_acteur;
             }
-        
+    
             $max = Decaissement::where('code_projet', $codeProjet)
                 ->when($codeActeur, fn($q) => $q->where('code_acteur', $codeActeur))
                 ->max('tranche_no');
-        
+    
             return $max ? ((int)$max + 1) : 1;
         }
-        
-        // === JSON: listage des financements par projet (pour peupler les selects) ===
+    
+        /** JSON: listage des financements par projet */
         public function financementsByProjet(string $codeProjet)
         {
             $financements = Financer::with(['bailleur.secteurActiviteActeur.secteur'])
                 ->where('code_projet', $codeProjet)
-                ->actifs() // si tu as le scope
                 ->get();
-
+    
             $payload = $financements->map(function ($f) {
                 $b = $f->bailleur;
-                // Libellé bailleur (avec précision Ministère de … si dispo)
                 $isMinistere = trim($b->libelle_court) === 'Ministère' || trim($b->libelle_long) === 'Ministère';
                 $secteur = optional($b->secteurActiviteActeur->first())->secteur?->libelle;
                 $bailleurLabel = trim(($b->libelle_court ?? '').' '.($b->libelle_long ?? ''));
-                if ($isMinistere && $secteur) {
-                    $bailleurLabel = 'Ministère de '.$secteur;
-                }
-
+                if ($isMinistere && $secteur) $bailleurLabel = 'Ministère de '.$secteur;
+    
                 return [
                     'id'               => $f->id,
                     'montant'          => (float) $f->montant_finance,
@@ -117,44 +148,40 @@ class GestionFinanciereController extends Controller
                     'bailleur_secteur' => $secteur,
                 ];
             })->values();
-
+    
             return response()->json($payload);
         }
-
-        /**
-         * Retourne le plafond (montant financé) et le total déjà décaissé
-         * pour un couple (code_projet, code_acteur). Si financer_id est fourni,
-         * le plafond est le montant de CE financement uniquement ; sinon, c’est
-         * la somme des financements de ce bailleur sur le projet.
-         *
-         * @return array{plafond: float, deja: float}
-         */
+    
+        /** Plafond/déjà pour (projet, bailleur), option financer_id */
         private function getPlafondEtDeja(string $codeProjet, ?int $financerId, string $codeActeur, ?int $ignoreDecaissementId = null): array
         {
-            // 1) Plafond (financement)
             if ($financerId) {
                 $plafond = (float) optional(Financer::find($financerId))->montant_finance ?? 0.0;
             } else {
-                // somme des financements du même bailleur sur le projet
                 $plafond = (float) Financer::where('code_projet', $codeProjet)
                     ->whereHas('bailleur', fn($q) => $q->where('code_acteur', $codeActeur))
                     ->sum('montant_finance');
             }
-
-            // 2) Déjà décaissé (tous décaissements pour ce projet + bailleur)
+    
             $deja = (float) Decaissement::where('code_projet', $codeProjet)
                 ->where('code_acteur', $codeActeur)
                 ->when($ignoreDecaissementId, fn($q) => $q->where('id', '!=', $ignoreDecaissementId))
                 ->sum('montant');
-
+    
             return ['plafond' => $plafond, 'deja' => $deja];
         }
-
-        // === JSON: création ===
+    
+        /** Création */
         public function decaissementsStore(Request $request)
         {
+            // Autorisation création par écran
+            $ecran = Ecran::find($request->input('ecran_id'));
+            if ($ecran && Gate::denies('ajouter_ecran_'.$ecran->id)) {
+                return response()->json(['ok'=>false,'message'=>"Vous n'êtes pas autorisé à ajouter."], 403);
+            }
+    
             try {
-                // 1) Si un financement est choisi, on récupère le bailleur/devise AVANT la validation
+                // Si un financement est choisi, enrichir bailleur/devise
                 if ($request->filled('financer_id')) {
                     $fin = Financer::with('bailleur')->find($request->input('financer_id'));
                     if ($fin && $fin->bailleur) {
@@ -164,85 +191,85 @@ class GestionFinanciereController extends Controller
                         ]);
                     }
                 }
-        
-                // 2) Validation : code_acteur requis si financer_id absent
+    
                 $data = $request->validate([
                     'code_projet'       => ['required','string','exists:projets,code_projet'],
+                    'financer_id'       => ['nullable','integer','exists:financer,id'],
+                    'banqueId'          => ['nullable','integer','exists:banques,id'],
+                    'mode_id'           => ['nullable','integer','exists:mode_paiement,id'],
                     'code_acteur'       => ['required_without:financer_id','string','exists:acteur,code_acteur'],
                     'reference'         => ['nullable','string','max:100'],
                     'tranche_no'        => ['nullable','integer','min:1'],
-                    'montant'           => ['required','numeric', 'min:0.01'],
+                    'montant'           => ['required','numeric','min:0.01'],
                     'devise'            => ['nullable','string','max:10'],
-                    'date_decaissement' => ['nullable','date'],
+                    'date_decaissement' => ['required','date'], // <<< requis pour la règle “date > dernière”
                     'commentaire'       => ['nullable','string'],
                 ], [
                     'code_acteur.required_without' => "Le bailleur est obligatoire si aucun financement n'est sélectionné.",
                 ]);
-
-                // Résoudre code_acteur (tu l’as déjà merge si financer_id)
-                $codeProjet  = $data['code_projet'];
-                $codeActeur  = $data['code_acteur'];
-                $financerId  = $request->input('financer_id');
+    
+                // Règle métier : date strictement > à la dernière
+                $last = $this->getLastDecaissementDate($data['code_projet'], $data['code_acteur']);
+                if ($last && Carbon::parse($data['date_decaissement'])->lte($last)) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => "La date de décaissement doit être strictement postérieure au dernier décaissement (".$last->format('d/m/Y').").",
+                    ], 422);
+                }
+    
+                // Plafond / déjà
+                $codeProjet = $data['code_projet'];
+                $codeActeur = $data['code_acteur'];
+                $financerId = $data['financer_id'] ?? null;
                 $montantCourant = (float) $data['montant'];
-
-                // Récup plafond & déjà décaissé
+    
                 ['plafond' => $plafond, 'deja' => $deja] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, null);
-
-                // Comparaison
                 if ($plafond > 0 && ($deja + $montantCourant) - $plafond > 1e-9) {
                     $reste = max(0, $plafond - $deja);
                     return response()->json([
-                        'ok'      => false,
-                        'message' => "Plafond dépassé : déjà décaissé "
-                            . number_format($deja, 2, ',', ' ')
-                            . " sur " . number_format($plafond, 2, ',', ' ')
-                            . ". Reste autorisé : " . number_format($reste, 2, ',', ' ') . ".",
+                        'ok'=>false,
+                        'message'=>"Plafond dépassé : déjà décaissé ".number_format($deja,2,',',' ')." sur "
+                            .number_format($plafond,2,',',' ').". Reste autorisé : ".number_format($reste,2,',',' ').".",
                     ], 422);
                 }
-
-                if (!empty($data['financer_id'])) {
-                    $fin = Financer::find($data['financer_id']);
+    
+                if (!empty($financerId)) {
+                    $fin = Financer::find($financerId);
                     if ($fin && $data['montant'] > (float) $fin->montant_finance) {
-                        return response()->json([
-                            'ok'      => false,
-                            'message' => 'Le montant décaissé dépasse le montant financé par le bailleur.',
-                        ], 422);
+                        return response()->json(['ok'=>false,'message'=>'Le montant décaissé dépasse le montant financé.'], 422);
                     }
                 }
-
+    
                 if (empty($data['tranche_no'])) {
-                    $data['tranche_no'] = $this->computeNextTranche(
-                        $data['code_projet'],
-                        $request->input('financer_id'),  
-                        $data['code_acteur'] ?? null    
-                    );
-                }            
-
+                    $data['tranche_no'] = $this->computeNextTranche($codeProjet, $financerId, $codeActeur);
+                }
+    
                 $dec = Decaissement::create($data + ['created_by' => auth()->id()]);
-        
+    
                 return response()->json([
-                    'ok' => true,
-                    'message' => 'Décaissement créé avec succès.',
-                    'data' => $dec->load(['bailleur'])
+                    'ok'=>true,
+                    'message'=>'Décaissement créé avec succès.',
+                    'data'=>$dec->load(['bailleur'])
                 ], 201);
-        
+    
             } catch (\Illuminate\Validation\ValidationException $e) {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Veuillez corriger les erreurs.',
-                    'errors' => $e->errors()
-                ], 422);
+                return response()->json(['ok'=>false,'message'=>'Veuillez corriger les erreurs.','errors'=>$e->errors()], 422);
             } catch (\Throwable $e) {
-                Log::error('Création décaissement - erreur', ['msg' => $e->getMessage()]);
-                return response()->json(['ok' => false, 'message' => 'Erreur lors de la création du décaissement.'], 500);
+                Log::error('Création décaissement - erreur', ['msg'=>$e->getMessage()]);
+                return response()->json(['ok'=>false,'message'=>'Erreur lors de la création du décaissement.'], 500);
             }
         }
-        
-        // === JSON: mise à jour ===
+    
+        /** Mise à jour */
         public function decaissementsUpdate(Request $request, $id)
         {
+            $ecran = Ecran::find($request->input('ecran_id'));
+            if ($ecran && Gate::denies('modifier_ecran_'.$ecran->id)) {
+                return response()->json(['ok'=>false,'message'=>"Vous n'êtes pas autorisé à modifier."], 403);
+            }
+    
             $dec = Decaissement::findOrFail($id);
-        
+    
             try {
                 if ($request->filled('financer_id')) {
                     $fin = Financer::with('bailleur')->find($request->input('financer_id'));
@@ -253,79 +280,83 @@ class GestionFinanciereController extends Controller
                         ]);
                     }
                 }
-        
+    
                 $data = $request->validate([
                     'code_projet'       => ['required','string','exists:projets,code_projet'],
+                    'financer_id'       => ['nullable','integer','exists:financer,id'],
+                    'banqueId'          => ['nullable','integer','exists:banques,id'],
+                    'mode_id'           => ['nullable','integer','exists:mode_paiement,id'],
                     'code_acteur'       => ['required_without:financer_id','string','exists:acteur,code_acteur'],
                     'reference'         => ['nullable','string','max:100'],
                     'tranche_no'        => ['nullable','integer','min:1'],
-                    'montant'           => ['required','numeric', 'min:0.01'],
+                    'montant'           => ['required','numeric','min:0.01'],
                     'devise'            => ['nullable','string','max:10'],
-                    'date_decaissement' => ['nullable','date'],
+                    'date_decaissement' => ['required','date'],
                     'commentaire'       => ['nullable','string'],
                 ], [
                     'code_acteur.required_without' => "Le bailleur est obligatoire si aucun financement n'est sélectionné.",
                 ]);
-        
-                $codeProjet  = $data['code_projet'];
-                $codeActeur  = $data['code_acteur'];
-                $financerId  = $request->input('financer_id');
-                $montantCourant = (float) $data['montant'];
-
-                ['plafond' => $plafond, 'deja' => $dejaHorsCourant] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, $dec->id);
-
-                if ($plafond > 0 && ($dejaHorsCourant + $montantCourant) - $plafond > 1e-9) {
-                    $reste = max(0, $plafond - $dejaHorsCourant);
+    
+                // Règle métier: date > dernière (hors courant)
+                $last = $this->getLastDecaissementDate($data['code_projet'], $data['code_acteur'], $dec->id);
+                if ($last && Carbon::parse($data['date_decaissement'])->lte($last)) {
                     return response()->json([
-                        'ok'      => false,
-                        'message' => "Plafond dépassé : déjà décaissé "
-                            . number_format($dejaHorsCourant, 2, ',', ' ')
-                            . " sur " . number_format($plafond, 2, ',', ' ')
-                            . ". Reste autorisé : " . number_format($reste, 2, ',', ' ') . ".",
+                        'ok'=>false,
+                        'message'=>"La date de décaissement doit être strictement postérieure au dernier décaissement (".$last->format('d/m/Y').").",
                     ], 422);
                 }
-
-                if (!empty($data['financer_id'])) {
-                    $fin = Financer::find($data['financer_id']);
+    
+                $codeProjet     = $data['code_projet'];
+                $codeActeur     = $data['code_acteur'];
+                $financerId     = $data['financer_id'] ?? null;
+                $montantCourant = (float) $data['montant'];
+    
+                ['plafond' => $plafond, 'deja' => $dejaHors] = $this->getPlafondEtDeja($codeProjet, $financerId, $codeActeur, $dec->id);
+                if ($plafond > 0 && ($dejaHors + $montantCourant) - $plafond > 1e-9) {
+                    $reste = max(0, $plafond - $dejaHors);
+                    return response()->json([
+                        'ok'=>false,
+                        'message'=>"Plafond dépassé : déjà décaissé ".number_format($dejaHors,2,',',' ')
+                            ." sur ".number_format($plafond,2,',',' ')
+                            .". Reste autorisé : ".number_format($reste,2,',',' ').".",
+                    ], 422);
+                }
+    
+                if (!empty($financerId)) {
+                    $fin = Financer::find($financerId);
                     if ($fin && $data['montant'] > (float) $fin->montant_finance) {
-                        return response()->json([
-                            'ok'      => false,
-                            'message' => 'Le montant décaissé dépasse le montant financé par le bailleur.',
-                        ], 422);
+                        return response()->json(['ok'=>false,'message'=>'Le montant décaissé dépasse le montant financé.'], 422);
                     }
                 }
-        
+    
                 if (empty($data['tranche_no'])) {
-                    $data['tranche_no'] = $this->computeNextTranche(
-                        $data['code_projet'],
-                        $request->input('financer_id'),   
-                        $data['code_acteur'] ?? null      
-                    );
+                    $data['tranche_no'] = $this->computeNextTranche($codeProjet, $financerId, $codeActeur);
                 }
-                
+    
                 $dec->update($data);
-        
+    
                 return response()->json([
-                    'ok' => true,
-                    'message' => 'Décaissement mis à jour.',
-                    'data' => $dec->fresh()->load(['bailleur'])
+                    'ok'=>true,
+                    'message'=>'Décaissement mis à jour.',
+                    'data'=>$dec->fresh()->load(['bailleur'])
                 ]);
-        
+    
             } catch (\Illuminate\Validation\ValidationException $e) {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Veuillez corriger les erreurs.',
-                    'errors' => $e->errors()
-                ], 422);
+                return response()->json(['ok'=>false,'message'=>'Veuillez corriger les erreurs.','errors'=>$e->errors()], 422);
             } catch (\Throwable $e) {
-                \Log::error('MAJ décaissement - erreur', ['msg' => $e->getMessage()]);
-                return response()->json(['ok' => false, 'message' => 'Erreur lors de la mise à jour.'], 500);
+                Log::error('MAJ décaissement - erreur', ['msg'=>$e->getMessage()]);
+                return response()->json(['ok'=>false,'message'=>'Erreur lors de la mise à jour.'], 500);
             }
         }
-        
-        // === JSON: suppression ===
-        public function decaissementsDestroy($id)
+    
+        /** Suppression */
+        public function decaissementsDestroy(Request $request, $id)
         {
+            $ecran = Ecran::find($request->input('ecran_id'));
+            if ($ecran && Gate::denies('supprimer_ecran_'.$ecran->id)) {
+                return response()->json(['ok'=>false,'message'=>"Vous n'êtes pas autorisé à supprimer."], 403);
+            }
+    
             try {
                 $dec = Decaissement::findOrFail($id);
                 $dec->delete();
@@ -334,8 +365,10 @@ class GestionFinanciereController extends Controller
                 return response()->json(['ok'=>false,'message'=>'Suppression impossible.'], 500);
             }
         }
-    /******************* FIN DECAISSEMENT ***********************/
+    /******************* FIN DECAISSEMENTS ***********************/
+    
 
+    
 
     /******************* ACHAT DE MATERIEL ******************/
         public function achatsIndex(Request $request)
@@ -576,7 +609,7 @@ class GestionFinanciereController extends Controller
                 'date_reglement'      => ['required','date'],
                 'tranche_no'          => ['nullable','integer','min:1'],
                 'banqueId'            => ['nullable','integer','exists:banques,id'],
-
+                'mode_id'           => ['nullable','integer','exists:mode_paiement,id'],
                 // Contexte (mutuellement exclusif)
                 'code_travaux_connexe'=> ['nullable','string'],
                 'code_renforcement'   => ['nullable','string'],

@@ -6,12 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Decaissement extends Model
 {
-    protected $table = 'gf_decaissements'; // adapte au nom réel de ta table
+    protected $table = 'gf_decaissements';
     public $timestamps = true;
 
     protected $fillable = [
         'code_projet',
-        'code_acteur',         // bailleur
+        'financer_id',       // ✅ ajouter
+        'banqueId',  
+        'mode_id',        // ✅ ajouter
+        'code_acteur',       // bailleur
         'reference',
         'tranche_no',
         'montant',
@@ -22,7 +25,10 @@ class Decaissement extends Model
     ];
 
     protected $casts = [
-        'tranche_no'        => 'integer', 
+        'financer_id'       => 'integer',
+        'banqueId'          => 'integer',
+        'mode_id'           => 'integer',
+        'tranche_no'        => 'integer',
         'montant'           => 'decimal:2',
         'date_decaissement' => 'date',
         'created_at'        => 'datetime',
@@ -37,7 +43,7 @@ class Decaissement extends Model
 
     public function financer()
     {
-        return $this->belongsTo(Financer::class, 'code_acteur');
+        return $this->belongsTo(Financer::class, 'financer_id'); // ✅ correct
     }
 
     public function bailleur()
@@ -45,4 +51,12 @@ class Decaissement extends Model
         return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
     }
 
+    public function banque()
+    {
+        return $this->belongsTo(Banque::class, 'banqueId'); // ✅
+    }
+    public function mode()
+    {
+        return $this->belongsTo(ModePaiement::class, 'mode_id', 'id');
+    }
 }

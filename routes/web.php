@@ -42,6 +42,7 @@ use App\Http\Controllers\sigAdminController;
 use App\Http\Controllers\SigAdminInfrastructureController;
 use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
+use App\Http\Controllers\WorkflowValidationController;
 use App\Models\Domaine;
 use App\Models\EtudeProject;
 use App\Models\LocalitesPays;
@@ -400,43 +401,76 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             
             Route::get('admin/autresRequetes', [SigAdminInfrastructureController::class, 'pageInfras'])->name('sig.infras');
 
-// agrégats & légende
- /*          Route::get('/api/legende/{groupe}', [SigAdminInfrastructureController::class, 'getByGroupe']);
+            // agrégats & légende
+            /*          Route::get('/api/legende/{groupe}', [SigAdminInfrastructureController::class, 'getByGroupe']);
 
-            // Agrégat principal (utilisé par map.js → loadProjectData)
-            Route::get('/api/projects', [SigAdminInfrastructureController::class, 'getProjects']);
-            Route::get('/api/filtrer-projets', [SigAdminInfrastructureController::class, 'getFiltreOptionsEtProjets']);
+                        // Agrégat principal (utilisé par map.js → loadProjectData)
+                        Route::get('/api/projects', [SigAdminInfrastructureController::class, 'getProjects']);
+                        Route::get('/api/filtrer-projets', [SigAdminInfrastructureController::class, 'getFiltreOptionsEtProjets']);
 
-            // Détails (tiroir)
-            Route::get('/api/project-details', [SigAdminInfrastructureController::class, 'getProjectDetails']);
+                        // Détails (tiroir)
+                        Route::get('/api/project-details', [SigAdminInfrastructureController::class, 'getProjectDetails']);
 
-            // Légende fallback (optionnel)
-            Route::get('/api/legend', [SigAdminInfrastructureController::class, 'legend']);
+                        // Légende fallback (optionnel)
+                        Route::get('/api/legend', [SigAdminInfrastructureController::class, 'legend']);
 
-            // Carte Afrique
-            Route::get('/api/projects/all', [SigAdminInfrastructureController::class, 'getAllProjects']);
+                        // Carte Afrique
+                        Route::get('/api/projects/all', [SigAdminInfrastructureController::class, 'getAllProjects']);
 
-            // (optionnels, si utilisés ailleurs)
-            Route::get('/api/aggregate', [SigAdminInfrastructureController::class, 'aggregate']);
-            Route::get('/api/details',   [SigAdminInfrastructureController::class, 'details']);
-*/
+                        // (optionnels, si utilisés ailleurs)
+                        Route::get('/api/aggregate', [SigAdminInfrastructureController::class, 'aggregate']);
+                        Route::get('/api/details',   [SigAdminInfrastructureController::class, 'details']);
+            */
+
             Route::get('/get-projet-data', 'ProjetController@getProjetData');
 
             Route::get('/dash', function () {
                 return view('dash');
             })->name('dash');
 
-            /****************************GESTION FINANCIERE  **********************************************/
-            Route::get ('admin/decaissementBailleurs',              [GestionFinanciereController::class, 'decaissementsIndex'])->name('gf.decaissements.index');
-            Route::post('admin/decaissementBailleurs',              [GestionFinanciereController::class, 'decaissementsStore'])->name('gf.decaissements.store');
-            Route::put ('admin/decaissementBailleurs/{id}',         [GestionFinanciereController::class, 'decaissementsUpdate'])->name('gf.decaissements.update');
-            Route::delete('admin/decaissementBailleurs/{id}',       [GestionFinanciereController::class, 'decaissementsDestroy'])->name('gf.decaissements.destroy');
-            Route::get('gf/decaissements/next-tranche', [GestionFinanciereController::class, 'getNextTranche'])->name('gf.decaissements.nextTranche');
+            /***************************WORKFLOW DE VALIDATION******************** */
+                        
+                    // --- VUES (toutes servies par le contrôleur) ---
+                    Route::get('admin/workflows/ui',                 [WorkflowValidationController::class, 'ui'])->name('workflows.ui');
+                    Route::get('admin/workflows/create',             [WorkflowValidationController::class, 'createForm'])->name('workflows.createForm');
+                    Route::get('admin/workflows/{id}/design',        [WorkflowValidationController::class, 'designForm'])->name('workflows.designForm');
+                    Route::get('admin/workflows/{id}/bindings',      [WorkflowValidationController::class, 'bindingsView'])->name('workflows.bindingsView');
+                    Route::get('admin/approbations/{instance}/view', [WorkflowValidationController::class, 'instanceView'])->name('approbations.instanceView');
+                    Route::get('admin/approbations/dashboard', [WorkflowValidationController::class, 'dashboard'])->name('approbations.dashboard');
+                    Route::post('/approbations/steps/{stepInstanceId}/act', [WorkflowValidationController::class, 'act'])->name('approbations.act');
+               
+                    // --- Conception / Admin (JSON) ---
+                    Route::get('/workflows',                [WorkflowValidationController::class, 'index'])->name('workflows.index');
+                    Route::post('/workflows',               [WorkflowValidationController::class, 'store'])->name('workflows.store');
+                    Route::get('/workflows/{id}',           [WorkflowValidationController::class, 'show'])->name('workflows.show');
+                    Route::put('/workflows/{id}',           [WorkflowValidationController::class, 'update'])->name('workflows.update');
+                    Route::post('/workflows/{id}/publish',  [WorkflowValidationController::class, 'publish'])->name('workflows.publish');
+                    Route::delete('/workflows/{id}',        [WorkflowValidationController::class, 'destroy'])->name('workflows.destroy');
 
-        
-            // Ajax: récupérer les financements (engagements) d’un projet pour alimenter la liste
-            Route::get('admin/decaissementBailleurs/financements/{code_projet}', [GestionFinanciereController::class, 'financementsByProjet'])
+                    // Liaisons (bindings)
+                    Route::post('/workflows/{id}/bind',     [WorkflowValidationController::class, 'bind'])->name('workflows.bind');
+                    Route::get('/workflows/{id}/bindings',  [WorkflowValidationController::class, 'bindings'])->name('workflows.bindings');
+
+                    // --- Exécution (JSON) ---
+                    Route::post('/approbations/start',      [WorkflowValidationController::class, 'start'])->name('approbations.start');
+                    Route::get('/approbations/{instance}',  [WorkflowValidationController::class, 'showInstance'])->name('approbations.show');
+
+                    // Actions
+                    Route::post('/approbations/etapes/{stepInstance}/act', [WorkflowValidationController::class, 'act'])->name('approbations.act');
+
+                    // Simulation & SLA
+                    Route::post('/workflows/{id}/simulate', [WorkflowValidationController::class, 'simulate'])->name('workflows.simulate');
+                    Route::post('/workflows/sla/tick',      [WorkflowValidationController::class, 'slaTick'])->name('workflows.slaTick');
+
+            /****************************GESTION FINANCIERE  **********************************************/
+            Route::get('gf/decaissements/financements/{codeProjet}', [GestionFinanciereController::class, 'financementsByProjet'])
                 ->name('gf.decaissements.financementsByProjet');
+
+            Route::get ('admin/decaissementBailleurs',        [GestionFinanciereController::class, 'decaissementsIndex'])->name('gf.decaissements.index');
+            Route::post('admin/decaissementBailleurs',        [GestionFinanciereController::class, 'decaissementsStore'])->name('gf.decaissements.store');
+            Route::put ('admin/decaissementBailleurs/{id}',   [GestionFinanciereController::class, 'decaissementsUpdate'])->name('gf.decaissements.update');
+            Route::delete('admin/decaissementBailleurs/{id}', [GestionFinanciereController::class, 'decaissementsDestroy'])->name('gf.decaissements.destroy');
+            Route::get('gf/decaissements/next-tranche',       [GestionFinanciereController::class, 'getNextTranche'])->name('gf.decaissements.nextTranche');
 
             Route::get   ('admin/achatsMateriaux',            [GestionFinanciereController::class, 'achatsIndex'])->name('gf.achats.index');
             Route::post  ('admin/achatsMateriaux',            [GestionFinanciereController::class, 'achatsStore'])->name('gf.achats.store');
@@ -460,12 +494,12 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                 Route::post('admin/pib/store', [GestionFinanciereController::class, 'storePIB'])->name('pib.store');
                 Route::put('admin/pib/update/{id}', [GestionFinanciereController::class, 'updatePIB'])->name('pib.update');
                 Route::delete('admin/pib/destroy/{id}', [GestionFinanciereController::class, 'destroyPIB'])->name('pib.destroy');
-
-            Route::get('admin/banques', [GestionFinanciereController::class, 'indexBanques'])->name('banques.index');
-            Route::get('/banques/list',   [GestionFinanciereController::class, 'listBanques'])->name('banques.list');
-            Route::post('/banques/store', [GestionFinanciereController::class, 'storeBanques'])->name('banques.store');
-            Route::put('/banques/{id}',   [GestionFinanciereController::class, 'updateBanques'])->name('banques.update');
-            Route::delete('/banques/{id}',[GestionFinanciereController::class, 'destroyBanques'])->name('banques.destroy');
+   
+            Route::get('admin/banques', [PlateformeController::class, 'indexBanque'])->name('banques.index');
+            Route::get('/banques/list', [PlateformeController::class, 'listBanque'])->name('banques.list');
+            Route::post('/banques', [PlateformeController::class, 'storeBanque'])->name('banques.store');
+            Route::put('/banques/{id}', [PlateformeController::class, 'updateBanque'])->name('banques.update');
+            Route::delete('/banques/{id}', [PlateformeController::class, 'destroyBanque'])->name('banques.destroy');
             /**************************** GESTION DES STATISTIQUES **********************************/
 
             Route::prefix('admin')->group(function () {

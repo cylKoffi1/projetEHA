@@ -25,7 +25,6 @@ class Banque extends Model
     /** Pays ISO par alpha-3 (ex: CIV) */
     public function pays(): BelongsTo
     {
-        // local key = code_pays ; owner key = alpha3
         return $this->belongsTo(Pays::class, 'code_pays', 'alpha3');
     }
 
@@ -39,5 +38,11 @@ class Banque extends Model
     public function setCodePaysAttribute($value): void
     {
         $this->attributes['code_pays'] = $value ? strtoupper(trim($value)) : null;
+    }
+
+    /** Uppercase + trim automatique du SWIFT */
+    public function setCodeSwiftAttribute($value): void
+    {
+        $this->attributes['code_swift'] = $value ? strtoupper(trim($value)) : null;
     }
 }
