@@ -13,7 +13,7 @@
       <table class="table table-sm align-middle" id="wf-table">
         <thead>
           <tr>
-            <th>Code</th><th>Nom</th><th>Pays</th><th>Groupe</th><th>Versions</th><th></th>
+            <th>Code</th><th>Libelle</th><th>Pays</th><th>Groupe</th><th>Versions</th><th></th>
           </tr>
         </thead>
         <tbody></tbody>

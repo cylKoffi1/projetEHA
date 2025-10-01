@@ -307,7 +307,7 @@
 
                 setTimeout(() => {
                     finaliserCodeProjet();
-                 window.location.href = '{{ route("project.create", ["ecran_id" => $ecran->id]) }}';
+                // window.location.href = '{{ route("project.create", ["ecran_id" => $ecran->id]) }}';
                 }, 1500);
             } else {
                 throw new Error(data.message || 'Erreur serveur');

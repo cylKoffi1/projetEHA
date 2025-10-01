@@ -1,5 +1,25 @@
 @extends('layouts.app')
 
+<style>
+.avatar-stack { display:flex; align-items:center; }
+.avatar {
+  width:28px; height:28px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:600;
+  color:#fff; border:2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.05);
+  margin-left:-8px; /* chevauchement */
+}
+.avatar:first-child { margin-left:0; }
+
+/* Couleurs statut */
+.avatar-success  { background:#28a745; } /* vert */
+.avatar-warning  { background:#ffc107; color:#111; } /* jaune */
+.avatar-danger   { background:#dc3545; } /* rouge */
+.avatar-secondary{ background:#6c757d; } /* gris */
+</style>
+
+
 @section('content')
 <div class="container py-3">
   <div class="d-flex align-items-center mb-3">
@@ -28,8 +48,7 @@
               <th>Objet</th>
               <th>Workflow</th>
               <th>Étape</th>
-              <th>Doivent valider AVANT</th>
-              <th>Doivent valider APRÈS</th>
+              <th>Approbateurs</th> 
               <th>Statut</th>
               <th style="width:260px">Actions</th>
             </tr>
@@ -47,14 +66,25 @@
                   <div class="text-muted small">v{{ $r['version'] ?? '—' }}</div>
                 </td>
                 <td>Étape {{ $r['step_pos'] }}</td>
-                <td class="small">
-                  @if(empty($r['before'])) <span class="text-muted">—</span>
-                  @else {{ implode(', ', $r['before']) }} @endif
+                <td>
+                  <div class="avatar-stack">
+                    @foreach(($r['approvers'] ?? []) as $ap)
+                      @php
+                        $class = match($ap['status'] ?? 'PENDING') {
+                          'APPROUVE'   => 'avatar-success',
+                          'REJETE'     => 'avatar-danger',
+                          'EN_COURS'   => 'avatar-warning',
+                          'PENDING'    => 'avatar-secondary',
+                          default      => 'avatar-secondary', // EN_ATTENTE
+                        };
+                      @endphp
+                      <div class="avatar {{ $class }}" title="{{ $ap['label'] }} ({{ $ap['status'] }})">
+                        {{ $ap['initials'] }}
+                      </div>
+                    @endforeach
+                  </div>
                 </td>
-                <td class="small">
-                  @if(empty($r['after'])) <span class="text-muted">—</span>
-                  @else {{ implode(', ', $r['after']) }} @endif
-                </td>
+
                 <td>
                   @switch($r['status_code'])
                     @case('EN_COURS') <span class="badge bg-warning text-dark">En cours</span> @break
@@ -92,8 +122,14 @@
       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
     </div>
     <div class="modal-body">
-      <label class="form-label">Code acteur destinataire</label>
-      <input id="delegate-to" class="form-control" placeholder="ex: ACT123">
+      <label class="form-label">Acteur destinataire</label>
+      <select name="delegate-to" id="delegate-to" class="form-control">
+        <option value="">— Choisir un acteur —</option>  
+        @foreach ($Users as $user)
+          <option value="{{ $user->code_acteur }}">{{ $user->libelle_court }} {{ $user->libelle_long }}</option>
+        @endforeach
+      </select>
+      
       <div class="form-text">Le code doit correspondre à un acteur valide.</div>
     </div>
     <div class="modal-footer">
@@ -102,14 +138,13 @@
     </div>
   </div></div>
 </div>
-@endsection
 
-@push('scripts')
 <script>
 (function(){
   const CSRF = '{{ csrf_token() }}';
-  const actUrl = (id) => `{{ url('/approbations/steps') }}/${id}/act`;
-
+  // Modèle d’URL généré depuis la route nommée : /approbations/etapes/__ID__/act
+  const ACT_URL_TPL = @json(route('approbations.act', ['stepInstance' => '__ID__']));
+  const actUrl = (id) => ACT_URL_TPL.replace('__ID__', String(id));
   const $tbl   = document.querySelector('#tb-approvals tbody');
   const $chkAll= document.getElementById('chk-all');
   const $filter= document.getElementById('filter');
@@ -200,23 +235,31 @@
   });
 
   /** Appel API act() **/
-  async function doAct(stepId, actionCode, meta=null){
-    try{
-      const res = await fetch(actUrl(stepId), {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json',
-          'X-CSRF-TOKEN': CSRF,
-          'Accept':'application/json'
-        },
-        body: JSON.stringify({ action_code: actionCode, meta })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || 'Erreur');
-    }catch(e){
-      alert(e.message);
-    }
+async function doAct(stepId, actionCode, meta=null){
+  try{
+    const res = await fetch(actUrl(stepId), {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept':'application/json'
+      },
+      body: JSON.stringify({ action_code: actionCode, meta })
+    });
+
+    const ct = res.headers.get('content-type') || '';
+    const isJson = ct.includes('application/json');
+    const data = isJson ? await res.json() : { error: await res.text() };
+
+    if (!res.ok) throw new Error(data.error || data.message || 'Erreur serveur');
+    return data;
+  }catch(e){
+    alert(e.message);
   }
+}
+
 })();
 </script>
-@endpush
+
+@endsection

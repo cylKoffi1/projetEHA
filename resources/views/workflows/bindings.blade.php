@@ -4,8 +4,7 @@
 @section('content')
 <div class="container py-3">
   <div class="d-flex align-items-center mb-3">
-    <h3 class="me-auto">Liaisons du workflow #{{ $workflowId }}</h3>
-    <a href="{{ route('workflows.ui') }}" class="btn btn-outline-secondary">Retour</a>
+    <h3 class="me-auto">Liaisons du workflow #{{ $workflowId }}</h3>   
   </div>
 
   <div class="card mb-3">

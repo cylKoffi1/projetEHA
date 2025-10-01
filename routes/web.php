@@ -437,8 +437,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                     Route::get('admin/workflows/{id}/bindings',      [WorkflowValidationController::class, 'bindingsView'])->name('workflows.bindingsView');
                     Route::get('admin/approbations/{instance}/view', [WorkflowValidationController::class, 'instanceView'])->name('approbations.instanceView');
                     Route::get('admin/approbations/dashboard', [WorkflowValidationController::class, 'dashboard'])->name('approbations.dashboard');
-                    Route::post('/approbations/steps/{stepInstanceId}/act', [WorkflowValidationController::class, 'act'])->name('approbations.act');
-               
+                   
                     // --- Conception / Admin (JSON) ---
                     Route::get('/workflows',                [WorkflowValidationController::class, 'index'])->name('workflows.index');
                     Route::post('/workflows',               [WorkflowValidationController::class, 'store'])->name('workflows.store');

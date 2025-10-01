@@ -11,11 +11,22 @@ class PersonneMorale extends Model
 
     protected $table = 'personne_morale';
     protected $primaryKey = 'id';
+    public $timestamps = false; // adapte si tu as les timestamps
 
     protected $fillable = [
-        'code_acteur', 'raison_sociale', 'date_creation', 'secteur_activite',
-        'forme_juridique', 'num_immatriculation', 'nif', 'rccm', 'capital',
-        'numero_agrement', 'code_postal', 'adresse_postale', 'adresse_siege'
+        'code_acteur',
+        'raison_sociale',
+        'date_creation',
+        'forme_juridique',
+        'num_immatriculation',
+        'nif',
+        'rccm',
+        'capital',
+        'numero_agrement',
+        'code_postal',
+        'adresse_postale',
+        'adresse_siege',
+        // + autres colonnes si présentes
     ];
 
     public function acteur()

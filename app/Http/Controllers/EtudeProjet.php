@@ -34,7 +34,6 @@ use App\Models\Pieceidentite;
 use App\Models\Possederpiece;
 use App\Models\ProjectApproval;
 use App\Models\Projet;
-use App\Models\ProjetEha2;
 use App\Models\Renforcement;
 use App\Models\SecteurActivite;
 use App\Models\SituationMatrimonial;
@@ -69,12 +68,12 @@ use App\Models\StatutOperation;
 use App\Models\TypeFinancement;
 use App\Models\UniteDerivee;
 use App\Services\FileProcService;
+use App\Support\ApprovesWithWorkflow;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\FacadesLog;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
@@ -1284,6 +1283,10 @@ class EtudeProjet extends Controller
         }
     }
 
+    
+
+    use ApprovesWithWorkflow;
+
     public function finaliserProjet()
     {
         return DB::transaction(function () {
@@ -1537,7 +1540,7 @@ class EtudeProjet extends Controller
                 File::ensureDirectoryExists($uploadPath);
                 Log::info('[Finaliser] Répertoire documents prêt', ['path' => $uploadPath]);
 
-                foreach ((($step7['fichiers'] ?? [])) as $i => $f) {
+                /*foreach ((($step7['fichiers'] ?? [])) as $i => $f) {
                     Log::info('[Finaliser] Doc entrée', ['i' => $i, 'file' => $f]);
 
                     $rel = ltrim($f['storage_path'] ?? '', '/');
@@ -1575,7 +1578,7 @@ class EtudeProjet extends Controller
                     } catch (\Throwable $th) {
                         Log::warning('[Finaliser] Échec suppression temp', ['abs' => $absPath, 'ex' => $th->getMessage()]);
                     }
-                }
+                }*/
 
                 // 10) Étude
                 $codeEtude = $this->genererCodeEtude(session('pays_selectionne'), session('projet_selectionne'));
@@ -1583,15 +1586,33 @@ class EtudeProjet extends Controller
                     throw new \Exception('Échec génération code étude');
                 }
 
-                EtudeProject::create([
+                /*EtudeProject::create([
                     'codeEtudeProjets' => $codeEtude,
                     'code_projet'      => $codeProjet,
                     'valider'          => false,
                     'is_deleted'       => false,
-                ]);
+                ]);*/
 
                 Log::info('[Finaliser] Étude créée', ['code_etude' => $codeEtude]);
-
+                try {
+                    $res = $this->startApproval(
+                        module:  'NAISSANCE_PROJET_INFRASTRUCTURE',
+                        type:    'projets',
+                        idObjet: (string) $codeProjet,  
+                        snapshot: []
+                    );
+                
+                    // feedback si besoin
+                    if ($res['created']) {
+                        Log::info('[Finaliser] Approbation lancée', ['instance_id' => $res['instance']->id]);
+                    } else {
+                        Log::info('[Finaliser] Instance déjà active', ['instance_id' => $res['instance']->id]);
+                    }
+                } catch (\DomainException $e) {
+                    // Aucune version publiée liée
+                    Log::warning('[Finaliser] Aucun workflow lié', ['err' => $e->getMessage()]);
+                    // À toi de décider : bloquer ou laisser passer
+                }
                 // 🔁 Nettoyage
                 $this->nettoyerSessionsEtFichiers();
                 Log::info('[Finaliser] Nettoyage sessions OK');
@@ -1599,7 +1620,7 @@ class EtudeProjet extends Controller
                 return response()->json([
                     'success'     => true,
                     'code_projet' => $codeProjet,
-                    'code_etude'  => $codeEtude,
+                    /*'code_etude'  => $codeEtude,*/
                     'message'     => 'Demande effectuée avec succès.',
                 ]);
             } catch (\Throwable $e) {

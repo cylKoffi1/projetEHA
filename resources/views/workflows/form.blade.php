@@ -191,10 +191,10 @@
     <select class="form-select r-op" style="max-width:220px">
         <option value="EQ">= (Égal à)</option>
         <option value="NE">≠ (Différent de)</option>
-        <option value="GT">< (Supérieur à)</option>
-        <option value="GTE"><= (Supérieur ou égal à)</option>
-        <option value="LT">> (Inférieur à)</option>
-        <option value="LTE">>= (Inférieur ou égal à)</option>
+        <option value="GT">> (Supérieur à)</option>
+        <option value="GTE">>= (Supérieur ou égal à)</option>
+        <option value="LT">< (Inférieur à)</option>
+        <option value="LTE"><= (Inférieur ou égal à)</option>
         <option value="IN">∈ (Dans la liste)</option>
         <option value="NOT_IN">∉ (Pas dans la liste)</option>
         <option value="BETWEEN">↔ (Entre min et max)</option>
@@ -387,54 +387,16 @@ async function savePayload() {
 
   const data = await res.json();
   if (!res.ok) {
-    alert((data.message || data.error || 'Erreur') + '\n' + JSON.stringify(data));
+    alert(data.message || data.error || 'Erreur');
     return;
   }
 
   alert(data.message || 'OK');
-  window.location = '{{ route('workflows.index') }}';
+  window.location = `{{ route('workflows.designForm', ['id' => '__ID__']) }}`.replace('__ID__', data.workflow.id);;
 }
 /* ========== Actions ========== */
 document.getElementById('btn-add-step').addEventListener('click', () => addStep());
 
-document.getElementById('btn-save').addEventListener('click', async function () {
-  // petite validation rapide côté client
-  if (!document.getElementById('wf-nom').value.trim()) {
-    alert('Le nom est requis.');
-    return;
-  }
-  if (!document.getElementById('wf-pays').value) {
-    alert('Le pays est obligatoire.');
-    return;
-  }
-
-  const payload = collectPayload();
-
-  const url = WF_ID
-    ? `{{ route('workflows.update', ['id' => '__ID__']) }}`.replace('__ID__', WF_ID)
-    : `{{ route('workflows.store') }}`;
-
-  const method = WF_ID ? 'PUT' : 'POST';
-
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': '{{ csrf_token() }}',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    alert((data.message || data.error || 'Erreur') + '\n' + JSON.stringify(data));
-    return;
-  }
-
-  alert('Enregistré.');
-  window.location = '{{ route('workflows.index') }}';
-});
 
 @if(isset($workflowId))
 document.getElementById('btn-publish').addEventListener('click', async function () {
@@ -453,7 +415,7 @@ document.getElementById('btn-publish').addEventListener('click', async function 
 
   const data = await res.json();
   if (!res.ok) {
-    alert((data.message || data.error || 'Erreur') + '\n' + JSON.stringify(data));
+    alert(data.message || data.error || 'Erreur');
     return;
   }
 

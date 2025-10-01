@@ -200,7 +200,7 @@
     #cancelAction {
         min-width: 100px;
     }
-    .avatar {
+    .avatar-unique {
         position: relative;
         width: 40px;          /* adapte la taille si besoin */
         height: 40px;
@@ -212,13 +212,13 @@
         font-weight: 700;
         user-select: none;
         }
-        .avatar img {
+        .avatar-unique img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
         }
-        .avatar .init {
+        .avatar-unique .init {
         position: absolute;
         inset: 0;
         display: none;        /* affichée seulement en fallback */
@@ -427,7 +427,7 @@ function confirmDelete(url, onSuccess, messages = {}) {
                             <span class="user-name fw-bold" style="color: #F1C40F;">{{ auth()->user()->login }}</span>
                             <span class="user-group text-sm" style="color: #F1C40F;">{{ auth()->user()->groupeUtilisateur->libelle_groupe }}</span>
                         </div>
-                        <div class="avatar profile-img" title="{{ $name }}" style="background: {{ $bg }}">
+                        <div class="avatar-unique profile-img-unique" title="{{ $name }}" style="background: {{ $bg }}">
                             @if($hasPhoto)
                                 <img
                                     src="{{ asset($photoPath) }}"
@@ -437,7 +437,7 @@ function confirmDelete(url, onSuccess, messages = {}) {
                             @endif
                             <span class="init" aria-hidden="true" style="{{ $hasPhoto ? '' : 'display:flex' }}">{{ $initials }}</span>
                         </div>
-                        {{--<img class="profile-img" src="{{ url('/api/fichiers/'.auth()->user()->acteur->Photo) }}" alt="Profile Picture" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover;">--}}
+                        {{--<img class="profile-img-unique" src="{{ url('/api/fichiers/'.auth()->user()->acteur->Photo) }}" alt="Profile Picture" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover;">--}}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end text-dark" aria-labelledby="navbarDropdown">
                         <li><hr class="dropdown-divider"></li>
@@ -465,7 +465,7 @@ function confirmDelete(url, onSuccess, messages = {}) {
         font-size: 14px;
         display: block;
     }
-    .profile-img {
+    .profile-img-unique {
         width: 40px;
         height: 40px;
         border-radius: 50%;

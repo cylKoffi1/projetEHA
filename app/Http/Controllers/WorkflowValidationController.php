@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\NotificationValidationProjet;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,8 @@ use App\Models\Pays;
 use App\Models\GroupeProjet;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\User;
+use App\Models\Acteur;
+use Illuminate\Support\Facades\Mail; 
 
 class WorkflowValidationController extends Controller
 {
@@ -51,19 +54,16 @@ class WorkflowValidationController extends Controller
 
     /** Formulaire de création -> resources/views/workflows/form.blade.php */
     public function createForm()
-{
-    $ctx = $this->buildViewContext();
-
-    $approverUsers = $this->getApproverUsers(
-        $ctx['pays_selected'] ?? null,
-        $ctx['projet_selected'] ?? null
-    );
-
-    return view('workflows.index', [
-        'ctx'            => $ctx,
-        'approverUsers'  => $approverUsers,
-    ]);
-}
+    {
+        $ctx = $this->buildViewContext();
+        $approverUsers = $this->getApproverUsers($ctx['pays_selected'] ?? null, $ctx['projet_selected'] ?? null);
+    
+        return view('workflows.form', [
+            'ctx'           => $ctx,
+            'approverUsers' => $approverUsers,
+        ]);
+    }
+    
 
 
     /** Formulaire d’édition/design -> resources/views/workflows/form.blade.php */
@@ -176,46 +176,41 @@ class WorkflowValidationController extends Controller
             })
             ->orderBy('date_debut', 'asc')
             ->get();
+            $Users = User::select('acteur_id')  
+            ->with(['acteur:code_acteur,libelle_court,libelle_long'])
+            ->get();
     
         // Prépare des DTO simples pour la vue
-        $rows = $pendingSteps->map(function($si) use ($actorCode) {
-    
-            $allSteps = $si->instance->etapes;                   // toutes les étapes d’instance
+        $rows = $pendingSteps->map(function($si) {
             $currentPos = $si->etape->position;
-    
-            $before = $allSteps->filter(fn($x) => $x->etape->position < $currentPos);
-            $after  = $allSteps->filter(fn($x) => $x->etape->position > $currentPos);
-    
-            $mapApproverCodes = function($stepColl) {
-                // retourne une liste unique de codes ACTEUR attendus par ces étapes
-                return $stepColl->flatMap(function($s){
-                    return $s->etape->approbateurs
-                        ->where('type_approbateur', 'ACTEUR')
-                        ->pluck('reference_approbateur');
-                })->unique()->values();
-            };
-    
-            $beforeCodes = $mapApproverCodes($before);
-            $afterCodes  = $mapApproverCodes($after);
-    
-            // Optionnel : traduire les codes acteurs en libellés
-            $labelize = function($codes) {
-                if ($codes->isEmpty()) return [];
-                // Tente de retrouver par la relation user->acteur (si existant)
-                $users = \App\Models\User::with('acteur:id,code_acteur,libelle_long,libelle_court,email')
-                    ->whereHas('acteur', fn($q) => $q->whereIn('code_acteur', $codes))
-                    ->get();
-    
-                $labels = [];
-                foreach ($codes as $c) {
-                    $u = $users->firstWhere(fn($uu) => optional($uu->acteur)->code_acteur === $c);
-                    $labels[] = $u?->acteur?->libelle_court
-                               ?? $u?->login
-                               ?? $c; // fallback = code
-                }
-                return $labels;
-            };
-    
+        
+            // approbateurs attendus de l'étape courante
+            $expApprovers = $si->etape->approbateurs
+                ->where('type_approbateur','ACTEUR')
+                ->pluck('reference_approbateur')
+                ->values();
+
+            $acteurs = Acteur::whereIn('code_acteur', $expApprovers)
+                ->get(['code_acteur','libelle_court','libelle_long'])
+                ->keyBy('code_acteur');
+
+            $approvers = $expApprovers->map(function ($code) use ($acteurs, $si) {
+                $a = $acteurs->get($code); // \App\Models\Acteur|null
+
+                // libellé et initiales à partir de libelle_court / libelle_long
+                $label    = $this->labelFromActor($a, $code);         // fallback = code
+                $initials = $this->initialsFromActor($a);             // calcule les initiales
+
+                return [
+                    'code'      => $code,
+                    'label'     => $label,
+                    'initials'  => $initials ?: '?',
+                    'status'    => $this->approverStatusFor($si, $code),
+                ];
+            });
+
+
+        
             return [
                 'step_id'        => $si->id,
                 'instance_id'    => $si->instance->id,
@@ -226,14 +221,12 @@ class WorkflowValidationController extends Controller
                 'version'        => $si->instance->version->numero_version ?? null,
                 'step_pos'       => $si->etape->position,
                 'status_code'    => $this->codeStatutEtape($si->statut_id),
-                'before'         => $labelize($beforeCodes),   // array de libellés
-                'after'          => $labelize($afterCodes),    // array de libellés
+                'approvers'      => $approvers, // <<< NOUVEAU
             ];
         });
+        
     
-        return view('approbations.dashboard', [
-            'rows' => $rows,
-        ]);
+        return view('approbations.dashboard', compact('Users', 'rows'));
     }
     
 
@@ -399,7 +392,9 @@ class WorkflowValidationController extends Controller
         $data = $this->validateWorkflowPayload($request);
     
         return DB::transaction(function () use ($data) {
+           
             $wf = WorkflowApprobation::create([
+                //'code'              => 'WF_' . strtoupper($data['code_pays']) . strtoupper($data['groupe_projet_id']) . '_' . str_pad($nextSeq, 4, '0', STR_PAD_LEFT),
                 'nom'              => $data['nom'],
                 'code_pays'        => $data['code_pays'],
                 'groupe_projet_id' => $data['groupe_projet_id'] ?? null,
@@ -432,8 +427,21 @@ class WorkflowValidationController extends Controller
                 'meta'             => $data['meta'] ?? $workflow->meta,
             ]);
     
-            $this->upsertVersionGraph($workflow->id, $data['version'] ?? [], $mode);
+            if ($mode === 'update_existing' && !empty($data['version']['numero_version'])) {
+                $existing = VersionWorkflow::where('workflow_id', $workflow->id)
+                    ->where('numero_version', $data['version']['numero_version'])
+                    ->first();
     
+                if ($existing && ($existing->publie || $this->versionIsInUse($existing))) {
+                    // 409 = conflit logique
+                    abort(response()->json([
+                        'message' => "Impossible de modifier une version publiée ou déjà utilisée. Créez une nouvelle version.",
+                        'code'    => 'VERSION_IN_USE'
+                    ], 409));
+                }
+            }
+    
+            $this->upsertVersionGraph($workflow->id, $data['version'] ?? [], $mode);
             return response()->json([
                 'message'  => $mode === 'update_existing' ? 'Version mise à jour' : 'Nouvelle version créée',
                 'workflow' => $workflow->load('versions.etapes.approbateurs', 'versions.etapes.regles')
@@ -594,6 +602,7 @@ class WorkflowValidationController extends Controller
 
             // Démarrer la première étape active
             $this->advance($inst);
+            $this->notifyActiveApprovers($inst);
 
             return response()->json([
                 'message'  => 'Instance démarrée',
@@ -674,7 +683,47 @@ class WorkflowValidationController extends Controller
                     'date_fin'  => now()
                 ]);
                 $inst->update(['statut_id' => $this->statutInstance('REJETE')->id]);
+
+                // 🔔 notifier le propriétaire / demandeur
+                if ($owner = $this->resolveOwnerContact($inst)) {
+                    $codeProjet    = $inst->id_cible;
+                    $libelleProjet = $inst->module_code.' • '.$inst->type_cible.' #'.$inst->id_cible;
+                    $commentaire   = $data['commentaire'] ?? '';
+
+                    \Mail::to($owner['email'])->queue(
+                        new \App\Mail\ProjetRefuseNotification($codeProjet, $libelleProjet, $commentaire, $owner)
+                    );
+                }
+
+                return response()->json([
+                    'message' => 'Action enregistrée',
+                    'etape'   => $si->fresh('actions')
+                ]);
+
+
+
             } elseif ($type->code === 'DELEGUER') {
+                $to = data_get($data, 'meta.delegate_to');
+            if ($to) {
+                // créer une “fausse” étape pour résolution d’email
+                $targets = $this->approverContactsForStep($si);
+                // si le délégué n’est pas dans la liste d’origine, résous-le à part :
+                if (!collect($targets)->firstWhere('code', $to)) {
+                    $a = \App\Models\Acteur::where('code_acteur', $to)->first();
+                    $email = $a?->email; // ou via User lié
+                    if ($email) {
+                        $targets[] = ['code'=>$to,'email'=>$email,'libelle_court'=>$a->libelle_court,'libelle_long'=>$a->libelle_long];
+                    }
+                }
+                foreach ($targets as $t) {
+                    if ($t['code'] !== $to) continue;
+                    $codeProjet    = $inst->id_cible;
+                    $libelleProjet = $inst->module_code.' • '.$inst->type_cible.' #'.$inst->id_cible;
+                    Mail::to($t['email'])->queue(
+                        new NotificationValidationProjet($codeProjet, $libelleProjet, $t)
+                    );
+                }
+            }
                 // La délégation est honorée via actorCanActOnStep() (meta.delegate_to)
                 if ($si->statut_id == $this->statutEtape('PENDING')->id) {
                     $si->update(['statut_id' => $this->statutEtape('EN_COURS')->id, 'date_debut' => now()]);
@@ -760,6 +809,154 @@ class WorkflowValidationController extends Controller
     /***********************************************************
      *                     HELPERS PRIVÉS
      ***********************************************************/
+    private function approverContactsForStep(InstanceEtape $si): array
+    {
+        // approbateurs ACTEUR attendus pour l’étape $si
+        $codes = $si->etape->approbateurs()
+            ->where('type_approbateur','ACTEUR')
+            ->pluck('reference_approbateur')->all();
+
+        if (empty($codes)) return [];
+
+        // emails possibles : acteur.email OU user.email lié à cet acteur
+        $acteurs = Acteur::whereIn('code_acteur', $codes)
+            ->get(['code_acteur','libelle_court','libelle_long','email'])
+            ->keyBy('code_acteur');
+
+        // si tu as une relation user<->acteur :
+        $users = User::with('acteur:code_acteur')
+            ->whereHas('acteur', fn($q) => $q->whereIn('code_acteur',$codes))
+            ->get(['email','acteur_id']);
+
+        $byActor = [];
+        foreach ($codes as $code) {
+            $a = $acteurs->get($code);
+            $mail = null;
+
+            // 1) email sur ACTEUR si renseigné
+            if ($a && !empty($a->email)) $mail = $a->email;
+
+            // 2) sinon prendre le mail du user attaché à l’acteur
+            if (!$mail) {
+                $u = $users->first(fn($uu) => optional($uu->acteur)->code_acteur === $code);
+                if ($u && !empty($u->email)) $mail = $u->email;
+            }
+
+            if ($mail) {
+                $byActor[] = [
+                    'code'  => $code,
+                    'email' => $mail,
+                    'libelle_court' => (string)($a->libelle_court ?? ''),
+                    'libelle_long'  => (string)($a->libelle_long  ?? ''),
+                ];
+            }
+        }
+
+        // déduplique par email
+        $seen = [];
+        return array_values(array_filter($byActor, function($x) use (&$seen){
+            if (isset($seen[$x['email']])) return false;
+            $seen[$x['email']] = true;
+            return true;
+        }));
+    }
+    private function versionIsInUse(VersionWorkflow $version): bool
+    {
+        $stepIds = $version->etapes()->pluck('id');
+        return InstanceEtape::whereIn('etape_workflow_id', $stepIds)->exists();
+    }
+
+    // Trouve le "propriétaire/demandeur" d’une instance (adapté à ton modèle PROJET)
+    private function resolveOwnerContact(InstanceApprobation $inst): ?array
+    {
+        // Cas PROJET • projet_appui (adapte si ton modèle/colonnes diffèrent)
+        if ($inst->module_code === 'PROJET' && $inst->type_cible === 'projet_appui') {
+            $proj = \App\Models\ProjetAppui::where('code',$inst->id_cible)
+                    ->orWhere('id',$inst->id_cible)->first();
+            if ($proj) {
+                // 1) colonnes user id possibles (prends le 1er trouvé)
+                foreach (['demandeur_user_id','owner_user_id','created_by','user_id'] as $col) {
+                    if (!empty($proj->{$col})) {
+                        if ($email = User::whereKey($proj->{$col})->value('email')) {
+                            $codeActeur = User::with('acteur:code_acteur')
+                                ->find($proj->{$col})?->acteur?->code_acteur;
+                            return ['email'=>$email, 'code'=>$codeActeur];
+                        }
+                    }
+                }
+                // 2) colonnes acteur possibles (chef, porteur, demandeur…)
+                foreach (['demandeur_acteur_code','chef_projet_code','porteur_acteur_code'] as $col) {
+                    if (!empty($proj->{$col})) {
+                        if ($c = $this->emailFromActorCode($proj->{$col})) return $c;
+                    }
+                }
+            }
+        }
+
+        // 3) fallback générique via snapshot (instantané)
+        $snap = (array)($inst->instantane ?? []);
+        foreach (['owner_acteur_code','demandeur_acteur_code','chef_projet_code'] as $k) {
+            if ($code = data_get($snap,$k)) {
+                if ($c = $this->emailFromActorCode($code)) return $c;
+            }
+        }
+        foreach (['owner_user_id','demandeur_user_id'] as $k) {
+            if ($uid = data_get($snap,$k)) {
+                if ($email = User::whereKey($uid)->value('email')) {
+                    return ['email'=>$email];
+                }
+            }
+        }
+
+        return null;
+    }
+    private function emailFromActorCode(?string $code): ?array
+    {
+        if (!$code) return null;
+
+        $a = Acteur::where('code_acteur', $code)->first();
+        $email = $a?->email;
+
+        // fallback: email du user rattaché à cet acteur
+        if (!$email) {
+            $email = User::whereHas('acteur', fn($q)=>$q->where('code_acteur',$code))
+                ->value('email'); // <- renvoie directement la string d’email
+        }
+
+        if (!$email) return null;
+
+        return [
+            'code'          => $code,
+            'email'         => $email,
+            'libelle_court' => (string)($a->libelle_court ?? ''),
+            'libelle_long'  => (string)($a->libelle_long  ?? ''),
+        ];
+    }
+    private function notifyActiveApprovers(InstanceApprobation $inst): void
+    {
+        // étape active = EN_COURS
+        $active = $inst->etapes()
+            ->where('statut_id', $this->statutEtape('EN_COURS')->id)
+            ->with('etape')
+            ->first();
+
+        if (!$active) return;
+
+        $targets = $this->approverContactsForStep($active);
+        if (empty($targets)) return;
+
+        // Contexte “projet” à adapter : ici on envoie module/type/id
+        $codeProjet    = $inst->id_cible;
+        $libelleProjet = $inst->module_code.' • '.$inst->type_cible.' #'.$inst->id_cible;
+
+        foreach ($targets as $t) {
+            // tu peux passer l’objet “approbateur” (libellés) à ton Mailable
+            Mail::to($t['email'])->queue(
+                new NotificationValidationProjet($codeProjet, $libelleProjet, $t)
+            );
+        }
+    }
+
     private function validateWorkflowPayload(Request $request, bool $updating = false): array
     {
         $rules = [
@@ -926,9 +1123,9 @@ class WorkflowValidationController extends Controller
                 $op = OperateurRegle::where('code', $r['operateur_code'])->firstOrFail();
                 EtapeRegle::create([
                     'etape_workflow_id' => $etape->id,
-                    'champ'             => $r->champ,
+                    'champ'             => $r['champ'],
                     'operateur_id'      => $op->id,
-                    'valeur'            => $r->valeur, // peut être string JSON ou array/json
+                    'valeur'            => $r['valeur'], // peut être string JSON ou array/json
                 ]);
             }
         }
@@ -1007,6 +1204,8 @@ class WorkflowValidationController extends Controller
                 'statut_id'  => $this->statutEtape('EN_COURS')->id,
                 'date_debut' => now(),
             ]);
+            // 🔔 nouvelle étape active → notifier ses approbateurs
+            $this->notifyActiveApprovers($inst);
         }
     }
 
@@ -1085,7 +1284,77 @@ class WorkflowValidationController extends Controller
         }
         return true;
     }
-
+    private function initialsFromActor(?\App\Models\Acteur $a): string
+    {
+        if (!$a) return '?';
+    
+        $short = trim((string) $a->libelle_court);
+        $long  = trim((string) $a->libelle_long);
+    
+        // si les 2 existent : 1ère du court + 1ère du dernier mot du long
+        if ($short !== '' && $long !== '') {
+            $last = preg_split('/\s+/', $long);
+            $li   = $last ? ($last[count($last)-1] ?: $long) : $long;
+            $c1   = mb_substr($short, 0, 1) ?: substr($short, 0, 1);
+            $c2   = mb_substr($li,    0, 1) ?: substr($li,    0, 1);
+            return mb_strtoupper($c1.$c2);
+        }
+    
+        // sinon : 2 lettres à partir du champ disponible
+        $base = $short !== '' ? $short : $long;
+        if ($base === '') return '?';
+    
+        $parts = preg_split('/\s+/', $base);
+        if (count($parts) === 1) {
+            $p = $parts[0];
+            $c = (mb_substr($p, 0, 2) ?: substr($p, 0, 2));
+            return mb_strtoupper($c);
+        }
+    
+        $p1 = $parts[0];
+        $p2 = $parts[count($parts)-1];
+        $c1 = (mb_substr($p1, 0, 1) ?: substr($p1, 0, 1));
+        $c2 = (mb_substr($p2, 0, 1) ?: substr($p2, 0, 1));
+        return mb_strtoupper($c1.$c2);
+    }
+    
+    
+    private function labelFromActor(?\App\Models\Acteur $a, ?string $fallback = null): string
+    {
+        if ($a) {
+            $pieces = array_filter([trim((string)$a->libelle_court), trim((string)$a->libelle_long)]);
+            if (!empty($pieces)) return implode(' · ', $pieces);
+        }
+        return $fallback ?: '';
+    }
+    
+    
+    private function approverStatusFor(InstanceEtape $step, string $actorCode): string
+    {
+        // a-t-il approuvé ?
+        $hasApproved = $step->actions()
+            ->whereHas('type', fn($q)=>$q->where('code','APPROUVER'))
+            ->where('code_acteur', $actorCode)
+            ->exists();
+        if ($hasApproved) return 'APPROUVE';
+    
+        // a-t-il rejeté ?
+        $hasRejected = $step->actions()
+            ->whereHas('type', fn($q)=>$q->where('code','REJETER'))
+            ->where('code_acteur', $actorCode)
+            ->exists();
+        if ($hasRejected) return 'REJETE';
+    
+        // statut de l'étape
+        $codeStep = $this->codeStatutEtape($step->statut_id);
+        // EN_COURS = jaune (à faire), PENDING/SAUTE/APPROUVE/REJETE...
+        if ($codeStep === 'EN_COURS') return 'EN_COURS';
+        if ($codeStep === 'PENDING')  return 'PENDING';
+    
+        // étapes déjà passées & approuvées sans action de cet acteur → considéré "non requis" => gris
+        return 'EN_ATTENTE';
+    }
+    
     /* -------- Raccourcis ref_* -------- */
     private function statutInstance(string $code): StatutInstance
     {
