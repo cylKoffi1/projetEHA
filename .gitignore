@@ -16,3 +16,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Documentation d'analyse (locale uniquement)
+/docs/
