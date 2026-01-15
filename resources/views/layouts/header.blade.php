@@ -231,23 +231,104 @@
 </style>
 
 <script>
-function alert(message, type = 'success') {
-    Swal.fire({
-        text: message,
-        icon: type, // 'success', 'error', 'warning', 'info', or 'question'
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 6000,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer);
-            toast.addEventListener('mouseleave', Swal.resumeTimer);
-        }
-    });
+// --- Alerte toast unifiée (SweetAlert2) ---------------------
+function alert(message, type = 'success', opts = {}) {
+  // Normalise tout en string courte et lisible
+  const text = typeof message === 'string' ? message : (
+    message?.message || message?.toString?.() || 'Une erreur est survenue'
+  );
+
+  Swal.fire({
+    text,
+    icon: type,                // 'success' | 'error' | 'warning' | 'info' | 'question'
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: opts.timer ?? 6000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.addEventListener('mouseenter', Swal.stopTimer);
+      toast.addEventListener('mouseleave', Swal.resumeTimer);
+    }
+  });
 }
 
+// --- Normalisation des messages d'erreur HTTP ----------------
+function normalizeErrorMessage(payload, status, rawText = '') {
+  // 1) payload JSON Laravel 422: { message, errors: { field: [..] } }
+  if (payload && typeof payload === 'object') {
+    if (payload.message && typeof payload.message === 'string') {
+      // S'il y a des "errors", on concatène la 1re ligne utile
+      if (payload.errors && typeof payload.errors === 'object') {
+        const lines = [];
+        Object.values(payload.errors).forEach(arr => {
+          if (Array.isArray(arr)) arr.forEach(msg => lines.push(String(msg)));
+        });
+        if (lines.length) return `${payload.message}\n• ${lines.slice(0, 3).join('\n• ')}`; // max 3 bullets
+      }
+      return payload.message;
+    }
+    // Certains contrôleurs renvoient { error: "...", message: "..." }
+    if (payload.error) return String(payload.error);
+  }
+
+  // 2) Réponses HTML (500/exception) -> on strip les balises
+  if (rawText && /^\s*<!DOCTYPE|<html/i.test(rawText)) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = rawText;
+    const text = (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+    // On tronque un peu pour un toast
+    return text.length > 240 ? text.slice(0, 240) + '…' : text || `Erreur ${status || ''}`;
+  }
+
+  // 3) Texte brut
+  if (rawText) {
+    return rawText.length > 240 ? rawText.slice(0, 240) + '…' : rawText;
+  }
+
+  // 4) Fallback
+  return status ? `Erreur ${status}` : 'Une erreur est survenue';
+}
+
+// --- fetch JSON robuste (jette sur !ok) ----------------------
+async function fetchJSON(url, { method = 'GET', body = null, headers = {} } = {}) {
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Accept': 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      // Ajoute CSRF si dispo globalement
+      'X-CSRF-TOKEN': (typeof CSRF !== 'undefined' ? CSRF : document.querySelector('meta[name="csrf-token"]')?.content),
+      ...headers
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+
+  // On essaie de lire le corps, JSON si possible, sinon texte
+  const ct = res.headers.get('content-type') || '';
+  let data = null, text = '';
+  try {
+    if (ct.includes('application/json')) data = await res.json();
+    else text = await res.text();
+  } catch (_) {
+    // ignore parse errors
+  }
+
+  // Succès HTTP + pas de "success:false" => on renvoie la data
+  if (res.ok && !(data && data.success === false)) {
+    return data ?? text;
+  }
+
+  // Sinon on construit un message propre et on JETTE l'erreur
+  const msg = normalizeErrorMessage(data, res.status, text);
+  const err = new Error(msg);
+  err.status = res.status;
+  err.payload = data ?? text;
+  throw err;
+}
 </script>
+
 {{--
     <script>
         function initSmartSelects(container = document) {
@@ -361,11 +442,20 @@ function confirmDelete(url, onSuccess, messages = {}) {
 
             <button class="sidebar-toggle" onclick="toggleSidebar()" style="margin: 2px;">☰</button>
 
-            <a class="navbar-brand d-flex align-items-center" href="#" style="color: white; flex-direction: column;">
-                <img src="{{ asset(auth()->user()?->paysSelectionne()?->armoirie) }}" style="width: 40px; height: auto; " class="logo-img" alt="Logo" />
-               {{-- <img src="{{ auth()->user()?->paysSelectionne()?->armoirie_url }}" alt="Armoirie">--}}
+            <a class="navbar-brand d-flex align-items-center"
+            href="#"
+            style="color: white; flex-direction: column;"
+            title="{{ auth()->user()?->paysSelectionne()?->nom_fr_fr }}">
+                
+                <img src="{{ asset(auth()->user()?->paysSelectionne()?->armoirie) }}"
+                    style="width: 40px; height: auto;"
+                    class="logo-img"
+                    alt="Armoirie"
+                    title="{{ auth()->user()?->paysSelectionne()?->nom_fr_fr }}" />
+
                 <span class="project-title">GP-INFRAS</span>
             </a>
+
         </div>
 
         <!-- Infos utilisateur -->

@@ -56,15 +56,24 @@
         <form id="groupeForm" action="{{ route('groupes-utilisateurs.store') }}" method="POST">
             @csrf
             <div class="row">
+                <div class="col-md-3">
+                    <label for="code">Type utilisateur</label>
+                    <select name="typeUtilisateur" id="typeUtilisateur" class="form-control">
+                        <option value="">Sélectionner le type utilisateur</option>
+                        @foreach ($TypeUtilisateur as $user)
+                            <option value="{{ $user->id }}">{{ $user->libelle }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label for="code">Code</label>
                     <input type="text" name="code" class="form-control" required>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="libelle_groupe">Libellé</label>
                     <input type="text" name="libelle_groupe" class="form-control" required>
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
+                <div class="col-md-3 d-flex align-items-end">
                     <button type="submit" id="submitButton" class="btn btn-primary">Enregistrer</button>
                     <button type="button" id="cancelButton" class="btn btn-secondary ms-2" style="display: none;">Annuler</button>
                 </div>
@@ -84,6 +93,7 @@
             <thead>
                 <tr>
                     <th>Code</th>
+                    <th>type utilisateur</th>
                     <th>Libellé</th>
                     <th >Actions</th>
                 </tr>
@@ -92,6 +102,7 @@
                 @foreach ($groupes as $groupe)
                     <tr>
                         <td>{{ $groupe->code }}</td>
+                        <td>{{ $groupe->typeUtilisateur?->libelle  }}</td>
                         <td>{{ $groupe->libelle_groupe }}</td>
                         <td>
 
@@ -119,7 +130,6 @@
      $(document).ready(function() {
         initDataTable('{{ auth()->user()->acteur->libelle_court }} {{ auth()->user()->acteur->libelle_long }}', 'table1', 'Liste des types acteurs')
     });
-
 </script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -137,6 +147,7 @@
                             // Remplir le formulaire avec les données du groupe sélectionné
                             document.querySelector('input[name="code"]').value = data.code;
                             document.querySelector('input[name="code"]').readOnly = true; // Désactiver la modification du code
+                            document.querySelector('input[name="typeUtilisateur"]').value = data.type_utilisateur_id;
                             document.querySelector('input[name="libelle_groupe"]').value = data.libelle_groupe;
 
                             // Modifier l'action du formulaire pour passer en mode mise à jour
@@ -166,6 +177,8 @@
             // Réactiver le champ "Code"
             document.querySelector('input[name="code"]').readOnly = false;
             document.querySelector('input[name="code"]').value = "";
+            
+            document.querySelector('input[name="typeUtilisateur"]').value = "";
             document.querySelector('input[name="libelle_groupe"]').value = "";
 
             // Cacher le bouton d'annulation

@@ -3,12 +3,13 @@
 namespace App\Support;
 
 use App\Services\WorkflowApproval;
-use DomainException;
 
 trait ApprovesWithWorkflow
 {
     /**
      * Lance un workflow pour un objet métier.
+     * Le snapshot est automatiquement normalisé pour inclure les hints standard.
+     *
      * @return array{instance: \App\Models\InstanceApprobation, created: bool, message?: string}
      */
     protected function startApproval(
@@ -23,7 +24,7 @@ trait ApprovesWithWorkflow
     }
 
     /**
-     * Helper pour construire un snapshot “propre” depuis un modèle Eloquent.
+     * Helper simple : extrait des champs du modèle (data_get) vers snapshot.
      */
     protected function snapshotFromModel($model, array $fields): array
     {
@@ -32,6 +33,49 @@ trait ApprovesWithWorkflow
             $snap[$f] = data_get($model, $f);
         }
         return $snap;
+    }
+
+    /**
+     * Helper “prêt à l’emploi” :
+     * génère un snapshot standard en mappant différents schémas possibles
+     * vers les clés hints (owner_* demandeur_*).
+     *
+     * @param  mixed $model  Ton modèle métier (Projet, Dossier, etc.)
+     * @param  array $map    Carte des colonnes du modèle -> hints standard
+     *                       (si tu ne passes rien, on tente les conventions par défaut)
+     */
+    protected function standardSnapshot($model, array $map = []): array
+    {
+        // Conventions par défaut (sur ton modèle)
+        $defaults = [
+            // emails
+            'owner_email'              => ['owner_email', 'demandeur_email', 'requester_email', 'created_by_email'],
+            // user ids
+            'owner_user_id'            => ['owner_user_id', 'demandeur_user_id', 'requester_user_id', 'created_by', 'user_id'],
+            // acteur codes
+            'owner_acteur_code'        => ['owner_acteur_code', 'demandeur_acteur_code', 'requester_acteur_code', 'chef_projet_code', 'created_by_acteur_code'],
+        ];
+
+        // Si tu passes un $map, il écrase/complète
+        // ex: ['owner_user_id' => 'demandeur_id', 'demandeur_acteur_code' => 'demandeur_code']
+        foreach ($map as $hint => $source) {
+            $defaults[$hint] = (array) $source;
+        }
+
+        $snap = [];
+
+        // Remplir avec la première colonne disponible pour chaque hint
+        foreach ($defaults as $hint => $candidates) {
+            foreach ($candidates as $col) {
+                $val = data_get($model, $col);
+                if (!is_null($val) && $val !== '') { $snap[$hint] = $val; break; }
+            }
+        }
+
+        // Laisse le normaliseur enrichir (emails depuis user_id/acteur_code, alias…)
+        /** @var \App\Support\SnapshotNormalizer $normalizer */
+        $normalizer = app(\App\Support\SnapshotNormalizer::class);
+        return $normalizer->normalize($snap);
     }
 }
 

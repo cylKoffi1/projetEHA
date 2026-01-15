@@ -111,7 +111,7 @@
                 <div class="col-12 col-md-6 order-md-2 order-first">
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="">Etudes projets</a></li>
+                            <li class="breadcrumb-item"><a href="">Projet</a></li>
                             <li class="breadcrumb-item active" aria-current="page">Planification projet</li>
                         </ol>
                         <div class="row">
@@ -136,17 +136,17 @@
             <div class="card-header">
                 <h5 class="card-title">Planifcation  de projet</h5>
 
-            @if (session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
+                @if (session('success'))
+                    <div class="alert alert-success">
+                        {{ session('success') }}
+                    </div>
+                @endif
 
-            @if (session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
+                @if (session('error'))
+                    <div class="alert alert-danger">
+                        {{ session('error') }}
+                    </div>
+                @endif
 
             </div>
             <div class="card-content">

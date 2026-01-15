@@ -1,3 +1,4 @@
+{{-- Sideb --}}
 @if(auth()->check())
 <style type="text/css">
     .nav-link:hover {
@@ -114,9 +115,15 @@
     <div class="sidebar-wrapper active" style="margin-top: 90px;" id="sidebar">
         <ul class="navbar-nav mr-auto sidenav" id="navAccordion" style="width: 100%;">
             @php
-                $userPermissions = auth()->user()->groupeUtilisateur->permissions->pluck('name');
-            @endphp
+            $pays = session('pays_selectionne');
 
+            $userPermissions = DB::table('role_permission_pays AS rpp')
+                ->join('permissions AS p', 'p.id', '=', 'rpp.permission_id')
+                ->where('rpp.role_code', auth()->user()->groupeUtilisateur->code)
+                ->where('rpp.pays_alpha3', $pays)
+                ->pluck('p.name');
+            @endphp
+           
             @foreach ($rubriquesByAuthRole as $rubrique)
                 @if ($rubrique->permission && $userPermissions->contains($rubrique->permission->name))
                     <li class="nav-item">
@@ -127,7 +134,7 @@
                             </div>
                         </a>
                         <ul class="nav-second-level collapse" data-parent="#navAccordion" id="rubrique_{{ $rubrique->code }}">
-                            @foreach ($rubrique->sousMenus->where('niveau', 1) as $sousMenu)
+                            @foreach ($rubrique->sousMenus as $sousMenu)
                                 @if ($sousMenu->permission && $userPermissions->contains($sousMenu->permission->name))
                                     <li class="nav-item">
                                         <a href="#" class="nav-link nav-link-collapse" data-toggle="collapse" data-target="#sous_menu{{ $sousMenu->code }}" aria-controls="sous_menu{{ $sousMenu->code }}">
@@ -168,6 +175,8 @@
             </li>
         </ul>
     </div>
+    
+   
 </div>
 
 <script>

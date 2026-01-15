@@ -267,7 +267,14 @@
             <div class="card-content">
                 <div class="col-12">
                     <div class="container mt-5">
-                        <h2 class="text-center mb-4 text-primary">📌 Demande de Projet - GP-INFRAS</h2>
+                        <h2 class="text-center mb-4 text-primary">
+                            📌 Demande de Projet - GP-INFRAS
+                            @if(isset($directMode) && $directMode)
+                                <span class="badge bg-success ms-2">Enregistrement Direct (Sans Validation)</span>
+                            @else
+                                <span class="badge bg-warning ms-2">Avec Validation</span>
+                            @endif
+                        </h2>
 
                         <!-- Barre de progression -->
                         <div class="progress mb-4">

@@ -14,6 +14,7 @@ use App\Models\LocalitesPays;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Log;
 
@@ -43,7 +44,8 @@ class UserController extends Controller
 
         return response()->json(['exists' => $user !== null]);
     }
-    public function checkEmail(Request $request)
+    /**Cet code devront être décoché après */
+    /*public function checkEmail(Request $request)
     {
         $email = $request->input('email');
 
@@ -65,7 +67,7 @@ class UserController extends Controller
 
         $exists = Acteur::where('email', $email)->exists();
         return response()->json(['exists' => $exists]);
-    }
+    }*/
 
     public function detailsUser(Request $request, $userId)
     {
@@ -98,7 +100,7 @@ class UserController extends Controller
             $errors = [];
     
             // Email
-            if ($request->filled('email') && $request->email !== $acteur->email) {
+            /*if ($request->filled('email') && $request->email !== $acteur->email) {
                 $emailExists = DB::table('acteurs')
                     ->where('email', $request->email)
                     ->where('code_acteur', '!=', $acteur->code_acteur)
@@ -110,7 +112,7 @@ class UserController extends Controller
                     $acteur->email = $request->email;
                     $user->email = $request->email;
                 }
-            }
+            }*/
     
             // Login
             if ($request->filled('username') && $request->username !== $user->login) {
@@ -192,7 +194,38 @@ class UserController extends Controller
                         ->get();
     }
 
+    public function changePassword(Request $request)
+    {
+        try {
+          
 
+            $user = auth()->user();
+
+            if (!Hash::check($request->old, $user->password)) {
+                
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => ['L\'ancien mot de passe est incorrect.']
+                ], 401);
+            }
+
+            $user->update([
+                'password' => Hash::make($request->new),
+                'must_change_password' => false
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Mot de passe modifié avec succès.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => ['Une erreur est survenue : ' . $e->getMessage()]
+            ], 500);
+        }
+    }
     /*public function update_auth(Request $request, $userId)
     {
         $request->validate([

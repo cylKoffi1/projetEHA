@@ -20,6 +20,7 @@ use App\Models\ValeurCaracteristique;
 use App\Models\Ecran;
 use App\Services\FileProcService;
 use App\Services\GridFsService;
+use App\Support\ApprovesWithWorkflow;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,15 +28,16 @@ use Illuminate\Support\Facades\Log;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Writer\PngWriter;
-
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Logo\Logo;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class InfrastructureController extends Controller
 {
-
+    use ApprovesWithWorkflow; // pour startApproval()
 
     // Afficher la liste des infrastructures
     public function index(Request $request)
@@ -141,16 +143,12 @@ class InfrastructureController extends Controller
      }
      
      
-     public function store(Request $request)
+     public function store(\App\Http\Requests\StoreInfrastructureRequest $request)
      {
          try {
-             Log::info("Début du store() infrastructure", $request->all());
+             Log::info("Début du store() infrastructure", $request->validated());
      
-             $request->validate([
-                 'libelle' => 'required|string|max:255',
-                 'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_Ssys',
-                 'code_localite' => 'required|exists:localites_pays,id',
-             ]);
+             // Validation effectuée par FormRequest
      
              $famille = FamilleInfrastructure::where('code_Ssys', $request->code_famille_infrastructure)->firstOrFail();
              $familleId = $famille->idFamille;
@@ -198,8 +196,14 @@ class InfrastructureController extends Controller
      
              if ($request->has('caracteristiques')) {
                  foreach ($request->input('caracteristiques', []) as $idCarac => $valeur) {
+                     // Ignorer les valeurs vides ou null
+                     if ($valeur === null || $valeur === '') {
+                         continue;
+                     }
+                     
                      Log::info("Traitement caractéristique", ['idCaracteristique' => $idCarac, 'valeur_reçue' => $valeur]);
      
+                     // Vérifier que la caractéristique appartient à la famille
                      $caracValide = FamilleCaracteristique::where('idFamille', $familleId)
                          ->where('idCaracteristique', $idCarac)
                          ->exists();
@@ -212,43 +216,74 @@ class InfrastructureController extends Controller
                      }
      
                      $caracteristique = Caracteristique::with('type', 'valeursPossibles')->findOrFail($idCarac);
-                     $type = strtolower($caracteristique->type->libelleTypeCaracteristique);
+                     $type = strtolower($caracteristique->type->libelleTypeCaracteristique ?? '');
                      $valeurFinale = null;
      
+                     // Traitement selon le type de caractéristique
                      switch ($type) {
-                         case 'Liste':
+                         case 'liste':
+                             // Pour les listes, valider que la valeur existe dans les valeurs possibles
                              $option = $caracteristique->valeursPossibles->firstWhere('valeur', $valeur)
                                  ?? $caracteristique->valeursPossibles->firstWhere('id', $valeur);
-                             $valeurFinale = $option?->valeur;
+                             
+                             if (!$option && !empty($valeur)) {
+                                 Log::warning("Valeur de liste invalide", [
+                                     'carac_id' => $idCarac,
+                                     'valeur_reçue' => $valeur,
+                                     'valeurs_possibles' => $caracteristique->valeursPossibles->pluck('valeur')->toArray()
+                                 ]);
+                                 return response()->json([
+                                     'error' => "La valeur '{$valeur}' n'est pas valide pour cette caractéristique de type Liste."
+                                 ], 422);
+                             }
+                             
+                             $valeurFinale = $option ? $option->valeur : null;
                              Log::info("Valeur 'Liste' convertie", ['finale' => $valeurFinale]);
                              break;
      
-                         case 'Boolean':
-                             $valeurFinale = $valeur ? 1 : 0;
+                         case 'boolean':
+                             // Convertir en 0 ou 1
+                             $valeurFinale = filter_var($valeur, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
                              Log::info("Valeur 'Boolean' convertie", ['finale' => $valeurFinale]);
+                             break;
+                         
+                         case 'nombre':
+                             // Valider que c'est un nombre
+                             if (!is_numeric($valeur)) {
+                                 Log::warning("Valeur numérique invalide", ['carac_id' => $idCarac, 'valeur' => $valeur]);
+                                 return response()->json([
+                                     'error' => "La valeur '{$valeur}' n'est pas un nombre valide pour cette caractéristique."
+                                 ], 422);
+                             }
+                             $valeurFinale = (string) $valeur;
                              break;
      
                          default:
-                             $valeurFinale = $valeur;
-                             Log::info("Valeur par défaut", ['finale' => $valeurFinale]);
+                             // Texte ou autre : utiliser tel quel
+                             $valeurFinale = is_string($valeur) ? trim($valeur) : (string) $valeur;
+                             Log::info("Valeur par défaut", ['finale' => $valeurFinale, 'type' => $type]);
                              break;
                      }
      
                      if ($valeurFinale !== null && $valeurFinale !== '') {
+                         // Récupérer l'unité dérivée si fournie
+                         $idUniteDerivee = $request->input("unites_derivees.$idCarac");
+                         
                          ValeurCaracteristique::create([
                              'infrastructure_code' => $code,
                              'idCaracteristique' => $idCarac,
                              'valeur' => $valeurFinale,
-                             'idUnite' => $infrastructure->idUnite,
-                             'ordre' => $infrastructure->ordre,
-                             'parent_saisie_id' => $infrastructure->parent_saisie_id,
-                             'description' => $infrastructure->description
+                             'idUnite' => $caracteristique->idUnite ?? null,
+                             'idUniteDerivee' => $idUniteDerivee ?: null,
+                             'parent_saisie_id' => $caracteristique->parent_id ?? null,
+                             'ordre' => $caracteristique->ordre ?? null,
                          ]);
      
                          Log::info("Valeur enregistrée", [
                              'infra_id' => $infrastructure->id,
                              'carac_id' => $idCarac,
-                             'valeur' => $valeurFinale
+                             'valeur' => $valeurFinale,
+                             'idUniteDerivee' => $idUniteDerivee,
                          ]);
                      }
                  }
@@ -290,14 +325,24 @@ class InfrastructureController extends Controller
              ], 200);
      
          } catch (\Throwable $e) {
-             Log::error("Erreur dans store()", ['exception' => $e]);
-             return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
+             Log::error("Erreur dans store()", [
+                 'exception' => $e->getMessage(),
+                 'trace' => $e->getTraceAsString(),
+                 'user_id' => auth()->id(),
+                 'request_data' => $request->except(['gallery', 'caracteristiques']),
+             ]);
+             
+             return response()->json([
+                 'error' => config('app.debug') 
+                     ? 'Erreur : ' . $e->getMessage() 
+                     : 'Une erreur est survenue lors de la création de l\'infrastructure. Veuillez réessayer.',
+             ], 500);
          }
      }
      
     
 
-     public function updateCaracteristiques(Request $request, Infrastructure $infrastructure)
+     public function updateCaracteristiques(\App\Http\Requests\UpdateCaracteristiquesRequest $request, Infrastructure $infrastructure)
      {
          try {
              if (!$infrastructure) {
@@ -305,6 +350,13 @@ class InfrastructureController extends Controller
                  return redirect()
                      ->route('infrastructures.index')
                      ->with('error', 'Infrastructure introuvable.');
+             }
+             
+             // Vérifier que l'infrastructure appartient au contexte actuel
+             if ($infrastructure->code_groupe_projet !== session('projet_selectionne') 
+                 || $infrastructure->code_pays !== session('pays_selectionne')) {
+                 return redirect()->back()
+                     ->with('error', 'Vous n\'êtes pas autorisé à modifier cette infrastructure.');
              }
      
              DB::beginTransaction();
@@ -315,7 +367,24 @@ class InfrastructureController extends Controller
                  'caracteristiques' => $request->input('caracteristiques', [])
              ]);
      
+             // Vérifier que la famille de l'infrastructure existe
+             $famille = $infrastructure->familleInfrastructure;
+             if (!$famille) {
+                 DB::rollBack();
+                 return redirect()->back()
+                     ->with('error', 'La famille d\'infrastructure n\'est pas définie.');
+             }
+             
              foreach ($request->input('caracteristiques', []) as $idKey => $valeur) {
+                 // Ignorer les valeurs vides (permet de supprimer une caractéristique)
+                 if ($valeur === null || $valeur === '') {
+                     // Supprimer la valeur existante si elle existe
+                     ValeurCaracteristique::where('infrastructure_code', $infrastructure->code)
+                         ->where('idCaracteristique', is_numeric($idKey) ? $idKey : intval(str_replace('new_', '', $idKey)))
+                         ->delete();
+                     continue;
+                 }
+                 
                  // 🔧 Nettoyer l'ID si formaté avec "new_"
                  $idCaracteristique = is_string($idKey) && str_starts_with($idKey, 'new_')
                      ? intval(str_replace('new_', '', $idKey))
@@ -330,7 +399,63 @@ class InfrastructureController extends Controller
                      Log::warning("⚠️ ID de caractéristique introuvable : {$idKey}");
                      continue;
                  }
-     
+                 
+                 // Vérifier que la caractéristique appartient à la famille
+                 $caracValide = FamilleCaracteristique::where('idFamille', $famille->idFamille)
+                     ->where('idCaracteristique', $idCaracteristique)
+                     ->exists();
+                 
+                 if (!$caracValide) {
+                     Log::warning("⚠️ Caractéristique non autorisée pour cette famille", [
+                         'carac_id' => $idCaracteristique,
+                         'famille_id' => $famille->idFamille
+                     ]);
+                     continue;
+                 }
+                 
+                 // Valider et convertir la valeur selon le type
+                 $type = strtolower($caracteristique->type->libelleTypeCaracteristique ?? '');
+                 $valeurFinale = null;
+                 
+                 switch ($type) {
+                     case 'liste':
+                         $option = $caracteristique->valeursPossibles->firstWhere('valeur', $valeur)
+                             ?? $caracteristique->valeursPossibles->firstWhere('id', $valeur);
+                         
+                         if (!$option) {
+                             Log::warning("Valeur de liste invalide", [
+                                 'carac_id' => $idCaracteristique,
+                                 'valeur_reçue' => $valeur
+                             ]);
+                             continue; // Ignorer cette valeur invalide
+                         }
+                         $valeurFinale = $option->valeur;
+                         break;
+                     
+                     case 'boolean':
+                         $valeurFinale = filter_var($valeur, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                         break;
+                     
+                     case 'nombre':
+                         if (!is_numeric($valeur)) {
+                             Log::warning("Valeur numérique invalide", ['carac_id' => $idCaracteristique, 'valeur' => $valeur]);
+                             continue;
+                         }
+                         $valeurFinale = (string) $valeur;
+                         break;
+                     
+                     default:
+                         $valeurFinale = is_string($valeur) ? trim($valeur) : (string) $valeur;
+                         break;
+                 }
+                 
+                 if ($valeurFinale === null || $valeurFinale === '') {
+                     continue;
+                 }
+                 
+                 // Récupérer l'unité dérivée si fournie
+                 $idUniteDerivee = $request->input("unites_derivees.$idCaracteristique");
+                 
                  // Rechercher une valeur existante
                  $valeurExistante = ValeurCaracteristique::where('infrastructure_code', $infrastructure->code)
                      ->where('idCaracteristique', $idCaracteristique)
@@ -340,30 +465,30 @@ class InfrastructureController extends Controller
                      Log::debug('✏️ Mise à jour valeur existante', [
                          'id' => $valeurExistante->id,
                          'ancienne_valeur' => $valeurExistante->valeur,
-                         'nouvelle_valeur' => $valeur
+                         'nouvelle_valeur' => $valeurFinale
                      ]);
      
                      $valeurExistante->update([
-                         'valeur' => $valeur,
-                         'idUnite' => $caracteristique->idUnite,
-                         'parent_saisie_id' => $caracteristique->parent_id,
-                         'uniteDerivee' => $request->input("unites_derivees.$idCaracteristique"),
-                         'ordre' => $caracteristique->ordre,
+                         'valeur' => $valeurFinale,
+                         'idUnite' => $caracteristique->idUnite ?? null,
+                         'idUniteDerivee' => $idUniteDerivee ?: null,
+                         'parent_saisie_id' => $caracteristique->parent_id ?? null,
+                         'ordre' => $caracteristique->ordre ?? null,
                      ]);
                  } else {
                      Log::debug('➕ Création nouvelle valeur', [
                          'caracteristique_id' => $idCaracteristique,
-                         'valeur' => $valeur
+                         'valeur' => $valeurFinale
                      ]);
      
                      ValeurCaracteristique::create([
                          'idCaracteristique' => $idCaracteristique,
-                         'valeur' => $valeur,
+                         'valeur' => $valeurFinale,
                          'infrastructure_code' => $infrastructure->code,
-                         'idUnite' => $caracteristique->idUnite,                         
-                        'idUniteDerivee' => $request->input("unites_derivees.$idCaracteristique"),
-                         'parent_saisie_id' => $caracteristique->parent_id,
-                         'ordre' => $caracteristique->ordre,
+                         'idUnite' => $caracteristique->idUnite ?? null,
+                         'idUniteDerivee' => $idUniteDerivee ?: null,
+                         'parent_saisie_id' => $caracteristique->parent_id ?? null,
+                         'ordre' => $caracteristique->ordre ?? null,
                      ]);
                  }
              }
@@ -570,16 +695,12 @@ class InfrastructureController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(\App\Http\Requests\UpdateInfrastructureRequest $request, $id)
     {
         try {
-            Log::info("🛠️ Début update infrastructure ID: $id", $request->all());
+            Log::info("🛠️ Début update infrastructure ID: $id", $request->validated());
 
-            $request->validate([
-                'libelle' => 'required|string|max:255',
-                'code_famille_infrastructure' => 'required|exists:familleinfrastructure,code_Ssys',
-                'code_localite' => 'required|exists:localites_pays,id',
-            ]);
+            // Validation effectuée par FormRequest
 
             $infrastructure = Infrastructure::findOrFail($id);
             $ancienCode = $infrastructure->code;
@@ -681,9 +802,17 @@ class InfrastructureController extends Controller
         } catch (\Throwable $e) {
             Log::error("❌ Erreur lors de la mise à jour de l'infrastructure ID: $id", [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+                'infrastructure_id' => $id,
+                'request_data' => $request->except(['gallery']),
             ]);
-            return response()->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
+            
+            return response()->json([
+                'error' => config('app.debug') 
+                    ? 'Erreur : ' . $e->getMessage() 
+                    : 'Une erreur est survenue lors de la mise à jour de l\'infrastructure. Veuillez réessayer.',
+            ], 500);
         }
     }
 
@@ -691,42 +820,202 @@ class InfrastructureController extends Controller
      // Supprimer une infrastructure
      public function destroy($id, Request $request)
      {
-         $ecran = Ecran::find($request->input('ecran_id'));
-         $infrastructure = Infrastructure::findOrFail($id);
-         $infrastructure->delete();
+         try {
+             $ecran = Ecran::find($request->input('ecran_id'));
+             $infrastructure = Infrastructure::findOrFail($id);
+             
+             // Vérifier que l'infrastructure appartient au contexte actuel
+             if ($infrastructure->code_groupe_projet !== session('projet_selectionne') 
+                 || $infrastructure->code_pays !== session('pays_selectionne')) {
+                 return redirect()->back()
+                     ->with('error', 'Vous n\'êtes pas autorisé à supprimer cette infrastructure.');
+             }
+             
+             // Vérifier si l'infrastructure est utilisée dans des projets
+             $usedInProjects = \App\Models\ProjetInfrastructure::where('code_infrastructure', $infrastructure->code)->exists();
+             if ($usedInProjects) {
+                 return redirect()->back()
+                     ->with('error', 'Impossible de supprimer cette infrastructure : elle est associée à un ou plusieurs projets.');
+             }
+             
+             $code = $infrastructure->code;
+             $infrastructure->delete();
+             
+             Log::info("Infrastructure supprimée", [
+                 'infrastructure_code' => $code,
+                 'user_id' => auth()->id(),
+             ]);
  
-         return redirect()->route('infrastructures.index', ['ecran_id' => $ecran->id])
-             ->with('success', 'Infrastructure supprimée avec succès.');
+             return redirect()->route('infrastructures.index', ['ecran_id' => $ecran->id])
+                 ->with('success', 'Infrastructure supprimée avec succès.');
+         } catch (\Throwable $e) {
+             Log::error("Erreur lors de la suppression de l'infrastructure", [
+                 'id' => $id,
+                 'error' => $e->getMessage(),
+                 'user_id' => auth()->id(),
+             ]);
+             
+             return redirect()->back()
+                 ->with('error', 'Une erreur est survenue lors de la suppression.');
+         }
      }
  
      // Gestion des caractéristiques
      public function storeCaracteristique(Request $request, $id)
      {
-         $request->validate([
-             'idCaracteristique' => 'required|exists:caracteristiques,idCaracteristique',
-             'idUnite' => 'required|exists:unites,idUnite',
-             'valeur' => 'required',
-         ]);
+         try {
+             $infrastructure = Infrastructure::findOrFail($id);
+             
+             // Vérifier que l'infrastructure appartient au contexte actuel
+             if ($infrastructure->code_groupe_projet !== session('projet_selectionne') 
+                 || $infrastructure->code_pays !== session('pays_selectionne')) {
+                 return redirect()->back()
+                     ->with('error', 'Vous n\'êtes pas autorisé à modifier cette infrastructure.');
+             }
+             
+             $request->validate([
+                 'idCaracteristique' => 'required|integer|exists:caracteristiques,idCaracteristique',
+                 'valeur' => 'required',
+                 'idUnite' => 'nullable|integer|exists:unites,idUnite',
+                 'idUniteDerivee' => 'nullable|integer|exists:unites_derivees,id',
+             ]);
+             
+             // Vérifier que la caractéristique appartient à la famille de l'infrastructure
+             $famille = $infrastructure->familleInfrastructure;
+             if (!$famille) {
+                 return redirect()->back()
+                     ->with('error', 'La famille d\'infrastructure n\'est pas définie.');
+             }
+             
+             $caracValide = FamilleCaracteristique::where('idFamille', $famille->idFamille)
+                 ->where('idCaracteristique', $request->idCaracteristique)
+                 ->exists();
+             
+             if (!$caracValide) {
+                 return redirect()->back()
+                     ->with('error', 'Cette caractéristique n\'est pas autorisée pour cette famille d\'infrastructure.');
+             }
+             
+             $caracteristique = Caracteristique::with('type', 'valeursPossibles')->findOrFail($request->idCaracteristique);
+             
+             // Valider et convertir la valeur selon le type
+             $type = strtolower($caracteristique->type->libelleTypeCaracteristique ?? '');
+             $valeurFinale = null;
+             
+             switch ($type) {
+                 case 'liste':
+                     $option = $caracteristique->valeursPossibles->firstWhere('valeur', $request->valeur)
+                         ?? $caracteristique->valeursPossibles->firstWhere('id', $request->valeur);
+                     
+                     if (!$option) {
+                         return redirect()->back()
+                             ->with('error', 'La valeur sélectionnée n\'est pas valide pour cette caractéristique de type Liste.');
+                     }
+                     $valeurFinale = $option->valeur;
+                     break;
+                 
+                 case 'boolean':
+                     $valeurFinale = filter_var($request->valeur, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                     break;
+                 
+                 case 'nombre':
+                     if (!is_numeric($request->valeur)) {
+                         return redirect()->back()
+                             ->with('error', 'La valeur doit être un nombre pour cette caractéristique.');
+                     }
+                     $valeurFinale = (string) $request->valeur;
+                     break;
+                 
+                 default:
+                     $valeurFinale = is_string($request->valeur) ? trim($request->valeur) : (string) $request->valeur;
+                     break;
+             }
+             
+             // Vérifier si une valeur existe déjà pour cette caractéristique
+             $valeurExistante = ValeurCaracteristique::where('infrastructure_code', $infrastructure->code)
+                 ->where('idCaracteristique', $request->idCaracteristique)
+                 ->first();
+             
+             if ($valeurExistante) {
+                 $valeurExistante->update([
+                     'valeur' => $valeurFinale,
+                     'idUnite' => $request->idUnite ?? $caracteristique->idUnite ?? null,
+                     'idUniteDerivee' => $request->idUniteDerivee ?? null,
+                     'parent_saisie_id' => $caracteristique->parent_id ?? null,
+                     'ordre' => $caracteristique->ordre ?? null,
+                 ]);
+                 
+                 Log::info("Caractéristique mise à jour", [
+                     'infrastructure_code' => $infrastructure->code,
+                     'caracteristique_id' => $request->idCaracteristique,
+                 ]);
+             } else {
+                 ValeurCaracteristique::create([
+                     'infrastructure_code' => $infrastructure->code,
+                     'idCaracteristique' => $request->idCaracteristique,
+                     'valeur' => $valeurFinale,
+                     'idUnite' => $request->idUnite ?? $caracteristique->idUnite ?? null,
+                     'idUniteDerivee' => $request->idUniteDerivee ?? null,
+                     'parent_saisie_id' => $caracteristique->parent_id ?? null,
+                     'ordre' => $caracteristique->ordre ?? null,
+                 ]);
+                 
+                 Log::info("Caractéristique ajoutée", [
+                     'infrastructure_code' => $infrastructure->code,
+                     'caracteristique_id' => $request->idCaracteristique,
+                 ]);
+             }
  
-         ValeurCaracteristique::create([
-             'idInfrastructure' => $id,
-             'idCaracteristique' => $request->idCaracteristique,
-             'idUnite' => $request->idUnite,
-             'valeur' => $request->valeur,
-             'ordre' => $request->ordre,
-             'parent_saisie_id' => $request->parent_saisie_id,
-             'description' => $request->description,
-         ]);
- 
-         return redirect()->back()->with('success', 'Caractéristique ajoutée avec succès.');
+             return redirect()->back()->with('success', 'Caractéristique enregistrée avec succès.');
+         } catch (\Throwable $e) {
+             Log::error("Erreur lors de l'ajout de caractéristique", [
+                 'infrastructure_id' => $id,
+                 'error' => $e->getMessage(),
+                 'user_id' => auth()->id(),
+             ]);
+             
+             return redirect()->back()
+                 ->with('error', 'Une erreur est survenue lors de l\'enregistrement de la caractéristique.');
+         }
      }
  
      public function destroyCaracteristique($id)
      {
-         $valeur = ValeurCaracteristique::findOrFail($id);
-         $valeur->delete();
+         try {
+             $valeur = ValeurCaracteristique::findOrFail($id);
+             $infrastructure = Infrastructure::where('code', $valeur->infrastructure_code)->first();
+             
+             if (!$infrastructure) {
+                 return redirect()->back()
+                     ->with('error', 'Infrastructure introuvable.');
+             }
+             
+             // Vérifier que l'infrastructure appartient au contexte actuel
+             if ($infrastructure->code_groupe_projet !== session('projet_selectionne') 
+                 || $infrastructure->code_pays !== session('pays_selectionne')) {
+                 return redirect()->back()
+                     ->with('error', 'Vous n\'êtes pas autorisé à supprimer cette caractéristique.');
+             }
+             
+             $valeur->delete();
+             
+             Log::info("Caractéristique supprimée", [
+                 'valeur_id' => $id,
+                 'infrastructure_code' => $valeur->infrastructure_code,
+                 'user_id' => auth()->id(),
+             ]);
  
-         return redirect()->back()->with('success', 'Caractéristique supprimée avec succès.');
+             return redirect()->back()->with('success', 'Caractéristique supprimée avec succès.');
+         } catch (\Throwable $e) {
+             Log::error("Erreur lors de la suppression de caractéristique", [
+                 'valeur_id' => $id,
+                 'error' => $e->getMessage(),
+                 'user_id' => auth()->id(),
+             ]);
+             
+             return redirect()->back()
+                 ->with('error', 'Une erreur est survenue lors de la suppression de la caractéristique.');
+         }
      }
 
      public function historique($id)
@@ -761,40 +1050,51 @@ class InfrastructureController extends Controller
         
             $projets[] = [
                 'code_projet' => $projet->code_projet,
-                'nature' => $projet->projetNaturesTravaux?->natureTravaux?->libelle ?? '-',
+                'nature' => optional(optional($projet->projetNaturesTravaux)->natureTravaux)->libelle ?? '-',
                 'date_debut' => $projet->date_demarrage_prevue ? \Carbon\Carbon::parse($projet->date_demarrage_prevue)->format('d/m/Y') : '-',
                 'date_fin' => $projet->date_fin_prevue ? \Carbon\Carbon::parse($projet->date_fin_prevue)->format('d/m/Y') : '-',
                 'cout' => number_format($projet->cout_projet, 0, ',', ' ') ?? '-',
-                'devise' => $projet->devise?->monnaie ?? '-',
+                'devise' => optional($projet->devise)->monnaie ?? '-',
             ];
         }
-        $armoiriePath = public_path(auth()->user()?->paysSelectionne()?->armoirie);
+        $url = route('infrastructures.show', $infrastructure->id);
 
-       
-       
-        $url = route('infrastructures.show', $infrastructure->id); // ou autre route
+        // ✅ Récupère l'armoirie du pays sélectionné
+        $user = auth()->user();
+        $pays = $user && method_exists($user, 'paysSelectionne') ? $user->paysSelectionne() : null;
+        $armoiriePath = $pays && isset($pays->armoirie) ? public_path($pays->armoirie) : null;
 
-
+        // Création du QR Code avec tous les paramètres dans le constructeur
         $qrCode = new QrCode(
-            data: $url,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::High,
-            size: 300, // taille du QR
-            margin: 10,
-            foregroundColor: new Color(0, 0, 0),
-            backgroundColor: new Color(255, 255, 255),
+            $url, // data
+            new Encoding('UTF-8'), // encoding
+            ErrorCorrectionLevel::High, // errorCorrectionLevel
+            300, // size
+            10, // margin
+            RoundBlockSizeMode::Margin, // roundBlockSizeMode
+            new Color(0, 0, 0), // foregroundColor
+            new Color(255, 255, 255) // backgroundColor
         );
         
-        // ✅ Récupère l’armoirie du pays sélectionné
-        $armoiriePath = public_path(auth()->user()?->paysSelectionne()?->armoirie);
-        
         $logo = null;
-        if (file_exists($armoiriePath)) {
-            $logo = Logo::create($armoiriePath)->setResizeToWidth(60); // ajuste selon tes besoins
+        if ($armoiriePath && file_exists($armoiriePath)) {
+            try {
+                $logo = new Logo(
+                    $armoiriePath, // path
+                    60, // resizeToWidth
+                    null, // resizeToHeight
+                    false // punchoutBackground
+                );
+            } catch (\Exception $e) {
+                Log::warning("Impossible de charger l'armoirie pour le QR code", [
+                    'path' => $armoiriePath,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
         
         $writer = new PngWriter();
-        $result = $writer->write($qrCode, $logo); // 💥 Logo inséré ici
+        $result = $logo ? $writer->write($qrCode, $logo) : $writer->write($qrCode);
         
         // Encode en base64 pour affichage direct dans la vue
         $qrCodeBase64 = base64_encode($result->getString());

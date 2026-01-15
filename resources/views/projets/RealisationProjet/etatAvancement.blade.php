@@ -291,14 +291,27 @@
 
                             <div class="row">
                                 <div class="col-md-3">
+                                    <label class="form-label">Type de projet</label>
+                                    <select id="real_type_projet" class="form-select">
+                                        @can('projettype.select', 'INF')
+                                            <option value="PROJET">Projet d'infrastructure</option>
+                                        @endcan
+                                        @can('projettype.select', 'APP')
+                                            <option value="APPUI">Projet d'appui</option>
+                                        @endcan
+                                        @can('projettype.select', 'ETU')
+                                            <option value="ETUDE">Projet d'étude</option>
+                                        @endcan
+                                    </select>
+                                    <small class="text-muted">Choisissez un type pour filtrer la liste.</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
                                     <label for="code_projet" class="form-label">Code projet</label>
                                     <select name="code_projet" id="code_projet" class="form-select" onchange="checkProjectDetails()">
                                             <option value="">Sélectionner un projet</option>
-                                            @foreach ($projets as $projet)
-                                                <option value="{{ $projet->code_projet }}">
-                                                        {{ $projet->code_projet }}
-                                                </option>
-                                            @endforeach
+                                           
                                     </select>
                                 </div>
 
@@ -486,17 +499,32 @@
                     </div>
                 </div>
 
-                <div class="row mb-3" id="finalisation-section" style="display: none;">
-                    <div class="col-md-6">
-                        <label for="date_fin_effective">Date effective de fin</label>
-                        <input type="date" class="form-control" id="date_fin_effective" name="date_fin_effective">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="description_finale">Description finale</label>
-                        <textarea class="form-control" id="description_finale" name="description_finale"
-                                rows="2" placeholder="Décrivez l'état final"></textarea>
-                    </div>
+                <div class="row mb-3" id="finalisation-section" style="display:none;">
+                <div class="col-md-6">
+                    <label for="date_fin_effective">Date effective de fin</label>
+                    <input type="date" class="form-control" id="date_fin_effective" name="date_fin_effective">
                 </div>
+                <div class="col-md-6">
+                    <label for="description_finale">Description finale</label>
+                    <textarea class="form-control" id="description_finale" name="description_finale"
+                    rows="2" placeholder="Décrivez l'état final"></textarea>
+                </div>
+
+                <!-- Livrables pour ETUDE -->
+                <div class="col-md-12 mt-2" id="livrables_etude_box" style="display:none;">
+                    <label for="livrables">Livrables (fichiers)</label>
+                    <input type="file" class="form-control" name="livrables[]" id="livrables" multiple>
+                    <small class="text-muted">PDF/Doc/Zip etc. (max 10 fichiers, 20 Mo chacun)</small>
+                </div>
+
+                <!-- Rapport pour APPUI -->
+                <div class="col-md-12 mt-2" id="rapport_appui_box" style="display:none;">
+                    <label for="rapport_appui">Rapport d'appui</label>
+                    <input type="file" class="form-control" name="rapport_appui" id="rapport_appui" accept=".pdf,.doc,.docx,.odt">
+                    <small class="text-muted">Un seul fichier (20 Mo max)</small>
+                </div>
+                </div>
+
 
                 <div class="row mb-3 d-flex ">
                     <div class="col-8">
@@ -598,6 +626,230 @@
     </div>
 </section>
 <script>
+const PREFIX_TO_TYPE = [
+  { prefix: 'ET_',    type: 'ETUDE' },
+  { prefix: 'APPUI_', type: 'APPUI' }
+];
+function detectTypeFromCode(code) {
+  if (!code) return 'PROJET';
+  const hit = PREFIX_TO_TYPE.find(p => code.startsWith(p.prefix));
+  return hit ? hit.type : 'PROJET';
+}
+
+const typeSelect   = document.getElementById('real_type_projet');
+const projetSelect = document.getElementById('code_projet');
+
+async function reloadProjetOptions(type, preselect = null) {
+  projetSelect.innerHTML = '<option value="">Chargement...</option>';
+  try {
+    const url = "{{ route('realise.optionsProjets') }}" 
+          + "?type=" + encodeURIComponent(type || 'PROJET')
+          + "&statut=2";
+
+    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    const data = await res.json();
+    projetSelect.innerHTML = '<option value="">Sélectionner un projet</option>';
+    (data || []).forEach(row => {
+      const opt = document.createElement('option');
+      opt.value = row.code;
+      opt.textContent = row.code + (row.label ? ' — ' + row.label : '');
+      projetSelect.appendChild(opt);
+    });
+    if (preselect && (data || []).some(d => d.code === preselect)) {
+      projetSelect.value = preselect;
+      checkProjectDetails();
+    }
+  } catch (e) {
+    projetSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+  }
+}
+
+// init + changements
+document.addEventListener('DOMContentLoaded', () => reloadProjetOptions(typeSelect.value));
+typeSelect.addEventListener('change', () => reloadProjetOptions(typeSelect.value));
+projetSelect.addEventListener('change', function() {
+  const code = this.value;
+  if (!code) return;
+  const autoType = detectTypeFromCode(code);
+  if (autoType !== typeSelect.value) {
+    typeSelect.value = autoType;
+    reloadProjetOptions(autoType, code);
+    return;
+  }
+  checkProjectDetails();
+});
+
+function showSuiviOnlyButton(codeProjet) {
+  // masque le tableau
+  document.querySelector('#actionTable').style.display = 'none';
+  // insère un conteneur bouton s’il n’existe pas
+  let box = document.getElementById('suivi-only-container');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'suivi-only-container';
+    box.className = 'mt-3 d-flex justify-content-end';
+    document.querySelector('.card-body').appendChild(box);
+  }
+  box.innerHTML = `
+    <button type="button" class="btn btn-success action-btn btn-niveau-avancement"
+            data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
+            data-projet="${codeProjet}" data-ordre="0" data-quantite="100">
+      <i class="fas fa-chart-line me-1"></i> Suivi
+    </button>`;
+}
+
+
+</script>
+<script>
+// Garde le type courant (PROJET / APPUI / ETUDE) et le libellé sélectionné
+let currentTypeForOffcanvas = 'PROJET';
+let currentProjectLabel = '';
+
+function inferTypeFromCode(code){
+  if (!code) return 'PROJET';
+  if (code.startsWith('ET_')) return 'ETUDE';
+  if (code.startsWith('APPUI_')) return 'APPUI';
+  return 'PROJET';
+}
+
+// Récupère le libellé du projet depuis le <select> (après " — ")
+function getSelectedProjectLabel() {
+  const sel = document.getElementById('code_projet');
+  const opt = sel ? sel.options[sel.selectedIndex] : null;
+  if (!opt) return '';
+  const txt = opt.textContent || '';
+  const parts = txt.split('—');
+  return parts.length > 1 ? parts.slice(1).join('—').trim() : '';
+}
+
+// Change le libellé du label + la valeur de l’input d’en-tête
+function setHeaderFieldByType(type, fallbackNature = '') {
+  const labelEl = document.querySelector('label[for="nature_travaux_Modal"]');
+  const inputEl = document.getElementById('nature_travaux_Modal');
+  const qtyBox  = document.getElementById('quantite_provisionnel_Modal')?.closest('.col-md-3');
+
+  if (!labelEl || !inputEl) return;
+
+  if (type === 'ETUDE' || type === 'APPUI') {
+    labelEl.textContent = 'Libellé du projet';
+    inputEl.value = currentProjectLabel || fallbackNature || 'Non défini';
+    if (qtyBox) qtyBox.style.display = 'none';
+  } else {
+    labelEl.textContent = 'Nature des travaux';
+    inputEl.value = fallbackNature || 'Non défini';
+    if (qtyBox) qtyBox.style.display = '';
+  }
+}
+
+// Affiche/masque livrables/rapport en fonction du type et du pourcentage
+function toggleFinalisationExtras(type, pct) {
+  const show = Number(pct) >= 100;
+  document.getElementById('livrables_etude_box').style.display = (show && type==='ETUDE') ? '' : 'none';
+  document.getElementById('rapport_appui_box').style.display   = (show && type==='APPUI') ? '' : 'none';
+}
+function updateProgressBar(val) {
+  const v = parseInt(val, 10) || 0;
+  $('#sliderValue').text(v + '%');
+  $('#pourcentage_Modal').val(v);
+  $('#quantite_reel_Modal').val(v); // on poste bien "quantite_reel" = %
+
+  const showFinal = v >= 100;
+  $('#finalisation-section').toggle(showFinal);
+  toggleFinalisationExtras(currentTypeForOffcanvas, v);
+}
+</script>
+<script>
+// Utilitaires
+function formatDateYYYYMMDD(d) {
+  if (!d) return '-';
+  // d peut déjà être 'YYYY-MM-DD' : on laisse tel quel ou adapte ton format
+  return d;
+}
+function safe(val, def='-'){ return (val===null||val===undefined||val==='') ? def : val; }
+
+// Recharge la liste (#table1) selon le type courant
+async function loadListeProjets(type) {
+  try {
+    const url = "{{ route('projets.listeByType') }}?type=" + encodeURIComponent(type || 'PROJET');
+    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    const data = await res.json();
+
+    const $table = $('#table1');
+    const $tbody = $table.find('tbody');
+
+    // Si DataTables est utilisé, on passe par son API
+    let dt = null;
+    if ($.fn.DataTable && $.fn.dataTable.isDataTable('#table1')) {
+      dt = $table.DataTable();
+      dt.clear();
+    } else {
+      $tbody.empty();
+    }
+
+    (data || []).forEach(row => {
+      const tr = `
+        <tr>
+          <td>${safe(row.code)}</td>
+          <td>${safe(row.domaine)}</td>
+          <td>${row.date_debut ? formatDateYYYYMMDD(row.date_debut) : '-'}</td>
+          <td>${row.date_fin ? formatDateYYYYMMDD(row.date_fin) : '-'}</td>
+          <td class="text-end">${row.cout ? formatNumber(row.cout) : '-'}</td>
+          <td>${safe(row.devise)}</td>
+          <td><span class="badge bg-primary">${safe(row.statut, 'Prévu')}</span></td>
+        </tr>
+      `;
+      if (dt) {
+        // Convertit la ligne HTML en tableau de colonnes pour DataTables
+        const $tmp = $('<table><tbody>'+tr+'</tbody></table>');
+        const cols = $tmp.find('td').toArray().map(td => td.innerHTML);
+        dt.row.add(cols);
+      } else {
+        $tbody.append(tr);
+      }
+    });
+
+    if (dt) dt.draw();
+  } catch(e) {
+    console.error(e);
+    // Optionnel: message à l’usager
+    // swalMsg('Erreur', 'Impossible de charger la liste des projets', 'error');
+  }
+}
+
+// 1) Quand on change le type, si la liste est visible → on recharge
+$('#real_type_projet').on('change', function() {
+  if ($('#liste-projets').is(':visible')) {
+    loadListeProjets(this.value);
+  }
+});
+
+// 2) Quand on clique “Voir la liste complète…”, on charge selon le type courant
+// ✅ Handler unique et propre
+$('#voir-liste-link')
+  .off('click') // on nettoie toute attache précédente
+  .on('click', function(e) {
+    e.preventDefault();
+    const $section = $('#liste-projets');
+    const vaAfficher = !$section.is(':visible');
+
+    if (vaAfficher) {
+      const type = $('#real_type_projet').val() || 'PROJET';
+      loadListeProjets(type);
+    }
+
+    $section.slideToggle(200, function() {
+      // Ajuste DataTables après affichage (colonnes, largeur)
+      if ($section.is(':visible') && $.fn.DataTable && $.fn.dataTable.isDataTable('#table1')) {
+        $('#table1').DataTable().columns.adjust();
+      }
+    });
+
+    $('#voir-liste-link').find('i').toggleClass('fa-list fa-times');
+  });
+
+</script>
+
+<script>
     $(document).ready(function() {
         initDataTable('{{ auth()->user()->acteur?->libelle_court }} {{ auth()->user()->acteur?->libelle_long }}', 'table1', 'Liste des des projets en cours ')
     });
@@ -629,21 +881,6 @@
 
         }
 
-    }
-
-
-
-    // Mise à jour de la barre de progression
-    function updateProgressBar(val) {
-        $('#sliderValue').text(val + '%');
-        $('#pourcentage_Modal').val(val);       // ← garder
-        // NE PAS pousser val dans #quantite_reel_Modal (ou supprime ce champ)
-        $('#quantite_reel_Modal').val(val);  // ← à enlever si on reste en modèle %
-        if (parseInt(val) >= 100) {
-            $('#finalisation-section').show();
-        } else {
-            $('#finalisation-section').hide();
-        }
     }
 
 
@@ -742,10 +979,9 @@
             <div class="modal-body">
                 <div id="carouselPhotos" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
-                    ${ids.map((id, index) => `
+                    ${ids.map((rel, index) => `
                     <div class="carousel-item ${index === 0 ? 'active' : ''}">
-                        <!-- Adapte la route si tu sers GridFS: /files/{id} -->
-                        <img src="/Data/avancement/${id}" class="d-block w-100" alt="Photo avancement">
+                        <img src="/${rel}" class="d-block w-100" alt="Photo avancement">
                     </div>
                     `).join('')}
                 </div>
@@ -766,6 +1002,7 @@
     $('#photosModal').modal('show').on('hidden.bs.modal', function(){ $(this).remove(); });
     return false;
     }
+
 
     // Helpers SweetAlert2
     function swalConfirm(opts) {
@@ -823,7 +1060,24 @@
 
         const formData = new FormData(this);
         const pourcentage = parseInt($('#pourcentage_Modal').val());
+        const type = currentTypeForOffcanvas;
 
+        if (parseInt($('#pourcentage_Modal').val(),10) >= 100) {
+            if (type === 'ETUDE') {
+            const liv = $('#livrables')[0].files || [];
+            if (liv.length > 10) {
+                swalMsg('Validation', 'Maximum 10 livrables.', 'warning');
+                return;
+            }
+            }
+            if (type === 'APPUI') {
+            const rap = $('#rapport_appui')[0].files || [];
+            if (rap.length > 1) {
+                swalMsg('Validation', 'Un seul rapport est autorisé.', 'warning');
+                return;
+            }
+            }
+        }
         // Validation
         if (pourcentage > 100) {
             alert('Attention', 'Le pourcentage ne peut pas dépasser 100%', 'warning');
@@ -901,12 +1155,6 @@
         $("#type_acteur").prop("checked", true);
         afficheSelect('select_acteur');
 
-        // Gestion de l'affichage de la liste des projets
-        $('#voir-liste-link').on('click', function(e) {
-            e.preventDefault();
-            $('#liste-projets').slideToggle();
-            $(this).find('i').toggleClass('fa-list fa-times');
-        });
 
         // Formatage des nombres
         $('#cout, #coutEffective_Modal').on('input', function(e) {
@@ -919,65 +1167,86 @@
         });
     });
 
-
-
     function checkProjectDetails() {
-        const codeProjet = $('#code_projet').val();
-        if (!codeProjet) return;
+    const codeProjet = $('#code_projet').val();
+    if (!codeProjet) return;
 
-        $.ajax({
-            url: '{{ url("/fetchProjectDetails")}}',
-            method: 'GET',
-            data: {
-                _token: '{{ csrf_token() }}',
-                code_projet: codeProjet
-            },
-            beforeSend: function() {
-                // Afficher un indicateur de chargement
-                $('#code_projet').addClass('loading');
-            },
-            success: function(response) {
-                console.log('la reponse', response);
-                $('#date_debut').val(response.date_debut);
-                $('#date_fin').val(response.date_fin);
-                $('#cout').val(formatNumber(response.cout));
-                $('#statutInput').val(response.statutInput);
-                $('#codeProjetHidden').val(response.codeProjet);
-                $('#devise').val(response.devise);
-                const codeProjet = response.codeProjet;
-                // Mettre à jour le tableau des actions
-                updateTableData(codeProjet, response.actions || []);
-                $.ajax({
-                    url: '{{ route("verifier.projet.finalisable") }}',
-                    method: 'GET',
-                    data: {
-                        code_projet: codeProjet
-                    },
-                    success: function(response) {
-                        if (response.finalisable === true) {
-                            $('#finalisation-projet-container').show();
-                            $('#info-projet-col').removeClass('col-12').addClass('col-9');
-                        } else {
-                            $('#finalisation-projet-container').hide();
-                            $('#info-projet-col').removeClass('col-9').addClass('col-12');
-                        }
-                    },
-                    error: function() {
-                        $('#finalisation-projet-container').hide();
-                    }
-                });
+    $.ajax({
+        url: '{{ url("/fetchProjectDetails")}}',
+        method: 'GET',
+        data: { _token: '{{ csrf_token() }}', code_projet: codeProjet },
+        beforeSend: function() { $('#code_projet').addClass('loading'); },
+        success: function(response) {
+        // Remplir l'entête
+        $('#date_debut').val(response.date_debut || '');
+        $('#date_fin').val(response.date_fin || '');
+        $('#cout').val(response.cout ? formatNumber(response.cout) : '');
+        $('#statutInput').val(response.statutInput || '');
+        $('#codeProjetHidden').val(response.codeProjet);
+        $('#devise').val(response.devise || '');
 
-                // Animation de mise à jour
-                $('.form-control').addClass('highlight');
-                setTimeout(() => $('.form-control').removeClass('highlight'), 1500);
-            },
-            complete: function() {
-                $('#code_projet').removeClass('loading');
-            },
-            error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Une erreur est survenue', 'error');
+        // Met à jour le libellé du projet pour l’offcanvas
+        currentProjectLabel = getSelectedProjectLabel();
+
+        // Détecter le type
+        const type = (function(code){
+            if (!code) return 'PROJET';
+            if (code.startsWith('ET_')) return 'ETUDE';
+            if (code.startsWith('APPUI_')) return 'APPUI';
+            return 'PROJET';
+        })(response.codeProjet);
+
+        // Affichage
+        if (type === 'APPUI' || type === 'ETUDE') {
+            document.querySelector('#actionTable').style.display = 'none';
+            let box = document.getElementById('suivi-only-container');
+            if (!box) {
+            box = document.createElement('div');
+            box.id = 'suivi-only-container';
+            box.className = 'mt-3 d-flex justify-content-end';
+            document.querySelector('.card-body').appendChild(box);
             }
+            box.innerHTML = `
+            <button type="button" class="btn btn-success action-btn btn-niveau-avancement"
+                    data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
+                    data-projet="${response.codeProjet}" data-ordre="0" data-quantite="100">
+                <i class="fas fa-chart-line me-1"></i> Suivi
+            </button>`;
+            $('#code_projet_Modal').val(response.codeProjet);
+            $('#ordre_Modal').val(0);
+        } else {
+            document.querySelector('#actionTable').style.display = '';
+            const extra = document.getElementById('suivi-only-container');
+            if (extra) extra.remove();
+            updateTableData(response.codeProjet, response.actions || []);
+        }
+
+        // Finalisable ?
+        $.ajax({
+            url: '{{ route("verifier.projet.finalisable") }}',
+            method: 'GET',
+            data: { code_projet: response.codeProjet },
+            success: function(res) {
+            if (res.finalisable === true) {
+                $('#finalisation-projet-container').show();
+                $('#info-projet-col').removeClass('col-12').addClass('col-9');
+            } else {
+                $('#finalisation-projet-container').hide();
+                $('#info-projet-col').removeClass('col-9').addClass('col-12');
+            }
+            },
+            error: function() { $('#finalisation-projet-container').hide(); }
         });
+
+        // Animation
+        $('.form-control').addClass('highlight');
+        setTimeout(() => $('.form-control').removeClass('highlight'), 1200);
+        },
+        complete: function() { $('#code_projet').removeClass('loading'); },
+        error: function(xhr) {
+        alert(xhr.responseJSON?.message || 'Une erreur est survenue', 'error');
+        }
+    });
     }
 
     function updateTableData(codeProjet, data) {
@@ -985,10 +1254,38 @@
     tbody.empty();
 
     if (!data || data.length === 0) {
-        tbody.append('<tr><td colspan="7" class="text-center text-muted">Aucune action disponible pour ce projet</td></tr>');
+        // Suivi GLOBAL pour ETUDE/APPUI
+        tbody.append(`
+        <tr class="action" data-id="GLOBAL">
+            <td class="num_ordre_cell">0</td>
+            <td>Suivi global</td>
+            <td>—</td>
+            <td>—</td>
+            <td>
+            <button type="button" class="btn btn-sm btn-outline-primary beneficiaire-btn"
+                    data-bs-toggle="modal" data-bs-target="#beneficiaireModal"
+                    data-projet="${codeProjet}" data-ordre="0">
+                <i class="fas fa-user-plus me-1"></i> Bénéficiaires
+            </button>
+            </td>
+            <td>
+            <button type="button" class="btn btn-sm btn-secondary no-carac">
+                <i class="fas fa-ban me-1"></i> Caractéristiques
+            </button>
+            </td>
+            <td>
+            <button type="button" class="btn btn-sm btn-success action-btn btn-niveau-avancement"
+                    data-bs-toggle="offcanvas" data-bs-target="#niveauAvancementModal"
+                    data-projet="${codeProjet}" data-ordre="0" data-quantite="100">
+                <i class="fas fa-chart-line me-1"></i> Suivi
+            </button>
+            </td>
+        </tr>
+        `);
         return;
     }
 
+    // Cas PROJET (infra) : inchangé
     data.forEach(item => {
         const caracButton = item.infrastructure_idCode
         ? `<a href="{{ url('admin/infrastructures') }}/${item.infrastructure_idCode}" class="btn btn-sm btn-primary action-btn">
@@ -1022,11 +1319,8 @@
         </tr>`;
         tbody.append(row);
     });
-
-    $(document).on('click', '.no-carac', function() {
-        swalMsg('Info', "Aucune caractéristique disponible pour cette infrastructure.", 'info');
-    });
     }
+
 
     // Gestion des bénéficiaires
     $(document).on('click', '.beneficiaire-btn', function() {
@@ -1041,69 +1335,81 @@
 
     // Fonction pour ouvrir le suivi d'avancement
     $(document).on('click', '.btn-niveau-avancement', function() {
-        const codeProjet = $(this).data('projet');
-        const numOrdre   = $(this).data('ordre');
+    const codeProjet = $(this).data('projet');
+    const numOrdre   = $(this).data('ordre');
 
-        // Reset UI
-        $('#avancementForm')[0].reset();
-        $('#photos-preview').empty();
-        $('#finalisation-section').hide();
+    // Fix : on détermine bien le type à partir du code projet
+    currentTypeForOffcanvas = inferTypeFromCode(codeProjet);
 
-        // Valeurs cachées
-        $('#code_projet_Modal').val(codeProjet);
-        $('#ordre_Modal').val(numOrdre);
+    // Reset UI
+    $('#avancementForm')[0].reset();
+    $('#photos-preview').empty();
+    $('#finalisation-section').hide();
 
-        // Précharge les données + dernier pourcentage
-        $.ajax({
-            url: '{{ route("get.donnees.suivi") }}',
-            type: 'GET',
-            data: { code_projet: codeProjet, num_ordre: numOrdre },
-            beforeSend: function() {
-            $('#nature_travaux_Modal').val('Chargement...');
-            $('#quantite_provisionnel_Modal').val('...');
-            $('#date_debut_Modal').val('');
-            },
-            success: function(response) {
-            if (!response || !response.success || !response.result) {
-                swalMsg('Info', (response && response.message) || 'Aucune information disponible.', 'info');
-                return;
-            }
-            const data = response.result;
+    // Valeurs cachées
+    $('#code_projet_Modal').val(codeProjet);
+    $('#ordre_Modal').val(numOrdre);
 
-            $('#nature_travaux_Modal').val(data.nature_travaux || 'Non défini');
-            $('#quantite_provisionnel_Modal').val(data.Quantite || 0);
-            $('#date_debut_Modal').val(data.date_debut_effective || '');
+    // Précharge les données + dernier pourcentage
+    $.ajax({
+        url: '{{ route("get.donnees.suivi") }}',
+        type: 'GET',
+        data: { code_projet: codeProjet, num_ordre: numOrdre },
+        beforeSend: function() {
+        $('#nature_travaux_Modal').val('Chargement...');
+        $('#quantite_provisionnel_Modal').val('...');
+        $('#date_debut_Modal').val('');
+        },
+        success: function(response) {
+        if (!response || !response.success || !response.result) {
+            swalMsg('Info', (response && response.message) || 'Aucune information disponible.', 'info');
+            return;
+        }
+        const data = response.result;
 
-            // Dernier % (retour API; défaut 0 si absent)
-            const lastPct = Number(data.dernier_pourcentage || 0);
-            const minNext = Math.min(100, lastPct + 1);
+        // Label d’en-tête : Libellé du projet (ETUDE/APPUI) ou Nature des travaux (PROJET)
+        // currentProjectLabel est mis à jour par checkProjectDetails()
+        setHeaderFieldByType(currentTypeForOffcanvas, data.nature_travaux || '');
 
-            $('#quantite_reel_slider').attr({ min: minNext, max: 100 }).val(minNext);
-            updateProgressBar(minNext);
+        // Quantité prévue (utile pour PROJET), sinon base 100
+        $('#quantite_provisionnel_Modal').val(
+            currentTypeForOffcanvas === 'PROJET' ? (data.Quantite || 0) : 100
+        );
 
-            if (lastPct >= 100) {
-                $('#quantite_reel_slider').prop('disabled', true);
-                $('button[type="submit"]').prop('disabled', true);
-                $('#finalisation-section').hide();
-                swalMsg('Terminé', "Cette action est déjà à 100%. Aucun nouveau suivi n'est possible.", 'info');
-            } else {
-                $('#quantite_reel_slider').prop('disabled', false);
-                $('button[type="submit"]').prop('disabled', false);
-            }
+        // Date début effective
+        $('#date_debut_Modal').val(data.date_debut_effective || '');
 
-            loadHistorique(codeProjet, numOrdre);
-            },
-            error: function(xhr) {
-            const message = xhr.responseJSON?.message || 'Erreur inconnue lors du chargement des données.';
-            swalMsg('Erreur', message, 'error');
-            }
-        });
+        // Dernier % -> min du slider = last + 1 (anti-régression)
+        const lastPct = Number(data.dernier_pourcentage || 0);
+        const minNext = Math.min(100, lastPct + 1);
+        $('#quantite_reel_slider').attr({ min: minNext, max: 100 }).val(minNext);
+        updateProgressBar(minNext);
 
-        // Ouvre l'offcanvas
-        const el = document.getElementById('niveauAvancementModal');
-        if (!el) return console.error('Offcanvas non trouvé : #niveauAvancementModal');
-        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(el);
-        offcanvas.show();
+        if (lastPct >= 100) {
+            $('#quantite_reel_slider').prop('disabled', true);
+            $('button[type="submit"]').prop('disabled', true);
+            $('#finalisation-section').hide();
+            toggleFinalisationExtras(currentTypeForOffcanvas, 100);
+            swalMsg('Terminé', "Cette action est déjà à 100%. Aucun nouveau suivi n'est possible.", 'info');
+        } else {
+            $('#quantite_reel_slider').prop('disabled', false);
+            $('button[type="submit"]').prop('disabled', false);
+        }
+
+        // Historique
+        loadHistorique(codeProjet, numOrdre);
+        },
+        error: function(xhr) {
+        const message = xhr.responseJSON?.message || 'Erreur inconnue lors du chargement des données.';
+        swalMsg('Erreur', message, 'error');
+        }
+    });
+
+    // Ouvre l'offcanvas
+    const el = document.getElementById('niveauAvancementModal');
+    if (!el) return console.error('Offcanvas non trouvé : #niveauAvancementModal');
+    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(el);
+    offcanvas.show();
     });
 
     function loadBeneficiaires(codeProjet, numOrdre) {

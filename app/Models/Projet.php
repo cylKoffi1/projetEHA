@@ -1,5 +1,5 @@
 <?php
-
+//Projet d'infrastructure
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -38,15 +38,7 @@ class Projet extends Model
     {
         return $this->hasMany(Profiter::class, 'code_projet', 'code_projet');
     }
-    public function renforcements()
-    {
-        return $this->belongsToMany(
-            Renforcement::class,
-            'renforcement_projet',
-            'code_projet',
-            'code_renforcement'
-        );
-    }
+
     public function beneficiairesInfrastructures()
     {
         return $this->hasMany(Jouir::class, 'code_projet', 'code_projet');
@@ -59,9 +51,20 @@ class Projet extends Model
             ->merge($this->beneficiairesLocalites)
             ->merge($this->beneficiairesInfrastructures);
     }
-    
-
-    
+    public function renforcements()
+    {
+        return $this->belongsToMany(
+            Renforcement::class,
+            'renforcement_projet',
+            'code_projet',
+            'code_renforcement'
+        );
+    }
+    public function sousDomaineSansSession()
+    {
+        // sans filtrage sur le groupe pour récupérer les libellés à coup sûr
+        return $this->belongsTo(SousDomaine::class, 'code_sous_domaine', 'code_sous_domaine');
+    }
 
     public function sousDomaine()
     {

@@ -375,7 +375,7 @@
             return;
         }
 
-        fetch('{{ route("projets.finaliser") }}', {
+        fetch('{{ isset($directMode) && $directMode ? route("projets.finaliser.direct") : route("projets.finaliser") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

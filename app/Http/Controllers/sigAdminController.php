@@ -12,17 +12,20 @@ use App\Models\Pays;
 use App\Models\Projet;
 use App\Models\ProjetEha2;
 use App\Models\Acteur;
+use App\Models\AppuiProjet;
 use App\Models\Financer;
 use App\Models\LegendeCarte;
 use App\Models\ProjetStatutProjet;
 use App\Models\LocalitesPays;
 use App\Models\ProjetStatut;
 use App\Models\StatutProjet;
+use App\Models\SousDomaine;
 use App\Models\TypeStatut;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class sigAdminController extends Controller
 {
@@ -412,91 +415,157 @@ class sigAdminController extends Controller
     
     public function getFiltreOptionsEtProjets(Request $request)
     {
-        $country = session('pays_selectionne');   // ex: "CIV"
-        $group   = session('projet_selectionne'); // ex: "EHA"
+        $country = session('pays_selectionne');   
+        $group   = session('projet_selectionne'); 
+    
         if (!$country || !$group) {
             return response()->json(['error' => 'Contexte pays/groupe manquant'], 400);
         }
-
-        // Pour indexer les libellés des localités, on a besoin de l'ID du pays
+    
+        // Pour indexer les libellés des localités, on a besoin de l’ID du pays
         $pays = Pays::where('alpha3', $country)->first();
         if (!$pays) return response()->json(['error' => 'Pays inconnu'], 404);
-
-        $start    = $request->input('start_date');   // optionnel
-        $end      = $request->input('end_date');     // optionnel
-        $type     = $request->input('date_type');    // 'prévisionnelles' | 'effectives' | null
-        $statut   = $request->input('status');       // optionnel
-        $bailleur = $request->input('bailleur');     // optionnel
-
-        $q = Projet::where('code_projet', 'like', $country.$group.'%');
-
-        // --- DATES (toutes optionnelles) ---
-        // Si au moins un des champs de date est fourni, on applique le type (prévisionnelles par défaut)
+    
+    
+        /* ============================================================
+         *                 PARAMÈTRES DE FILTRAGE
+         * ============================================================ */
+        $start      = $request->input('start_date');  
+        $end        = $request->input('end_date');    
+        $type       = $request->input('date_type');   // 'prévisionnelles' | 'effectives' | null
+        $statut     = $request->input('status');      // id du statut
+        $bailleur   = $request->input('bailleur');    // code acteur
+        $projectType = $request->input('project_type', 'cumul'); // infras | appui | cumul
+    
+        if (!$projectType) {
+            Log::info($projectType);
+            return response()->json(['error' => 'Erreur projet type manquant'], 400);
+        }
+        Log::info($projectType);
+        /* ============================================================
+         *                 FILTRE PROJETS INFRASTRUCTURES
+         * ============================================================ */
+        $qInfra = Projet::where('code_projet', 'like', $country.$group.'%');
+    
+        // Dates
         if ($start || $end) {
             $type = $type ?: 'prévisionnelles';
         }
-
+    
         if ($type === 'prévisionnelles') {
-            if ($start) $q->where('date_demarrage_prevue', '>=', $start);
-            if ($end)   $q->where('date_fin_prevue',      '<=', $end);
-        } elseif ($type === 'effectives') {
-            $q->whereHas('dateEffective', function ($qq) use ($start, $end) {
+            if ($start) $qInfra->where('date_demarrage_prevue', '>=', $start);
+            if ($end)   $qInfra->where('date_fin_prevue',      '<=', $end);
+        }
+        elseif ($type === 'effectives') {
+            $qInfra->whereHas('dateEffective', function ($qq) use ($start, $end) {
                 if ($start) $qq->where('date_debut_effective', '>=', $start);
                 if ($end)   $qq->where('date_fin_effective',   '<=', $end);
             });
         }
-        // Si aucun start/end n’est fourni → aucune contrainte de date
-
-        // --- BAILLEUR (optionnel) ---
-        if (!empty($bailleur)) {
-            $q->whereHas('financements', fn($qq) => $qq->where('code_acteur', $bailleur));
+    
+        // Bailleur
+        if ($bailleur) {
+            $qInfra->whereHas('financements', fn($qq) => $qq->where('code_acteur', $bailleur));
         }
-
-        // --- STATUT (optionnel) ---
-        if (!empty($statut)) {
-            $q->whereHas('statuts', fn($qq) => $qq->where('type_statut', $statut));
+    
+        // Statut
+        if ($statut) {
+            $qInfra->whereHas('statuts', fn($qq) => $qq->where('type_statut', $statut));
         }
-
-        $filtered = $q->get();
-
-        // --- AGRÉGATION identique à /api/projects ---
+    
+    
+        /* ============================================================
+         *                 FILTRE PROJETS APPUI
+         * ============================================================ */
+        $qAppui = AppuiProjet::where('code_projet_appui','like','APPUI_'.$country.'_'.$group.'%');
+    
+        // Dates
+        if ($start || $end) {
+            if ($type === 'prévisionnelles') {
+                if ($start) $qAppui->where('date_debut_previsionnel', '>=', $start);
+                if ($end)   $qAppui->where('date_fin_previsionnel',   '<=', $end);
+            } else {
+                $qAppui->whereHas('dateEffective', function ($qq) use ($start, $end) {
+                    if ($start) $qq->where('date_debut_effective', '>=', $start);
+                    if ($end)   $qq->where('date_fin_effective',   '<=', $end);
+                });
+            }
+        }
+    
+        // Bailleur
+        if ($bailleur) {
+            $qAppui->whereHas('financements', fn($qq) => $qq->where('code_acteur', $bailleur));
+        }
+    
+        // Statut
+        if ($statut) {
+            $qAppui->whereHas('statuts', fn($qq) => $qq->where('type_statut', $statut));
+        }
+    
+    
+        /* ============================================================
+         *                 SELECTION SELON TYPE PROJET
+         * ============================================================ */
+        if ($projectType === 'infras') {
+            $filtered = $qInfra->get();
+        }
+        elseif ($projectType === 'appui') {
+            $filtered = $qAppui->get();
+        }
+        else { // cumul
+            $filtered = $qInfra->get()->merge(
+                $qAppui->get()
+            );
+        }
+    
+    
+        /* ============================================================
+         *                 AGREGATION PAR NIVEAUX
+         * ============================================================ */
+        // Localités indexées par: id_niveau -> code -> libelle
         $localites = LocalitesPays::where('id_pays', $pays->id)->get();
         $idx = [];
         foreach ($localites as $loc) {
             $idx[$loc->id_niveau][$loc->code_rattachement] = $loc->libelle;
         }
-
+    
         $agg = [];
-        $publicCost = 0; $privateCost = 0;
-
+        $publicCost = 0;
+        $privateCost = 0;
+    
         foreach ($filtered as $p) {
-            $codeProjet = $p->code_projet ?: $this->reconstruireCodeProjet($p);
-            $c = $this->decomposerCodeProjet($codeProjet);
-
-            $loc       = $c['code_localisation'];
-            $dom2      = substr($c['code_sous_domaine'] ?? '00', 0, 2);
-            $isPublic  = ($c['type_financement'] ?? '1') === '1';
-            $cost      = $p->cout_projet ?? 0;
-
-            // coûts globaux
+    
+            $codeProjet = $p->code_projet ?? $p->code_projet_appui;
+            $codeProjet = $codeProjet ?: $this->reconstruireCodeProjet($p);
+    
+            $comp = $this->decomposerCodeProjet($codeProjet);
+    
+            $locCode   = $comp['code_localisation'];
+            $dom2      = substr($comp['code_sous_domaine'], 0, 2);
+            $isPublic  = ($comp['type_financement'] ?? '1') === '1';
+            $cost      = $p->cout_projet ?? $p->montant_budget_previsionnel ?? 0;
+    
+            // Totaux globaux
             $isPublic ? $publicCost += $cost : $privateCost += $cost;
-
-            // 3 niveaux : incrément exactement une fois par niveau
+    
+            // 3 niveaux
             $codes = [
-                1 => substr($loc, 0, 2),
-                2 => substr($loc, 0, 4),
-                3 => substr($loc, 0, 6),
+                1 => substr($locCode, 0, 2),
+                2 => substr($locCode, 0, 4),
+                3 => substr($locCode, 0, 6),
             ];
+    
             foreach ($codes as $level => $code) {
                 if (!$code) continue;
+    
                 $name = $idx[$level][$code] ?? null;
                 if (!$name) continue;
-
+    
                 if (!isset($agg[$code])) {
                     $agg[$code] = [
+                        'code'     => $code,
                         'name'     => $name,
                         'level'    => $level,
-                        'code'     => $code,
                         'count'    => 0,
                         'public'   => 0,
                         'private'  => 0,
@@ -504,13 +573,15 @@ class sigAdminController extends Controller
                         'byDomain' => [],
                     ];
                 }
+    
                 $agg[$code]['count']++;
                 $agg[$code]['cost'] += $cost;
                 $isPublic ? $agg[$code]['public']++ : $agg[$code]['private']++;
-
+    
                 if (!isset($agg[$code]['byDomain'][$dom2])) {
-                    $agg[$code]['byDomain'][$dom2] = ['count'=>0,'cost'=>0,'public'=>0,'private'=>0];
+                    $agg[$code]['byDomain'][$dom2] = ['count'=>0, 'cost'=>0, 'public'=>0, 'private'=>0];
                 }
+    
                 $agg[$code]['byDomain'][$dom2]['count']++;
                 $agg[$code]['byDomain'][$dom2]['cost'] += $cost;
                 $isPublic
@@ -518,10 +589,18 @@ class sigAdminController extends Controller
                     : $agg[$code]['byDomain'][$dom2]['private']++;
             }
         }
-
-        $codes = $filtered->pluck('code_projet');
-
-        // LISTES pour les selects (non destructives)
+    
+        $codes = $filtered->pluck('code_projet')
+            ->merge($filtered->pluck('code_projet_appui'))
+            ->filter()
+            ->values();
+    
+    
+        /* ============================================================
+         *              LISTES POUR LES SELECT (UI)
+         * ============================================================ */
+    
+        // Bailleurs filtrés
         $bailleursList = Financer::whereIn('code_projet', $codes)
             ->with('bailleur')
             ->get()
@@ -531,7 +610,8 @@ class sigAdminController extends Controller
             ])
             ->unique('code_acteur')
             ->values();
-
+    
+        // Statuts filtrés
         $statutsList = ProjetStatut::whereIn('code_projet', $codes)
             ->with('statut')
             ->get()
@@ -541,9 +621,10 @@ class sigAdminController extends Controller
             ])
             ->unique('id')
             ->values();
-
+    
+    
         return response()->json([
-            'projets'      => array_values($agg),     // <-- EXACTEMENT comme /api/projects
+            'projets'      => array_values($agg),
             'bailleurs'    => $bailleursList,
             'statuts'      => $statutsList,
             'public_cost'  => $publicCost,
@@ -551,8 +632,7 @@ class sigAdminController extends Controller
             'total_cost'   => $publicCost + $privateCost,
         ]);
     }
-
-
+    
 
     public function getAllProjects()
     {
@@ -649,6 +729,9 @@ class sigAdminController extends Controller
         // -----------------------------
     // Page
     // -----------------------------
+    // PAGE : Carte des infrastructures bénéficiaires
+    // Seules les infrastructures présentes dans la table 'jouir' sont affichées
+    // -----------------------------
     public function page(Request $request)
     {
         $ecran = Ecran::find($request->input('ecran_id'));
@@ -669,15 +752,51 @@ class sigAdminController extends Controller
         $codeAlpha3 = $pays->alpha3;
         $codeZoom   = Pays::select('minZoom', 'maxZoom')->where('alpha3', $codeAlpha3)->first();
 
-        // Niveaux admin (libellés)
-        $niveau = DB::table('decoupage_admin_pays')
-            ->join('decoupage_administratif', 'decoupage_admin_pays.code_decoupage', '=', 'decoupage_administratif.code_decoupage')
-            ->where('id_pays', $pays->id)
-            ->select('decoupage_admin_pays.code_decoupage','decoupage_admin_pays.num_niveau_decoupage','decoupage_administratif.libelle_decoupage')
-            ->orderBy('num_niveau_decoupage')
+        // Vérifiez si un groupe projet est sélectionné dans la session
+        $groupeProjetSelectionne = session('projet_selectionne');
+        if (!$groupeProjetSelectionne) {
+            return redirect()->route('projets.index')->with('error', 'Vous n\'avez pas de groupe projet.');
+        }
+
+        // Récupérez les informations du groupe projet sélectionné
+        $groupeProjet = GroupeProjetPaysUser::where('groupe_projet_id', $groupeProjetSelectionne)
+            ->with('groupeProjet')
+            ->first();
+
+        if (!$groupeProjet) {
+            return redirect()->route('projets.index')->with('error', 'Le groupe projet n\'existe pas.');
+        }
+
+        $codeGroupeProjet = $groupeProjet->groupe_projet_id;
+
+        // Récupérer les domaines associés au groupe projet
+        $domainesAssocie = Domaine::where('groupe_projet_code', $codeGroupeProjet)
+            ->select('code', 'libelle', 'groupe_projet_code')
             ->get();
 
-        return view('GestionSig.sigInfra', compact('ecran','codeZoom','niveau','codeAlpha3'));
+        // Récupérer les sous-domaines associés au groupe projet
+        $sousDomainesAssocie = SousDomaine::where('code_groupe_projet', $codeGroupeProjet)
+            ->select('code_sous_domaine', 'lib_sous_domaine', 'code_domaine', 'code_groupe_projet')
+            ->get();
+
+        // Récupérer les niveaux administratifs
+        $niveau = DecoupageAdminPays::where('id_pays', $pays->id)
+            ->join('decoupage_administratif', 'decoupage_admin_pays.code_decoupage', '=', 'decoupage_administratif.code_decoupage')
+            ->select(
+                'decoupage_admin_pays.code_decoupage',
+                'decoupage_admin_pays.num_niveau_decoupage',
+                'decoupage_administratif.libelle_decoupage'
+            )
+            ->get();
+
+        // Bailleurs et statuts pour les filtres
+        $Bailleurs = Acteur::whereHas('bailleurs')->get();
+        $TypesStatuts = TypeStatut::all();
+
+        return view('GestionSig.sigInfra', compact(
+            'ecran', 'codeZoom', 'niveau', 'codeAlpha3', 'codeGroupeProjet', 
+            'domainesAssocie', 'sousDomainesAssocie', 'Bailleurs', 'TypesStatuts'
+        ));
     }
 
     // -----------------------------
@@ -725,21 +844,24 @@ class sigAdminController extends Controller
         $alpha3  = session('pays_selectionne');
         if (!$alpha3) return response()->json(['error'=>'pays_selectionne manquant'], 400);
 
-        $group   = $request->input('groupe');        // optionnel (code groupe)
+        $group   = $request->input('groupe') ?: session('projet_selectionne'); // optionnel (code groupe)
         $domaine = $request->input('domaine');       // optionnel (2 chars)
         $sous    = $request->input('sous');          // optionnel (code_sous_domaine)
         $dateDeb = $request->input('start_date');    // optionnel
         $dateFin = $request->input('end_date');      // optionnel
-        $finance = $request->input('finance');       // 'public' | 'private' | 'cumul' (par défaut)
+        $dateType = $request->input('date_type', 'prévisionnelles'); // 'prévisionnelles' | 'effectives'
+        $finance = $request->input('finance', 'cumul');       // 'public' | 'private' | 'cumul' (par défaut)
+        $statut  = $request->input('status');        // optionnel (id statut)
+        $bailleur = $request->input('bailleur');     // optionnel (code_acteur)
 
         // Récupérer les couples Projet-Infrastructure via JOUIR
-        // -> Jointure pour compter le nb d'infras par projet afin de répartir le coût sans surévaluer
+        // IMPORTANT: Seules les infrastructures présentes dans 'jouir' sont considérées comme bénéficiaires
         $sub = DB::table('jouir as j')
             ->join('projets as p', 'p.code_projet', '=', 'j.code_projet')
             ->join('infrastructures as i', 'i.code', '=', 'j.code_Infrastructure')
             ->where('i.code_pays', $alpha3)
             ->when($group, function($q) use ($group) {
-                // filtre soit sur groupe du projet (dans code_projet) soit sur l’infra
+                // filtre soit sur groupe du projet (dans code_projet) soit sur l'infra
                 $q->where(function($x) use ($group){
                     $x->where(DB::raw('SUBSTRING(p.code_projet,4,3)'), $group)
                       ->orWhere('i.code_groupe_projet', $group);
@@ -751,11 +873,48 @@ class sigAdminController extends Controller
             ->when($sous, function($q) use ($sous){
                 $q->where('p.code_sous_domaine', 'like', $sous.'%');
             })
-            ->when($dateDeb, function($q) use ($dateDeb){
-                $q->whereDate('p.date_demarrage_prevue', '>=', $dateDeb);
+            ->when($dateDeb || $dateFin, function($q) use ($dateDeb, $dateFin, $dateType) {
+                if ($dateType === 'effectives') {
+                    // Filtre sur dates effectives
+                    $q->whereExists(function($subq) use ($dateDeb, $dateFin) {
+                        $subq->select(DB::raw(1))
+                            ->from('date_effective_projet as dep')
+                            ->whereColumn('dep.code_projet', 'p.code_projet');
+                        if ($dateDeb) {
+                            $subq->where('dep.date_debut_effective', '>=', $dateDeb);
+                        }
+                        if ($dateFin) {
+                            $subq->where('dep.date_fin_effective', '<=', $dateFin);
+                        }
+                    });
+                } else {
+                    // Filtre sur dates prévisionnelles (par défaut)
+                    if ($dateDeb) {
+                        $q->whereDate('p.date_demarrage_prevue', '>=', $dateDeb);
+                    }
+                    if ($dateFin) {
+                        $q->whereDate('p.date_fin_prevue', '<=', $dateFin);
+                    }
+                }
             })
-            ->when($dateFin, function($q) use ($dateFin){
-                $q->whereDate('p.date_fin_prevue', '<=', $dateFin);
+            ->when($statut, function($q) use ($statut) {
+                // Filtre par statut (dernier statut du projet)
+                $q->whereExists(function($subq) use ($statut) {
+                    $subq->select(DB::raw(1))
+                        ->from('projet_statut as ps')
+                        ->whereColumn('ps.code_projet', 'p.code_projet')
+                        ->where('ps.type_statut', $statut)
+                        ->whereRaw('ps.date_statut = (SELECT MAX(ps2.date_statut) FROM projet_statut ps2 WHERE ps2.code_projet = p.code_projet)');
+                });
+            })
+            ->when($bailleur, function($q) use ($bailleur) {
+                // Filtre par bailleur
+                $q->whereExists(function($subq) use ($bailleur) {
+                    $subq->select(DB::raw(1))
+                        ->from('financer as f')
+                        ->whereColumn('f.code_projet', 'p.code_projet')
+                        ->where('f.code_acteur', $bailleur);
+                });
             })
             ->select([
                 'p.code_projet',
@@ -873,6 +1032,7 @@ class sigAdminController extends Controller
 
     // -----------------------------
     // Détails pour le drawer
+    // Seules les infrastructures bénéficiaires (via table jouir) sont retournées
     // -----------------------------
     public function details(Request $request)
     {
@@ -883,6 +1043,7 @@ class sigAdminController extends Controller
         $finance    = $request->input('filter','cumul'); // 'public'|'private'|'cumul'
         $domaine2   = $request->input('domain');   // ex: '01' (optionnel)
         $limit      = (int) $request->input('limit', 1000);
+        $group      = session('projet_selectionne'); // groupe projet de la session
 
         if (!$codePrefix) return response()->json(['error'=>'Paramètre code requis'], 422);
 
@@ -891,6 +1052,12 @@ class sigAdminController extends Controller
             ->join('infrastructures as i', 'i.code', '=', 'j.code_Infrastructure')
             ->where('i.code_pays', $alpha3)
             ->where('i.code_localite', 'like', $codePrefix.'%')
+            ->when($group, function($q) use ($group) {
+                $q->where(function($x) use ($group){
+                    $x->where(DB::raw('SUBSTRING(p.code_projet,4,3)'), $group)
+                      ->orWhere('i.code_groupe_projet', $group);
+                });
+            })
             ->when($domaine2, fn($q) => $q->where(DB::raw('LEFT(p.code_sous_domaine,2)'), $domaine2))
             ->select([
                 'p.code_projet','p.libelle_projet','p.cout_projet','p.code_devise',

@@ -1,611 +1,1222 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workflow d’approbation — Module générique</title>
-  <style>
-    /* ===============================
-       Design system — variables
-    =============================== */
-    :root{
-      --bg: #0f1218;
-      --panel: #141924;
-      --panel-2: #101520;
-      --text: #e8edf3;
-      --muted: #98a2b3;
-      --primary: #4f46e5;    /* indigo */
-      --primary-600:#4338ca;
-      --secondary:#10b981;   /* emerald */
-      --warning:#f59e0b;     /* amber */
-      --danger:#ef4444;      /* red */
-      --info:#06b6d4;        /* cyan */
-      --border:#22283a;
-      --badge:#1f2937;
-      --radius: 14px;
-      --radius-sm: 10px;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --shadow-soft: 0 8px 18px rgba(0,0,0,.25);
-      --ring: 0 0 0 3px rgba(79,70,229,.25);
-      --font: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, system-ui, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Avant-Projet – Bureau d’Études BTP (SPA claire)</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+/* =========================
+   DESIGN SYSTEM (LIGHT THEME)
+   ========================= */
+:root{
+  --bg:#f7f9fc;
+  --bg-2:#eef3fb;
+  --card:#ffffff;
+  --card-2:#ffffff;
+  --ink:#1f2937;
+  --muted:#6b7280;
+  --primary:#2563eb;
+  --primary-2:#1d4ed8;
+  --success:#10b981;
+  --warning:#f59e0b;
+  --danger:#ef4444;
+  --info:#06b6d4;
+  --border:#e5e7eb;
+  --shadow:0 6px 16px rgba(0,0,0,.06);
+  --radius:14px;
+}
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; background:linear-gradient(180deg,#0b0e14 0%, #0e131e 100%);
-      color:var(--text); font-family:var(--font); line-height:1.45;
-    }
-    a{color:inherit; text-decoration:none}
-    .app{display:grid; grid-template-columns: 270px 1fr; min-height:100vh}
+/* Reset / base */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;
+  color:var(--ink);
+  background:linear-gradient(180deg,var(--bg) 0,var(--bg-2) 100%);
+  overflow:hidden;
+}
 
-    /* ===============================
-       Sidebar
-    =============================== */
-    .sidebar{
-      background: radial-gradient(120% 120% at 0 0, #151a27 0, #0f1218 65%);
-      border-right:1px solid var(--border);
-      padding:24px 18px; position:sticky; top:0; height:100vh; overflow:auto;
-    }
-    .brand{display:flex; gap:10px; align-items:center; margin-bottom:22px}
-    .logo{width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:linear-gradient(135deg,#6366f1 0,#06b6d4 100%); box-shadow: var(--shadow-soft)}
-    .logo b{font-weight:800}
-    .brand h1{font-size:16px; margin:0}
+/* =========================
+   LAYOUT
+   ========================= */
+.app{
+  display:grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: 64px 1fr;
+  grid-template-areas:
+    "sidebar header"
+    "sidebar main";
+  height:100%;
+}
 
-    .nav{display:grid; gap:8px; margin:16px 0 28px}
-    .nav a{padding:10px 12px; border-radius:12px; border:1px solid transparent; display:flex; align-items:center; gap:10px; color:var(--muted)}
-    .nav a[aria-current="page"], .nav a:hover{background: linear-gradient(180deg,#171e2c,#121726); color:var(--text); border-color:var(--border)}
+/* Sidebar */
+.sidebar{
+  grid-area:sidebar;
+  background:linear-gradient(180deg,#ffffff,#f4f7fd);
+  border-right:1px solid var(--border);
+  padding:14px 12px;
+}
+.brand{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;margin-bottom:10px;
+}
+.brand .logo{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(140deg,var(--primary),#8b5cf6);
+  display:grid;place-items:center;
+  font-weight:800;color:#fff;letter-spacing:.5px;
+}
+.brand .title{font-weight:700}
+.nav{
+  margin-top:6px;
+  display:flex;flex-direction:column;gap:6px;
+  height:calc(100% - 64px);overflow:auto;padding-right:6px;
+}
+.nav .group{margin:8px 0 2px 10px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.8px}
+.nav a{
+  display:flex;align-items:center;gap:10px;
+  text-decoration:none;color:var(--ink);
+  padding:10px 12px;border-radius:12px;border:1px solid transparent;
+  transition:.15s ease;
+}
+.nav a i{width:18px;text-align:center;color:#5b6b8c}
+.nav a.active{background:var(--card);border-color:var(--border);box-shadow:var(--shadow)}
+.nav a:hover{background:#f3f6fc;border-color:#dbe3f3;transform:translateY(-1px)}
 
-    .pill{font-size:12px; color:#cbd5e1; background:#0b1220; border:1px solid #1e293b; display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px}
+/* Header */
+.header{
+  grid-area:header;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 18px;border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.8);backdrop-filter: blur(8px);
+}
+.header .search{
+  display:flex;align-items:center;gap:10px;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:8px 12px;min-width:380px;box-shadow:var(--shadow)
+}
+.search input{
+  background:transparent;border:0;outline:0;color:var(--ink);width:100%;
+}
+.header .user{
+  display:flex;align-items:center;gap:12px;
+}
+.user .chip{
+  background:var(--card);border:1px solid var(--border);
+  padding:6px 10px;border-radius:999px;color:var(--muted)
+}
+.user .avatar{
+  width:36px;height:36px;border-radius:10px;background:linear-gradient(130deg,#22d3ee,#3b82f6);
+  display:grid;place-items:center;font-weight:800;color:#fff
+}
 
-    .kbd{font-family:var(--mono); font-size:11px; padding:.2rem .4rem; border:1px solid var(--border); background:#0b1019; border-radius:6px; color:#cbd5e1}
+/* Main */
+.main{
+  grid-area:main;overflow:auto;scroll-behavior:smooth;
+  padding:18px;
+}
+.page{display:none;animation:fade .25s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-    /* ===============================
-       Topbar
-    =============================== */
-    .topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 22px; position:sticky; top:0; background:rgba(13,17,26,.75); backdrop-filter: blur(6px); border-bottom:1px solid var(--border); z-index:4}
-    .search{flex:1; display:flex; align-items:center; gap:8px; background:#0d1422; border:1px solid var(--border); border-radius:12px; padding:10px}
-    .search input{flex:1; background:transparent; border:0; color:var(--text); outline:none}
-    .user{display:flex; align-items:center; gap:10px}
-    .avatar{width:34px; height:34px; border-radius:999px; background:linear-gradient(135deg,#10b981,#3b82f6)}
+/* =========================
+   UI PRIMITIVES
+   ========================= */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.section{margin-bottom:18px}
+.section .hd{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:#fbfdff
+}
+.hd h3{margin:0;font-size:16px}
+.body{padding:14px 16px}
 
-    /* ===============================
-       Content Layout
-    =============================== */
-    .content{min-width:0}
-    .grid{display:grid; gap:16px}
-    .cols-3{grid-template-columns: repeat(3, minmax(0,1fr))}
-    .cols-2{grid-template-columns: repeat(2, minmax(0,1fr))}
+/* Grid */
+.grid{display:grid;gap:12px}
+.grid.cols-2{grid-template-columns:1fr 1fr}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.grid.cols-4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:1200px){.grid.cols-4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:900px){.grid.cols-3{grid-template-columns:1fr}.grid.cols-2{grid-template-columns:1fr}}
 
-    .card{
-      background:linear-gradient(180deg,#121725,#0f141f);
-      border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow: var(--shadow-soft)
-    }
-    .card h3{margin:0 0 10px; font-size:16px}
-    .muted{color:var(--muted)}
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid var(--border);background:var(--card);color:var(--ink);
+  padding:8px 12px;border-radius:10px;cursor:pointer;transition:.15s ease;text-decoration:none
+}
+.btn:hover{transform:translateY(-1px);border-color:#cfd7e6;background:#f6f9ff}
+.btn.primary{background:linear-gradient(180deg,var(--primary),var(--primary-2));border-color:#1f4ec8;color:#fff}
+.btn.success{background:linear-gradient(180deg,var(--success),#0e8a67);border-color:#0f7f60;color:#fff}
+.btn.warn{background:linear-gradient(180deg,var(--warning),#b45309);border-color:#b45309;color:#fff}
+.btn.danger{background:linear-gradient(180deg,var(--danger),#b91c1c);border-color:#b91c1c;color:#fff}
+.btn.ghost{background:transparent}
 
-    .toolbar{display:flex; gap:10px; flex-wrap:wrap}
-    .btn{--bg: #111827; --bd:#253045; --fg:#e5e7eb; cursor:pointer; display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; border:1px solid var(--bd); background:var(--bg)}
-    .btn:hover{filter:brightness(1.1)}
-    .btn.primary{--bg: linear-gradient(135deg,#6366f1,#06b6d4); --bd: transparent; --fg:white}
-    .btn.soft{--bg:#0e1624}
-    .btn.warn{--bg:#2b1b07; --bd:#3d2b0d}
+/* Inputs */
+.row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
+.label{display:block;color:#4b5563;font-size:12px;margin-bottom:6px}
+.input,select,textarea{
+  width:100%;background:#ffffff;border:1px solid var(--border);border-radius:10px;color:var(--ink);padding:10px;
+}
+.input:focus,select:focus,textarea:focus{outline:3px solid rgba(37,99,235,.15);border-color:#c6d3fb}
+textarea{min-height:110px;resize:vertical}
 
-    .badges{display:flex; gap:6px; flex-wrap:wrap}
-    .badge{padding:5px 10px; border-radius:999px; background:var(--badge); border:1px solid var(--border); font-size:12px; color:#cbd5e1}
-    .badge.success{background:rgba(16,185,129,.15); border-color:#134e4a; color:#d1fae5}
-    .badge.warn{background:rgba(245,158,11,.15); border-color:#78350f; color:#fde68a}
-    .badge.danger{background:rgba(239,68,68,.12); border-color:#7f1d1d; color:#fecaca}
-    .badge.info{background:rgba(6,182,212,.12); border-color:#164e63; color:#a5f3fc}
+/* Tags / Badges */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--border);
+  background:#f7fbff;color:#374151
+}
+.badge.s{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.badge.w{background:#fff7ed;border-color:#fed7aa;color:#92400e}
+.badge.d{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.badge.i{background:#ecfeff;border-color:#a5f3fc;color:#0f766e}
+.kpi{
+  padding:16px;border-radius:14px;border:1px solid var(--border);
+  background:linear-gradient(180deg,#f6f9ff,#ffffff);
+  box-shadow:var(--shadow)
+}
+.kpi h4{margin:0 0 6px 0}
+.kpi .v{font-size:22px;font-weight:800}
 
-    /* ===============================
-       Tables
-    =============================== */
-    .table{width:100%; border-collapse:separate; border-spacing:0 10px}
-    .table th{font-size:12px; text-transform:uppercase; letter-spacing:.06em; text-align:left; color:#9aa7bd; padding:0 12px}
-    .table td{padding:14px 12px; background:#0f1524; border-top:1px solid #1b2538; border-bottom:1px solid #1b2538}
-    .table tr td:first-child{border-left:1px solid #1b2538; border-top-left-radius:12px; border-bottom-left-radius:12px}
-    .table tr td:last-child{border-right:1px solid #1b2538; border-top-right-radius:12px; border-bottom-right-radius:12px}
+/* Tables */
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:10px;border-bottom:1px dashed var(--border);text-align:left}
+.table th{font-size:12px;color:#4b5563;background:#fbfdff}
+.table tr:hover td{background:#f7fbff}
+.actions{display:flex;gap:6px}
 
-    .status{display:inline-flex; gap:8px; align-items:center}
-    .dot{width:8px; height:8px; border-radius:999px; background:#64748b; box-shadow:0 0 0 3px rgba(100,116,139,.15)}
-    .dot.ok{background:#10b981}
-    .dot.pending{background:#f59e0b}
-    .dot.danger{background:#ef4444}
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.col{background:var(--card);border:1px solid var(--border);border-radius:12px;min-height:120px;box-shadow:var(--shadow)}
+.col .colhd{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fbfdff}
+.col .items{padding:10px}
+.card-mini{
+  background:#ffffff;
+  border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px;box-shadow:var(--shadow)
+}
 
-    /* ===============================
-       Forms
-    =============================== */
-    .form{display:grid; gap:14px}
-    .row{display:grid; gap:12px; grid-template-columns: repeat(12, 1fr)}
-    .col-6{grid-column: span 6}
-    .col-4{grid-column: span 4}
-    .col-3{grid-column: span 3}
-    .input, select, textarea{
-      width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--border); background:#0d1422; color:var(--text)
-    }
-    label{font-size:13px; color:#9aa7bd; display:block; margin-bottom:6px}
+/* Progress */
+.progress{height:10px;background:#f1f5f9;border-radius:999px;border:1px solid var(--border);overflow:hidden}
+.progress > span{display:block;height:100%;background:linear-gradient(90deg,#06b6d4,#2563eb)}
 
-    /* ===============================
-       Timelines & chips
-    =============================== */
-    .timeline{display:grid; gap:14px}
-    .event{display:grid; grid-template-columns: 20px 1fr; gap:12px}
-    .event .bar{position:relative}
-    .event .bar::before{content:""; position:absolute; left:8px; top:0; bottom:0; width:4px; background:linear-gradient(#1f2937, transparent)}
-    .event .pin{width:20px; height:20px; border-radius:999px; background:linear-gradient(135deg,#6366f1,#06b6d4); box-shadow: var(--shadow); border:2px solid #0b0f17}
-    .chip{display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; background:#0b1019; border:1px solid #1f2a3d; color:#cbd5e1; font-size:12px}
+/* Timeline */
+.timeline{position:relative;padding-left:22px}
+.timeline::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:#dfe6f3}
+.titem{position:relative;padding:8px 8px 8px 10px}
+.titem::before{
+  content:"";position:absolute;left:-2px;top:14px;width:10px;height:10px;border-radius:50%;
+  background:linear-gradient(180deg,#06b6d4,#2563eb);border:1px solid #9ec2ff;
+}
 
-    /* ===============================
-       Accordions (sans JS)
-    =============================== */
-    details{border:1px solid var(--border); border-radius:12px; background:#0e1320; padding:10px 12px}
-    details[open]{box-shadow: var(--shadow-soft)}
-    summary{cursor:pointer; list-style:none}
-    summary::-webkit-details-marker{display:none}
+/* Gantt-ish */
+.gantt{display:grid;grid-template-columns:200px 1fr;gap:8px}
+.gantt .rowname{padding:8px 10px;border-bottom:1px dashed var(--border);color:#475569;background:#fbfdff}
+.gantt .bars{position:relative;height:32px;border-bottom:1px dashed var(--border);background:#ffffff}
+.gantt .bar{
+  position:absolute;height:18px;top:7px;border-radius:8px;background:linear-gradient(90deg,#06b6d4,#2563eb);
+  box-shadow:0 4px 10px rgba(37,99,235,.15);cursor:ew-resize
+}
 
-    /* ===============================
-       Modal (CSS-only using :target)
-    =============================== */
-    .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55); z-index:50}
-    .modal:target{display:grid}
-    .dialog{width:min(860px, 94vw); background:linear-gradient(180deg,#121725,#0f141f); border:1px solid var(--border); border-radius:18px; box-shadow: var(--shadow); padding:18px}
-    .dialog header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px}
+/* Modals */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.active{display:flex}
+.modal .dialog{width:min(780px,92vw);max-height:86vh;overflow:auto}
+.modal .dialog .hd{position:sticky;top:0;background:#fbfdff;z-index:1}
 
-    /* ===============================
-       Helper utilities
-    =============================== */
-    .flex{display:flex; gap:10px; align-items:center}
-    .space{flex:1}
-    .right{margin-left:auto}
-    .mt-8{margin-top:8px}
-    .mt-16{margin-top:16px}
-    .mt-24{margin-top:24px}
-    .code{font-family:var(--mono); background:#0b1019; border:1px solid #1f2a3d; border-radius:10px; padding:8px 10px; font-size:12px}
-  </style>
+/* Pills */
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Sticky footer */
+.page .footer{
+  display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding:12px 16px;margin-top:12px;
+  position:sticky;bottom:0;background:#fbfdff
+}
+
+/* Helpers */
+.muted{color:var(--muted)}
+.hr{height:1px;background:linear-gradient(90deg,transparent,#e6ebf5,transparent);margin:10px 0}
+.right{display:flex;justify-content:flex-end}
+.center{display:flex;justify-content:center;align-items:center}
+
+/* Tiny badges in table */
+.tb-badge{padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--border);background:#f8fafc}
+.tb-badge.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.tb-badge.wait{background:#fff7ed;border-color:#fed7aa;color:#92400e}
+.tb-badge.ko{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+
+/* Switch */
+.switch{display:inline-grid;grid-template-columns:auto 1fr;align-items:center;gap:8px}
+.switch input{accent-color:var(--primary)}
+
+/* Tiny legend */
+.legend{display:flex;gap:10px;flex-wrap:wrap}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:6px}
+.l-blue{background:#2563eb}.l-cyan{background:#06b6d4}.l-green{background:#10b981}.l-amber{background:#f59e0b}.l-red{background:#ef4444}
+</style>
 </head>
 <body>
-  <div class="app">
-    <!-- ================= Sidebar ================= -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="logo"><b>WF</b></div>
-        <h1>Workflow · BTP‑Project</h1>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">BE</div>
+      <div>
+        <div class="title">Bureau d’Études</div>
+        <div class="muted" style="font-size:12px">Avant-Projet · BTP</div>
       </div>
+    </div>
 
-      <div class="pill">Module générique <span class="kbd">subject_type/id</span></div>
+    <nav class="nav" id="nav">
+      <div class="group">Pré-entrée</div>
+      <a href="#page-demandes" class="active"><i class="fa-solid fa-inbox"></i> Demandes</a>
+      <a href="#page-qualification"><i class="fa-solid fa-clipboard-check"></i> Qualification</a>
 
-      <nav class="nav mt-16">
-        <a href="#" aria-current="page">Tableau de bord</a>
-        <a href="#proc">Processus</a>
-        <a href="#inst">Instances</a>
-        <a href="#tasks">Tâches</a>
-        <a href="#audit">Journal / Audit</a>
-        <a href="#admin">Administration</a>
-      </nav>
+      <div class="group">Mission d’étude</div>
+      <a href="#page-mission"><i class="fa-solid fa-diagram-project"></i> Phases Avant-Projet</a>
+      <a href="#page-docs"><i class="fa-solid fa-file-signature"></i> Documents & Visas</a>
+      <a href="#page-risks"><i class="fa-solid fa-triangle-exclamation"></i> Risques & Hypothèses</a>
+      <a href="#page-estim"><i class="fa-solid fa-calculator"></i> Estimation & Planning</a>
 
-      <details class="mt-24">
-        <summary>Raccourcis</summary>
-        <div class="grid mt-8">
-          <a class="btn soft" href="#newProcess">➕ Nouveau processus</a>
-          <a class="btn soft" href="#startInstance">▶️ Démarrer une instance</a>
+      <div class="group">Décision</div>
+      <a href="#page-gonogo"><i class="fa-solid fa-traffic-light"></i> Comité GO / NO-GO</a>
+
+      <div class="group">Config</div>
+      <a href="#page-workflow"><i class="fa-solid fa-sliders"></i> Paramétrage Workflow</a>
+      <a href="#page-export"><i class="fa-solid fa-download"></i> Export / Handoff</a>
+    </nav>
+  </aside>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input placeholder="Rechercher une demande, une mission, un document…" />
+    </div>
+    <div class="user">
+      <span class="chip"><i class="fa-regular fa-clock"></i> <span id="clock"></span></span>
+      <span class="chip"><i class="fa-solid fa-shield-halved"></i> Chef de mission</span>
+      <div class="avatar">JD</div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- ========================= DEMANDES ========================= -->
+    <section id="page-demandes" class="page active">
+      <div class="section card">
+        <div class="hd">
+          <h3>Boîte de Demandes (Entrantes)</h3>
+          <div class="pills">
+            <span class="badge i"><i class="fa-solid fa-bolt"></i> 3 nouvelles</span>
+            <span class="badge s"><i class="fa-solid fa-circle-check"></i> 12 qualifiées</span>
+            <button class="btn primary" onclick="openModal('modalNewDemande')"><i class="fa-solid fa-plus"></i> Nouvelle demande</button>
+          </div>
         </div>
-      </details>
-    </aside>
+        <div class="body">
+          <div class="grid cols-4">
+            <div class="kpi"><h4>Demandes ouvertes</h4><div class="v" id="kpiOpen">18</div><div class="muted">dont 5 en attente d’infos</div></div>
+            <div class="kpi"><h4>Temps moyen de qualif.</h4><div class="v">2,8 j</div><div class="muted">sur 30 derniers jours</div></div>
+            <div class="kpi"><h4>Taux de GO</h4><div class="v">61%</div><div class="muted">vs 58% période préc.</div></div>
+            <div class="kpi"><h4>Appels d’offres</h4><div class="v">7</div><div class="muted">actifs cette semaine</div></div>
+          </div>
 
-    <!-- ================= Main ================= -->
-    <main class="content">
-      <div class="topbar">
-        <div class="search">
-          🔎 <input placeholder="Rechercher un processus, une instance, une tâche…" />
-          <span class="kbd">Ctrl</span><span class="kbd">K</span>
-        </div>
-        <div class="user">
-          <span class="badge info">Environnement · Demo</span>
-          <div class="avatar"></div>
-        </div>
-      </div>
+          <div class="hr"></div>
 
-      <section class="grid cols-3" style="padding:18px">
-        <article class="card">
-          <h3>Instances actives</h3>
-          <div class="flex"><div class="status"><span class="dot pending"></span> 42 en revue</div><span class="space"></span><span class="badge info">+8 aujourd’hui</span></div>
-        </article>
-        <article class="card">
-          <h3>Délais (SLA)</h3>
-          <div class="flex"><div class="status"><span class="dot danger"></span> 5 en retard</div><span class="space"></span><span class="badge warn">à surveiller</span></div>
-        </article>
-        <article class="card">
-          <h3>Taux d’approbation</h3>
-          <div class="flex"><div class="status"><span class="dot ok"></span> 94% semaine</div><span class="space"></span><span class="badge success">bon</span></div>
-        </article>
-      </section>
-
-      <!-- ================= Processus (définitions) ================= -->
-      <section id="proc" style="padding: 0 18px 18px">
-        <div class="card">
-          <header class="flex" style="justify-content:space-between">
-            <div>
-              <h3>Processus d’approbation</h3>
-              <p class="muted">Modèles de workflow génériques utilisables par tout module.</p>
-            </div>
-            <a class="btn primary" href="#newProcess">Créer un processus</a>
-          </header>
-
-          <table class="table mt-16">
-            <thead>
-              <tr><th>Nom</th><th>Version</th><th>États</th><th>Règles</th><th></th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><b>WF_GENERIC_V1</b><div class="muted">Étude/DAO/Projet (MO/Tech/Bailleur)</div></td>
-                <td>1</td>
-                <td>
-                  <div class="badges">
-                    <span class="badge">DRAFT</span>
-                    <span class="badge">REVIEW</span>
-                    <span class="badge">APPROVAL</span>
-                    <span class="badge">NO_OBJECTION?</span>
-                    <span class="badge">APPROVED</span>
+          <div class="grid cols-2">
+            <div class="card">
+              <div class="hd"><h3>Filtrer</h3><div class="pills"><span class="badge">Tri : récents</span></div></div>
+              <div class="body">
+                <div class="row">
+                  <div class="col-4">
+                    <label class="label">Source</label>
+                    <select id="fSource">
+                      <option>Toutes</option><option>MOA</option><option>AO</option><option>Interne</option>
+                    </select>
                   </div>
-                </td>
-                <td>
-                  <div class="badges">
-                    <span class="badge info">SLA</span>
-                    <span class="badge info">Quorum</span>
-                    <span class="badge info">Guards</span>
+                  <div class="col-4">
+                    <label class="label">Pays</label>
+                    <select id="fPays">
+                      <option>Tous</option><option>CI</option><option>SN</option><option>ML</option><option>FR</option>
+                    </select>
                   </div>
-                </td>
-                <td class="right"><a class="btn" href="#viewProcess">Voir</a></td>
-              </tr>
-              <tr>
-                <td><b>WF_SIMPLE_AP</b><div class="muted">Décompte/Facture · 2 étapes</div></td>
-                <td>3</td>
-                <td>
-                  <div class="badges">
-                    <span class="badge">DRAFT</span>
-                    <span class="badge">APPROVAL</span>
-                    <span class="badge">APPROVED</span>
+                  <div class="col-4">
+                    <label class="label">Statut</label>
+                    <select id="fStatut">
+                      <option>Tous</option><option>NOUV</option><option>QUAL</option><option>REJ</option><option>ETU</option>
+                    </select>
                   </div>
-                </td>
-                <td>
-                  <div class="badges">
-                    <span class="badge info">SLA</span>
-                  </div>
-                </td>
-                <td class="right"><a class="btn" href="#viewProcess">Voir</a></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ================= Instances ================= -->
-      <section id="inst" style="padding: 0 18px 18px">
-        <div class="card">
-          <header class="flex" style="justify-content:space-between">
-            <div>
-              <h3>Instances</h3>
-              <p class="muted">Chaque ligne = 1 approbation en cours, liée à n’importe quel objet (polymorphisme).</p>
-            </div>
-            <a class="btn" href="#startInstance">Démarrer</a>
-          </header>
-
-          <table class="table mt-16">
-            <thead>
-              <tr><th>Objet</th><th>Processus</th><th>État</th><th>Assigné</th><th>Échéance</th><th></th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <b>ETUDE-2025-0142</b>
-                  <div class="muted">subject_type: Etude | subject_id: 142</div>
-                </td>
-                <td>WF_GENERIC_V1</td>
-                <td><span class="status"><span class="dot pending"></span> REVIEW</span></td>
-                <td>
-                  <div class="badges">
-                    <span class="badge">TECH: K. Oumar</span>
-                    <span class="badge">TECH: L. Traoré</span>
-                  </div>
-                </td>
-                <td><span class="badge warn">J-1</span></td>
-                <td class="right"><a class="btn" href="#viewInstance">Ouvrir</a></td>
-              </tr>
-              <tr>
-                <td><b>DECOMPTE-0007</b><div class="muted">subject_type: Decompte | subject_id: 7</div></td>
-                <td>WF_SIMPLE_AP</td>
-                <td><span class="status"><span class="dot ok"></span> APPROVAL</span></td>
-                <td><span class="badge">MO: Chef Projet</span></td>
-                <td><span class="badge">J+3</span></td>
-                <td class="right"><a class="btn" href="#viewInstance">Ouvrir</a></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ================= Tâches ================= -->
-      <section id="tasks" style="padding: 0 18px 18px">
-        <div class="card">
-          <header class="flex" style="justify-content:space-between">
-            <div>
-              <h3>Tâches d’approbation</h3>
-              <p class="muted">À faire par rôle/utilisateur (mode: single / all / quorum).</p>
-            </div>
-            <div class="toolbar">
-              <a class="btn soft" href="#">Mes tâches</a>
-              <a class="btn soft" href="#">Équipe</a>
-              <a class="btn soft" href="#">Toutes</a>
-            </div>
-          </header>
-
-          <table class="table mt-16">
-            <thead>
-              <tr><th>Tâche</th><th>Instance</th><th>Rôle</th><th>Mode</th><th>Échéance</th><th></th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><b>Revue technique</b></td>
-                <td>ETUDE-2025-0142</td>
-                <td><span class="badge">TECH</span></td>
-                <td><span class="badge info">ALL</span></td>
-                <td><span class="badge warn">Aujourd’hui</span></td>
-                <td class="right">
-                  <a class="btn" href="#viewInstance">Voir</a>
-                </td>
-              </tr>
-              <tr>
-                <td><b>Validation MO</b></td>
-                <td>DECOMPTE-0007</td>
-                <td><span class="badge">MO</span></td>
-                <td><span class="badge info">SINGLE</span></td>
-                <td><span class="badge">J+3</span></td>
-                <td class="right">
-                  <a class="btn" href="#viewInstance">Voir</a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ================= Journal / Audit ================= -->
-      <section id="audit" style="padding: 0 18px 18px">
-        <div class="card">
-          <h3>Journal / Audit</h3>
-          <div class="timeline mt-16">
-            <div class="event">
-              <div class="bar"><div class="pin"></div></div>
-              <div>
-                <b>Transition</b> · ETUDE-2025-0142 · DRAFT ➜ REVIEW · <span class="muted">par K. Oumar, 12:04</span>
-                <div class="mt-8 code">trigger=submit; guards=pass; actions=[lockFiles, notify(TECH)]; hash=7b9c…</div>
+                  <div class="col-12 right"><button class="btn"><i class="fa-solid fa-filter"></i> Appliquer</button></div>
+                </div>
               </div>
             </div>
-            <div class="event">
-              <div class="bar"><div class="pin"></div></div>
-              <div>
-                <b>SLA breach</b> · Tâche "Revue technique" · <span class="muted">+1j, escalade envoyée</span>
-                <div class="mt-8 chip">notif → Responsable Technique</div>
+
+            <div class="card">
+              <div class="hd"><h3>Aperçu</h3><div class="badge i"><i class="fa-solid fa-circle-info"></i> Sélectionnez une ligne</div></div>
+              <div class="body">
+                <div class="timeline" id="tlDemande">
+                  <div class="titem">
+                    <strong>Réception CdC – Pont PK14</strong>
+                    <div class="muted">09:42 · Fichiers : CdC.pdf (1,2 Mo)</div>
+                  </div>
+                  <div class="titem">
+                    <strong>Assignée à Jean Dupont</strong>
+                    <div class="muted">09:51 · Délai de réponse : 72h</div>
+                  </div>
+                  <div class="titem">
+                    <strong>Demande d’infos complémentaires envoyée</strong>
+                    <div class="muted">10:18 · Géométrie existante manquante</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- ================= Administration ================= -->
-      <section id="admin" style="padding: 0 18px 28px">
-        <div class="grid cols-2">
-          <div class="card">
-            <h3>Rôles & équipes</h3>
-            <p class="muted">Rôles propres au moteur (indépendants des modules).</p>
-            <div class="badges mt-8">
-              <span class="badge">MO</span>
-              <span class="badge">BET/TECH</span>
-              <span class="badge">BAILLEUR</span>
-              <span class="badge">JURIDIQUE</span>
-              <span class="badge">HSE</span>
+          <div class="section card" style="margin-top:12px">
+            <div class="hd">
+              <h3>Liste des demandes</h3>
+              <div class="legend">
+                <span><i class="l-blue"></i> MOA</span>
+                <span><i class="l-green"></i> AO</span>
+                <span><i class="l-amber"></i> En attente</span>
+                <span><i class="l-red"></i> Rejetée</span>
+              </div>
+            </div>
+            <div class="body">
+              <table class="table" id="tabDemandes">
+                <thead>
+                  <tr>
+                    <th>Réf.</th><th>Objet</th><th>Pays</th><th>Client</th><th>Budget indicatif</th><th>Statut</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Rempli par JS -->
+                </tbody>
+              </table>
             </div>
           </div>
-          <div class="card">
-            <h3>Calendriers & jours fériés</h3>
-            <p class="muted">Pour les SLA en jours ouvrés, par pays/tenant.</p>
-            <div class="badges mt-8">
-              <span class="badge">CIV · Jours ouvrés (lun–ven)</span>
-              <span class="badge">MLI · Jours ouvrés (lun–ven)</span>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= QUALIFICATION ========================= -->
+    <section id="page-qualification" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Qualification & Triage</h3>
+          <div class="pills">
+            <span class="badge"><i class="fa-regular fa-note-sticky"></i> Score = pertinence × marge × risque</span>
+            <button class="btn primary" onclick="qualifyAll()"><i class="fa-solid fa-magic-wand-sparkles"></i> Auto-qualifier</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="grid cols-3">
+            <div class="card">
+              <div class="hd"><h3>Formulaire de qualification</h3></div>
+              <div class="body">
+                <div class="row">
+                  <div class="col-12"><label class="label">Demande sélectionnée</label><input id="qRef" class="input" readonly value="—"></div>
+                  <div class="col-6">
+                    <label class="label">Pertinence (0–5)</label>
+                    <input type="range" id="qPertinence" min="0" max="5" value="3" oninput="recalcScore()">
+                  </div>
+                  <div class="col-6">
+                    <label class="label">Marge probable (0–5)</label>
+                    <input type="range" id="qMarge" min="0" max="5" value="3" oninput="recalcScore()">
+                  </div>
+                  <div class="col-12">
+                    <label class="label">Risque (0–5)</label>
+                    <input type="range" id="qRisque" min="0" max="5" value="2" oninput="recalcScore()">
+                  </div>
+                  <div class="col-12">
+                    <div class="kpi">
+                      <h4>Score estimé</h4>
+                      <div class="v" id="qScore">—</div>
+                      <div class="progress" style="margin-top:8px"><span id="qScoreBar" style="width:0%"></span></div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="label">Décision rapide</label>
+                    <div class="pills">
+                      <button class="btn success" onclick="decisionRapide('Poursuivre')"><i class="fa-solid fa-circle-check"></i> Poursuivre</button>
+                      <button class="btn warn" onclick="decisionRapide('Demander infos')"><i class="fa-solid fa-envelope-open-text"></i> Demander infos</button>
+                      <button class="btn danger" onclick="decisionRapide('Refuser')"><i class="fa-solid fa-ban"></i> Refuser</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="hd"><h3>Règles & check-list</h3></div>
+              <div class="body">
+                <ul>
+                  <li>Compétences internes disponibles (structure / géotech / environnement).</li>
+                  <li>Capacité planning & charge (sous 90 j).</li>
+                  <li>Budget indicatif cohérent avec périmètre.</li>
+                  <li>Risque foncier / servitudes acceptable.</li>
+                  <li>Pas d’incompatibilité contractuelle.</li>
+                </ul>
+                <div class="hr"></div>
+                <div class="switch"><input type="checkbox" id="ckCapa"> <label for="ckCapa">Capacité planning confirmée</label></div>
+                <div class="switch"><input type="checkbox" id="ckBudget"> <label for="ckBudget">Budget indicatif plausible</label></div>
+                <div class="switch"><input type="checkbox" id="ckRisque"> <label for="ckRisque">Risque global maîtrisable</label></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="hd"><h3>Créer la mission d’étude</h3></div>
+              <div class="body">
+                <div class="row">
+                  <div class="col-6"><label class="label">Référence mission</label><input id="mRef" class="input" placeholder="ex: MIS-2025-001"></div>
+                  <div class="col-6"><label class="label">Type</label>
+                    <select id="mType"><option>Étude structure</option><option>Géotech</option><option>Thermique</option><option>Multi-technique</option></select>
+                  </div>
+                  <div class="col-6"><label class="label">Priorité</label>
+                    <select id="mPrio"><option>Normale</option><option>Haute</option><option>Urgente</option></select>
+                  </div>
+                  <div class="col-6"><label class="label">Chef de mission</label><input class="input" id="mChef" value="Jean Dupont"></div>
+                  <div class="col-12">
+                    <button class="btn primary" onclick="createMissionFromDemande()"><i class="fa-solid fa-diagram-project"></i> Créer mission d’étude</button>
+                    <div class="muted" id="mHint" style="margin-top:8px">Phases par défaut : Esquisse → Études prélim. → APS → Estimation/Planning → DAP</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= PHASES AVANT-PROJET ========================= -->
+    <section id="page-mission" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Mission d’étude – Phases Avant-Projet</h3>
+          <div class="pills">
+            <span class="badge s"><i class="fa-solid fa-circle"></i> PRP</span>
+            <span class="badge w"><i class="fa-solid fa-play"></i> ENC</span>
+            <span class="badge i"><i class="fa-solid fa-flag-checkered"></i> TER</span>
+            <button class="btn" onclick="openModal('modalNewPhase')"><i class="fa-solid fa-plus"></i> Ajouter phase</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="kanban" id="kanban"></div>
+        </div>
+      </div>
+
+      <div class="section card">
+        <div class="hd"><h3>Journal de la mission</h3></div>
+        <div class="body">
+          <div class="timeline" id="tlMission"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= DOCUMENTS & VISAS ========================= -->
+    <section id="page-docs" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Documents d’étude & Workflow de visas</h3>
+          <div class="pills">
+            <span class="badge"><i class="fa-regular fa-folder-open"></i> Dossier DAP</span>
+            <button class="btn" onclick="openModal('modalNewDoc')"><i class="fa-solid fa-upload"></i> Ajouter document</button>
+          </div>
+        </div>
+        <div class="body">
+          <table class="table" id="tabDocs">
+            <thead>
+              <tr>
+                <th>Réf.</th><th>Titre</th><th>Type</th><th>Phase</th><th>Statut</th><th>Visas</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody><!-- JS --></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section card">
+        <div class="hd"><h3>Règles de validation</h3></div>
+        <div class="body">
+          <ol>
+            <li><strong>Relecture interne</strong> (Ing. pair)</li>
+            <li><strong>Visa Chef de mission</strong></li>
+            <li><strong>Visa Qualité</strong> (si requis)</li>
+            <li><strong>Visa MOA</strong> (si requis)</li>
+          </ol>
+          <div class="hr"></div>
+          <div class="legend">
+            <span><i class="l-cyan"></i> ENR.</span>
+            <span><i class="l-amber"></i> À VAL.</span>
+            <span><i class="l-green"></i> VAL.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= RISQUES & HYPOTHÈSES ========================= -->
+    <section id="page-risks" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Registre des risques</h3>
+          <div class="pills">
+            <button class="btn" onclick="openModal('modalRisk')"><i class="fa-solid fa-plus"></i> Nouveau risque</button>
+          </div>
+        </div>
+        <div class="body">
+          <table class="table" id="tabRisks">
+            <thead>
+              <tr><th>Risque</th><th>Prob.</th><th>Impact</th><th>Criticité</th><th>Mitigation</th><th>Owner</th><th>Actions</th></tr>
+            </thead>
+            <tbody><!-- JS --></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section card">
+        <div class="hd"><h3>Hypothèses clés</h3><div class="pills"><button class="btn" onclick="openModal('modalHyp')"><i class="fa-solid fa-plus"></i> Nouvelle hypothèse</button></div></div>
+        <div class="body">
+          <table class="table" id="tabHyps">
+            <thead><tr><th>Hypothèse</th><th>Effet Coût</th><th>Effet Délai</th><th>Effet Qualité</th><th>Actions</th></tr></thead>
+            <tbody><!-- JS --></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= ESTIMATION & PLANNING ========================= -->
+    <section id="page-estim" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Estimation macro</h3>
+          <div class="pills">
+            <span class="badge"><i class="fa-solid fa-coins"></i> Devise : XOF</span>
+            <button class="btn" onclick="simulateEstimate()"><i class="fa-solid fa-wand-magic-sparkles"></i> Simuler</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="grid cols-3">
+            <div class="kpi"><h4>Coût objectif</h4><div class="v" id="estCout">—</div><div class="muted">ordre de grandeur</div></div>
+            <div class="kpi"><h4>Contingence</h4><div class="v" id="estCont">—</div><div class="muted">risques & incertitudes</div></div>
+            <div class="kpi"><h4>Durée</h4><div class="v" id="estDur">—</div><div class="muted">mois calendaires</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section card">
+        <div class="hd"><h3>Planning (macro-jalons)</h3></div>
+        <div class="body">
+          <div class="gantt" id="gantt"></div>
+          <div class="muted" style="margin-top:8px">Glissez les poignées sur les barres (démo) pour ajuster les durées.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= GO / NO-GO ========================= -->
+    <section id="page-gonogo" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Comité de décision – GO / NO-GO</h3>
+          <div class="pills">
+            <span class="badge"><i class="fa-regular fa-clipboard"></i> Pré-contrôles</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="grid cols-2">
+            <div class="card">
+              <div class="hd"><h3>Check-list bloquante</h3></div>
+              <div class="body">
+                <div class="switch"><input type="checkbox" id="ckPhaseOK"> <label for="ckPhaseOK">Phases 1→4 marquées <strong>TER</strong></label></div>
+                <div class="switch"><input type="checkbox" id="ckDocOK"> <label for="ckDocOK">≥1 doc critique <strong>VAL</strong> (Faisabilité/APS/CdC signé)</label></div>
+                <div class="switch"><input type="checkbox" id="ckEstimOK"> <label for="ckEstimOK">Estimation & Planning renseignés</label></div>
+                <div class="switch"><input type="checkbox" id="ckRisksOK"> <label for="ckRisksOK">Top-risques & hypothèses saisis</label></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="hd"><h3>Décision</h3></div>
+              <div class="body">
+                <div class="pills">
+                  <button class="btn success" onclick="emitDecision('GO')"><i class="fa-solid fa-check"></i> GO</button>
+                  <button class="btn danger" onclick="emitDecision('NO-GO')"><i class="fa-solid fa-xmark"></i> NO-GO</button>
+                  <button class="btn warn" onclick="emitDecision('AJOURNÉ')"><i class="fa-solid fa-hourglass-half"></i> Ajourné</button>
+                </div>
+                <div class="hr"></div>
+                <label class="label">Motifs / Conditions</label>
+                <textarea id="goComment" placeholder="Conditions de GO, compléments requis, etc."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="section card" style="margin-top:12px">
+            <div class="hd"><h3>Historique des décisions</h3></div>
+            <div class="body">
+              <table class="table" id="tabDecisions">
+                <thead><tr><th>Date</th><th>Décision</th><th>Note</th></tr></thead>
+                <tbody><!-- JS --></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="footer">
+            <button class="btn primary" onclick="handoffToProject()"><i class="fa-solid fa-share-from-square"></i> Créer le projet (passerelle)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= PARAMÉTRAGE WORKFLOW ========================= -->
+    <section id="page-workflow" class="page">
+      <div class="section card">
+        <div class="hd">
+          <h3>Paramétrage – Workflow de visas & Phases</h3>
+          <div class="pills"><span class="badge"><i class="fa-solid fa-gear"></i> Global</span></div>
+        </div>
+        <div class="body">
+          <div class="grid cols-2">
+            <div class="card">
+              <div class="hd"><h3>Étapes de visa</h3></div>
+              <div class="body">
+                <table class="table" id="tabWf">
+                  <thead><tr><th>Ordre</th><th>Étape</th><th>Rôle</th><th>Délais (j)</th><th>Actif</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Relecture interne</td><td>Ingénieur</td><td><input class="input" value="2"></td><td><input type="checkbox" checked></td></tr>
+                    <tr><td>2</td><td>Visa Chef de mission</td><td>Chef</td><td><input class="input" value="1"></td><td><input type="checkbox" checked></td></tr>
+                    <tr><td>3</td><td>Visa Qualité</td><td>Qualité</td><td><input class="input" value="2"></td><td><input type="checkbox"></td></tr>
+                    <tr><td>4</td><td>Visa MOA</td><td>MOA</td><td><input class="input" value="5"></td><td><input type="checkbox"></td></tr>
+                  </tbody>
+                </table>
+                <div class="right"><button class="btn"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="hd"><h3>Gabarit de phases</h3></div>
+              <div class="body">
+                <table class="table" id="tabPhases">
+                  <thead><tr><th>Ordre</th><th>Nom</th><th>Obligatoire</th><th>Durée (j)</th></tr></thead>
+                  <tbody>
+                    <tr><td>1</td><td>Esquisse & recueil</td><td><input type="checkbox" checked></td><td><input class="input" value="5"></td></tr>
+                    <tr><td>2</td><td>Études préliminaires</td><td><input type="checkbox" checked></td><td><input class="input" value="15"></td></tr>
+                    <tr><td>3</td><td>APS / variantes</td><td><input type="checkbox" checked></td><td><input class="input" value="10"></td></tr>
+                    <tr><td>4</td><td>Estimation & planning</td><td><input type="checkbox" checked></td><td><input class="input" value="4"></td></tr>
+                    <tr><td>5</td><td>Dossier DAP & visas</td><td><input type="checkbox" checked></td><td><input class="input" value="7"></td></tr>
+                  </tbody>
+                </table>
+                <div class="right"><button class="btn"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= EXPORT / HANDOFF ========================= -->
+    <section id="page-export" class="page">
+      <div class="section card">
+        <div class="hd"><h3>Export – Dossier Avant-Projet</h3><div class="pills"><span class="badge">JSON & PDF (maquette)</span></div></div>
+        <div class="body">
+          <div class="grid cols-2">
+            <div class="card">
+              <div class="hd"><h3>Résumé</h3></div>
+              <div class="body">
+                <ul id="summaryExport" class="muted"></ul>
+              </div>
+            </div>
+            <div class="card">
+              <div class="hd"><h3>Actions</h3></div>
+              <div class="body">
+                <div class="pills">
+                  <button class="btn" onclick="exportJSON()"><i class="fa-solid fa-file-code"></i> Export JSON</button>
+                  <button class="btn"><i class="fa-solid fa-file-pdf"></i> Générer DAP (PDF)</button>
+                  <button class="btn primary" onclick="handoffToProject()"><i class="fa-solid fa-share-nodes"></i> Envoyer au module Projet</button>
+                </div>
+                <div class="hr"></div>
+                <pre id="jsonOut" style="white-space:pre-wrap;background:#f6f9ff;border:1px solid var(--border);padding:10px;border-radius:10px;max-height:280px;overflow:auto"></pre>
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-    </main>
+  </main>
+</div>
+
+<!-- ========================= MODALS ========================= -->
+<div class="modal" id="modalNewDemande">
+  <div class="dialog card">
+    <div class="hd"><h3>Nouvelle demande</h3><div><button class="btn ghost" onclick="closeModal('modalNewDemande')"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div class="body">
+      <div class="row">
+        <div class="col-6"><label class="label">Objet</label><input id="dObjet" class="input" placeholder="Ex : Pont PK14 – réhabilitation"></div>
+        <div class="col-3"><label class="label">Source</label><select id="dSource"><option>MOA</option><option>AO</option><option>Interne</option></select></div>
+        <div class="col-3"><label class="label">Pays</label><select id="dPays"><option>CI</option><option>SN</option><option>ML</option><option>FR</option></select></div>
+        <div class="col-6"><label class="label">Client</label><input id="dClient" class="input" placeholder="Nom du client"></div>
+        <div class="col-3"><label class="label">Budget indicatif</label><input id="dBudget" class="input" placeholder="ex: 350 000 000"></div>
+        <div class="col-3"><label class="label">Délai souhaité (j)</label><input id="dDelai" class="input" type="number" value="90"></div>
+        <div class="col-12"><label class="label">Description</label><textarea id="dDesc" placeholder="Notes, contraintes initiales…"></textarea></div>
+        <div class="col-12 right"><button class="btn primary" onclick="addDemande()"><i class="fa-solid fa-check"></i> Enregistrer</button></div>
+      </div>
+    </div>
   </div>
+</div>
 
-  <!-- ================= Modals ================= -->
-  <!-- Nouveau Processus -->
-  <div class="modal" id="newProcess">
-    <div class="dialog">
-      <header>
-        <h3>Créer un processus</h3>
-        <a class="btn" href="#">✖</a>
-      </header>
-      <div class="form">
-        <div class="row">
-          <div class="col-6">
-            <label>Nom</label>
-            <input class="input" placeholder="WF_GENERIC_V1" />
-          </div>
-          <div class="col-3">
-            <label>Version</label>
-            <input class="input" type="number" value="1" />
-          </div>
-          <div class="col-3">
-            <label>Actif</label>
-            <select><option>Oui</option><option>Non</option></select>
-          </div>
+<div class="modal" id="modalNewPhase">
+  <div class="dialog card">
+    <div class="hd"><h3>Ajouter une phase</h3><div><button class="btn ghost" onclick="closeModal('modalNewPhase')"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div class="body">
+      <div class="row">
+        <div class="col-6"><label class="label">Nom de la phase</label><input id="phName" class="input" placeholder="Ex : Études trafic"></div>
+        <div class="col-3"><label class="label">Début prévu</label><input id="phStart" class="input" type="date"></div>
+        <div class="col-3"><label class="label">Fin prévue</label><input id="phEnd" class="input" type="date"></div>
+        <div class="col-12"><label class="label">Description</label><textarea id="phDesc" placeholder="Détail du périmètre de la phase…"></textarea></div>
+        <div class="col-12 right"><button class="btn primary" onclick="addPhase()"><i class="fa-solid fa-check"></i> Ajouter</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modalNewDoc">
+  <div class="dialog card">
+    <div class="hd"><h3>Ajouter un document</h3><div><button class="btn ghost" onclick="closeModal('modalNewDoc')"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div class="body">
+      <div class="row">
+        <div class="col-4"><label class="label">Réf. doc</label><input id="docRef" class="input" placeholder="DOC-001"></div>
+        <div class="col-8"><label class="label">Titre</label><input id="docTitle" class="input" placeholder="Étude de faisabilité – pont PK14"></div>
+        <div class="col-4"><label class="label">Type</label>
+          <select id="docType"><option>Faisabilité</option><option>APS</option><option>Cahier des charges</option><option>Note de calcul</option></select>
         </div>
-        <div class="row">
-          <div class="col-6">
-            <label>États (liste)</label>
-            <input class="input" placeholder="DRAFT, REVIEW, APPROVAL, NO_OBJECTION?, APPROVED" />
-          </div>
-          <div class="col-6">
-            <label>Règles (JSON)</label>
-            <textarea rows="4" placeholder='{"sla": {"REVIEW": 5}, "quorum": {"APPROVAL": 0.66}}'></textarea>
-          </div>
+        <div class="col-4"><label class="label">Phase liée</label>
+          <select id="docPhase"><!-- JS --></select>
         </div>
-        <details class="mt-8">
-          <summary>Voir exemple de DSL JSON</summary>
-          <pre class="code" style="white-space:pre-wrap">{
-  "states": {
-    "DRAFT": {"type":"initial"},
-    "REVIEW": {"tasks":[{"name":"Revue technique","role":"TECH","mode":"all","sla_days":5}]},
-    "APPROVAL": {"tasks":[{"name":"Validation MO","role":"MO","mode":"single","sla_days":3}]},
-    "NO_OBJECTION?": {"optional":true, "tasks":[{"name":"Non-objection bailleur","role":"BAILLEUR","mode":"single","sla_days":10}]},
-    "APPROVED": {"type":"final"}
+        <div class="col-4"><label class="label">Statut</label>
+          <select id="docStatus"><option>ENR</option><option>AVL</option><option>VAL</option></select>
+        </div>
+        <div class="col-12"><label class="label">Lien / Fichier (démo)</label><input id="docUrl" class="input" placeholder="https://…"></div>
+        <div class="col-12 right"><button class="btn primary" onclick="addDoc()"><i class="fa-solid fa-check"></i> Ajouter</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modalRisk">
+  <div class="dialog card">
+    <div class="hd"><h3>Nouveau risque</h3><div><button class="btn ghost" onclick="closeModal('modalRisk')"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div class="body">
+      <div class="row">
+        <div class="col-12"><label class="label">Description</label><input id="rkDesc" class="input" placeholder="Sol médiocre / nappe haute"></div>
+        <div class="col-3"><label class="label">Prob. (1–5)</label><input id="rkP" type="number" class="input" value="3" min="1" max="5"></div>
+        <div class="col-3"><label class="label">Impact (1–5)</label><input id="rkI" type="number" class="input" value="3" min="1" max="5"></div>
+        <div class="col-6"><label class="label">Mitigation</label><input id="rkMit" class="input" placeholder="Sondages suppl., fondations profondes…"></div>
+        <div class="col-6"><label class="label">Owner</label><input id="rkOwn" class="input" value="Ing. Géotech"></div>
+        <div class="col-12 right"><button class="btn primary" onclick="addRisk()"><i class="fa-solid fa-check"></i> Ajouter</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modalHyp">
+  <div class="dialog card">
+    <div class="hd"><h3>Nouvelle hypothèse</h3><div><button class="btn ghost" onclick="closeModal('modalHyp')"><i class="fa-solid fa-xmark"></i></button></div></div>
+    <div class="body">
+      <div class="row">
+        <div class="col-12"><label class="label">Hypothèse</label><input id="hpText" class="input" placeholder="Trafic futur +15% sur 10 ans"></div>
+        <div class="col-4"><label class="label">Effet Coût</label><select id="hpC"><option>Faible</option><option>Moyen</option><option>Fort</option></select></div>
+        <div class="col-4"><label class="label">Effet Délai</label><select id="hpD"><option>Faible</option><option>Moyen</option><option>Fort</option></select></div>
+        <div class="col-4"><label class="label">Effet Qualité</label><select id="hpQ"><option>Faible</option><option>Moyen</option><option>Fort</option></select></div>
+        <div class="col-12 right"><button class="btn primary" onclick="addHyp()"><i class="fa-solid fa-check"></i> Ajouter</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   UTIL & STATE (DEMO)
+   ========================= */
+const $ = s=>document.querySelector(s);
+const $$ = s=>document.querySelectorAll(s);
+
+const state = {
+  demandes: [
+    {ref:"DEM-2025-001", objet:"Pont PK14 – réhabilitation", pays:"CI", client:"Min. Infrastructures", budget:350_000_000, statut:"NOUV", source:"MOA"},
+    {ref:"DEM-2025-002", objet:"VRD ZAC Akwaba", pays:"CI", client:"Société ABC", budget:180_000_000, statut:"QUAL", source:"AO"},
+    {ref:"DEM-2025-003", objet:"Station d’épuration – Lot 2", pays:"SN", client:"Ville X", budget:420_000_000, statut:"ETU", source:"MOA"},
+    {ref:"DEM-2025-004", objet:"Ouvrage hydraulique", pays:"ML", client:"Agence Eau", budget:120_000_000, statut:"REJ", source:"Interne"}
+  ],
+  selectedDemande: null,
+  mission: {
+    ref:"MIS-2025-001",
+    phases:[
+      {id:"P1", name:"Esquisse & recueil", statut:"ENC", start:"2025-02-02", end:"2025-02-10", desc:"Visites et recueil des données"},
+      {id:"P2", name:"Études préliminaires", statut:"PRP", start:"2025-02-11", end:"2025-03-05", desc:"Topo, géotech, trafic…"},
+      {id:"P3", name:"APS / variantes", statut:"PRP", start:"2025-03-06", end:"2025-03-22", desc:"Scénarios & dimensionnements"},
+      {id:"P4", name:"Estimation & planning", statut:"PRP", start:"2025-03-23", end:"2025-03-28", desc:"Chiffrage et jalons"},
+      {id:"P5", name:"Dossier DAP & visas", statut:"PRP", start:"2025-03-29", end:"2025-04-04", desc:"Compilation & signatures"}
+    ],
+    logs:[
+      "Mission créée depuis DEM-2025-001",
+      "Phase P1 démarrée",
+    ],
+    docs:[
+      {ref:"DOC-001", title:"Cahier des charges signé", type:"Cahier des charges", phase:"P1", statut:"VAL", visas:["Ing.","Chef"]},
+      {ref:"DOC-002", title:"Étude de faisabilité – pont PK14", type:"Faisabilité", phase:"P2", statut:"AVL", visas:["Ing."]},
+    ],
+    risks:[
+      {desc:"Sol médiocre / nappe haute", p:3, i:4, mit:"Sondages suppl., fondations profondes", own:"Ing. Géotech"},
+    ],
+    hyps:[
+      {text:"Trafic futur +15% sur 10 ans", c:"Moyen", d:"Faible", q:"Moyen"},
+    ],
+    estimate:{cout:null, contingency:null, duree:null},
+    gantt:[
+      {name:"Esquisse", start:0, len:6},
+      {name:"Études prélim.", start:7, len:20},
+      {name:"APS", start:28, len:12},
+      {name:"Estim/Planning", start:41, len:6},
+      {name:"DAP & visas", start:48, len:7}
+    ],
+    decisions:[]
   }
-}</pre>
-        </details>
-        <div class="flex mt-16">
-          <a class="btn" href="#">Annuler</a>
-          <span class="space"></span>
-          <a class="btn primary" href="#">Enregistrer</a>
-        </div>
-      </div>
-    </div>
-  </div>
+};
 
-  <!-- Démarrer une instance -->
-  <div class="modal" id="startInstance">
-    <div class="dialog">
-      <header>
-        <h3>Démarrer une instance</h3>
-        <a class="btn" href="#">✖</a>
-      </header>
-      <div class="form">
-        <div class="row">
-          <div class="col-6">
-            <label>Processus</label>
-            <select>
-              <option>WF_GENERIC_V1</option>
-              <option>WF_SIMPLE_AP</option>
-            </select>
-          </div>
-          <div class="col-6">
-            <label>Objet (subject_type/id)</label>
-            <input class="input" placeholder="Etude#142" />
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-6">
-            <label>Variables</label>
-            <input class="input" placeholder='{"requires_no_objection": true, "country":"CIV"}' />
-          </div>
-          <div class="col-6">
-            <label>Pièces liées (IDs)</label>
-            <input class="input" placeholder='{"rapport": 812, "plans": 990}' />
-          </div>
-        </div>
-        <div class="flex mt-16">
-          <a class="btn" href="#">Annuler</a>
-          <span class="space"></span>
-          <a class="btn primary" href="#">Démarrer</a>
-        </div>
-      </div>
-    </div>
-  </div>
+/* Clock */
+setInterval(()=>{$("#clock").textContent=new Date().toLocaleString()},1000);
 
-  <!-- Voir un processus (lecture seule) -->
-  <div class="modal" id="viewProcess">
-    <div class="dialog">
-      <header>
-        <h3>WF_GENERIC_V1 · Détails</h3>
-        <a class="btn" href="#">✖</a>
-      </header>
-      <div class="grid cols-2">
-        <div class="card">
-          <h3>États</h3>
-          <div class="badges mt-8">
-            <span class="badge">DRAFT</span>
-            <span class="badge">REVIEW</span>
-            <span class="badge">APPROVAL</span>
-            <span class="badge">NO_OBJECTION?</span>
-            <span class="badge">APPROVED</span>
+/* NAV SPA */
+function setActivePage(hash){
+  $$("#nav a").forEach(a=>a.classList.toggle("active", a.getAttribute("href")===hash));
+  $$(".page").forEach(p=>p.classList.remove("active"));
+  const el = document.querySelector(hash);
+  if(el) el.classList.add("active");
+}
+window.addEventListener("hashchange",()=>setActivePage(location.hash||"#page-demandes"));
+setActivePage(location.hash||"#page-demandes");
+
+/* Modals */
+function openModal(id){ $("#"+id).classList.add("active"); }
+function closeModal(id){ $("#"+id).classList.remove("active"); }
+
+/* ========================= DEMANDES ========================= */
+function renderDemandes(){
+  const tb = $("#tabDemandes tbody"); tb.innerHTML="";
+  state.demandes.forEach(d=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.ref}</td>
+      <td>${d.objet}</td>
+      <td>${d.pays}</td>
+      <td>${d.client}</td>
+      <td>${(d.budget).toLocaleString('fr-FR')} XOF</td>
+      <td>
+        <span class="tb-badge ${d.statut==='REJ'?'ko': d.statut==='NOUV'?'wait':'ok'}">${d.statut}</span>
+      </td>
+      <td class="actions">
+        <button class="btn" title="Voir" onclick="selectDemande('${d.ref}')"><i class="fa-regular fa-eye"></i></button>
+        <button class="btn primary" title="Qualifier" onclick="goQualif('${d.ref}')"><i class="fa-solid fa-clipboard-check"></i></button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+}
+function addDemande(){
+  const ref = "DEM-2025-"+String(100+state.demandes.length+1).slice(1);
+  const obj = $("#dObjet").value.trim(); if(!obj) return alert("Objet obligatoire");
+  state.demandes.unshift({
+    ref, objet:obj, pays:$("#dPays").value, client:$("#dClient").value,
+    budget:Number(($("#dBudget").value||"0").replace(/\s/g,''))||0,
+    statut:"NOUV", source:$("#dSource").value
+  });
+  closeModal("modalNewDemande"); renderDemandes();
+}
+function selectDemande(ref){
+  const d = state.demandes.find(x=>x.ref===ref);
+  state.selectedDemande = d;
+  $("#qRef").value = d?.ref || "—";
+  $("#tlDemande").innerHTML = `
+    <div class="titem"><strong>Sélection :</strong> ${d.ref} – ${d.objet}</div>
+    <div class="titem"><strong>Client :</strong> ${d.client} (${d.pays})</div>
+    <div class="titem"><strong>Budget indicatif :</strong> ${(d.budget).toLocaleString('fr-FR')} XOF</div>
+  `;
+  alert("Demande sélectionnée : "+d.ref);
+}
+function goQualif(ref){
+  selectDemande(ref);
+  location.hash="#page-qualification";
+}
+renderDemandes();
+
+/* ========================= QUALIFICATION ========================= */
+function recalcScore(){
+  const p = Number($("#qPertinence").value);
+  const m = Number($("#qMarge").value);
+  const r = Number($("#qRisque").value);
+  const score = Math.max(0,(p*0.45 + m*0.45 - r*0.35))*20; // 0..100
+  $("#qScore").textContent = Math.round(score)+" / 100";
+  $("#qScoreBar").style.width = Math.min(100,Math.round(score))+"%";
+}
+recalcScore();
+
+function decisionRapide(dec){
+  alert("Décision rapide : "+dec);
+}
+function qualifyAll(){
+  $("#qPertinence").value=4; $("#qMarge").value=4; $("#qRisque").value=2;
+  $("#ckCapa").checked = $("#ckBudget").checked = $("#ckRisque").checked = true;
+  recalcScore();
+}
+function createMissionFromDemande(){
+  if(!state.selectedDemande){ alert("Sélectionnez d’abord une demande."); return; }
+  state.mission.ref = $("#mRef").value || ("MIS-"+state.selectedDemande.ref.replace("DEM-",""));
+  state.mission.logs.unshift(`Mission ${state.mission.ref} créée depuis ${state.selectedDemande.ref}`);
+  state.selectedDemande.statut="ETU";
+  renderDemandes(); renderKanban(); renderMissionLog(); fillDocPhases();
+  alert("Mission d’étude créée : "+state.mission.ref);
+}
+
+/* ========================= PHASES (KANBAN) ========================= */
+function renderKanban(){
+  const groups = { PRP:{title:"Planifié",items:[]}, ENC:{title:"En cours",items:[]}, TER:{title:"Terminé",items:[]} };
+  state.mission.phases.forEach(p=>groups[p.statut].items.push(p));
+  const root = $("#kanban"); root.innerHTML="";
+  Object.entries(groups).forEach(([k,g])=>{
+    const col = document.createElement("div");
+    col.className="col";
+    col.innerHTML = `<div class="colhd"><strong>${g.title}</strong><span class="badge">${g.items.length}</span></div><div class="items"></div>`;
+    const items = col.querySelector(".items");
+    g.items.forEach(p=>{
+      const it = document.createElement("div");
+      it.className="card-mini";
+      it.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div><strong>${p.name}</strong><div class="muted">${p.start||'—'} → ${p.end||'—'}</div></div>
+          <div class="actions">
+            <button class="btn" title="Démarrer" onclick="movePhase('${p.id}','ENC')"><i class="fa-solid fa-play"></i></button>
+            <button class="btn success" title="Terminer" onclick="movePhase('${p.id}','TER')"><i class="fa-solid fa-flag-checkered"></i></button>
           </div>
         </div>
-        <div class="card">
-          <h3>Règles & SLA</h3>
-          <pre class="code" style="white-space:pre-wrap">REVIEW: 5j ouvrés · APPROVAL: 3j · NO_OBJECTION?: 10j (si requis)
-mode(REVIEW)=all, mode(APPROVAL)=single</pre>
-        </div>
-      </div>
-      <details class="mt-16">
-        <summary>JSON (DSL) appliqué</summary>
-        <pre class="code" style="white-space:pre-wrap">{"code":"WF_GENERIC_V1", "version":1, "states":{…}, "transitions":[…]}</pre>
-      </details>
-    </div>
-  </div>
+        <div class="hr"></div>
+        <div class="muted">${p.desc||''}</div>`;
+      items.appendChild(it);
+    });
+    root.appendChild(col);
+  });
+}
+function movePhase(id,target){
+  const p = state.mission.phases.find(x=>x.id===id); if(!p) return;
+  p.statut = target;
+  state.mission.logs.unshift(`Phase "${p.name}" → ${target}`);
+  renderKanban(); renderMissionLog();
+}
+function addPhase(){
+  const name = $("#phName").value.trim(); if(!name) return;
+  const id = "P"+(state.mission.phases.length+1);
+  state.mission.phases.push({id,name,statut:"PRP",start:$("#phStart").value,end:$("#phEnd").value,desc:$("#phDesc").value});
+  closeModal("modalNewPhase"); renderKanban(); fillDocPhases();
+}
+function renderMissionLog(){
+  const tl = $("#tlMission"); tl.innerHTML="";
+  state.mission.logs.forEach(l=>{
+    const it = document.createElement("div"); it.className="titem"; it.innerHTML = `<strong>${l}</strong>`;
+    tl.appendChild(it);
+  });
+}
+renderKanban(); renderMissionLog();
 
-  <!-- Voir une instance -->
-  <div class="modal" id="viewInstance">
-    <div class="dialog">
-      <header>
-        <h3>Instance · ETUDE-2025-0142</h3>
-        <a class="btn" href="#">✖</a>
-      </header>
-      <div class="grid cols-2">
-        <div class="card">
-          <h3>État courant</h3>
-          <div class="status mt-8"><span class="dot pending"></span> REVIEW</div>
-          <div class="mt-16">
-            <label>Assignés</label>
-            <div class="badges mt-8">
-              <span class="badge">TECH: K. Oumar</span>
-              <span class="badge">TECH: L. Traoré</span>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>Échéance</h3>
-          <p class="muted">Due: Aujourd’hui · SLA: 5j ouvrés</p>
-          <div class="badges">
-            <span class="badge warn">Rappel envoyé</span>
-          </div>
-        </div>
-      </div>
+/* ========================= DOCS & VISAS ========================= */
+function fillDocPhases(){
+  const sel = $("#docPhase"); if(!sel) return;
+  sel.innerHTML = state.mission.phases.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
+}
+fillDocPhases();
 
-      <div class="card mt-16">
-        <h3>Historique</h3>
-        <div class="timeline mt-8">
-          <div class="event">
-            <div class="bar"><div class="pin"></div></div>
-            <div>
-              <b>submit</b> · DRAFT ➜ REVIEW · <span class="muted">par BET: M. Diarra, 09:10</span>
-              <div class="code mt-8">guards=pass; actions=[lockFiles, notify(TECH)]; hash=7b9c…</div>
-            </div>
-          </div>
-          <div class="event">
-            <div class="bar"><div class="pin"></div></div>
-            <div>
-              <b>comment</b> · TECH: L. Traoré · <span class="muted">10:32</span>
-              <div class="code mt-8">"Plans niveau 2 à corriger"</div>
-            </div>
-          </div>
-        </div>
-      </div>
+function renderDocs(){
+  const tb = $("#tabDocs tbody"); tb.innerHTML="";
+  state.mission.docs.forEach(d=>{
+    const st = d.statut==="VAL"?"ok":(d.statut==="AVL"?"wait":"");
+    const visas = (d.visas||[]).join(", ");
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.ref}</td><td>${d.title}</td><td>${d.type}</td><td>${d.phase}</td>
+      <td><span class="tb-badge ${st}">${d.statut}</span></td>
+      <td>${visas||"<span class='muted'>—</span>"}</td>
+      <td class="actions">
+        <button class="btn" onclick="bumpVisa('${d.ref}')"><i class="fa-solid fa-stamp"></i></button>
+        <button class="btn success" onclick="setDocStat('${d.ref}','VAL')"><i class="fa-solid fa-check"></i></button>
+        <button class="btn warn" onclick="setDocStat('${d.ref}','AVL')"><i class="fa-solid fa-hourglass-half"></i></button>
+        <button class="btn danger" onclick="delDoc('${d.ref}')"><i class="fa-solid fa-trash"></i></button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+}
+function addDoc(){
+  const doc = {
+    ref: $("#docRef").value || "DOC-"+String(100+state.mission.docs.length+1).slice(1),
+    title: $("#docTitle").value,
+    type: $("#docType").value,
+    phase: $("#docPhase").value,
+    statut: $("#docStatus").value,
+    visas:[]
+  };
+  if(!doc.title){ alert("Titre requis"); return; }
+  state.mission.docs.push(doc);
+  closeModal("modalNewDoc"); renderDocs();
+}
+function setDocStat(ref,st){
+  const d = state.mission.docs.find(x=>x.ref===ref); if(!d) return;
+  d.statut = st; renderDocs();
+}
+function bumpVisa(ref){
+  const d = state.mission.docs.find(x=>x.ref===ref); if(!d) return;
+  const chain = ["Ing.","Chef","Qual.","MOA"];
+  const next = chain[(d.visas?.length||0)] || null;
+  if(next){ d.visas.push(next); renderDocs(); }
+}
+function delDoc(ref){
+  state.mission.docs = state.mission.docs.filter(x=>x.ref!==ref);
+  renderDocs();
+}
+renderDocs();
 
-      <details class="mt-16">
-        <summary>Variables & pièces</summary>
-        <pre class="code" style="white-space:pre-wrap">{"requires_no_objection": true, "country":"CIV", "bailleur":"BM", "files":{"rapport":812,"plans":990}}</pre>
-      </details>
+/* ========================= RISKS & HYPOTHESES ========================= */
+function renderRisks(){
+  const tb = $("#tabRisks tbody"); tb.innerHTML="";
+  state.mission.risks.forEach((r,idx)=>{
+    const crit = r.p*r.i;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.desc}</td>
+      <td>${r.p}</td>
+      <td>${r.i}</td>
+      <td><span class="tb-badge ${crit>=12?'ko':crit>=6?'wait':'ok'}">${crit}</span></td>
+      <td>${r.mit}</td>
+      <td>${r.own}</td>
+      <td class="actions"><button class="btn danger" onclick="delRisk(${idx})"><i class="fa-solid fa-trash"></i></button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function addRisk(){
+  const r = {
+    desc: $("#rkDesc").value, p:Number($("#rkP").value), i:Number($("#rkI").value),
+    mit: $("#rkMit").value, own: $("#rkOwn").value
+  };
+  if(!r.desc) return alert("Description requise");
+  state.mission.risks.push(r); closeModal("modalRisk"); renderRisks();
+}
+function delRisk(idx){ state.mission.risks.splice(idx,1); renderRisks(); }
+renderRisks();
 
-      <div class="flex mt-16">
-        <a class="btn" href="#">Refuser</a>
-        <a class="btn primary" href="#">Approuver</a>
-      </div>
-    </div>
-  </div>
+function renderHyps(){
+  const tb = $("#tabHyps tbody"); tb.innerHTML="";
+  state.mission.hyps.forEach((h,idx)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${h.text}</td><td>${h.c}</td><td>${h.d}</td><td>${h.q}</td>
+      <td class="actions"><button class="btn danger" onclick="delHyp(${idx})"><i class="fa-solid fa-trash"></i></button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function addHyp(){
+  const h = {text:$("#hpText").value, c:$("#hpC").value, d:$("#hpD").value, q:$("#hpQ").value};
+  if(!h.text) return alert("Hypothèse requise");
+  state.mission.hyps.push(h); closeModal("modalHyp"); renderHyps();
+}
+function delHyp(idx){ state.mission.hyps.splice(idx,1); renderHyps(); }
+renderHyps();
 
+/* ========================= ESTIMATION & GANTT (DEMO) ========================= */
+function simulateEstimate(){
+  const cout = 1_200_000_000 + Math.floor(Math.random()*300_000_000);
+  const cont = Math.round(cout*0.12);
+  const dur  = 6 + Math.floor(Math.random()*3);
+  state.mission.estimate = {cout, contingency:cont, duree:dur};
+  $("#estCout").textContent = cout.toLocaleString('fr-FR')+" XOF";
+  $("#estCont").textContent = cont.toLocaleString('fr-FR')+" XOF";
+  $("#estDur").textContent  = dur+" mois";
+}
+simulateEstimate();
+
+function renderGantt(){
+  const root = $("#gantt"); root.innerHTML="";
+  state.mission.gantt.forEach(r=>{
+    const rn = document.createElement("div"); rn.className="rowname"; rn.textContent=r.name; root.appendChild(rn);
+    const bars = document.createElement("div"); bars.className="bars";
+    const bar = document.createElement("div"); bar.className="bar";
+    bar.style.left = (r.start*10)+"px"; bar.style.width=(r.len*10)+"px";
+    // drag demo
+    let dragging=false, startX=0, initLeft=0;
+    bar.addEventListener("mousedown",(e)=>{dragging=true;startX=e.clientX;initLeft=parseInt(bar.style.left)});
+    document.addEventListener("mouseup",()=>dragging=false);
+    document.addEventListener("mousemove",(e)=>{ if(!dragging) return; const dx=e.clientX-startX; bar.style.left=(initLeft+dx)+"px"; });
+    bars.appendChild(bar); root.appendChild(bars);
+  });
+}
+renderGantt();
+
+/* ========================= GO / NO-GO ========================= */
+function emitDecision(dec){
+  const req = $("#ckPhaseOK").checked && $("#ckDocOK").checked && $("#ckEstimOK").checked && $("#ckRisksOK").checked;
+  if(dec==="GO" && !req){ alert("Tous les pré-contrôles doivent être cochés pour un GO."); return; }
+  state.mission.decisions.unshift({date:new Date().toLocaleString(), dec, note:$("#goComment").value});
+  $("#goComment").value="";
+  renderDecisions();
+  if(dec==="GO") alert("GO enregistré. Vous pouvez créer le projet d’infrastructure.");
+}
+function renderDecisions(){
+  const tb = $("#tabDecisions tbody"); tb.innerHTML="";
+  state.mission.decisions.forEach(d=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${d.date}</td><td><span class="tb-badge ${d.dec==='GO'?'ok':(d.dec==='NO-GO'?'ko':'wait')}">${d.dec}</span></td><td>${d.note||'—'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+renderDecisions();
+
+function handoffToProject(){
+  alert("Passerelle : les données d’Avant-Projet seront pré-remplies dans le module “Naissance / Modélisation de Projet”.");
+  location.hash="#page-export";
+  buildSummary();
+}
+
+/* ========================= EXPORT ========================= */
+function buildSummary(){
+  const ul = $("#summaryExport"); ul.innerHTML="";
+  const li = (t)=>{const x=document.createElement("li"); x.textContent=t; return x;}
+  ul.append(
+    li("Mission : "+state.mission.ref),
+    li("Phases : "+state.mission.phases.map(p=>`${p.name}(${p.statut})`).join(" → ")),
+    li("Docs VAL : "+state.mission.docs.filter(d=>d.statut==='VAL').map(d=>d.title).join(", ") || "—"),
+    li("Top-risque : "+(state.mission.risks[0]?.desc||"—")),
+    li("Estimation : "+(state.mission.estimate.cout? state.mission.estimate.cout.toLocaleString('fr-FR')+" XOF" : "—"))
+  );
+}
+buildSummary();
+
+function exportJSON(){
+  const data = {
+    mission: state.mission.ref,
+    phases: state.mission.phases,
+    docs: state.mission.docs,
+    risks: state.mission.risks,
+    hyps: state.mission.hyps,
+    estimate: state.mission.estimate,
+    decisions: state.mission.decisions
+  };
+  $("#jsonOut").textContent = JSON.stringify(data,null,2);
+}
+
+/* ========================= INIT HELPERS ========================= */
+function updateKPIs(){
+  $("#kpiOpen").textContent = state.demandes.filter(d=>["NOUV","QUAL","ETU"].includes(d.statut)).length;
+}
+updateKPIs();
+</script>
 </body>
 </html>

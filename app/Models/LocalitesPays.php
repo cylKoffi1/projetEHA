@@ -10,13 +10,16 @@ class LocalitesPays extends Model
     use HasFactory;
 
     protected $table = 'localites_pays';
-    protected $fillable = ['id_pays', 'id_niveau', 'libelle', 'code_rattachement', 'code_decoupage'];
+    protected $fillable = ['id_pays', 'id_niveau', 'libelle', 'code_rattachement', 'code_decoupage', 'latitude', 'longitude', 'geo_status'];
 
     public function decoupage()
     {
         return $this->belongsTo(DecoupageAdministratif::class, 'code_decoupage', 'code_decoupage');
     }
-
+    public function pays()
+    {
+        return $this->belongsTo(Pays::class, 'id_pays', 'alpha3');
+    }
       /**
      * Récupère toutes les données d'une localité
      * @param string $codeLocalite

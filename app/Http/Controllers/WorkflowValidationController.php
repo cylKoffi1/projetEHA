@@ -4,10 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Mail\NotificationValidationProjet;
+use App\Mail\ProjetRefuseNotification;
+use App\Services\WorkflowApproval;
+use App\Services\ApprovalNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\File;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
 
 // ------- Modèles Références -------
 use App\Models\ModeWorkflow;
@@ -15,7 +26,6 @@ use App\Models\StatutInstance;
 use App\Models\StatutEtapeInstance;
 use App\Models\TypeAction;
 use App\Models\OperateurRegle;
-
 // ------- Modèles Conception -------
 use App\Models\WorkflowApprobation;
 use App\Models\VersionWorkflow;
@@ -30,20 +40,114 @@ use App\Models\InstanceEtape;
 use App\Models\ActionApprobation;
 use App\Models\EscaladeApprobation;
 
+
 // ------- Contexte (pays/projet) -------
 use App\Models\Pays;
 use App\Models\GroupeProjet;
 use App\Models\GroupeProjetPaysUser;
 use App\Models\User;
 use App\Models\Acteur;
-use Illuminate\Support\Facades\Mail; 
+use App\Models\ModuleWorkflowDisponible;
 
 class WorkflowValidationController extends Controller
 {
     /***********************************************************
+     *                    HELPERS ERREURS JSON (NOUVEAU)
+     ***********************************************************/
+    /**
+     * Construit une 422 JSON avec toutes les erreurs concaténées dans `message`
+     */
+    private function throw422FromValidator(\Illuminate\Contracts\Validation\Validator $validator): never
+    {
+        $all = $validator->errors()->all(); // toutes les lignes d'erreur
+        $message = implode("\n", array_map(fn($m) => "• ".$m, $all));
+
+        throw new HttpResponseException(
+            response()->json([
+                'message' => $message,
+                'errors'  => $validator->errors(), // on garde le détail pour debug éventuel
+            ], 422)
+        );
+    }
+
+    /**
+     * Remplace $request->validate() par une version qui jette une 422 propre
+     */
+    private function validateJson(
+        Request $request,
+        array $rules,
+        array $messages = [],
+        array $attributes = [],
+        ?\Closure $after = null
+    ): array {
+        $validator = \Validator::make($request->all(), $rules, $messages, $attributes);
+        if ($after) {
+            $validator->after(fn($v) => $after($v));
+        }
+        if ($validator->fails()) {
+            $this->throw422FromValidator($validator);
+        }
+        return $validator->validated();
+    }
+
+    /***********************************************************
      *                         VUES
      ***********************************************************/
-
+    public function objectView(string $module, string $type, string $id)
+    {
+        // 1) Config module/type (table "modules_workflow_disponibles")
+        $cfg = DB::table('modules_workflow_disponibles')
+            ->where('code_module', $module)
+            ->where('type_cible', $type)
+            ->first();
+    
+        if (!$cfg) {
+            return response()->json(['message' => "Configuration module/type introuvable : {$module} • {$type}"], 404);
+           
+        }
+    
+        $modelClass = $cfg->classe_modele ?? null;
+        $idField    = $cfg->champ_identifiant ?? 'id';
+        if (!$modelClass || !class_exists($modelClass)) {
+            return response()->json(['message' => "Classe modèle non configurée pour {$module} • {$type}"], 404);
+           
+        }
+    
+        // 2) Chargement de l’enregistrement cible
+        /** @var \Illuminate\Database\Eloquent\Model $record */
+        $record = $modelClass::query()->where($idField, $id)->first();
+        if (!$record) {
+            return response()->json(['message' => "Objet introuvable pour {$module} • {$type} avec {$idField}={$id}"], 404);
+           
+        }
+    
+        // 3) Résolution de la vue spécifique -> fallback
+        $viewSpecific = "approbations.objects.{$module}.".strtolower($type);
+        $viewFallback = "approbations.objects.{$module}.show";
+    
+        $view = view()->exists($viewSpecific) ? $viewSpecific
+               : (view()->exists($viewFallback) ? $viewFallback : null);
+            if (!$view) {
+                return response()->json(['message' => "La vue de consultation n’est pas encore implémentée"], 404);
+            }
+            
+    
+        // 4) Contexte optionnel
+        $ctx = [
+            'pays'   => session('pays_selectionne'),
+            'projet' => session('projet_selectionne'),
+        ];
+    
+        return view($view, [
+            'record'     => $record,
+            'module'     => $module,
+            'type'       => $type,
+            'object_id'  => $id,
+            'id_field'   => $idField,
+            'ctx'        => $ctx,
+        ]);
+    }
+    
     /** Page liste front -> resources/views/workflows/index.blade.php */
     public function ui()
     {
@@ -57,23 +161,25 @@ class WorkflowValidationController extends Controller
     {
         $ctx = $this->buildViewContext();
         $approverUsers = $this->getApproverUsers($ctx['pays_selected'] ?? null, $ctx['projet_selected'] ?? null);
-    
+
         return view('workflows.form', [
             'ctx'           => $ctx,
             'approverUsers' => $approverUsers,
         ]);
     }
-    
-
 
     /** Formulaire d’édition/design -> resources/views/workflows/form.blade.php */
     public function designForm($id)
     {
         // $this->authorize('workflow.update', $workflow);
+        // Précharger référentiels pour éviter les N+1
+        $modeById = \App\Models\ModeWorkflow::query()->pluck('code', 'id');
+        $opById   = \App\Models\OperateurRegle::query()->pluck('code', 'id');
+
         $workflow = WorkflowApprobation::with([
             'versions' => function ($q) {
                 $q->with(['etapes' => function ($q) {
-                    $q->with(['approbateurs', 'regles']);
+                    $q->with(['approbateurs', 'regles.operateur']);
                 }])->orderByDesc('numero_version');
             }
         ])->findOrFail($id);
@@ -91,10 +197,10 @@ class WorkflowValidationController extends Controller
                 'numero_version'       => $last->numero_version,
                 'politique_changement' => $last->politique_changement,
                 'publie'               => (bool)$last->publie,
-                'etapes'               => $last->etapes->map(function ($e) {
+                'etapes'               => $last->etapes->map(function ($e) use ($modeById, $opById) {
                     return [
                         'position'                => $e->position,
-                        'mode'                    => optional(ModeWorkflow::find($e->mode_id))->code,
+                        'mode_code'               => $modeById[$e->mode_id] ?? null,
                         'quorum'                  => $e->quorum,
                         'sla_heures'              => $e->sla_heures,
                         'delegation_autorisee'    => (bool)$e->delegation_autorisee,
@@ -105,10 +211,10 @@ class WorkflowValidationController extends Controller
                             'reference_approbateur' => $a->reference_approbateur,
                             'obligatoire'           => (bool)$a->obligatoire,
                         ]),
-                        'regles'                  => $e->regles->map(function ($r) {
+                        'regles'                  => $e->regles->map(function ($r) use ($opById) {
                             return [
                                 'champ'          => $r->champ,
-                                'operateur_code' => optional(OperateurRegle::find($r->operateur_id))->code,
+                                'operateur_code' => optional($r->operateur)->code ?? ($opById[$r->operateur_id] ?? null),
                                 'valeur'         => $r->valeur,
                             ];
                         }),
@@ -118,12 +224,11 @@ class WorkflowValidationController extends Controller
         ];
 
         $ctx = $this->buildViewContext();
-
         $approverUsers = $this->getApproverUsers(
             $ctx['pays_selected'] ?? null,
             $ctx['projet_selected'] ?? null
         );
-    
+
         return view('workflows.form', [
             'workflowId'    => (int)$workflow->id,
             'prefill'       => $prefill,
@@ -133,7 +238,6 @@ class WorkflowValidationController extends Controller
     }
 
     /** Vue liaisons/bindings -> resources/views/workflows/bindings.blade.php */
-
     public function bindingsView($id)
     {
         $wf = WorkflowApprobation::with([
@@ -148,87 +252,294 @@ class WorkflowValidationController extends Controller
 
         return view('workflows.bindings', [
             'workflowId'        => (int) $wf->id,
-            'publishedVersions' => $wf->versions, // -> foreach dans le select Version
-            'bindings'          => $bindings,     // -> foreach dans le select & le tableau
+            'publishedVersions' => $wf->versions,
+            'bindings'          => $bindings,
         ]);
     }
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $user = auth()->user();
         $actorCode = optional($user?->acteur)->code_acteur;
-    
-        // Étapes où l'utilisateur est approbateur (ACTEUR) et encore actives
-        $pendingSteps = InstanceEtape::query()
-            ->with([
-                'instance.version.workflow',             // contexte (nom workflow)
-                'instance.etapes.etape.approbateurs',    // pour "avant / après"
-                'etape.approbateurs',                    // approbateurs de l’étape courante
-                'etape'                                  // position
-            ])
-            ->whereIn('statut_id', [
-                $this->statutEtape('PENDING')->id,
-                $this->statutEtape('EN_COURS')->id,
-            ])
-            ->whereHas('etape.approbateurs', function($q) use ($actorCode) {
-                $q->where('type_approbateur', 'ACTEUR')
-                  ->where('reference_approbateur', $actorCode);
+        $activeTab = $request->get('tab', 'current'); // 'current' ou 'history'
+
+        if (!$actorCode) {
+            return view('approbations.dashboard', [
+                'currentRows'    => collect(),
+                'historyRows'    => collect(),
+                'Users'          => collect(),
+                'pendingCount'   => 0,
+                'approvedCount'  => 0,
+                'rejectedCount'  => 0,
+                'activeTab'      => $activeTab,
+            ]);
+        }
+
+        $stEnCours = $this->statutEtape('EN_COURS')->id;
+        $stPending = $this->statutEtape('PENDING')->id;
+        $stAppr    = $this->statutEtape('APPROUVE')->id;
+        $stRejet   = $this->statutEtape('REJETE')->id;
+
+        // APPROBATIONS ACTUELLES (en cours et en attente)
+        $currentQ = \App\Models\InstanceEtape::query()
+            ->where(function ($q) use ($actorCode) {
+                $q->whereHas('etape.approbateurs', function ($q) use ($actorCode) {
+                    $q->where('type_approbateur', 'ACTEUR')
+                      ->where('reference_approbateur', $actorCode);
+                })
+                ->orWhereHas('actions', function ($qq) use ($actorCode) {
+                    $qq->whereHas('type', fn($t) => $t->where('code', 'DELEGUER'))
+                       ->where('meta->delegate_to', $actorCode);
+                });
             })
-            ->orderBy('date_debut', 'asc')
-            ->get();
-            $Users = User::select('acteur_id')  
-            ->with(['acteur:code_acteur,libelle_court,libelle_long'])
-            ->get();
+            ->whereIn('statut_id', [$stEnCours, $stPending]);
+
+        // Comptes pour les approbations actuelles
+        $pendingCount  = (clone $currentQ)->count();
+        $approvedCount = \App\Models\InstanceEtape::where(function ($q) use ($actorCode) {
+                $q->whereHas('etape.approbateurs', fn($qq)=>$qq->where('type_approbateur','ACTEUR')->where('reference_approbateur',$actorCode))
+                ->orWhereHas('actions', fn($qq)=>$qq->whereHas('type', fn($t)=>$t->where('code','DELEGUER'))->where('meta->delegate_to',$actorCode));
+            })
+            ->where('statut_id', $stAppr)
+            ->count();
+        
+        $rejectedCount = \App\Models\InstanceEtape::where(function ($q) use ($actorCode) {
+                $q->whereHas('etape.approbateurs', fn($qq)=>$qq->where('type_approbateur','ACTEUR')->where('reference_approbateur',$actorCode))
+                ->orWhereHas('actions', fn($qq)=>$qq->whereHas('type', fn($t)=>$t->where('code','DELEGUER'))->where('meta->delegate_to',$actorCode));
+            })
+            ->where('statut_id', $stRejet)
+            ->count();
     
-        // Prépare des DTO simples pour la vue
-        $rows = $pendingSteps->map(function($si) {
-            $currentPos = $si->etape->position;
-        
-            // approbateurs attendus de l'étape courante
-            $expApprovers = $si->etape->approbateurs
-                ->where('type_approbateur','ACTEUR')
-                ->pluck('reference_approbateur')
-                ->values();
 
-            $acteurs = Acteur::whereIn('code_acteur', $expApprovers)
-                ->get(['code_acteur','libelle_court','libelle_long'])
-                ->keyBy('code_acteur');
+        // Liste paginée des approbations actuelles
+        $currentSteps = (clone $currentQ)
+            ->with([
+                'instance.version.workflow',
+                'instance',
+                'etape.approbateurs',
+                'actions.type',
+            ])
+            ->orderByDesc('id')
+            ->paginate(25, ['*'], 'current_page')
+            ->withQueryString();
 
-            $approvers = $expApprovers->map(function ($code) use ($acteurs, $si) {
-                $a = $acteurs->get($code); // \App\Models\Acteur|null
+        // HISTORIQUE (déjà traitées)
+        $historyQ = \App\Models\InstanceEtape::query()
+            ->where(function ($q) use ($actorCode) {
+                $q->whereHas('etape.approbateurs', function ($q) use ($actorCode) {
+                    $q->where('type_approbateur', 'ACTEUR')
+                      ->where('reference_approbateur', $actorCode);
+                })
+                ->orWhereHas('actions', function ($qq) use ($actorCode) {
+                    $qq->whereHas('type', fn($t) => $t->where('code', 'DELEGUER'))
+                       ->where('meta->delegate_to', $actorCode);
+                });
+            })
+            ->whereIn('statut_id', [$stAppr, $stRejet]);
 
-                // libellé et initiales à partir de libelle_court / libelle_long
-                $label    = $this->labelFromActor($a, $code);         // fallback = code
-                $initials = $this->initialsFromActor($a);             // calcule les initiales
+        // Liste paginée de l'historique
+        $historySteps = $historyQ
+            ->with([
+                'instance.version.workflow',
+                'instance',
+                'etape.approbateurs',
+                'actions.type',
+            ])
+            ->orderByDesc('id')
+            ->paginate(25, ['*'], 'history_page')
+            ->withQueryString();
 
-                return [
-                    'code'      => $code,
-                    'label'     => $label,
-                    'initials'  => $initials ?: '?',
-                    'status'    => $this->approverStatusFor($si, $code),
-                ];
-            });
+        // Mapping des données pour l'affichage
+        $currentRows = $currentSteps->getCollection()->map(fn($si) => $this->mapStepToRow($si));
+        $historyRows = $historySteps->getCollection()->map(fn($si) => $this->mapStepToRow($si));
 
+        // Remettre les collections mappées dans les paginators
+        $currentSteps->setCollection($currentRows);
+        $historySteps->setCollection($historyRows);
 
-        
+        // Sélecteur délégation
+        $Users = \App\Models\User::where('is_active', true)
+            ->whereHas('acteur')
+            ->select('acteur_id')
+            ->with(['acteur:code_acteur,libelle_court,libelle_long'])
+            ->orderBy('acteur_id')
+            ->get();
+
+        return view('approbations.dashboard', [
+            'currentRows'    => $currentSteps,
+            'historyRows'    => $historySteps,
+            'Users'          => $Users,
+            'pendingCount'   => $pendingCount,
+            'approvedCount'  => $approvedCount,
+            'rejectedCount'  => $rejectedCount,
+            'activeTab'      => $activeTab,
+        ]);
+    }
+
+    
+    /**
+     * Helper pour mapper InstanceEtape vers format d'affichage
+     */
+    private function mapStepToRow(\App\Models\InstanceEtape $si): array
+    {
+        $inst = $si->instance;
+        $wf   = optional($inst->version)->workflow;
+
+        // approbateurs attendus (codes)
+        $expApprovers = $si->etape->approbateurs
+            ->whereIn('type_approbateur', ['ACTEUR','FIELD_ACTEUR'])
+            ->map(function ($a) use ($inst) {
+                if ($a->type_approbateur === 'ACTEUR') {
+                    return (string) $a->reference_approbateur;
+                }
+                $snap = (array) ($inst->instantane ?? []);
+                $code = (string) data_get($snap, $a->reference_approbateur);
+                return $code ?: null;
+            })
+            ->filter()
+            ->values();
+
+        $acteurs = \App\Models\Acteur::whereIn('code_acteur', $expApprovers)
+            ->get(['code_acteur','libelle_court','libelle_long'])
+            ->keyBy('code_acteur');
+
+        $approvers = $expApprovers->map(function ($code) use ($acteurs, $si) {
+            $a = $acteurs->get($code);
+            $label    = $this->labelFromActor($a, $code);
+            $initials = $this->initialsFromActor($a);
             return [
-                'step_id'        => $si->id,
-                'instance_id'    => $si->instance->id,
-                'module'         => $si->instance->module_code,
-                'type'           => $si->instance->type_cible,
-                'target_id'      => $si->instance->id_cible,
-                'workflow_name'  => $si->instance->version->workflow->nom ?? 'N/A',
-                'version'        => $si->instance->version->numero_version ?? null,
-                'step_pos'       => $si->etape->position,
-                'status_code'    => $this->codeStatutEtape($si->statut_id),
-                'approvers'      => $approvers, // <<< NOUVEAU
+                'code'      => $code,
+                'label'     => $label,
+                'initials'  => $initials ?: '?',
+                'status'    => $this->approverStatusFor($si, $code),
             ];
         });
-        
-    
-        return view('approbations.dashboard', compact('Users', 'rows'));
+
+        return [
+            'step_id'        => $si->id,
+            'instance_id'    => $inst->id,
+            'module'         => $inst->module_code,
+            'type'           => $inst->type_cible,
+            'target_id'      => $inst->id_cible,
+            'workflow_name'  => $wf?->nom ?? 'N/A',
+            'version'        => $inst->version?->numero_version ?? null,
+            'step_pos'       => $si->etape->position,
+            'status_code'    => $this->codeStatutEtape($si->statut_id),
+            'approvers'      => $approvers,
+            'created_at'     => $si->date_debut ?: $si->created_at,
+            'updated_at'     => $si->updated_at,
+        ];
     }
-    
+
+    public function HistoriqueApprobation(Request $request)
+    {
+        // --------- Filtres ----------
+        $module      = trim((string) $request->get('module'));
+        $type        = trim((string) $request->get('type'));
+        $cible       = trim((string) $request->get('id_cible'));
+        $actor       = trim((string) $request->get('actor'));
+        $actionCode  = trim((string) $request->get('action_code'));
+        $instStatus  = trim((string) $request->get('instance_status'));
+        $from        = $request->get('from'); // yyyy-mm-dd
+        $to          = $request->get('to');   // yyyy-mm-dd
+        $mine        = (bool) $request->boolean('mine');
+
+        // Contexte optionnel (pays / projet)
+        $ctxPays   = session('pays_selectionne');
+        $ctxProjet = session('projet_selectionne');
+
+        // --------- Tables ----------
+        $tA  = app(ActionApprobation::class)->getTable();
+        $tSI = app(InstanceEtape::class)->getTable();
+        $tIA = app(InstanceApprobation::class)->getTable();
+        $tTA = app(TypeAction::class)->getTable();
+        $tVW = app(VersionWorkflow::class)->getTable();
+        $tWA = app(WorkflowApprobation::class)->getTable();
+        $tSTI= app(StatutInstance::class)->getTable();
+        $tSTE= app(StatutEtapeInstance::class)->getTable();
+        $tAC = app(Acteur::class)->getTable();
+
+        // --------- Base query ----------
+        $q = DB::table("$tA as a")
+            ->join("$tSI as si", 'si.id', '=', 'a.instance_etape_id')
+            ->join("$tIA as ia", 'ia.id', '=', 'si.instance_approbation_id')
+            ->leftJoin("$tTA as ta", 'ta.id', '=', 'a.action_type_id')
+            ->leftJoin("$tVW as vw", 'vw.id', '=', 'ia.version_workflow_id')
+            ->leftJoin("$tWA as wa", 'wa.id', '=', 'vw.workflow_id')
+            ->leftJoin("$tSTI as sti", 'sti.id', '=', 'ia.statut_id')
+            ->leftJoin("$tSTE as ste", 'ste.id', '=', 'si.statut_id')
+            ->leftJoin("$tAC as ac", 'ac.code_acteur', '=', 'a.code_acteur')
+            ->selectRaw("
+                a.id               as action_id,
+                a.created_at       as action_at,
+                a.commentaire      as action_comment,
+                a.code_acteur      as actor_code,
+                ta.code            as action_code,
+
+                si.id              as step_id,
+                ste.code           as step_status,
+
+                ia.id              as instance_id,
+                ia.module_code     as module_code,
+                ia.type_cible      as type_cible,
+                ia.id_cible        as id_cible,
+                sti.code           as instance_status,
+
+                vw.numero_version  as version,
+                wa.nom             as workflow_nom,
+                wa.code_pays       as code_pays,
+                wa.groupe_projet_id as groupe_projet,
+
+                ac.libelle_court   as actor_short,
+                ac.libelle_long    as actor_long
+            ");
+
+        // --------- Filtres ----------
+        if ($module !== '')    $q->where('ia.module_code', $module);
+        if ($type !== '')      $q->where('ia.type_cible',  $type);
+        if ($cible !== '')     $q->where('ia.id_cible',    $cible);
+        if ($actionCode !== '')$q->where('ta.code',        $actionCode);
+        if ($instStatus !== '')$q->where('sti.code',       $instStatus);
+
+        if ($from) $q->where('a.created_at', '>=', Carbon::parse($from)->startOfDay());
+        if ($to)   $q->where('a.created_at', '<=', Carbon::parse($to)->endOfDay());
+
+        if ($mine && ($me = optional(auth()->user()?->acteur)->code_acteur)) {
+            $q->where('a.code_acteur', $me);
+        }
+
+        if ($actor !== '') {
+            $q->where(function ($w) use ($actor) {
+                $w->where('a.code_acteur', 'like', "%$actor%")
+                  ->orWhere('ac.libelle_court', 'like', "%$actor%")
+                  ->orWhere('ac.libelle_long',  'like', "%$actor%");
+            });
+        }
+
+        if ($ctxPays)   $q->where('wa.code_pays', $ctxPays);
+        if ($ctxProjet) $q->where('wa.groupe_projet_id', $ctxProjet);
+
+        $q->orderByDesc('a.id');
+        $rows = $q->paginate(50)->withQueryString();
+
+        $actionCodes = TypeAction::query()->orderBy('code')->pluck('code')->all();
+        $instanceStatuses = StatutInstance::query()->orderBy('code')->pluck('code')->all();
+
+        return view('approbations.history', [
+            'rows'              => $rows,
+            'filters'           => [
+                'module' => $module, 'type' => $type, 'id_cible' => $cible,
+                'actor'  => $actor,  'action_code' => $actionCode, 'instance_status' => $instStatus,
+                'from'   => $from,   'to' => $to, 'mine' => $mine,
+            ],
+            'actionCodes'       => $actionCodes,
+            'instanceStatuses'  => $instanceStatuses,
+            'ctx'               => [
+                'pays'   => $ctxPays,
+                'projet' => $ctxProjet,
+            ],
+        ]);
+    }
 
     /** Vue détail d’une instance + actions -> resources/views/approbations/show.blade.php */
     public function instanceView($instanceId)
@@ -238,6 +549,244 @@ class WorkflowValidationController extends Controller
         return view('approbations.show', ['instanceId' => (int)$instanceId, 'ctx' => $ctx]);
     }
 
+    /**
+     * POST /workflows/{workflowId}/bind-dynamic
+     * Upsert binding (module_type_id + scope).
+     */
+    public function bindDynamic(Request $request, $workflowId)
+    {
+        // $this->authorize('workflow.admin');
+        $data = $this->validateJson($request, [
+            'module_type_id'   => ['required','exists:modules_workflow_disponibles,id'],
+            'numero_version'   => ['required','integer','min:1'],
+            'id_cible'         => ['nullable','string','max:150'],
+            'par_defaut'       => ['nullable','boolean'],
+            'code_pays'        => ['nullable','string','size:3'],
+            'groupe_projet_id' => ['nullable','string'],
+        ]);
+
+        $moduleType = ModuleWorkflowDisponible::findOrFail($data['module_type_id']);
+        $wf = WorkflowApprobation::findOrFail($workflowId);
+        $version = VersionWorkflow::where('workflow_id', $wf->id)
+            ->where('numero_version', $data['numero_version'])
+            ->where('publie', 1)
+            ->firstOrFail();
+
+        return DB::transaction(function () use ($data, $moduleType, $version) {
+            if (!empty($data['par_defaut'])) {
+                LiaisonWorkflow::where('module_code', $moduleType->code_module)
+                    ->where('type_cible', $moduleType->type_cible)
+                    ->where(function ($q) use ($data) {
+                        $q->whereNull('code_pays')->orWhere('code_pays', $data['code_pays'] ?? null);
+                    })
+                    ->where(function ($q) use ($data) {
+                        $q->whereNull('groupe_projet_id')->orWhere('groupe_projet_id', $data['groupe_projet_id'] ?? null);
+                    })
+                    ->update(['par_defaut' => 0]);
+            }
+
+            $exists = LiaisonWorkflow::where('module_code', $moduleType->code_module)
+                ->where('type_cible', $moduleType->type_cible)
+                ->where('id_cible', $data['id_cible'] ?? null)
+                ->where('code_pays', $data['code_pays'] ?? null)
+                ->where('groupe_projet_id', $data['groupe_projet_id'] ?? null)
+                ->first();
+
+            if ($exists) {
+                $exists->update([
+                    'version_workflow_id' => $version->id,
+                    'par_defaut'          => (int)($data['par_defaut'] ?? 0),
+                    'module_type_id'      => $moduleType->id,
+                ]);
+                return response()->json(['message' => 'Liaison mise à jour', 'liaison' => $exists], 200);
+            }
+
+            $binding = LiaisonWorkflow::create([
+                'version_workflow_id' => $version->id,
+                'module_code'         => $moduleType->code_module,
+                'type_cible'          => $moduleType->type_cible,
+                'id_cible'            => $data['id_cible'] ?? null,
+                'par_defaut'          => (int)($data['par_defaut'] ?? 0),
+                'module_type_id'      => $moduleType->id,
+                'code_pays'           => $data['code_pays'] ?? null,
+                'groupe_projet_id'    => $data['groupe_projet_id'] ?? null,
+            ]);
+
+            return response()->json(['message' => 'Liaison créée', 'liaison' => $binding->load('moduleType')], 201);
+        });
+    }
+
+    /**
+     * DELETE /workflows/{workflow}/bindings/{binding}
+     */
+    public function destroyBinding(Request $request, $workflowId, $bindingId)
+    {
+        // $this->authorize('workflow.admin');
+        $wf = WorkflowApprobation::findOrFail($workflowId);
+        $b = LiaisonWorkflow::where('id', $bindingId)
+            ->whereIn('version_workflow_id', VersionWorkflow::where('workflow_id', $wf->id)->pluck('id'))
+            ->firstOrFail();
+
+        $b->delete();
+        return response()->json(['message' => 'Liaison supprimée']);
+    }
+
+    /**
+     * GET /workflow/model-candidates
+     * Scan app/Models for classes (non abstract, subclass of Model).
+     */
+    public function modelCandidates(Request $request)
+    {
+        // $this->authorize('workflow.admin');
+        $cacheKey = 'workflow.modelCandidates';
+        $ttl = config('workflow.models_cache_ttl', 60);
+
+        $candidates = Cache::remember($cacheKey, $ttl, function () {
+            $basePath = app_path('Models');
+            if (!is_dir($basePath)) return collect();
+            $files = \Illuminate\Support\Facades\File::allFiles($basePath);
+
+            $list = collect($files)
+                ->map(function ($f) use ($basePath) {
+                    $relative = str_replace([$basePath . DIRECTORY_SEPARATOR, '.php'], '', $f->getPathname());
+                    $class = 'App\\Models\\' . str_replace(DIRECTORY_SEPARATOR, '\\', $relative);
+                    return $class;
+                })
+                ->unique()
+                ->filter(function ($class) {
+                    if (!class_exists($class)) return false;
+                    $ref = new \ReflectionClass($class);
+                    return !$ref->isAbstract() && $ref->isSubclassOf(Model::class);
+                })
+                ->map(function ($class) {
+                    return [
+                        'class' => $class,
+                        'short' => class_basename($class),
+                        'label' => class_basename($class),
+                    ];
+                })->values();
+
+            // whitelist optionnelle
+            if ($allow = config('workflow.allowed_models', null)) {
+                if (is_array($allow) && count($allow) > 0) {
+                    $list = $list->filter(fn($c) => in_array($c['class'], $allow, true))->values();
+                }
+            }
+
+            return $list;
+        });
+
+        return response()->json($candidates);
+    }
+
+    /**
+     * GET /workflow/model-fields?class=App\Models\...
+     * Retourne colonnes & un petit échantillon.
+     */
+    public function modelFields(Request $request)
+    {
+        // Normaliser le FQCN : enlever les "\" de tête et trim
+        $class = ltrim((string) $request->query('class', ''), '\\');
+        if ($class === '' || !class_exists($class)) {
+            return response()->json(['error' => "Modèle introuvable: {$class}"], 404);
+        }
+    
+        $ref = new \ReflectionClass($class);
+        if ($ref->isAbstract() || !$ref->isSubclassOf(\Illuminate\Database\Eloquent\Model::class)) {
+            return response()->json(['error' => "Classe non valide (doit étendre Eloquent Model): {$class}"], 400);
+        }
+    
+        /** @var \Illuminate\Database\Eloquent\Model $m */
+        $m = app($class);
+    
+        // Utiliser la connexion du modèle (et pas la connexion globale)
+        $table       = $m->getTable();
+        $connection  = $m->getConnectionName(); // peut être null => default
+        $schema      = \Illuminate\Support\Facades\Schema::connection($connection);
+    
+        if (!$schema->hasTable($table)) {
+            return response()->json(['error' => "Table '{$table}' introuvable sur la connexion '".($connection ?: config('database.default'))."'"], 400);
+        }
+    
+        // Colonnes via la connexion du modèle
+        $columns = $schema->getColumnListing($table);
+    
+        // Tri "intelligent" pour proposer d’abord les champs utiles
+        $priorities = ['id','code','slug','reference','libelle','titre','title','name'];
+        $sorted = collect($columns)
+            ->map(fn($c) => ['column' => $c])
+            ->sortBy(function ($item) use ($priorities) {
+                $col = $item['column'];
+                foreach ($priorities as $i => $p) {
+                    if (str_starts_with($col, $p) || str_contains($col, $p)) return $i - 100;
+                }
+                return 1000;
+            })
+            ->values();
+    
+        $fillable = method_exists($m, 'getFillable') ? array_values($m->getFillable()) : [];
+        $guarded  = method_exists($m, 'getGuarded')  ? array_values($m->getGuarded())  : [];
+    
+        // Petit échantillon — sur la bonne connexion
+        $sample = [];
+        try {
+            $sampleRows = $m->newQuery()->limit(6)->get(array_slice($columns, 0, 10));
+            $sample = $sampleRows->map(function ($r) use ($columns) {
+                $out = [];
+                foreach (array_slice($columns, 0, 10) as $c) {
+                    $out[$c] = (string) data_get($r, $c);
+                }
+                return $out;
+            });
+        } catch (\Throwable $e) {
+            // On renvoie quand même sans sample, mais on expose l’info utile
+            return response()->json([
+                'table'    => $table,
+                'columns'  => $sorted,
+                'fillable' => $fillable,
+                'guarded'  => $guarded,
+                'sample'   => [],
+                'warning'  => 'Impossible de lire un échantillon: '.$e->getMessage(),
+            ], 200);
+        }
+    
+        return response()->json([
+            'table'    => $table,
+            'columns'  => $sorted,
+            'fillable' => $fillable,
+            'guarded'  => $guarded,
+            'sample'   => $sample,
+        ]);
+    }
+    
+
+    /**
+     * GET /modules-workflow/{id}/instances
+     * Retourne instances du modèle (autocomplete)
+     */
+    public function moduleInstances(Request $request, $id)
+    {
+        $m = ModuleWorkflowDisponible::findOrFail($id);
+
+        if (empty($m->classe_modele) || !class_exists($m->classe_modele)) {
+            return response()->json([], 200);
+        }
+
+        $filters = [
+            'pays_code' => $request->string('pays_code', null),
+            'groupe_projet_id' => $request->string('groupe_projet_id', null),
+            'q' => $request->string('q', null),
+            'limit' => $request->integer('limit', 50),
+        ];
+
+        $instances = $m->getInstances($filters);
+
+        // pagination/limite
+        $instances = $instances->slice(0, min(100, max(10, $filters['limit'])))->values();
+
+        return response()->json($instances);
+    }
+
     /***********************************************************
      *      CONTEXTE PAYS / GROUPE PROJET POUR LES VUES
      ***********************************************************/
@@ -245,21 +794,20 @@ class WorkflowValidationController extends Controller
     {
         $user = auth()->user();
 
-        // 1) Pays sélectionné (session) ou premier pays accessible par l'utilisateur
+        // 1) Pays sélectionné
         $alpha3Selected = session('pays_selectionne');
         $userPaysCodes  = collect();
 
         if ($user) {
-            // via la table de jointure (groupe_projet_pays_user)
             $userPaysCodes = GroupeProjetPaysUser::query()
-                ->where('user_id', $user->acteur_id)
+                ->where('user_id', $user->id)
                 ->pluck('pays_code')
                 ->unique()
                 ->values();
         }
 
         if (!$alpha3Selected) {
-            $alpha3Selected = $userPaysCodes->first(); // fallback: le 1er pays de l'utilisateur
+            $alpha3Selected = $userPaysCodes->first();
         }
 
         // 2) Liste des pays accessibles
@@ -269,13 +817,13 @@ class WorkflowValidationController extends Controller
         }
         $paysOptions = $paysOptionsQuery->get(['alpha3','nom_fr_fr']);
 
-        // 3) Groupe projet sélectionné (session) ou premier groupe du pays sélectionné
+        // 3) Groupe projet sélectionné
         $gpSelected = session('projet_selectionne');
         $groupesDansPays = collect();
 
         if ($user && $alpha3Selected) {
             $gppus = GroupeProjetPaysUser::query()
-                ->where('user_id', $user->acteur_id)
+                ->where('user_id', $user->id)
                 ->where('pays_code', $alpha3Selected)
                 ->with('groupeProjet')
                 ->get();
@@ -291,7 +839,7 @@ class WorkflowValidationController extends Controller
             }
         }
 
-        // 4) Liste des groupes accessibles dans le pays sélectionné
+        // 4) Liste des groupes accessibles
         $groupeOptions = $groupesDansPays->isNotEmpty()
             ? $groupesDansPays->map(fn($g)=>['code'=>$g->code,'libelle'=>$g->libelle])->values()
             : GroupeProjet::query()->orderBy('libelle')->get(['code','libelle'])->map(fn($g)=>['code'=>$g->code,'libelle'=>$g->libelle]);
@@ -299,18 +847,18 @@ class WorkflowValidationController extends Controller
         return [
             'pays_selected'    => $alpha3Selected,
             'projet_selected'  => $gpSelected,
-            'pays_options'     => $paysOptions,    // collection de {alpha3, nom_fr_fr}
-            'groupe_options'   => $groupeOptions,  // collection de {code, libelle}
+            'pays_options'     => $paysOptions,
+            'groupe_options'   => $groupeOptions,
         ];
     }
+
     private function getApproverUsers(?string $alpha3 = null, ?string $gpCode = null)
     {
         $alpha3  = $alpha3 ?: (string) session('pays_selectionne');
         $gpCode  = $gpCode ?: (string) session('projet_selectionne');
-    
+
         $q = User::query()
             ->where('is_active', true)
-            // Filtre via la table pivot groupe_projet_pays_user
             ->whereHas('projetsPays', function ($q) use ($alpha3, $gpCode) {
                 if ($alpha3) {
                     $q->where('pays_code', $alpha3);
@@ -323,20 +871,84 @@ class WorkflowValidationController extends Controller
                 $q->select('code_acteur','libelle_long','libelle_court','email');
             }])
             ->orderBy('login');
-    
-        // On récupère les colonnes utiles du user
-        return $q->get(['acteur_id','login','email']);
+
+        return $q->get(['id','acteur_id','login','email']);
     }
-    
+
+    /**
+     * GET /modules-workflow
+     * Retourne modules disponibles (registres) pour le select
+     */
+    public function modulesDisponibles(Request $request)
+    {
+        // $this->authorize('workflow.admin');
+        $cacheKey = 'workflow.modules:' . md5(json_encode($request->only(['module','type','only_with_model','q'])));
+        $useCache = !$request->boolean('nocache');
+
+        $query = ModuleWorkflowDisponible::query()->where('actif', true);
+
+        if ($request->filled('module')) $query->where('code_module', $request->string('module'));
+        if ($request->filled('type')) $query->where('type_cible', $request->string('type'));
+        if ($request->boolean('only_with_model')) $query->whereNotNull('classe_modele')->where('classe_modele', '!=', '');
+        if ($request->filled('q')) {
+            $term = '%' . trim($request->string('q')) . '%';
+            $query->where(function($w) use ($term) {
+                $w->where('code_module', 'like', $term)
+                  ->orWhere('libelle_module', 'like', $term)
+                  ->orWhere('type_cible', 'like', $term)
+                  ->orWhere('libelle_type', 'like', $term);
+            });
+        }
+        $query->orderBy('code_module')->orderBy('type_cible');
+
+        if ($useCache) {
+            $result = Cache::remember($cacheKey, config('workflow.models_cache_ttl', 60), fn() => $query->get());
+        } else {
+            $result = $query->get();
+        }
+
+        return response()->json($result);
+    }
+
     /** Hydrate code_pays / groupe_projet_id depuis la session si absents */
     private function hydrateContextFromSession(Request $request): void
     {
         if (!$request->filled('code_pays') && ($alpha3 = session('pays_selectionne'))) {
             $request->merge(['code_pays' => $alpha3]);
         }
-        if (!$request->filled('groupe_projet_id') && ($gp = session('projet_selectionne'))) {
-            $request->merge(['groupe_projet_id' => $gp]);
+        // NOTE : on NE force PAS groupe_projet_id (volontairement)
+    }
+
+    /** Helper pour construire la query (réutilisable) */
+    private function buildModulesQuery(Request $request)
+    {
+        $q = ModuleWorkflowDisponible::query()->where('actif', true);
+
+        if ($request->filled('module')) {
+            $q->where('code_module', $request->string('module'));
         }
+
+        if ($request->filled('type')) {
+            $q->where('type_cible', $request->string('type'));
+        }
+
+        if ($request->boolean('only_with_model')) {
+            $q->whereNotNull('classe_modele')->where('classe_modele', '!=', '');
+        }
+
+        if ($request->filled('q')) {
+            $term = '%' . trim($request->string('q')) . '%';
+            $q->where(function ($w) use ($term) {
+                $w->where('code_module', 'like', $term)
+                    ->orWhere('libelle_module', 'like', $term)
+                    ->orWhere('type_cible', 'like', $term)
+                    ->orWhere('libelle_type', 'like', $term);
+            });
+        }
+
+        $q->orderBy('code_module')->orderBy('type_cible');
+
+        return $q;
     }
 
     /***********************************************************
@@ -351,11 +963,9 @@ class WorkflowValidationController extends Controller
             }])
             ->orderBy('code_pays')->orderBy('code');
 
-        // pays explicitement demandé ?
         if ($request->filled('pays')) {
             $q->where('code_pays', $request->string('pays'));
         } else {
-            // sinon => filtre sur le pays sélectionné en session si disponible
             if ($alpha3 = session('pays_selectionne')) {
                 $q->where('code_pays', $alpha3);
             }
@@ -374,7 +984,7 @@ class WorkflowValidationController extends Controller
         $workflow = WorkflowApprobation::with([
             'versions' => function ($q) {
                 $q->with(['etapes' => function ($q) {
-                    $q->with(['approbateurs', 'regles']);
+                    $q->with(['approbateurs', 'regles.operateur']);
                 }])->orderBy('numero_version');
             },
             'versions.liaisons'
@@ -390,57 +1000,55 @@ class WorkflowValidationController extends Controller
     {
         $this->hydrateContextFromSession($request);
         $data = $this->validateWorkflowPayload($request);
-    
+
         return DB::transaction(function () use ($data) {
-           
+
             $wf = WorkflowApprobation::create([
-                //'code'              => 'WF_' . strtoupper($data['code_pays']) . strtoupper($data['groupe_projet_id']) . '_' . str_pad($nextSeq, 4, '0', STR_PAD_LEFT),
                 'nom'              => $data['nom'],
                 'code_pays'        => $data['code_pays'],
                 'groupe_projet_id' => $data['groupe_projet_id'] ?? null,
                 'actif'            => 1,
                 'meta'             => $data['meta'] ?? null,
             ]);
-    
+
             // NEW WORKFLOW -> crée toujours une nouvelle version (1)
             $this->upsertVersionGraph($wf->id, $data['version'] ?? [], 'new_version');
-    
+
             return response()->json([
                 'message'  => 'Workflow créé',
                 'workflow' => $wf->load('versions.etapes.approbateurs', 'versions.etapes.regles')
             ], 201);
         });
     }
-    
+
     public function update(Request $request, $id)
     {
         $workflow = WorkflowApprobation::findOrFail($id);
         $this->hydrateContextFromSession($request);
         $data = $this->validateWorkflowPayload($request, updating: true);
         $mode = $data['mode_version'] ?? 'new_version';
-    
+
         return DB::transaction(function () use ($workflow, $data, $mode) {
             $workflow->update([
                 'nom'              => $data['nom'] ?? $workflow->nom,
                 'code_pays'        => $data['code_pays'] ?? $workflow->code_pays,
-                'groupe_projet_id' => $data['groupe_projet_id'] ?? $workflow->groupe_projet_id,
+                'groupe_projet_id' => array_key_exists('groupe_projet_id',$data) ? ($data['groupe_projet_id'] ?? null) : $workflow->groupe_projet_id,
                 'meta'             => $data['meta'] ?? $workflow->meta,
             ]);
-    
-            if ($mode === 'update_existing' && !empty($data['version']['numero_version'])) {
+
+            /*if ($mode === 'update_existing' && !empty($data['version']['numero_version'])) {
                 $existing = VersionWorkflow::where('workflow_id', $workflow->id)
                     ->where('numero_version', $data['version']['numero_version'])
                     ->first();
-    
+
                 if ($existing && ($existing->publie || $this->versionIsInUse($existing))) {
-                    // 409 = conflit logique
                     abort(response()->json([
                         'message' => "Impossible de modifier une version publiée ou déjà utilisée. Créez une nouvelle version.",
                         'code'    => 'VERSION_IN_USE'
                     ], 409));
                 }
-            }
-    
+            }*/
+
             $this->upsertVersionGraph($workflow->id, $data['version'] ?? [], $mode);
             return response()->json([
                 'message'  => $mode === 'update_existing' ? 'Version mise à jour' : 'Nouvelle version créée',
@@ -448,24 +1056,26 @@ class WorkflowValidationController extends Controller
             ]);
         });
     }
-    
 
     /** Publier une version (exclusif) */
     public function publish(Request $request, $id)
     {
         // $this->authorize('workflow.publish', $workflow);
-        $request->validate(['numero_version' => ['required','integer','min:1']]);
+        $inp = $this->validateJson($request, [
+            'numero_version' => ['required','integer','min:1']
+        ]);
+
         $workflow = WorkflowApprobation::findOrFail($id);
 
-        DB::transaction(function() use ($workflow, $request) {
+        DB::transaction(function() use ($workflow, $inp) {
             VersionWorkflow::where('workflow_id', $workflow->id)->update(['publie' => 0]);
             VersionWorkflow::where('workflow_id', $workflow->id)
-                ->where('numero_version', $request->integer('numero_version'))
+                ->where('numero_version', $inp['numero_version'])
                 ->update(['publie' => 1]);
         });
 
         $version = VersionWorkflow::where('workflow_id', $workflow->id)
-            ->where('numero_version', $request->integer('numero_version'))
+            ->where('numero_version', $inp['numero_version'])
             ->firstOrFail();
 
         return response()->json([
@@ -490,7 +1100,7 @@ class WorkflowValidationController extends Controller
     public function bind(Request $request, $id)
     {
         // $this->authorize('workflow.bind', $workflow);
-        $data = $request->validate([
+        $data = $this->validateJson($request, [
             'numero_version' => ['required', 'integer', 'min:1'],
             'module_code'    => ['required', 'string', 'max:100'],
             'type_cible'     => ['required', 'string', 'max:100'],
@@ -510,6 +1120,7 @@ class WorkflowValidationController extends Controller
                 'module_code'         => $data['module_code'],
                 'type_cible'          => $data['type_cible'],
                 'id_cible'            => $data['id_cible'],
+                'code_pays'           => session(('pays_selectionne')),
             ],
             ['par_defaut' => (int)($data['par_defaut'] ?? 0)]
         );
@@ -546,69 +1157,38 @@ class WorkflowValidationController extends Controller
         return response()->json($bindings->values());
     }
 
-
     /***********************************************************
      *                  EXÉCUTION : INSTANCES (JSON)
      ***********************************************************/
-    /** Démarrer une instance d’approbation pour un objet. */
-    public function start(Request $request)
+    /** Démarrer une instance d’approbation pour un objet. (via Service) */
+    public function start(Request $request, WorkflowApproval $svc)
     {
         // $this->authorize('approval.start', [$module,$type,$id]);
-        $data = $request->validate([
+        $data = $this->validateJson($request, [
             'module_code' => ['required', 'string', 'max:100'],
             'type_cible'  => ['required', 'string', 'max:100'],
             'id_cible'    => ['required', 'string', 'max:150'],
-            'instantane'  => ['nullable', 'array']
+            'instantane'  => ['nullable', 'array'],
         ]);
 
-        $version = $this->resolveVersion($data['module_code'], $data['type_cible'], $data['id_cible']);
-        if (!$version) {
-            return response()->json(['error' => 'Aucune version publiée liée à ce module/objet'], 422);
+        try {
+            $res = $svc->start(
+                $data['module_code'],
+                $data['type_cible'],
+                $data['id_cible'],
+                $data['instantane'] ?? []
+            );
+        } catch (\DomainException $e) {
+            throw new HttpResponseException(
+                response()->json(['message' => $e->getMessage()], 422)
+            );
         }
 
-        return DB::transaction(function () use ($data, $version) {
-
-            // Unicité instance par objet
-            $exists = InstanceApprobation::where([
-                'module_code' => $data['module_code'],
-                'type_cible'  => $data['type_cible'],
-                'id_cible'    => $data['id_cible'],
-            ])->whereIn('statut_id', [
-                $this->statutInstance('PENDING')->id,
-                $this->statutInstance('EN_COURS')->id
-            ])->lockForUpdate()->exists();
-
-            if ($exists) {
-                return response()->json(['error' => 'Une instance active existe déjà pour cet objet'], 409);
-            }
-
-            $inst = InstanceApprobation::create([
-                'version_workflow_id' => $version->id,
-                'module_code'         => $data['module_code'],
-                'type_cible'          => $data['type_cible'],
-                'id_cible'            => $data['id_cible'],
-                'statut_id'           => $this->statutInstance('PENDING')->id,
-                'instantane'          => $data['instantane'] ?? null,
-            ]);
-
-            // Créer les étapes d’instance (PENDING/SAUTE)
-            foreach ($version->etapes()->orderBy('position')->get() as $etape) {
-                if ($this->shouldSkip($etape, $inst->instantane)) {
-                    $this->spawnStep($inst, $etape, $this->statutEtape('SAUTE')->id);
-                } else {
-                    $this->spawnStep($inst, $etape, $this->statutEtape('PENDING')->id, $etape->quorum);
-                }
-            }
-
-            // Démarrer la première étape active
-            $this->advance($inst);
-            $this->notifyActiveApprovers($inst);
-
-            return response()->json([
-                'message'  => 'Instance démarrée',
-                'instance' => $inst->load('etapes')
-            ], 201);
-        });
+        return response()->json([
+            'message'  => $res['created'] ? 'Instance démarrée' : 'Instance déjà active',
+            'created'  => $res['created'],
+            'instance' => $res['instance']->load('etapes'),
+        ], $res['created'] ? 201 : 200);
     }
 
     /** Détail d’une instance */
@@ -623,132 +1203,245 @@ class WorkflowValidationController extends Controller
     }
 
     /** Action sur une étape (APPROUVER / REJETER / DELEGUER / COMMENTER). */
-    public function act(Request $request, $stepInstanceId)
+    public function act(\App\Http\Requests\WorkflowActionRequest $request, int $stepInstanceId, ApprovalNotifier $notifier)
     {
-        // $this->authorize('approval.act', $stepInstance);
-        $data = $request->validate([
-            'action_code' => ['required', 'string', 'max:30'], // APPROUVER|REJETER|DELEGUER|COMMENTER
-            'commentaire' => ['nullable', 'string'],
-            'meta'        => ['nullable', 'array']
-        ]);
-
-        $type = TypeAction::where('code', $data['action_code'])->first();
-        if (!$type) return response()->json(['error' => 'Type d’action invalide'], 422);
-
-        return DB::transaction(function () use ($stepInstanceId, $type, $data) {
-
-            /** @var InstanceEtape $si */
-            $si = InstanceEtape::with(['instance', 'etape', 'actions'])->lockForUpdate()->findOrFail($stepInstanceId);
-            $inst = $si->instance;
-
-            if (!in_array($si->statut_id, [
-                $this->statutEtape('EN_COURS')->id,
-                $this->statutEtape('PENDING')->id,
-            ])) {
-                return response()->json(['error' => 'Étape non active'], 409);
-            }
-
-            // Vérifier droit approbateur
-            $actorCode = optional(auth()->user()?->acteur)->code_acteur;
-            if (!$this->actorCanActOnStep($actorCode, $si)) {
-                return response()->json(['error' => 'Acteur non autorisé pour cette étape'], 403);
-            }
-
-            // Enregistrer l’action
-            ActionApprobation::create([
-                'instance_etape_id' => $si->id,
-                'code_acteur'       => $actorCode,
-                'action_type_id'    => $type->id,
-                'commentaire'       => $data['commentaire'] ?? null,
-                'meta'              => $data['meta'] ?? null,
-            ]);
-
-            // Effets métier
-            if ($type->code === 'APPROUVER') {
-                $si->increment('nombre_approbations');
-                if ($si->nombre_approbations >= $si->quorum_requis && $this->requiredApproversMet($si)) {
-                    $si->update([
-                        'statut_id' => $this->statutEtape('APPROUVE')->id,
-                        'date_fin'  => now()
-                    ]);
-                    $this->advance($inst, $si);
-                } else {
-                    if ($si->statut_id == $this->statutEtape('PENDING')->id) {
-                        $si->update(['statut_id' => $this->statutEtape('EN_COURS')->id, 'date_debut' => now()]);
-                    }
-                }
-            } elseif ($type->code === 'REJETER') {
-                $si->update([
-                    'statut_id' => $this->statutEtape('REJETE')->id,
-                    'date_fin'  => now()
-                ]);
-                $inst->update(['statut_id' => $this->statutInstance('REJETE')->id]);
-
-                // 🔔 notifier le propriétaire / demandeur
-                if ($owner = $this->resolveOwnerContact($inst)) {
-                    $codeProjet    = $inst->id_cible;
-                    $libelleProjet = $inst->module_code.' • '.$inst->type_cible.' #'.$inst->id_cible;
-                    $commentaire   = $data['commentaire'] ?? '';
-
-                    \Mail::to($owner['email'])->queue(
-                        new \App\Mail\ProjetRefuseNotification($codeProjet, $libelleProjet, $commentaire, $owner)
-                    );
-                }
-
-                return response()->json([
-                    'message' => 'Action enregistrée',
-                    'etape'   => $si->fresh('actions')
-                ]);
-
-
-
-            } elseif ($type->code === 'DELEGUER') {
-                $to = data_get($data, 'meta.delegate_to');
-            if ($to) {
-                // créer une “fausse” étape pour résolution d’email
-                $targets = $this->approverContactsForStep($si);
-                // si le délégué n’est pas dans la liste d’origine, résous-le à part :
-                if (!collect($targets)->firstWhere('code', $to)) {
-                    $a = \App\Models\Acteur::where('code_acteur', $to)->first();
-                    $email = $a?->email; // ou via User lié
-                    if ($email) {
-                        $targets[] = ['code'=>$to,'email'=>$email,'libelle_court'=>$a->libelle_court,'libelle_long'=>$a->libelle_long];
-                    }
-                }
-                foreach ($targets as $t) {
-                    if ($t['code'] !== $to) continue;
-                    $codeProjet    = $inst->id_cible;
-                    $libelleProjet = $inst->module_code.' • '.$inst->type_cible.' #'.$inst->id_cible;
-                    Mail::to($t['email'])->queue(
-                        new NotificationValidationProjet($codeProjet, $libelleProjet, $t)
-                    );
-                }
-            }
-                // La délégation est honorée via actorCanActOnStep() (meta.delegate_to)
-                if ($si->statut_id == $this->statutEtape('PENDING')->id) {
-                    $si->update(['statut_id' => $this->statutEtape('EN_COURS')->id, 'date_debut' => now()]);
-                }
-            } else { // COMMENTER
-                if ($si->statut_id == $this->statutEtape('PENDING')->id) {
-                    $si->update(['statut_id' => $this->statutEtape('EN_COURS')->id, 'date_debut' => now()]);
-                }
-            }
-
+        // Validation effectuée par FormRequest
+        $data = $request->validated();
+    
+        // Type d'action (avec cache pour performance)
+        $type = Cache::remember(
+            "type_action_{$data['action_code']}",
+            now()->addHours(24),
+            fn() => TypeAction::where('code', $data['action_code'])->first()
+        );
+        
+        if (!$type) {
             return response()->json([
-                'message' => 'Action enregistrée',
-                'etape'   => $si->fresh('actions')
+                'success' => false,
+                'message' => 'Type d\'action invalide',
+            ], 422);
+        }
+    
+        try {
+            return DB::transaction(function () use ($stepInstanceId, $type, $data, $notifier) {
+    
+                /** @var InstanceEtape $si */
+                $si = InstanceEtape::with(['instance', 'etape', 'actions'])
+                    ->lockForUpdate()
+                    ->findOrFail($stepInstanceId);
+    
+                $inst = $si->instance;
+    
+                // Étape encore active ?
+                if (!in_array($si->statut_id, [
+                    $this->statutEtape('EN_COURS')->id,
+                    $this->statutEtape('PENDING')->id,
+                ], true)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Étape non active',
+                    ], 409);
+                }
+    
+                // Autorisation "fonctionnelle" (approbateur autorisé)
+                $actorCode = optional(auth()->user()?->acteur)->code_acteur;
+                if (!$this->actorCanActOnStep($actorCode, $si)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Acteur non autorisé pour cette étape',
+                    ], 403);
+                }
+    
+                // Empêcher décisions multiples par le même acteur (optimisé avec cache)
+                $decisionTypeIds = Cache::remember(
+                    'type_action_decision_ids',
+                    now()->addHours(24),
+                    fn() => TypeAction::whereIn('code', ['APPROUVER', 'REJETER'])->pluck('id')->toArray()
+                );
+                
+                $alreadyDecided = $si->actions()
+                    ->whereIn('action_type_id', $decisionTypeIds)
+                    ->where('code_acteur', $actorCode)
+                    ->exists();
+                
+                if ($alreadyDecided && in_array($type->code, ['APPROUVER','REJETER'], true)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Vous avez déjà pris une décision sur cette étape.',
+                    ], 409);
+                }
+    
+                // Enregistrement de l’action
+                ActionApprobation::create([
+                    'instance_etape_id' => $si->id,
+                    'code_acteur'       => $actorCode,
+                    'action_type_id'    => $type->id,
+                    'commentaire'       => $data['commentaire'] ?? null,
+                    'meta'              => $data['meta'] ?? null,
+                ]);
+    
+                // Effets métier selon l’action
+                if ($type->code === 'APPROUVER') {
+                    $si->increment('nombre_approbations');
+    
+                    if (
+                        $si->nombre_approbations >= $si->quorum_requis
+                        && $this->requiredApproversMet($si)
+                    ) {
+                        // Étape approuvée
+                        $si->update([
+                            'statut_id' => $this->statutEtape('APPROUVE')->id,
+                            'date_fin'  => now(),
+                        ]);
+                        // Avancer le workflow
+                        $this->advance($inst, $si, $notifier);
+                    } else {
+                        // Démarre l’étape si elle était encore PENDING
+                        if ((int)$si->statut_id === (int)$this->statutEtape('PENDING')->id) {
+                            $si->update([
+                                'statut_id'  => $this->statutEtape('EN_COURS')->id,
+                                'date_debut' => now(),
+                            ]);
+                        }
+                    }
+    
+                } elseif ($type->code === 'REJETER') {
+                    // Étape rejetée + instance rejetée
+                    $si->update([
+                        'statut_id' => $this->statutEtape('REJETE')->id,
+                        'date_fin'  => now(),
+                    ]);
+                    $inst->update(['statut_id' => $this->statutInstance('REJETE')->id]);
+    
+                    // Notifier le porteur
+                    app(ApprovalNotifier::class)->notifyOwnerOnRejection($inst, $data['commentaire'] ?? '');
+    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Action enregistrée',
+                        'etape'   => $si->fresh('actions'),
+                    ]);
+    
+                } elseif ($type->code === 'DELEGUER') {
+                    $to = data_get($data, 'meta.delegate_to');
+                    if (!$to) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Le code acteur destinataire est requis pour la délégation.',
+                        ], 422);
+                    }
+                    
+                    // Vérifier que l'acteur destinataire existe et est actif
+                    $destActor = Acteur::where('code_acteur', $to)->first();
+                    if (!$destActor) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'L\'acteur destinataire n\'existe pas.',
+                        ], 422);
+                    }
+                    
+                    $notifier->notifyOnDelegation($si, $to);
+                    
+                    // Démarre l'étape si elle était PENDING
+                    if ((int)$si->statut_id === (int)$this->statutEtape('PENDING')->id) {
+                        $si->update([
+                            'statut_id'  => $this->statutEtape('EN_COURS')->id,
+                            'date_debut' => now(),
+                        ]);
+                    }
+    
+                } else { // COMMENTER
+                    // Démarre l’étape si elle était PENDING
+                    if ((int)$si->statut_id === (int)$this->statutEtape('PENDING')->id) {
+                        $si->update([
+                            'statut_id'  => $this->statutEtape('EN_COURS')->id,
+                            'date_debut' => now(),
+                        ]);
+                    }
+                }
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Action enregistrée',
+                    'etape'   => $si->fresh('actions'),
+                ]);
+            });
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Étape introuvable',
+            ], 404);
+        } catch (\Throwable $e) {
+            \Log::error('Approval act error', [
+                'message' => $e->getMessage(),
+                'step_instance_id' => $stepInstanceId,
+                'user_id' => auth()->id(),
+                'action_code' => $data['action_code'] ?? null,
+                'trace' => $e->getTraceAsString(),
             ]);
-        });
+            
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') 
+                    ? 'Erreur serveur: ' . $e->getMessage() 
+                    : 'Une erreur est survenue lors du traitement de votre demande. Veuillez réessayer.',
+            ], 500);
+        }
     }
 
     /***********************************************************
      *                    SIMULATION & SLA (JSON)
      ***********************************************************/
+    /**
+     * POST /workflow/modules
+     * Créer / mettre à jour ModuleWorkflowDisponible (minimale).
+     */
+    public function storeModule(Request $request)
+    {
+        // $this->authorize('workflow.admin');
+        $data = $this->validateJson($request, [
+            'id'               => ['nullable','integer','exists:modules_workflow_disponibles,id'],
+            'code_module'      => ['required','string','max:100'],
+            'libelle_module'   => ['nullable','string','max:200'],
+            'type_cible'       => ['required','string','max:100'],
+            'libelle_type'     => ['nullable','string','max:200'],
+            'classe_modele'    => ['nullable','string'],
+            'champ_identifiant'=> ['nullable','string','max:100'],
+            'actif'            => ['nullable','boolean'],
+        ]);
+
+        if (!empty($data['classe_modele']) && !class_exists($data['classe_modele'])) {
+            throw new HttpResponseException(
+                response()->json(['message' => "Classe modèle introuvable: {$data['classe_modele']}"], 422)
+            );
+        }
+
+        $payload = [
+            'code_module'       => $data['code_module'],
+            'libelle_module'    => $data['libelle_module'] ?? null,
+            'type_cible'        => $data['type_cible'],
+            'libelle_type'      => $data['libelle_type'] ?? null,
+            'classe_modele'     => $data['classe_modele'] ?? null,
+            'champ_identifiant' => $data['champ_identifiant'] ?? null,
+            'actif'             => (int)($data['actif'] ?? 1),
+        ];
+
+        if (!empty($data['id'])) {
+            $m = ModuleWorkflowDisponible::findOrFail($data['id']);
+            $m->update($payload);
+            return response()->json(['message'=>'Module mis à jour','module'=>$m], 200);
+        }
+
+        $m = ModuleWorkflowDisponible::create($payload);
+        return response()->json(['message'=>'Module créé','module'=>$m], 201);
+    }
+
+
     /** Simulation de parcours (sans créer d’instance) */
     public function simulate(Request $request, $workflowId)
     {
         $wf = WorkflowApprobation::findOrFail($workflowId);
-        $inp = $request->validate([
+        $inp = $this->validateJson($request, [
             'numero_version' => ['required', 'integer', 'min:1'],
             'instantane'     => ['nullable', 'array']
         ]);
@@ -776,72 +1469,69 @@ class WorkflowValidationController extends Controller
     }
 
     /** Tick SLA (pour Scheduler/CRON) */
-    public function slaTick(Request $request)
+    public function slaTick(Request $request, ApprovalNotifier $notifier)
     {
         $now = Carbon::now();
-        $enCours = InstanceEtape::query()
+        $count = 0;
+    
+        InstanceEtape::query()
             ->with(['instance', 'etape'])
             ->where('statut_id', $this->statutEtape('EN_COURS')->id)
-            ->get();
-
-        $count = 0;
-        foreach ($enCours as $si) {
-            $slaHours = $si->etape->sla_heures;
-            if (!$slaHours || !$si->date_debut) continue;
-
-            if (Carbon::parse($si->date_debut)->addHours($slaHours)->lt($now)) {
-                $exists = EscaladeApprobation::where('instance_etape_id', $si->id)
-                    ->where('raison', 'SLA')->exists();
-                if (!$exists) {
-                    EscaladeApprobation::create([
-                        'instance_etape_id' => $si->id,
-                        'acteur_source'     => null,
-                        'acteur_cible'      => null, // À définir si tu as une hiérarchie
-                        'raison'            => 'SLA',
-                    ]);
-                    $count++;
+            ->orderBy('id') // important pour chunkById
+            ->chunkById(500, function ($chunk) use ($now, $notifier, &$count) {
+                foreach ($chunk as $si) {
+                    $slaHours = $si->etape->sla_heures;
+                    if (!$slaHours || !$si->date_debut) continue;
+    
+                    if (Carbon::parse($si->date_debut)->addHours($slaHours)->lt($now)) {
+                        $exists = EscaladeApprobation::where('instance_etape_id', $si->id)
+                            ->where('raison', 'SLA')
+                            ->exists();
+                        if (!$exists) {
+                            EscaladeApprobation::create([
+                                'instance_etape_id' => $si->id,
+                                'acteur_source'     => null,
+                                'acteur_cible'      => null,
+                                'raison'            => 'SLA',
+                            ]);
+    
+                            // Limiter la notif: pas plus d'une fois par étape (grâce à Escalade + notifie_le)
+                            try {
+                                $notifier->notifyActiveApprovers($si->instance);
+                            } catch (\Throwable $e) {
+                                \Log::warning('SLA notify error: '.$e->getMessage());
+                            }
+    
+                            $count++;
+                        }
+                    }
                 }
-            }
-        }
+            });
+    
         return response()->json(['message' => "SLA traités", 'escalades' => $count]);
     }
+    
 
     /***********************************************************
      *                     HELPERS PRIVÉS
      ***********************************************************/
     private function approverContactsForStep(InstanceEtape $si): array
     {
-        // approbateurs ACTEUR attendus pour l’étape $si
-        $codes = $si->etape->approbateurs()
-            ->where('type_approbateur','ACTEUR')
-            ->pluck('reference_approbateur')->all();
-
+        $codes = $this->expandApproverCodes($si);
         if (empty($codes)) return [];
 
-        // emails possibles : acteur.email OU user.email lié à cet acteur
         $acteurs = Acteur::whereIn('code_acteur', $codes)
             ->get(['code_acteur','libelle_court','libelle_long','email'])
             ->keyBy('code_acteur');
 
-        // si tu as une relation user<->acteur :
         $users = User::with('acteur:code_acteur')
-            ->whereHas('acteur', fn($q) => $q->whereIn('code_acteur',$codes))
+            ->whereHas('acteur', fn($q)=>$q->whereIn('code_acteur',$codes))
             ->get(['email','acteur_id']);
 
         $byActor = [];
         foreach ($codes as $code) {
             $a = $acteurs->get($code);
-            $mail = null;
-
-            // 1) email sur ACTEUR si renseigné
-            if ($a && !empty($a->email)) $mail = $a->email;
-
-            // 2) sinon prendre le mail du user attaché à l’acteur
-            if (!$mail) {
-                $u = $users->first(fn($uu) => optional($uu->acteur)->code_acteur === $code);
-                if ($u && !empty($u->email)) $mail = $u->email;
-            }
-
+            $mail = $a?->email ?: $users->first(fn($u)=>optional($u->acteur)->code_acteur===$code)?->email;
             if ($mail) {
                 $byActor[] = [
                     'code'  => $code,
@@ -851,65 +1541,57 @@ class WorkflowValidationController extends Controller
                 ];
             }
         }
-
-        // déduplique par email
-        $seen = [];
-        return array_values(array_filter($byActor, function($x) use (&$seen){
-            if (isset($seen[$x['email']])) return false;
-            $seen[$x['email']] = true;
-            return true;
-        }));
+        $seen=[]; return array_values(array_filter($byActor,fn($x)=>!isset($seen[$x['email']])&&($seen[$x['email']]=1)));
     }
+
     private function versionIsInUse(VersionWorkflow $version): bool
     {
         $stepIds = $version->etapes()->pluck('id');
         return InstanceEtape::whereIn('etape_workflow_id', $stepIds)->exists();
     }
 
-    // Trouve le "propriétaire/demandeur" d’une instance (adapté à ton modèle PROJET)
+    // Trouve le "propriétaire/demandeur" d’une instance, de façon générique
     private function resolveOwnerContact(InstanceApprobation $inst): ?array
     {
-        // Cas PROJET • projet_appui (adapte si ton modèle/colonnes diffèrent)
-        if ($inst->module_code === 'PROJET' && $inst->type_cible === 'projet_appui') {
-            $proj = \App\Models\ProjetAppui::where('code',$inst->id_cible)
-                    ->orWhere('id',$inst->id_cible)->first();
-            if ($proj) {
-                // 1) colonnes user id possibles (prends le 1er trouvé)
-                foreach (['demandeur_user_id','owner_user_id','created_by','user_id'] as $col) {
-                    if (!empty($proj->{$col})) {
-                        if ($email = User::whereKey($proj->{$col})->value('email')) {
-                            $codeActeur = User::with('acteur:code_acteur')
-                                ->find($proj->{$col})?->acteur?->code_acteur;
-                            return ['email'=>$email, 'code'=>$codeActeur];
-                        }
-                    }
-                }
-                // 2) colonnes acteur possibles (chef, porteur, demandeur…)
-                foreach (['demandeur_acteur_code','chef_projet_code','porteur_acteur_code'] as $col) {
-                    if (!empty($proj->{$col})) {
-                        if ($c = $this->emailFromActorCode($proj->{$col})) return $c;
-                    }
+        $snap = (array)($inst->instantane ?? []);
+
+        // a) email direct
+        foreach (['owner_email', 'demandeur_email', 'requester_email', 'created_by_email'] as $k) {
+            if ($email = data_get($snap, $k)) {
+                return ['email' => $email];
+            }
+        }
+
+        // b) codes acteurs
+        foreach (['owner_acteur_code','demandeur_acteur_code','chef_projet_code','requester_acteur_code','created_by_acteur_code'] as $k) {
+            if ($code = data_get($snap, $k)) {
+                if ($c = $this->emailFromActorCode($code)) {
+                    return $c;
                 }
             }
         }
 
-        // 3) fallback générique via snapshot (instantané)
-        $snap = (array)($inst->instantane ?? []);
-        foreach (['owner_acteur_code','demandeur_acteur_code','chef_projet_code'] as $k) {
-            if ($code = data_get($snap,$k)) {
-                if ($c = $this->emailFromActorCode($code)) return $c;
+        // c) user IDs
+        foreach (['owner_user_id','demandeur_user_id','requester_user_id','created_by','user_id'] as $k) {
+            if ($uid = data_get($snap, $k)) {
+                if ($email = User::whereKey($uid)->value('email')) {
+                    $codeActeur = User::with('acteur:code_acteur')->find($uid)?->acteur?->code_acteur;
+                    return ['email' => $email, 'code' => $codeActeur];
+                }
             }
         }
-        foreach (['owner_user_id','demandeur_user_id'] as $k) {
-            if ($uid = data_get($snap,$k)) {
-                if ($email = User::whereKey($uid)->value('email')) {
-                    return ['email'=>$email];
-                }
+
+        // d) fallback éventuel (si champ sur InstanceApprobation)
+        if (property_exists($inst, 'created_by_user_id') && $inst->created_by_user_id) {
+            if ($email = User::whereKey($inst->created_by_user_id)->value('email')) {
+                $codeActeur = User::with('acteur:code_acteur')->find($inst->created_by_user_id)?->acteur?->code_acteur;
+                return ['email' => $email, 'code' => $codeActeur];
             }
         }
 
         return null;
     }
+
     private function emailFromActorCode(?string $code): ?array
     {
         if (!$code) return null;
@@ -917,10 +1599,9 @@ class WorkflowValidationController extends Controller
         $a = Acteur::where('code_acteur', $code)->first();
         $email = $a?->email;
 
-        // fallback: email du user rattaché à cet acteur
         if (!$email) {
             $email = User::whereHas('acteur', fn($q)=>$q->where('code_acteur',$code))
-                ->value('email'); // <- renvoie directement la string d’email
+                ->value('email');
         }
 
         if (!$email) return null;
@@ -932,110 +1613,152 @@ class WorkflowValidationController extends Controller
             'libelle_long'  => (string)($a->libelle_long  ?? ''),
         ];
     }
-    private function notifyActiveApprovers(InstanceApprobation $inst): void
-    {
-        // étape active = EN_COURS
-        $active = $inst->etapes()
-            ->where('statut_id', $this->statutEtape('EN_COURS')->id)
-            ->with('etape')
-            ->first();
-
-        if (!$active) return;
-
-        $targets = $this->approverContactsForStep($active);
-        if (empty($targets)) return;
-
-        // Contexte “projet” à adapter : ici on envoie module/type/id
-        $codeProjet    = $inst->id_cible;
-        $libelleProjet = $inst->module_code.' • '.$inst->type_cible.' #'.$inst->id_cible;
-
-        foreach ($targets as $t) {
-            // tu peux passer l’objet “approbateur” (libellés) à ton Mailable
-            Mail::to($t['email'])->queue(
-                new NotificationValidationProjet($codeProjet, $libelleProjet, $t)
-            );
-        }
-    }
 
     private function validateWorkflowPayload(Request $request, bool $updating = false): array
     {
         $rules = [
-            // 'code' ❌ (généré automatiquement)
-            'nom'              => [$updating ? 'sometimes' : 'required', 'string', 'max:200'],
-            'mode_version' => ['nullable','in:update_existing,new_version'],
-            // code_pays : obligatoire, 3 lettres, présent dans 'pays.alpha3'
-            'code_pays'        => ['required', 'string', 'size:3', Rule::exists('pays', 'alpha3')],
+            // workflow
+            'nom'                 => [$updating ? 'sometimes' : 'required', 'string', 'max:200'],
+            'mode_version'        => ['nullable','in:update_existing,new_version'],
+            'code_pays'           => ['required', 'string', 'size:3', Rule::exists('pays', 'alpha3')],
+            'groupe_projet_id'    => ['nullable', 'string', Rule::exists('groupe_projet', 'code')],
+            'meta'                => ['nullable', 'array'],
 
-            // groupe projet : optionnel mais doit exister si fourni
-            'groupe_projet_id' => ['nullable', 'string', Rule::exists('groupe_projet', 'code')],
-            'meta'             => ['nullable', 'array'],
-
-            'version'          => [$updating ? 'sometimes' : 'required', 'array'],
+            // version
+            'version'             => [$updating ? 'sometimes' : 'required', 'array'],
             'version.numero_version'       => ['nullable', 'integer', 'min:1'],
             'version.politique_changement' => ['nullable', 'string', 'max:50'],
             'version.metadonnees'          => ['nullable', 'array'],
             'version.publie'               => ['nullable', 'boolean'],
 
-            'version.etapes'               => ['required', 'array', 'min:1'],
-            'version.etapes.*.position'    => ['required', 'integer', 'min:1'],
-            'version.etapes.*.mode_code'   => ['required', 'string', 'in:SERIAL,PARALLEL'],
-            'version.etapes.*.quorum'      => ['nullable', 'integer', 'min:1'],
-            'version.etapes.*.sla_heures'  => ['nullable', 'integer', 'min:1'],
+            // étapes
+            'version.etapes'                  => ['required', 'array', 'min:1'],
+            'version.etapes.*.position'       => ['required', 'integer', 'min:1'],
+            'version.etapes.*.mode_code'      => ['required', 'string', Rule::exists('ref_workflow_mode','code')],
+            'version.etapes.*.quorum'         => ['nullable', 'integer', 'min:1'],
+            'version.etapes.*.sla_heures'     => ['nullable', 'integer', 'min:1'],
             'version.etapes.*.delegation_autorisee' => ['nullable', 'boolean'],
             'version.etapes.*.sauter_si_vide'       => ['nullable', 'boolean'],
             'version.etapes.*.politique_reapprobation' => ['nullable', 'array'],
-            'version.etapes.*.metadonnees' => ['nullable', 'array'],
+            'version.etapes.*.metadonnees'    => ['nullable', 'array'],
 
+            // approbateurs (avec FIELD_ACTEUR)
             'version.etapes.*.approbateurs' => ['nullable', 'array'],
-            'version.etapes.*.approbateurs.*.type_approbateur' => ['required_with:version.etapes.*.approbateurs', 'string', 'in:ACTEUR,ROLE,GROUPE'],
-            'version.etapes.*.approbateurs.*.reference_approbateur' => ['required_with:version.etapes.*.approbateurs', 'string', 'max:150'],
-            'version.etapes.*.approbateurs.*.obligatoire' => ['nullable', 'boolean'],
+            'version.etapes.*.approbateurs.*.type_approbateur' => [
+                'required_with:version.etapes.*.approbateurs',
+                'string',
+                'in:ACTEUR,FIELD_ACTEUR,ROLE,GROUPE',
+            ],
+            'version.etapes.*.approbateurs.*.reference_approbateur' => [
+                'required_with:version.etapes.*.approbateurs',
+                'string',
+                'max:150',
+            ],
+            'version.etapes.*.approbateurs.*.obligatoire' => ['nullable','boolean'],
 
-            'version.etapes.*.regles' => ['nullable', 'array'],
+            // règles
+            'version.etapes.*.regles' => ['nullable','array'],
             'version.etapes.*.regles.*.champ' => ['required_with:version.etapes.*.regles', 'string', 'max:100'],
-            'version.etapes.*.regles.*.operateur_code' => ['required_with:version.etapes.*.regles', 'string', 'in:EQ,NE,GT,GTE,LT,LTE,IN,NOT_IN,BETWEEN'],
-            'version.etapes.*.regles.*.valeur' => ['required_with:version.etapes.*.regles'], // JSON libre (string/json)
+            'version.etapes.*.regles.*.operateur_code' => [
+                'required_with:version.etapes.*.regles',
+                'string',
+                'in:EQ,NE,GT,GTE,LT,LTE,IN,NOT_IN,BETWEEN'
+            ],
+            'version.etapes.*.regles.*.valeur' => ['required_with:version.etapes.*.regles'],
         ];
 
-        return $request->validate($rules);
+        $validator = \Validator::make($request->all(), $rules);
+
+        $validator->after(function($v) use ($request) {
+            $etapes = data_get($request->all(), 'version.etapes', []);
+            $positions = [];
+
+            foreach ($etapes as $i => $e) {
+                $pos = (int)($e['position'] ?? 0);
+                if ($pos <= 0) {
+                    $v->errors()->add("version.etapes.$i.position", "La position doit être ≥ 1.");
+                }
+                if (in_array($pos, $positions, true)) {
+                    $v->errors()->add("version.etapes.$i.position", "Chaque étape doit avoir une position unique.");
+                } else {
+                    $positions[] = $pos;
+                }
+
+                $nbApp = count($e['approbateurs'] ?? []);
+                $quorum = (int)($e['quorum'] ?? 1);
+                if ($nbApp > 0 && $quorum > $nbApp) {
+                    $v->errors()->add("version.etapes.$i.quorum", "Le quorum ($quorum) ne peut pas dépasser le nombre d’approbateurs ($nbApp).");
+                }
+
+                foreach (($e['approbateurs'] ?? []) as $j => $a) {
+                    $t = $a['type_approbateur'] ?? null;
+                    $ref = (string)($a['reference_approbateur'] ?? '');
+                    if ($t === 'FIELD_ACTEUR' && !preg_match('/^[A-Za-z0-9_.]+$/', $ref)) {
+                        $v->errors()->add("version.etapes.$i.approbateurs.$j.reference_approbateur",
+                            "Pour FIELD_ACTEUR, utiliser un chemin simple (ex: chef_mission_code).");
+                    }
+                    if ($t === 'ACTEUR' && $ref !== '' && !\App\Models\Acteur::where('code_acteur', $ref)->exists()) {
+                        $v->errors()->add("version.etapes.$i.approbateurs.$j.reference_approbateur",
+                            "Code acteur introuvable : $ref");
+                    }
+                }
+
+                foreach (($e['regles'] ?? []) as $k => $r) {
+                    $op  = $r['operateur_code'] ?? null;
+                    $val = $r['valeur'] ?? null;
+
+                    $decoded = is_string($val) ? (json_decode($val, true) ?? $val) : $val;
+
+                    if (in_array($op, ['IN','NOT_IN'], true) && !is_array($decoded)) {
+                        $v->errors()->add("version.etapes.$i.regles.$k.valeur", "Pour $op, fournir un tableau JSON (ex: [\"A\",\"B\"]).");
+                    }
+                    if ($op === 'BETWEEN') {
+                        $ok = is_array($decoded) && count($decoded) === 2 && is_numeric($decoded[0]) && is_numeric($decoded[1]);
+                        if (!$ok) {
+                            $v->errors()->add("version.etapes.$i.regles.$k.valeur", "Pour BETWEEN, fournir [min,max] numériques.");
+                        }
+                    }
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            $this->throw422FromValidator($validator);
+        }
+        return $validator->validated();
     }
+
     private function upsertVersionGraph(
         int $workflowId,
         array $versionData,
-        string $mode = 'new_version' // 'update_existing' | 'new_version'
+        string $mode = 'new_version'
     ): VersionWorkflow {
-        // Trouver la version cible si 'update_existing'
         $existing = null;
         if (($mode === 'update_existing') && !empty($versionData['numero_version'])) {
             $existing = VersionWorkflow::where('workflow_id', $workflowId)
                 ->where('numero_version', $versionData['numero_version'])
                 ->first();
         }
-    
+
         if ($mode === 'update_existing' && $existing) {
-            // Met à jour entête
             $existing->update([
                 'politique_changement' => $versionData['politique_changement'] ?? $existing->politique_changement,
                 'metadonnees'          => $versionData['metadonnees'] ?? $existing->metadonnees,
                 'publie'               => (int)($versionData['publie'] ?? $existing->publie),
             ]);
-    
-            // Purge enfants (étapes -> approbateurs/règles)
+
             $stepIds = $existing->etapes()->pluck('id');
             EtapeApprobateur::whereIn('etape_workflow_id', $stepIds)->delete();
             EtapeRegle::whereIn('etape_workflow_id', $stepIds)->delete();
             $existing->etapes()->delete();
-    
-            // Recrée le graph
+
             $this->createEtapesGraph($existing, $versionData['etapes'] ?? []);
-    
             return $existing->load('etapes.approbateurs','etapes.regles');
         }
-    
-        // Sinon, NEW VERSION (toujours une version libre)
+
         $nextVersion = VersionWorkflow::where('workflow_id', $workflowId)->max('numero_version');
         $numero = ($nextVersion ?? 0) + 1;
-    
+
         $version = VersionWorkflow::create([
             'workflow_id'          => $workflowId,
             'numero_version'       => $numero,
@@ -1043,9 +1766,8 @@ class WorkflowValidationController extends Controller
             'metadonnees'          => $versionData['metadonnees'] ?? null,
             'publie'               => (int)($versionData['publie'] ?? 0),
         ]);
-    
+
         $this->createEtapesGraph($version, $versionData['etapes'] ?? []);
-    
         return $version->load('etapes.approbateurs','etapes.regles');
     }
 
@@ -1081,7 +1803,7 @@ class WorkflowValidationController extends Controller
                     'etape_workflow_id' => $etape->id,
                     'champ'             => $r['champ'],
                     'operateur_id'      => $op->id,
-                    'valeur'            => $r['valeur'],
+                    'valeur'            => $this->parseRuleValue($r['valeur']),
                 ]);
             }
         }
@@ -1125,7 +1847,7 @@ class WorkflowValidationController extends Controller
                     'etape_workflow_id' => $etape->id,
                     'champ'             => $r['champ'],
                     'operateur_id'      => $op->id,
-                    'valeur'            => $r['valeur'], // peut être string JSON ou array/json
+                    'valeur'            => $this->parseRuleValue($r['valeur']),
                 ]);
             }
         }
@@ -1133,50 +1855,11 @@ class WorkflowValidationController extends Controller
         return $version->load('etapes.approbateurs', 'etapes.regles');
     }
 
-    private function resolveVersion(string $module, string $type, string $id): ?VersionWorkflow
-    {
-        // 1) Liaison spécifique à l’objet
-        $liaison = LiaisonWorkflow::where([
-            'module_code' => $module,
-            'type_cible'  => $type,
-            'id_cible'    => $id,
-        ])->whereHas('version', fn($q) => $q->where('publie', 1))
-          ->latest('id')->first();
-
-        if ($liaison) return $liaison->version()->with('etapes.approbateurs', 'etapes.regles')->first();
-
-        // 2) Liaison par défaut pour le type
-        $liaison = LiaisonWorkflow::where([
-            'module_code' => $module,
-            'type_cible'  => $type,
-            'id_cible'    => null,
-            'par_defaut'  => 1
-        ])->whereHas('version', fn($q) => $q->where('publie', 1))
-          ->latest('id')->first();
-
-        if ($liaison) return $liaison->version()->with('etapes.approbateurs', 'etapes.regles')->first();
-
-        return null;
-    }
-
-    private function spawnStep(InstanceApprobation $inst, EtapeWorkflow $etape, int $statutId, int $quorum = 1): InstanceEtape
-    {
-        return InstanceEtape::create([
-            'instance_approbation_id' => $inst->id,
-            'etape_workflow_id'       => $etape->id,
-            'statut_id'               => $statutId,
-            'quorum_requis'           => $quorum,
-            'nombre_approbations'     => 0,
-            'date_debut'              => null,
-            'date_fin'                => null,
-        ]);
-    }
-
-    private function advance(InstanceApprobation $inst, InstanceEtape $justFinished = null): void
+    private function advance(InstanceApprobation $inst, InstanceEtape $justFinished = null, ApprovalNotifier $notifier = null): void
     {
         $steps = InstanceEtape::query()
             ->where('instance_approbation_id', $inst->id)
-            ->with('etape') // etape->position
+            ->with('etape')
             ->get();
 
         // 1) clôture si toutes les étapes non SAUTE sont APPROUVE
@@ -1204,9 +1887,37 @@ class WorkflowValidationController extends Controller
                 'statut_id'  => $this->statutEtape('EN_COURS')->id,
                 'date_debut' => now(),
             ]);
-            // 🔔 nouvelle étape active → notifier ses approbateurs
-            $this->notifyActiveApprovers($inst);
+            if ($notifier) {
+                $notifier->notifyActiveApprovers($inst);
+            } else {
+                app(ApprovalNotifier::class)->notifyActiveApprovers($inst);
+            }
         }
+    }
+
+    private function approverStatusFor(InstanceEtape $step, string $actorCode): string
+    {
+        // a-t-il approuvé ?
+        $hasApproved = $step->actions()
+            ->whereHas('type', fn($q) => $q->where('code', 'APPROUVER'))
+            ->where('code_acteur', $actorCode)
+            ->exists();
+        if ($hasApproved) return 'APPROUVE';
+
+        // a-t-il rejeté ?
+        $hasRejected = $step->actions()
+            ->whereHas('type', fn($q) => $q->where('code', 'REJETER'))
+            ->where('code_acteur', $actorCode)
+            ->exists();
+        if ($hasRejected) return 'REJETE';
+
+        // statut de l'étape
+        $codeStep = $this->codeStatutEtape($step->statut_id);
+        return match ($codeStep) {
+            'EN_COURS' => 'EN_COURS',
+            'PENDING'  => 'PENDING',
+            default    => 'EN_ATTENTE',
+        };
     }
 
     private function shouldSkip(EtapeWorkflow $etape, ?array $snapshot): bool
@@ -1218,10 +1929,10 @@ class WorkflowValidationController extends Controller
         // Si AUCUNE règle ne match -> on saute
         foreach ($rules as $rule) {
             if ($this->ruleMatches($rule, $snapshot)) {
-                return false; // au moins une match -> on ne saute pas
+                return false;
             }
         }
-        return true; // aucune règle ne match
+        return true;
     }
 
     private function ruleMatches(EtapeRegle $r, ?array $snapshot): bool
@@ -1230,7 +1941,6 @@ class WorkflowValidationController extends Controller
         $val   = data_get($snapshot, $field);
         $op    = OperateurRegle::find($r->operateur_id)?->code;
 
-        // valeur en base : string JSON OU scalaire ; on tente un json_decode souple
         $exp = is_string($r->valeur) ? json_decode($r->valeur, true) ?? $r->valeur : $r->valeur;
 
         return match ($op) {
@@ -1247,27 +1957,15 @@ class WorkflowValidationController extends Controller
         };
     }
 
-    private function actorCanActOnStep(?string $actorCode, InstanceEtape $si): bool
+    public function actorCanActOnStep(?string $actorCode, InstanceEtape $si): bool
     {
         if (!$actorCode) return false;
-
-        // Lister approbateurs attendus
-        $approvers = $si->etape->approbateurs;
-        foreach ($approvers as $a) {
-            if ($a->type_approbateur === 'ACTEUR' && $a->reference_approbateur === $actorCode) {
-                return true;
-            }
-            // ROLE/GROUPE: à implémenter selon tes tables
-        }
-
-        // Délégation (meta.delegate_to)
+        $codes = $this->expandApproverCodes($si);
         $delegations = $si->actions()->whereHas('type', fn ($q) => $q->where('code', 'DELEGUER'))->get();
         foreach ($delegations as $del) {
-            $to = data_get($del->meta, 'delegate_to');
-            if ($to && $to === $actorCode) return true;
+            if (data_get($del->meta,'delegate_to') === $actorCode) return true;
         }
-
-        return false;
+        return in_array($actorCode, $codes, true);
     }
 
     private function requiredApproversMet(InstanceEtape $si): bool
@@ -1275,23 +1973,41 @@ class WorkflowValidationController extends Controller
         $required = $si->etape->approbateurs()->where('obligatoire', 1)->get();
         if ($required->isEmpty()) return true;
 
+        $snapshot = (array)($si->instance->instantane ?? []);
         foreach ($required as $req) {
+            $requiredCode = match ($req->type_approbateur) {
+                'ACTEUR'       => $req->reference_approbateur,
+                'FIELD_ACTEUR' => (string) data_get($snapshot, $req->reference_approbateur),
+                default        => null, // TODO: ROLE/GROUPE
+            };
+
+            if (!$requiredCode) return false;
+
             $ok = $si->actions()
                 ->whereHas('type', fn ($q) => $q->where('code', 'APPROUVER'))
-                ->where('code_acteur', $req->reference_approbateur)
+                ->where('code_acteur', $requiredCode)
                 ->exists();
+
             if (!$ok) return false;
         }
         return true;
     }
-    private function initialsFromActor(?\App\Models\Acteur $a): string
+
+    private function initialsFromActor(?Acteur $a): string
     {
+        $base = trim((string)($a?->libelle_court ?: $a?->libelle_long ?: ''));
+        if ($base === '') {
+            $login = auth()->user()?->login ?? auth()->user()?->email ?? '??';
+            $p = preg_split('/[@\.\s_]+/',$login);
+            $c1 = mb_substr($p[0]??'?',0,1); $c2 = mb_substr($p[count($p)-1]??'?',0,1);
+            return mb_strtoupper($c1.$c2);
+        }
+
         if (!$a) return '?';
-    
+
         $short = trim((string) $a->libelle_court);
         $long  = trim((string) $a->libelle_long);
-    
-        // si les 2 existent : 1ère du court + 1ère du dernier mot du long
+
         if ($short !== '' && $long !== '') {
             $last = preg_split('/\s+/', $long);
             $li   = $last ? ($last[count($last)-1] ?: $long) : $long;
@@ -1299,27 +2015,25 @@ class WorkflowValidationController extends Controller
             $c2   = mb_substr($li,    0, 1) ?: substr($li,    0, 1);
             return mb_strtoupper($c1.$c2);
         }
-    
-        // sinon : 2 lettres à partir du champ disponible
+
         $base = $short !== '' ? $short : $long;
         if ($base === '') return '?';
-    
+
         $parts = preg_split('/\s+/', $base);
         if (count($parts) === 1) {
             $p = $parts[0];
             $c = (mb_substr($p, 0, 2) ?: substr($p, 0, 2));
             return mb_strtoupper($c);
         }
-    
+
         $p1 = $parts[0];
         $p2 = $parts[count($parts)-1];
         $c1 = (mb_substr($p1, 0, 1) ?: substr($p1, 0, 1));
         $c2 = (mb_substr($p2, 0, 1) ?: substr($p2, 0, 1));
         return mb_strtoupper($c1.$c2);
     }
-    
-    
-    private function labelFromActor(?\App\Models\Acteur $a, ?string $fallback = null): string
+
+    private function labelFromActor(?Acteur $a, ?string $fallback = null): string
     {
         if ($a) {
             $pieces = array_filter([trim((string)$a->libelle_court), trim((string)$a->libelle_long)]);
@@ -1327,34 +2041,7 @@ class WorkflowValidationController extends Controller
         }
         return $fallback ?: '';
     }
-    
-    
-    private function approverStatusFor(InstanceEtape $step, string $actorCode): string
-    {
-        // a-t-il approuvé ?
-        $hasApproved = $step->actions()
-            ->whereHas('type', fn($q)=>$q->where('code','APPROUVER'))
-            ->where('code_acteur', $actorCode)
-            ->exists();
-        if ($hasApproved) return 'APPROUVE';
-    
-        // a-t-il rejeté ?
-        $hasRejected = $step->actions()
-            ->whereHas('type', fn($q)=>$q->where('code','REJETER'))
-            ->where('code_acteur', $actorCode)
-            ->exists();
-        if ($hasRejected) return 'REJETE';
-    
-        // statut de l'étape
-        $codeStep = $this->codeStatutEtape($step->statut_id);
-        // EN_COURS = jaune (à faire), PENDING/SAUTE/APPROUVE/REJETE...
-        if ($codeStep === 'EN_COURS') return 'EN_COURS';
-        if ($codeStep === 'PENDING')  return 'PENDING';
-    
-        // étapes déjà passées & approuvées sans action de cet acteur → considéré "non requis" => gris
-        return 'EN_ATTENTE';
-    }
-    
+
     /* -------- Raccourcis ref_* -------- */
     private function statutInstance(string $code): StatutInstance
     {
@@ -1369,5 +2056,51 @@ class WorkflowValidationController extends Controller
     private function codeStatutEtape(int $id): ?string
     {
         return StatutEtapeInstance::find($id)?->code;
+    }
+
+    private function parseRuleValue($raw) {
+        if (is_array($raw) || is_object($raw)) return $raw;
+        if (is_null($raw)) return null;
+        if (is_string($raw)) {
+            $t = trim($raw);
+            if ($t === '') return null;
+            $decoded = json_decode($t, true);
+            return json_last_error() === JSON_ERROR_NONE ? $decoded : $t;
+        }
+        return $raw;
+    }
+
+    public function expandApproverCodes(InstanceEtape $si): array
+    {
+        $snapshot = (array)($si->instance->instantane ?? []);
+        $codes = [];
+        foreach ($si->etape->approbateurs as $a) {
+            switch ($a->type_approbateur) {
+                case 'ACTEUR':
+                    if ($a->reference_approbateur) $codes[] = $a->reference_approbateur;
+                    break;
+                case 'FIELD_ACTEUR':
+                    $field = (string)$a->reference_approbateur;
+                    $code  = data_get($snapshot, $field);
+                    if ($code) $codes[] = $code;
+                    break;
+                case 'ROLE':
+                    $codes = array_merge($codes, $this->resolveByRole($a->reference_approbateur, $snapshot));
+                    break;
+                case 'GROUPE':
+                    $codes = array_merge($codes, $this->resolveByGroup($a->reference_approbateur, $snapshot));
+                    break;
+            }
+        }
+        return array_values(array_unique(array_filter($codes)));
+    }
+
+    private function resolveByRole(string $roleCode, array $snapshot): array {
+        // TODO: branchement réel
+        return [];
+    }
+    private function resolveByGroup(string $groupCode, array $snapshot): array {
+        // TODO: branchement réel
+        return [];
     }
 }

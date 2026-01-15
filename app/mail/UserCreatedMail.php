@@ -24,8 +24,8 @@ class UserCreatedMail extends Mailable
         return $this->subject('Bienvenue sur la plateforme - Informations de connexion')
             ->view('emails.user_created')
             ->with([
-                'name' => $this->user->acteur->libelle_court,
-                'email' => $this->user->email,
+                'name' => $this->user->acteur->libelle_court .' '. $this->user->acteur->libelle_long,
+                'login' => $this->user->login,
                 'password' => $this->password,
                 'url' => url('/login')
             ]);

@@ -17,13 +17,18 @@ const normalized = (str) => {
     .toString()
     .toLowerCase()
     .normalize('NFD')
+    // suppression des accents
     .replace(/[\u0300-\u036f]/g, '')
+    // espaces multiples → simple espace
     .replace(/\s+/g, ' ')
+    // préfixes administratifs fréquents
     .replace(/^region\s+(d[eu']\s+)?/i, '')
     .replace(/^région\s+(d[eu']\s+)?/i, '')
     .replace(/^province\s+(d[eu']\s+)?/i, '')
     .replace(/^departement\s+(d[eu']\s+)?/i, '')
     .replace(/^département\s+(d[eu']\s+)?/i, '')
+    .replace(/^district\s+(d[eu']\s+)?/i, '')   // 🔁 ajout pour aligner avec LocalitesPays
+    .replace(/^district\s+/i, '')
     .trim();
 };
 
@@ -158,11 +163,16 @@ function initCountryMap(
     dragging: true,
   });
   map.panBy([20, 0]);
+  
+  // Exposer la carte dans window pour accès externe
+  window.mapInstance = map;
 
   // State
   let currentLayers = {};
   let selectedLevels = {};
   let maxLevels = 3;
+  let infrastructureMarkersLayer = L.layerGroup().addTo(map);
+  let currentInfrastructureLevel = 0;
 
   window.currentMapMetric = window.currentMapMetric || 'count'; // 'count' | 'cost'
   window.currentMapFilter = window.currentMapFilter || 'cumul'; // 'cumul' | 'public' | 'private'
@@ -470,6 +480,16 @@ function initCountryMap(
         byDomain: project.byDomain || {},
       };
     });
+    // Debug: vérifier la structure des données agrégées pour la carte admin/carte
+    try {
+      console.log('[sigAdmin] processProjectData → projets:', {
+        inputCount: (projects || []).length,
+        keysSample: Object.keys(data).slice(0, 10),
+        sample: Object.values(data).slice(0, 2),
+      });
+    } catch (e) {
+      // pas bloquant pour la prod
+    }
     window.projectData = data;
     return data;
   }
@@ -510,7 +530,19 @@ function initCountryMap(
       fillColor = found ? found.couleur : '#ff0000';
     }
 
-    return { weight: 1, opacity: 1, color: 'white', fillOpacity: 0.7, fillColor };
+    // Si les couches transparentes sont activées, réduire l'opacité du remplissage
+    // mais garder les bordures visibles (seulement si la variable est définie)
+    const fillOpacity = (window.transparentLayersEnabled === true) ? 0.1 : 0.7;
+    const borderOpacity = 1; // Toujours garder les bordures visibles
+    const borderWeight = (window.transparentLayersEnabled === true) ? 2 : 1; // Bordures plus épaisses si transparent
+
+    return { 
+      weight: borderWeight, 
+      opacity: borderOpacity, 
+      color: 'white', 
+      fillOpacity: fillOpacity, 
+      fillColor 
+    };
   }
 
   function onEachFeature(feature, layer, level) {
@@ -544,7 +576,19 @@ function initCountryMap(
   function valueForLegend(regionName, metric = 'count', filter = 'cumul') {
     if (!window.projectData || !regionName) return 0;
     const stats = window.projectData[normalized(regionName)];
-    if (!stats) return 0;
+    if (!stats) {
+      // Debug léger : loguer de temps en temps les cas sans correspondance
+      if (Math.random() < 0.02) {
+        try {
+          console.log('[sigAdmin] valueForLegend: aucune stats pour la région', {
+            regionName,
+            normalizedName: normalized(regionName),
+            availableKeys: Object.keys(window.projectData || {}).slice(0, 10),
+          });
+        } catch (e) {}
+      }
+      return 0;
+    }
   
     // source = nombre de projets (public/privé/cumul) -> pour ratio éventuel
     const totalCount = (stats.public || 0) + (stats.private || 0);
@@ -672,19 +716,46 @@ function initCountryMap(
     for (let l = level + 1; l <= maxLevels; l++) delete selectedLevels[l];
 
     info.update(domainesAssocie, niveaux);
-    if (level < maxLevels) loadGeoJsonLevel(level + 1, featureName);
+    
+    // Si on est au niveau 3 et que la fonction handleLevel3InfrastructureClick existe (sigInfra uniquement)
+    if (level === 3 && typeof window.handleLevel3InfrastructureClick === 'function') {
+      // Récupérer les bounds de la couche pour ajuster la vue
+      const bounds = lyr.getBounds ? lyr.getBounds() : null;
+      
+      // Essayer de trouver un code de localité dans les propriétés
+      let localiteCode = feature.properties?.GID_3 || 
+                        feature.properties?.GID_2 || 
+                        feature.properties?.GID_1 ||
+                        feature.properties?.code ||
+                        featureName; // Utiliser le nom comme fallback
+      
+      console.log('[Map] Clic sur niveau 3, appel handleLevel3InfrastructureClick', {
+        localiteCode,
+        featureName,
+        bounds: bounds ? bounds.toBBoxString() : null
+      });
+      
+      window.handleLevel3InfrastructureClick(localiteCode, featureName, bounds);
+    } else if (level < maxLevels) {
+      loadGeoJsonLevel(level + 1, featureName);
+    }
   }
 
   function highlightFeature(e) {
     const layer = e.target;
-    layer.setStyle({ weight: 4, color: '#222', fillOpacity: 0.95 });
+    const fillOpacity = (window.transparentLayersEnabled === true) ? 0.3 : 0.95;
+    layer.setStyle({ weight: 4, color: '#222', fillOpacity: fillOpacity });
     if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) layer.bringToFront();
   }
 
   function resetHighlight(e) {
     const layer = e.target;
     const lvl = layer.feature.properties.level;
-    if (currentLayers[lvl]) currentLayers[lvl].resetStyle(layer);
+    if (currentLayers[lvl]) {
+      // Réappliquer le style avec la transparence actuelle
+      const newStyle = getFeatureStyle(layer.feature, lvl);
+      layer.setStyle(newStyle);
+    }
   }
 
   // -----------------------------

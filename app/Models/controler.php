@@ -34,4 +34,13 @@ class Controler extends Model
     {
         return $this->belongsTo(Projet::class, 'code_projet', 'code_projet');
     }
+
+    public function projetAppui()
+    {
+        return $this->belongsTo(AppuiProjet::class, 'code_projet', 'code_projet_appui');
+    } 
+    public function projetEtude()
+    {
+        return $this->belongsTo(EtudeProjet::class, 'code_projet', 'code_projet_etude');
+    } 
 }

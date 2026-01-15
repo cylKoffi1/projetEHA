@@ -1,0 +1,381 @@
+{
+  "level1": {
+    "description": "Niveau 1 - Domaines (ou Groupes pour non-BTP)",
+    "markers": [
+      {
+        "lat": 5.3364,
+        "lng": -4.0267,
+        "count": 15,
+        "class": "domain",
+        "code": "01",
+        "label": "Infrastructure de Transport"
+      },
+      {
+        "lat": 5.3599,
+        "lng": -4.0083,
+        "count": 12,
+        "class": "domain",
+        "code": "02",
+        "label": "Infrastructure de Santé"
+      },
+      {
+        "lat": 5.3200,
+        "lng": -4.0150,
+        "count": 8,
+        "class": "domain",
+        "code": "03",
+        "label": "Infrastructure d'Éducation"
+      },
+      {
+        "lat": 5.3500,
+        "lng": -4.0200,
+        "count": 20,
+        "class": "domain",
+        "code": "04",
+        "label": "Infrastructure d'Énergie"
+      },
+      {
+        "lat": 5.3300,
+        "lng": -4.0100,
+        "count": 10,
+        "class": "domain",
+        "code": "05",
+        "label": "Infrastructure d'Eau et Assainissement"
+      }
+    ]
+  },
+  "level2": {
+    "description": "Niveau 2 - Sous-domaines",
+    "markers": [
+      {
+        "lat": 5.3364,
+        "lng": -4.0267,
+        "count": 8,
+        "class": "sub",
+        "code": "0101",
+        "label": "Routes et Ponts"
+      },
+      {
+        "lat": 5.3400,
+        "lng": -4.0250,
+        "count": 7,
+        "class": "sub",
+        "code": "0102",
+        "label": "Aéroports et Ports"
+      },
+      {
+        "lat": 5.3599,
+        "lng": -4.0083,
+        "count": 6,
+        "class": "sub",
+        "code": "0201",
+        "label": "Hôpitaux et Centres de Santé"
+      },
+      {
+        "lat": 5.3600,
+        "lng": -4.0100,
+        "count": 6,
+        "class": "sub",
+        "code": "0202",
+        "label": "Dispensaires"
+      },
+      {
+        "lat": 5.3200,
+        "lng": -4.0150,
+        "count": 4,
+        "class": "sub",
+        "code": "0301",
+        "label": "Écoles Primaires"
+      },
+      {
+        "lat": 5.3250,
+        "lng": -4.0120,
+        "count": 4,
+        "class": "sub",
+        "code": "0302",
+        "label": "Collèges et Lycées"
+      },
+      {
+        "lat": 5.3500,
+        "lng": -4.0200,
+        "count": 12,
+        "class": "sub",
+        "code": "0401",
+        "label": "Centrales Électriques"
+      },
+      {
+        "lat": 5.3450,
+        "lng": -4.0180,
+        "count": 8,
+        "class": "sub",
+        "code": "0402",
+        "label": "Lignes de Transmission"
+      },
+      {
+        "lat": 5.3300,
+        "lng": -4.0100,
+        "count": 5,
+        "class": "sub",
+        "code": "0501",
+        "label": "Forages et Puits"
+      },
+      {
+        "lat": 5.3350,
+        "lng": -4.0080,
+        "count": 5,
+        "class": "sub",
+        "code": "0502",
+        "label": "Stations de Traitement"
+      }
+    ]
+  },
+  "level3": {
+    "description": "Niveau 3 - Sous-domaines détaillés (pour zoom)",
+    "markers": [
+      {
+        "lat": 5.3364,
+        "lng": -4.0267,
+        "count": 3,
+        "class": "sub",
+        "code": "010101",
+        "label": "Routes Nationales"
+      },
+      {
+        "lat": 5.3380,
+        "lng": -4.0250,
+        "count": 5,
+        "class": "sub",
+        "code": "010102",
+        "label": "Ponts et Viaducs"
+      },
+      {
+        "lat": 5.3400,
+        "lng": -4.0250,
+        "count": 4,
+        "class": "sub",
+        "code": "010201",
+        "label": "Aéroports"
+      },
+      {
+        "lat": 5.3420,
+        "lng": -4.0230,
+        "count": 3,
+        "class": "sub",
+        "code": "010202",
+        "label": "Ports Maritimes"
+      },
+      {
+        "lat": 5.3599,
+        "lng": -4.0083,
+        "count": 3,
+        "class": "sub",
+        "code": "020101",
+        "label": "Hôpitaux Généraux"
+      },
+      {
+        "lat": 5.3610,
+        "lng": -4.0090,
+        "count": 3,
+        "class": "sub",
+        "code": "020102",
+        "label": "Centres de Santé Urbains"
+      },
+      {
+        "lat": 5.3600,
+        "lng": -4.0100,
+        "count": 3,
+        "class": "sub",
+        "code": "020201",
+        "label": "Dispensaires Ruraux"
+      },
+      {
+        "lat": 5.3620,
+        "lng": -4.0110,
+        "count": 3,
+        "class": "sub",
+        "code": "020202",
+        "label": "Postes de Santé"
+      }
+    ]
+  },
+  "level4": {
+    "description": "Niveau 4+ - Infrastructures individuelles",
+    "markers": [
+      {
+        "lat": 5.3364,
+        "lng": -4.0267,
+        "count": 2,
+        "class": "infra",
+        "code": "INF-001",
+        "label": "Route Abidjan-Yamoussoukro - Section 1",
+        "famille_code": "ROUTE-001"
+      },
+      {
+        "lat": 5.3380,
+        "lng": -4.0250,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-002",
+        "label": "Pont sur la Lagune Ébrié",
+        "famille_code": "PONT-001"
+      },
+      {
+        "lat": 5.3400,
+        "lng": -4.0250,
+        "count": 3,
+        "class": "infra",
+        "code": "INF-003",
+        "label": "Aéroport International Félix Houphouët-Boigny",
+        "famille_code": "AEROPORT-001"
+      },
+      {
+        "lat": 5.3420,
+        "lng": -4.0230,
+        "count": 2,
+        "class": "infra",
+        "code": "INF-004",
+        "label": "Port Autonome d'Abidjan - Terminal 1",
+        "famille_code": "PORT-001"
+      },
+      {
+        "lat": 5.3599,
+        "lng": -4.0083,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-005",
+        "label": "CHU de Cocody",
+        "famille_code": "HOPITAL-001"
+      },
+      {
+        "lat": 5.3610,
+        "lng": -4.0090,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-006",
+        "label": "Centre de Santé de Yopougon",
+        "famille_code": "SANTE-001"
+      },
+      {
+        "lat": 5.3600,
+        "lng": -4.0100,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-007",
+        "label": "Dispensaire d'Adjamé",
+        "famille_code": "SANTE-002"
+      },
+      {
+        "lat": 5.3620,
+        "lng": -4.0110,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-008",
+        "label": "Poste de Santé d'Attécoubé",
+        "famille_code": "SANTE-003"
+      },
+      {
+        "lat": 5.3200,
+        "lng": -4.0150,
+        "count": 2,
+        "class": "infra",
+        "code": "INF-009",
+        "label": "École Primaire Publique Plateau",
+        "famille_code": "ECOLE-001"
+      },
+      {
+        "lat": 5.3250,
+        "lng": -4.0120,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-010",
+        "label": "Lycée Moderne de Cocody",
+        "famille_code": "ECOLE-002"
+      },
+      {
+        "lat": 5.3500,
+        "lng": -4.0200,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-011",
+        "label": "Centrale Thermique d'Azito",
+        "famille_code": "ENERGIE-001"
+      },
+      {
+        "lat": 5.3450,
+        "lng": -4.0180,
+        "count": 2,
+        "class": "infra",
+        "code": "INF-012",
+        "label": "Ligne HT 225kV Abidjan-Yamoussoukro",
+        "famille_code": "ENERGIE-002"
+      },
+      {
+        "lat": 5.3300,
+        "lng": -4.0100,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-013",
+        "label": "Forage de Yopougon",
+        "famille_code": "EAU-001"
+      },
+      {
+        "lat": 5.3350,
+        "lng": -4.0080,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-014",
+        "label": "Station de Traitement d'Eau Potable de Songon",
+        "famille_code": "EAU-002"
+      },
+      {
+        "lat": 5.3370,
+        "lng": -4.0270,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-015",
+        "label": "Route Abidjan-San Pedro - Section 2",
+        "famille_code": "ROUTE-002"
+      },
+      {
+        "lat": 5.3390,
+        "lng": -4.0260,
+        "count": 1,
+        "class": "infra",
+        "code": "INF-016",
+        "label": "Pont sur le Bandama",
+        "famille_code": "PONT-002"
+      }
+    ]
+  },
+  "metadata": {
+    "description": "Données mockées pour les marqueurs d'infrastructures bénéficiaires",
+    "version": "1.0",
+    "created": "2025-01-27",
+    "structure": {
+      "level1-3": {
+        "lat": "float - Latitude du centroïde",
+        "lng": "float - Longitude du centroïde",
+        "count": "int - Nombre d'infrastructures agrégées",
+        "class": "string - Type: 'domain', 'sub', 'group'",
+        "code": "string - Code unique du domaine/sous-domaine",
+        "label": "string - Libellé du domaine/sous-domaine"
+      },
+      "level4+": {
+        "lat": "float - Latitude de l'infrastructure",
+        "lng": "float - Longitude de l'infrastructure",
+        "count": "int - Nombre de projets associés",
+        "class": "string - Toujours 'infra'",
+        "code": "string - Code unique de l'infrastructure",
+        "label": "string - Libellé de l'infrastructure",
+        "famille_code": "string - Code de la famille d'infrastructure (pour icônes personnalisées)"
+      }
+    },
+    "notes": [
+      "Les coordonnées sont centrées sur Abidjan, Côte d'Ivoire (environ 5.3364, -4.0267)",
+      "Les codes de famille permettent de personnaliser les icônes (ECOLE, HOPITAL, ROUTE, PONT, EAU, ENERGIE, etc.)",
+      "Pour les niveaux 1-3, les coordonnées représentent le centroïde (moyenne) des infrastructures agrégées",
+      "Pour le niveau 4+, les coordonnées sont les positions exactes des infrastructures"
+    ]
+  }
+}
+

@@ -2,83 +2,69 @@
 
 namespace App\Providers;
 
-use App\Models\Ecran;
 use App\Models\GroupeUtilisateur;
-use App\Models\Pays;
 use App\Models\Rubriques;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
-use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\DB;
 
 class RubriquesServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     *
-     * @return void
-     */
     public function register()
     {
         //
     }
 
-    /**
-     * Bootstrap services.
-     *
-     * @return void
-     */
     public function boot()
     {
-        // Utilisation du View Composer pour partager les rubriques avec toutes les vues
         View::composer('*', function ($view) {
-            // Charger toutes les rubriques avec leurs relations
+
             $rubriques = Rubriques::with([
                 'sousMenus.sousSousMenusRecursive.ecrans',
                 'ecrans',
                 'sousMenus.ecrans'
-            ])->get();
+            ])->orderBy('ordre')->get();
 
-            $rubriquesByAuthRole = collect(); // Collection vide par défaut
+            $rubriquesByAuthRole = collect();
 
-
-
-
-
-            // Vérification de l'utilisateur connecté
             if (auth()->check()) {
-                $role_id = auth()->user()->groupe_utilisateur_id;// Récupérer le rôle de l'utilisateur connecté
-                $userRoles = GroupeUtilisateur::where('code', $role_id)->get(); // Récupérer les rôles de l'utilisateur connecté
 
-                if ($userRoles->isNotEmpty()) {
-                    // Extraire les permissions des rôles de l'utilisateur
-                    $permissions = $userRoles->flatMap(function ($role) {
-                        return $role->permissions;
-                    })->pluck('name')->toArray();
+                $pays = session('pays_selectionne');
+                $roleCode = auth()->user()->groupeUtilisateur->code;
 
-                    // Filtrer les rubriques basées sur les permissions associées
+                if ($pays && $roleCode) {
+
+                    // 🔥 Récupération correcte des permissions PAR PAYS
+                    $permissions = DB::table('role_permission_pays AS rpp')
+                        ->join('permissions AS p', 'p.id', '=', 'rpp.permission_id')
+                        ->where('rpp.role_code', $roleCode)
+                        ->where('rpp.pays_alpha3', $pays)
+                        ->pluck('p.name')
+                        ->toArray();
+
+                    // 🔥 Filtre des rubriques visibles : en fonction de leur permission
                     $rubriquesByAuthRole = Rubriques::with([
-                        'sousMenus' => function ($query) {
-                            $query->orderBy('ordre');
-                        },
-                        'ecrans' => function ($query) {
-                            $query->orderBy('ordre');
-                        },
-                        'sousMenus.ecrans' => function ($query) {
-                            $query->orderBy('ordre');
-                        }
-                    ])
-                    ->whereHas('permission', function ($query) use ($permissions) {
-                        $query->whereIn('name', $permissions);
-                    })
-                    ->orderBy('ordre')
-                    ->get();
+                            'sousMenus' => function ($q) {
+                                $q->orderBy('ordre');
+                            },
+                            'ecrans' => function ($q) {
+                                $q->orderBy('ordre');
+                            },
+                            'sousMenus.ecrans' => function ($q) {
+                                $q->orderBy('ordre');
+                            }
+                        ])
+                        ->whereHas('permission', function ($q) use ($permissions) {
+                            $q->whereIn('name', $permissions);
+                        })
+                        ->orderBy('ordre')
+                        ->get();
                 }
             }
 
-            // Partager les rubriques avec toutes les vues
             $view->with([
-                'rubriques' => $rubriques,
-                'rubriquesByAuthRole' => $rubriquesByAuthRole
+                'rubriques'            => $rubriques,
+                'rubriquesByAuthRole'  => $rubriquesByAuthRole
             ]);
         });
     }

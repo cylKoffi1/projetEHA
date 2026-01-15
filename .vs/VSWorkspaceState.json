@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\app",
+    "\\app\\Http",
+    "\\app\\Http\\Controllers",
+    "\\resources",
+    "\\resources\\views",
+    "\\resources\\views\\armonisation",
+    "\\resources\\views\\TableauBord",
+    "\\routes"
+  ],
+  "SelectedNode": "\\app\\Http\\Controllers\\StatController.php",
+  "PreviewInSolutionExplorer": false
+}

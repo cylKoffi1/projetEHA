@@ -23,7 +23,18 @@
                 <tbody>
                 @forelse($acteurs as $acteur)
                     @php
-                        $photoUrl = $acteur->photo_url;
+                        // ==== Photo URL robuste (pas besoin d'accessor côté modèle) ====
+                        $photoUrl = null;
+                        if (!empty($acteur->Photo)) {
+                            if (is_numeric($acteur->Photo)) {
+                                $photoUrl = url('/fichiers/' . $acteur->Photo);
+                            } elseif (Str::startsWith($acteur->Photo, ['http://', 'https://', '//'])) {
+                                $photoUrl = $acteur->Photo;
+                            } else {
+                                $photoUrl = url($acteur->Photo);
+                            }
+                        }
+
                         $displayName = trim(($acteur->libelle_court ?? '') . ' ' . ($acteur->libelle_long ?? ''));
                         if (!$displayName) { $displayName = trim(($acteur->nom ?? '') . ' ' . ($acteur->prenom ?? '')); }
                         $parts = preg_split('/\s+/', $displayName ?: '', -1, PREG_SPLIT_NO_EMPTY);
@@ -64,25 +75,24 @@
                         </td>
                         <td class="text-end">
                             @can('modifier_ecran_' . $ecran->id)
-                            <a href="#" class="btn btn-sm btn-outline-primary btn-edit" data-id="{{ $acteur->code_acteur }}"><i class="bi bi-pencil-square"></i></a>
+                                <a href="#" class="btn btn-sm btn-outline-primary btn-edit" data-id="{{ $acteur->code_acteur }}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
                             @endcan
+
                             @can('supprimer_ecran_' . $ecran->id)
                                 @if ($acteur->is_active)
-                                <a href="#" 
-                                    class="btn btn-sm btn-outline-danger btn-delete"
-                                    data-id="{{ $a->code_acteur }}"
-                                    data-url="{{ route('acteurs.destroy', $a->code_acteur) }}">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                                    <a href="#" class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ $acteur->code_acteur }}">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
                                 @else
-                                <a href="#"
-                                    class="btn btn-sm btn-outline-success btn-restore"
-                                    data-id="{{ $a->code_acteur }}"
-                                    data-url="{{ route('acteurs.restore', $a->code_acteur) }}">
-                                    <i class="bi bi-arrow-clockwise"></i>
-                                </a>
+                                    <a href="#" class="btn btn-sm btn-outline-success btn-restore" data-id="{{ $acteur->code_acteur }}" data-ecran-id="{{ $ecran->id }}">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </a>
                                 @endif
                             @endcan
+
+                            {{-- Formulaires cachés pour fallback --}}
                             <form id="delete-form-{{ $acteur->code_acteur }}" action="{{ route('acteurs.destroy', $acteur->code_acteur) }}" method="POST" style="display:none;">@csrf @method('DELETE')</form>
                             <form id="restore-form-{{ $acteur->code_acteur }}" action="{{ route('acteurs.restore', ['id' => $acteur->code_acteur, 'ecran_id' => $ecran->id]) }}" method="POST" style="display:none;">@csrf @method('PATCH')</form>
                         </td>
@@ -100,7 +110,18 @@
         <div id="cardsContainer" class="row g-3">
             @forelse ($acteurs as $acteur)
                 @php
-                    $photoUrl = $acteur->photo_url;
+                    // ==== Photo URL robuste (pas besoin d'accessor côté modèle) ====
+                    $photoUrl = null;
+                    if (!empty($acteur->Photo)) {
+                        if (is_numeric($acteur->Photo)) {
+                            $photoUrl = url('/fichiers/' . $acteur->Photo);
+                        } elseif (Str::startsWith($acteur->Photo, ['http://', 'https://', '//'])) {
+                            $photoUrl = $acteur->Photo;
+                        } else {
+                            $photoUrl = url($acteur->Photo);
+                        }
+                    }
+
                     $displayName = trim(($acteur->libelle_court ?? '') . ' ' . ($acteur->libelle_long ?? ''));
                     if (!$displayName) { $displayName = trim(($acteur->nom ?? '') . ' ' . ($acteur->prenom ?? '')); }
                     $parts = preg_split('/\s+/', $displayName ?: '', -1, PREG_SPLIT_NO_EMPTY);
@@ -158,17 +179,20 @@
                                         <div class="small text-muted">{{ $acteur->adresse ?: '—' }}</div>
                                         <div class="actor-actions">
                                             @can('modifier_ecran_' . $ecran->id)
-                                            <a href="#" class="btn-edit" title="Modifier" data-id="{{ $acteur->code_acteur }}"><i class="bi bi-pencil-square"></i></a>
+                                                <a href="#" class="btn-edit" title="Modifier" data-id="{{ $acteur->code_acteur }}">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
                                             @endcan
 
                                             @can('supprimer_ecran_' . $ecran->id)
                                                 @if ($acteur->is_active)
-                                                <a href="#" class="btn-delete" title="Désactiver" data-id="{{ $acteur->code_acteur }}"><i class="bi bi-x-circle text-danger"></i></a>
+                                                    <a href="#" class="btn-delete" title="Désactiver" data-id="{{ $acteur->code_acteur }}"><i class="bi bi-x-circle text-danger"></i></a>
                                                 @else
-                                                <a href="#" class="btn-restore" title="Réactiver" data-id="{{ $acteur->code_acteur }}" data-ecran-id="{{ $ecran->id }}"><i class="bi bi-check-circle text-success"></i></a>
+                                                    <a href="#" class="btn-restore" title="Réactiver" data-id="{{ $acteur->code_acteur }}" data-ecran-id="{{ $ecran->id }}"><i class="bi bi-check-circle text-success"></i></a>
                                                 @endif
                                             @endcan
 
+                                            {{-- Formulaires cachés pour fallback --}}
                                             <form id="delete-form-{{ $acteur->code_acteur }}" action="{{ route('acteurs.destroy', $acteur->code_acteur) }}" method="POST" style="display:none;">@csrf @method('DELETE')</form>
                                             <form id="restore-form-{{ $acteur->code_acteur }}" action="{{ route('acteurs.restore', ['id' => $acteur->code_acteur, 'ecran_id' => $ecran->id]) }}" method="POST" style="display:none;">@csrf @method('PATCH')</form>
                                         </div>

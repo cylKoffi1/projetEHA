@@ -4,6 +4,11 @@ namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class Handler extends ExceptionHandler
 {
@@ -23,8 +28,46 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
-        $this->reportable(function (Throwable $e) {
-            //
+        $this->renderable(function (ValidationException $e, $request) {
+            if (!$this->wantsJson($request)) return null;
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->implode(' '),
+                'errors'  => $e->errors(),
+            ], 422);
+        });
+    
+        $this->renderable(function (ModelNotFoundException $e, $request) {
+            if (!$this->wantsJson($request)) return null;
+            return response()->json(['success'=>false,'message'=>'Ressource introuvable'], 404);
+        });
+    
+        $this->renderable(function (AuthenticationException $e, $request) {
+            if (!$this->wantsJson($request)) return null;
+            return response()->json(['success'=>false,'message'=>'Authentification requise'], 401);
+        });
+    
+        $this->renderable(function (AuthorizationException $e, $request) {
+            if (!$this->wantsJson($request)) return null;
+            return response()->json(['success'=>false,'message'=>'Action non autorisée'], 403);
+        });
+    
+        $this->renderable(function (HttpExceptionInterface $e, $request) {
+            if (!$this->wantsJson($request)) return null;
+            $status = $e->getStatusCode();
+            $msg = match ($status) {
+                404 => 'Route introuvable',
+                405 => 'Méthode non autorisée',
+                429 => 'Trop de requêtes',
+                default => 'Erreur',
+            };
+            return response()->json(['success'=>false,'message'=>$msg], $status);
+        });
+    
+        $this->renderable(function (\Throwable $e, $request) {
+            if (!$this->wantsJson($request)) return null;
+            \Log::error($e);
+            return response()->json(['success'=>false,'message'=>'Erreur serveur'], 500);
         });
     }
 
@@ -58,5 +101,10 @@ class Handler extends ExceptionHandler
 
         return parent::render($request, $exception);
     }
-
+    protected function wantsJson($request): bool
+    {
+        return $request->expectsJson()
+            || $request->ajax()
+            || str_contains($request->header('Accept', ''), 'application/json');
+    }
 }

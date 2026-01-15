@@ -15,13 +15,17 @@ class CustomResetPasswordNotification extends ResetPasswordNotification
      */
     public function toMail($notifiable)
     {
-        $resetUrl = url(config('app.url') . route('password.reset', $this->token, false));
+        $resetUrl = url(config('app.url') . route('password.reset', [
+            'token' => $this->token,
+            'email' => $notifiable->email
+        ], false));
 
         return (new MailMessage)
-            ->subject('Réinitialisation de votre mot de passe')
-            ->line('Vous recevez cet email car une demande de réinitialisation de mot de passe a été effectuée.')
-            ->action('Réinitialiser le mot de passe', $resetUrl)
-            ->line('Ce lien expirera dans 60 minutes.')
-            ->line('Si vous n\'avez pas demandé de réinitialisation, aucune action supplémentaire n\'est requise.');
+            ->subject('Réinitialisation de votre mot de passe - GP-INFRAS')
+            ->view('emails.reset_password', [
+                'actionUrl' => $resetUrl,
+                'url' => $resetUrl,
+                'user' => $notifiable
+            ]);
     }
 }

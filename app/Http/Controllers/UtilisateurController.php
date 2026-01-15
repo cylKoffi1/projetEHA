@@ -21,6 +21,7 @@ use App\Models\Pays;
 use App\Models\PaysUser;
 use App\Models\RolePermission;
 use App\Models\SousDomaine;
+use App\Models\TypeUtilisateur;
 use App\Models\User;
 use App\Models\Users;
 use App\Models\UtilisateurChampExercice;
@@ -80,12 +81,15 @@ class UtilisateurController extends Controller
             $groupeProjets = GroupeProjetPaysUser::where('user_id', $user->acteur_id)->value('groupe_projet_id');
 
             $pays = Pays::all();
-           $roles =
-            RolePermission::where('role_source', Auth::user()->groupe_utilisateur_id)
-            ->join('groupe_utilisateur as gu', 'gu.code', '=', 'role_permissions.role_target')
-            ->where('role_permissions.can_assign', 1)
-            ->select('code','gu.libelle_groupe')
+
+            $typeUtilisateurUserConnect = GroupeUtilisateur::select('type_utilisateur_id')
+            ->where('code', Auth::user()->groupe_utilisateur_id)->first();
+            
+             LOG::info($typeUtilisateurUserConnect);
+            $roles = GroupeUtilisateur::where('type_utilisateur_id', $typeUtilisateurUserConnect->type_utilisateur_id)
             ->get();
+            LOG::info($roles);
+
             $groupProjects = GroupeProjet::where('code', $groupeSelectionne)->first();
 
             $acteurs = Acteur::where('is_user', 0)

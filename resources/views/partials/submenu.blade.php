@@ -1,3 +1,4 @@
+{{-- Sidebar  submenu--}}
 @if ($sousMenus->count() > 0)
 
     @foreach ($sousMenus as $sousMenu)

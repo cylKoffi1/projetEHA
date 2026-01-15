@@ -11,9 +11,9 @@ class Acteur extends Model
 
     protected $table = 'acteur';
     protected $primaryKey = 'code_acteur';
-    public $incrementing = false; // si code_acteur n'est pas auto-incrémenté, sinon retire cette ligne
-    protected $keyType = 'string'; // adapte si c'est un int
-
+    public $incrementing = true;
+    protected $keyType = 'int'; // adapte si c'est un int
+    public $timestamps = true;
     protected $fillable = [
         'code_acteur',
         'libelle_long',
@@ -139,4 +139,9 @@ class Acteur extends Model
     {
         return $this->hasMany(ProjetApprobation::class, 'code_acteur', 'code_acteur')->with('etude.projet');
     }
+
+    public function scopeCabinets($q){ 
+        return $q->where('type_acteur','CAB'); 
+    }
+
 }

@@ -102,6 +102,7 @@ Route::get('/legendeInfras/{groupe}',         [SigAdminInfrastructureController:
 
 // markers & détails
 Route::get('/infrasInfras/markers',           [SigAdminInfrastructureController::class, 'markersInfras']);
+Route::get('/infrasInfras/localite-coords',   [SigAdminInfrastructureController::class, 'getLocaliteCoordinates']);
 Route::get('/project-detailsInfras',          [SigAdminInfrastructureController::class, 'projectDetailsInfras']);
 
 // filtres

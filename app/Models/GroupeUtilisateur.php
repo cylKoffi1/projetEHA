@@ -19,7 +19,7 @@ class GroupeUtilisateur extends Model implements RoleContract
     public $incrementing = false;
     protected $keyType = 'string';
     protected $guard_name = 'web';
-    protected $fillable = ['code', 'libelle_groupe', 'guard_name', 'created_at', 'updated_at'];
+    protected $fillable = ['code', 'libelle_groupe', 'guard_name', 'type_utilisateur_id','created_at', 'updated_at'];
 
     /**
      * ✅ Déclaration correcte pour la compatibilité avec Spatie
@@ -32,6 +32,10 @@ class GroupeUtilisateur extends Model implements RoleContract
             'role_id',
             'permission_id'
         );
+    }
+    public function typeUtilisateur()
+    {
+        return $this->belongsTo(TypeUtilisateur::class, 'type_utilisateur_id');
     }
 
     /**

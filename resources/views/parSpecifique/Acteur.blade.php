@@ -102,13 +102,14 @@
                     </div>
 
                 </div>
-
+                <input type="hidden" name="ecran_id" value="{{ $ecran?->id ?? $ecran_id }}">
+ 
                 <div class="d-flex align-items-center gap-2">
                     <div class="btn-group view-toggle" role="group" aria-label="Vues">
                         <a class="btn btn-primary" id="btnViewCards" href="{{ request()->fullUrlWithQuery(['view' => 'cards', 'page' => null]) }}"><i class="bi bi-grid-3x3-gap me-1"></i> Cartes</a>
                         <a class="btn btn-outline-primary" id="btnViewTable" href="{{ request()->fullUrlWithQuery(['view' => 'table', 'page' => null]) }}"><i class="bi bi-table me-1"></i> Tableau</a>
                     </div>
-                    @can('ajouter_ecran_' . $ecran->id)
+                    @can('ajouter_ecran_' . ($ecran?->id ?? $ecran_id))
                     <button id="btnCreate" class="btn btn-success">
                         <i class="bi bi-layout-sidebar-inset-reverse me-1"></i> Nouvel acteur
                     </button>
@@ -145,14 +146,14 @@
         </div>
     </div>
 
-    @can('consulter_ecran_' . $ecran->id)
+    @can('consulter_ecran_' . ($ecran?->id ?? $ecran_id))
         <div id="listWrapper">
             @include('parSpecifique.acteurs._list') {{-- <= partial liste (cards/table) --}}
         </div>
     @endcan
 </section>
 
-@can('ajouter_ecran_' . $ecran->id)
+@can('ajouter_ecran_' . ($ecran?->id ?? $ecran_id))
     {{-- ====== OFFCANVAS FORMULAIRE ====== --}}
     <div class="offcanvas offcanvas-end panel-boosted" tabindex="-1" id="acteurPanel" aria-labelledby="acteurPanelLabel">
         <div class="offcanvas-header">

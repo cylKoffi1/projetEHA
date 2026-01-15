@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ecran;
 use App\Models\GroupeUtilisateur;
 use App\Models\GroupProjectPermission;
+use App\Models\TypeUtilisateur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -84,10 +85,11 @@ class GroupProjectPermissionsController extends Controller
     {
         try {
             Log::info('Chargement des groupes utilisateurs.');
+            $TypeUtilisateur = TypeUtilisateur::all();
             $groupes = GroupeUtilisateur::all();
             $ecran = Ecran::find($request->input('ecran_id'));
 
-            return view('parGeneraux.groupeUtilisateur', compact('groupes', 'ecran'));
+            return view('parGeneraux.groupeUtilisateur', compact('TypeUtilisateur','groupes', 'ecran'));
         } catch (\Exception $e) {
             Log::error("Erreur lors du chargement des groupes utilisateurs : " . $e->getMessage());
             return redirect()->back()->with('error', "Une erreur est survenue lors du chargement des groupes.");
@@ -101,13 +103,15 @@ class GroupProjectPermissionsController extends Controller
     {
         $request->validate([
             'code' => 'required|string|max:10|unique:groupe_utilisateur,code',
-            'libelle_groupe' => 'required|string|max:255'
+            'libelle_groupe' => 'required|string|max:255',
+            'typeUtilisateur' => 'required|integer' 
         ]);
 
         try {
             GroupeUtilisateur::create([
                 'code' => $request->code,
-                'libelle_groupe' => $request->libelle_groupe
+                'libelle_groupe' => $request->libelle_groupe,
+                'type_utilisateur_id' => $request->typeUtilisateur
             ]);
 
             return redirect()->back()->with('success', 'Groupe utilisateur ajouté avec succès.');
@@ -129,6 +133,7 @@ class GroupProjectPermissionsController extends Controller
         try {
             $groupe = GroupeUtilisateur::findOrFail($id);
             $groupe->update(['libelle_groupe' => $request->libelle_groupe]);
+            $groupe->update(['type_utilisateur_id' => $request->typeUtilisateur]);
 
             return redirect()->back()->with('success', 'Groupe utilisateur mis à jour avec succès.');
         } catch (\Exception $e) {

@@ -12,382 +12,39 @@ use App\Models\Posseder;
 use App\Models\Financer;
 use App\Models\Projet;
 use App\Models\ProjetStatut;
+use App\Models\AppuiProjet;
+use App\Models\EtudeProjet as ModelsEtudeProjet;
 
 class StatController extends Controller
 {
-    /**
-     * Détecter les rôles de l’acteur connecté (peut en avoir plusieurs)
-     */
+    /* --------------------------------------------------------------
+     |  Détecter les rôles de l’acteur connecté
+     |-------------------------------------------------------------- */
     private function detectRoles(string $codeActeur): array
     {
         $roles = [];
 
-        if (Executer::where('code_acteur', $codeActeur)->where('is_active', 1)->exists()) {
+        if (Executer::where('code_acteur',$codeActeur)->where('is_active',1)->exists())
             $roles[] = 'chef_projet';
-        }
-        if (Controler::where('code_acteur', $codeActeur)->where('is_active', 1)->exists()) {
-            $roles[] = 'moe';
-        }
-        if (Posseder::where('code_acteur', $codeActeur)->where('is_active', 1)->where('isAssistant', 0)->exists()) {
-            $roles[] = 'mo';
-        }
-        if (Financer::where('code_acteur', $codeActeur)->where('is_active', 1)->exists()) {
-            $roles[] = 'bailleur';
-        }
 
-        Log::info("👤 Acteur {$codeActeur} → rôles détectés: " . implode(',', $roles));
+        if (Controler::where('code_acteur',$codeActeur)->where('is_active',1)->exists())
+            $roles[] = 'moe';
+
+        if (Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)->exists())
+            $roles[] = 'mo';
+
+        if (Financer::where('code_acteur',$codeActeur)->where('is_active',1)->exists())
+            $roles[] = 'bailleur';
+
         return $roles;
     }
 
-    /**
-     * Dernier statut par projet (filtré par pays+projet)
-     */
-    private function latestStatuts()
+    /* --------------------------------------------------------------
+     |  Génère la map des statuts
+     |-------------------------------------------------------------- */
+    private function statusMap()
     {
-        $prefix = session('pays_selectionne') . session('projet_selectionne') . '%';
-        Log::info("📊 Filtrage des projets par prefix: {$prefix}");
-
-        $latest = DB::table('projet_statut as ps1')
-            ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
-            ->where('ps1.code_projet', 'like', $prefix)
-            ->groupBy('ps1.code_projet');
-
-        return DB::table('projet_statut as ps')
-            ->joinSub($latest, 'lp', function ($j) {
-                $j->on('ps.code_projet', '=', 'lp.code_projet')
-                  ->on('ps.date_statut', '=', 'lp.max_date');
-            })
-            ->join('type_statut as ts', 'ts.id', '=', 'ps.type_statut')
-            ->select('ps.code_projet', 'ts.libelle as statut');
-    }
-
-    /**
-     * Page globale – Nombre de projets
-     */
-    public function statNombreProjet(Request $request)
-    {
-        $ecran   = Ecran::find($request->input('ecran_id'));
-        $country = session('pays_selectionne');
-        $group   = session('projet_selectionne');
-        $prefix  = ($country ?? '').($group ?? '').'%';
-    
-        Log::info('📋 Nb Projets (TOUS STATUTS) | ecran_id='.($ecran->id ?? 'NULL').' | prefix='.$prefix);
-    
-        // ---- Définition des statuts (synonymes inclus) + ordre d’affichage ----
-        $statusOrder  = ['prevu','en_cours','cloture','termine','redemarre','suspendu','annule'];
-        $statusTitles = [
-            'prevu'      => 'Prévu',
-            'en_cours'   => 'En cours',
-            'cloture'    => 'Clôturé',
-            'termine'    => 'Terminé',
-            'redemarre'  => 'Redémarré',
-            'suspendu'   => 'Suspendu',
-            'annule'     => 'Annulé',
-        ];
-        $statusMap = [
-            'prevu'     => ["'Prévu'"],
-            'en_cours'  => ["'En cours'"],
-            'cloture'   => ["'Clôturé'","'Clôturés'"],
-            'termine'   => ["'Terminé'"],
-            'redemarre' => ["'Redémarré'"],
-            'suspendu'  => ["'Suspendu'"],
-            'annule'    => ["'Annulé'"],
-        ];
-    
-        // ---- Gabarit vide pour toutes les colonnes (par statut) ----
-        $empty = function() use ($statusOrder) {
-            $bag = [];
-            foreach ($statusOrder as $k) {
-                $bag["total_{$k}"]  = 0;
-                $bag["public_{$k}"] = 0;
-                $bag["prive_{$k}"]  = 0;
-            }
-            return $bag;
-        };
-    
-        // ---- Base: dernier statut par projet (filtré par prefix) ----
-        $baseLatest = function() use ($prefix) {
-            $latest = DB::table('projet_statut as ps1')
-                ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
-                ->groupBy('ps1.code_projet');
-    
-            return DB::table('projet_statut as ps')
-                ->joinSub($latest, 'lp', function ($j) {
-                    $j->on('ps.code_projet','=','lp.code_projet')
-                      ->on('ps.date_statut','=','lp.max_date');
-                })
-                ->join('type_statut as ts','ts.id','=','ps.type_statut')
-                ->where('ps.code_projet','like',$prefix);
-        };
-    
-        $isPublic = "SUBSTR(ps.code_projet,7,1)='1'";
-        $isPrive  = "SUBSTR(ps.code_projet,7,1)='2'";
-    
-        // ---- Agrégateur dynamique (génère le SELECT avec tous les statuts) ----
-        $aggregate = function($builder) use ($statusMap,$statusOrder,$isPublic,$isPrive,$empty) {
-            $parts = [];
-            foreach ($statusOrder as $k) {
-                $in = '('.implode(',', $statusMap[$k]).')';
-                $parts[] = "SUM(CASE WHEN ts.libelle IN $in THEN 1 ELSE 0 END) as total_{$k}";
-                $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPublic THEN 1 ELSE 0 END) as public_{$k}";
-                $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPrive  THEN 1 ELSE 0 END) as prive_{$k}";
-            }
-            $row = $builder->selectRaw(implode(",\n", $parts))->first();
-            if (!$row) return $empty();
-    
-            $bag = $empty();
-            foreach ($statusOrder as $k) {
-                $bag["total_{$k}"]  = (int)($row->{"total_{$k}"}  ?? 0);
-                $bag["public_{$k}"] = (int)($row->{"public_{$k}"} ?? 0);
-                $bag["prive_{$k}"]  = (int)($row->{"prive_{$k}"}  ?? 0);
-            }
-            return $bag;
-        };
-    
-        // ---------- National (tous projets, sans filtre acteur) ----------
-        $stats = [];
-        $stats['National'] = $aggregate($baseLatest());
-        Log::info('📊 National (all statuses)', $stats['National']);
-    
-        // ---------- Détection des rôles de l’acteur ----------
-        $roles = [];
-        $codeActeur = auth()->user()?->acteur?->code_acteur;
-    
-        if ($codeActeur) {
-            if (Executer::where('code_acteur',$codeActeur)->where('is_active',1)->exists())                         $roles[]='chef_projet';
-            if (Controler::where('code_acteur',$codeActeur)->where('is_active',1)->exists())                        $roles[]='moe';
-            if (Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)->exists()) $roles[]='mo';
-            if (Financer::where('code_acteur',$codeActeur)->where('is_active',1)->exists())                         $roles[]='bailleur';
-        }
-        $roles = array_values(array_unique($roles));
-        Log::info("👤 Acteur {$codeActeur} → rôles", $roles);
-    
-        // Helper: projets de l’acteur par rôle
-        $idsForRole = function(string $role) use ($codeActeur,$prefix) {
-            return match($role) {
-                'chef_projet' => Executer::where('code_acteur',$codeActeur)->where('is_active',1)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                'moe'         => Controler::where('code_acteur',$codeActeur)->where('is_active',1)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                'mo'          => Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                'bailleur'    => Financer::where('code_acteur',$codeActeur)->where('is_active',1)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                default       => collect(),
-            };
-        };
-    
-        // Somme de deux sacs de stats
-        $sumBags = function(array $a, array $b) {
-            foreach ($b as $k => $v) $a[$k] = ($a[$k] ?? 0) + $v;
-            return $a;
-        };
-    
-        // ---------- Mes rôles ----------
-        $stats['Moi'] = [];
-        $mine = $empty();
-    
-        foreach ($roles as $role) {
-            $ids = $idsForRole($role);
-            Log::info("📌 {$role} → ".$ids->count()." projets");
-            if ($ids->isEmpty()) {
-                $stats['Moi'][$role] = $empty();
-                continue;
-            }
-            $bag = $aggregate(
-                $baseLatest()->whereIn('ps.code_projet',$ids->all())
-            );
-            $stats['Moi'][$role] = $bag;
-            $mine = $sumBags($mine, $bag);
-            Log::info("📊 {$role}", $bag);
-        }
-    
-        // ---------- Ratio = (Somme de mes rôles) / National, par colonne ----------
-        $stats['Ratio'] = $empty();
-        foreach (array_keys($stats['Ratio']) as $col) {
-            $den = $stats['National'][$col] ?? 0;
-            $num = $mine[$col] ?? 0;
-            $stats['Ratio'][$col] = $den ? round(($num / $den) * 100, 0) : 0;
-        }
-    
-        return view('TableauBord.stat_nombre_projet_vue',
-            compact('ecran','stats','roles','statusOrder','statusTitles')
-        );
-    }
-    
-    /**
-     * Page globale – Finances
-     */
-    // ===================== PAGE GLOBALE — FINANCE (sommes cout_projet) =====================
-    public function statFinance(Request $request)
-    {
-        $ecran   = Ecran::find($request->input('ecran_id'));
-        $country = session('pays_selectionne');
-        $group   = session('projet_selectionne');
-        $prefix  = ($country ?? '').($group ?? '').'%';
-
-        Log::info('💰 Finance (TOUS STATUTS, sommes cout_projet) | ecran_id=' . ($ecran->id ?? 'NULL') . ' | prefix=' . $prefix);
-
-        // mêmes statuts/ordre que la page "Nombre"
-        $statusOrder  = ['prevu','en_cours','cloture','termine','redemarre','suspendu','annule'];
-        $statusTitles = [
-            'prevu'      => 'Prévu',
-            'en_cours'   => 'En cours',
-            'cloture'    => 'Clôturé',
-            'termine'    => 'Terminé',
-            'redemarre'  => 'Redémarré',
-            'suspendu'   => 'Suspendu',
-            'annule'     => 'Annulé',
-        ];
-        $statusMap = [
-            'prevu'     => ["'Prévu'"],
-            'en_cours'  => ["'En cours'"],
-            'cloture'   => ["'Clôturé'","'Clôturés'"],
-            'termine'   => ["'Terminé'"],
-            'redemarre' => ["'Redémarré'"],
-            'suspendu'  => ["'Suspendu'"],
-            'annule'    => ["'Annulé'"],
-        ];
-
-        // gabarit vide (montants)
-        $empty = function() use ($statusOrder) {
-            $bag = [];
-            foreach ($statusOrder as $k) {
-                $bag["total_{$k}"]  = 0.0;
-                $bag["public_{$k}"] = 0.0;
-                $bag["prive_{$k}"]  = 0.0;
-            }
-            return $bag;
-        };
-
-        // dernière ligne de statut + jointure projet (pour cout_projet)
-        $baseLatest = function() use ($prefix) {
-            $latest = DB::table('projet_statut as ps1')
-                ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
-                ->groupBy('ps1.code_projet');
-
-            return DB::table('projet_statut as ps')
-                ->joinSub($latest, 'lp', function ($j) {
-                    $j->on('ps.code_projet','=','lp.code_projet')
-                    ->on('ps.date_statut','=','lp.max_date');
-                })
-                ->join('type_statut as ts','ts.id','=','ps.type_statut')
-                ->join('projets as p','p.code_projet','=','ps.code_projet')
-                ->where('ps.code_projet','like',$prefix);
-        };
-
-        $isPublic = "SUBSTR(ps.code_projet,7,1)='1'";
-        $isPrive  = "SUBSTR(ps.code_projet,7,1)='2'";
-
-        // agrégateur : SOMME(cout_projet) par statut / public / privé
-        $aggregateAmounts = function($builder) use ($statusMap,$statusOrder,$isPublic,$isPrive,$empty) {
-            $parts = [];
-            foreach ($statusOrder as $k) {
-                $in = '('.implode(',', $statusMap[$k]).')';
-                $parts[] = "SUM(CASE WHEN ts.libelle IN $in THEN COALESCE(p.cout_projet,0) ELSE 0 END) as total_{$k}";
-                $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPublic THEN COALESCE(p.cout_projet,0) ELSE 0 END) as public_{$k}";
-                $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPrive  THEN COALESCE(p.cout_projet,0) ELSE 0 END) as prive_{$k}";
-            }
-            $row = $builder->selectRaw(implode(",\n", $parts))->first();
-            if (!$row) return $empty();
-
-            $bag = $empty();
-            foreach ($statusOrder as $k) {
-                $bag["total_{$k}"]  = (float)($row->{"total_{$k}"}  ?? 0);
-                $bag["public_{$k}"] = (float)($row->{"public_{$k}"} ?? 0);
-                $bag["prive_{$k}"]  = (float)($row->{"prive_{$k}"}  ?? 0);
-            }
-            return $bag;
-        };
-
-        // ---------- National (sans filtre acteur) ----------
-        $stats = [];
-        $stats['National'] = $aggregateAmounts($baseLatest());
-        Log::info('💰 National (montants)', $stats['National']);
-
-        // ---------- Rôles de l’acteur ----------
-        $roles = [];
-        $codeActeur = auth()->user()?->acteur?->code_acteur;
-        if ($codeActeur) {
-            if (Executer::where('code_acteur',$codeActeur)->where('is_active',1)->exists())                         $roles[]='chef_projet';
-            if (Controler::where('code_acteur',$codeActeur)->where('is_active',1)->exists())                        $roles[]='moe';
-            if (Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)->exists()) $roles[]='mo';
-            if (Financer::where('code_acteur',$codeActeur)->where('is_active',1)->exists())                         $roles[]='bailleur';
-        }
-        $roles = array_values(array_unique($roles));
-        Log::info("👤 Acteur {$codeActeur} → rôles", $roles);
-
-        // IDs projets par rôle
-        $idsForRole = function(string $role) use ($codeActeur,$prefix) {
-            return match($role) {
-                'chef_projet' => Executer::where('code_acteur',$codeActeur)->where('is_active',1)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                'moe'         => Controler::where('code_acteur',$codeActeur)->where('is_active',1)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                'mo'          => Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                'bailleur'    => Financer::where('code_acteur',$codeActeur)->where('is_active',1)
-                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
-                default       => collect(),
-            };
-        };
-
-        // somme de sacs
-        $sumBags = function(array $a, array $b) {
-            foreach ($b as $k => $v) $a[$k] = round(($a[$k] ?? 0) + ($v ?? 0), 2);
-            return $a;
-        };
-
-        // ---------- Mes rôles (en montants) ----------
-        $stats['Moi'] = [];
-        $mine = $empty();
-
-        foreach ($roles as $role) {
-            $ids = $idsForRole($role);
-            Log::info("📌 {$role} → ".$ids->count()." projets (finance)");
-            if ($ids->isEmpty()) { $stats['Moi'][$role] = $empty(); continue; }
-
-            $bag = $aggregateAmounts(
-                $baseLatest()->whereIn('ps.code_projet',$ids->all())
-            );
-            $stats['Moi'][$role] = $bag;
-            $mine = $sumBags($mine, $bag);
-            Log::info("💰 {$role}", $bag);
-        }
-
-        // ---------- Ratio (montants) ----------
-        $stats['Ratio'] = $empty();
-        foreach (array_keys($stats['Ratio']) as $col) {
-            $den = $stats['National'][$col] ?? 0.0;
-            $num = $mine[$col] ?? 0.0;
-            $stats['Ratio'][$col] = $den > 0 ? round(($num / $den) * 100, 0) : 0;
-        }
-
-        // on réutilise la même vue (ou une vue finance dédiée si tu en as une autre)
-        // n’oublie pas de passer $statusOrder et $statusTitles si ta vue finance les utilise.
-        return view('TableauBord.stat_fincance',
-            compact('ecran','stats','roles','statusOrder','statusTitles')
-        );
-    }
-
-
-    /**
-     * Vue détail – Nombre de projets
-     */
-    public function statNombreData(Request $request)
-    {
-        $ecran   = Ecran::find($request->input('ecran_id'));
-        $type    = $request->input('type');          // national | personnel
-        $role    = $request->input('role');          // chef_projet | moe | mo | bailleur (si personnel)
-        $statutK = $request->input('statut');        // prevu | en_cours | cloture | termine | redemarre | suspendu | annule
-        $segment = $request->input('segment');       // total | public | prive
-    
-        $country = session('pays_selectionne');
-        $group   = session('projet_selectionne');
-        $prefix  = ($country ?? '').($group ?? '').'%';
-    
-        // mapping identique à la page principale
-        $statusMap = [
+        return [
             'prevu'     => ["Prévu"],
             'en_cours'  => ["En cours"],
             'cloture'   => ["Clôturé","Clôturés"],
@@ -396,175 +53,1285 @@ class StatController extends Controller
             'suspendu'  => ["Suspendu"],
             'annule'    => ["Annulé"],
         ];
-    
-        // 1) Construire la base "dernier statut par projet" sur le périmètre (prefix)
+    }
+
+    /* --------------------------------------------------------------
+     |  Ordre des statuts + libellés affichés
+     |-------------------------------------------------------------- */
+    private function statusMeta()
+    {
+        return [
+            'order' => ['prevu','en_cours','cloture','termine','redemarre','suspendu','annule'],
+            'titles' => [
+                'prevu'      => 'Prévu',
+                'en_cours'   => 'En cours',
+                'cloture'    => 'Clôturé',
+                'termine'    => 'Terminé',
+                'redemarre'  => 'Redémarré',
+                'suspendu'   => 'Suspendu',
+                'annule'     => 'Annulé',
+            ]
+        ];
+    }
+
+    /* --------------------------------------------------------------
+     |  Gabarit vide : utilisé pour nombre ET finance
+     |-------------------------------------------------------------- */
+    private function emptyBag(array $statusOrder)
+    {
+        $bag = [];
+        foreach ($statusOrder as $k) {
+            $bag["total_$k"]  = 0;
+            $bag["public_$k"] = 0;
+            $bag["prive_$k"]  = 0;
+        }
+        return $bag;
+    }
+
+    /* --------------------------------------------------------------
+     |  Base : dernier statut par projet (pour un prefix donné)
+     |-------------------------------------------------------------- */
+    private function baseLatest(string $prefix)
+    {
         $latest = DB::table('projet_statut as ps1')
             ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
-            ->where('ps1.code_projet','like',$prefix)
             ->groupBy('ps1.code_projet');
-    
-        $base = DB::table('projet_statut as ps')
-            ->joinSub($latest,'lp', function($j){
+
+        return DB::table('projet_statut as ps')
+            ->joinSub($latest, 'lp', function ($j) {
                 $j->on('ps.code_projet','=','lp.code_projet')
                   ->on('ps.date_statut','=','lp.max_date');
             })
             ->join('type_statut as ts','ts.id','=','ps.type_statut')
             ->where('ps.code_projet','like',$prefix);
-    
-        // 2) Filtre sur le STATUT cliqué (si transmis)
-        if ($statutK && isset($statusMap[$statutK])) {
-            $base->whereIn('ts.libelle', $statusMap[$statutK]);
-        }
-    
-        // 3) Filtre sur le SEGMENT cliqué (public/privé)
-        if ($segment === 'public') {
-            $base->whereRaw("SUBSTR(ps.code_projet,7,1)='1'");
-        } elseif ($segment === 'prive') {
-            $base->whereRaw("SUBSTR(ps.code_projet,7,1)='2'");
-        }
-        // (segment === total => pas de filtre supplémentaire)
-    
-        // 4) Périmètre ACTEUR si type=personnel
-        if ($type === 'personnel') {
-            $codeActeur = auth()->user()->acteur->code_acteur ?? null;
-    
-            $ids = collect();
-            if ($codeActeur) {
-                $ids = match ($role) {
-                    'chef_projet' => Executer::where('code_acteur',$codeActeur)->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    'moe'         => Controler::where('code_acteur',$codeActeur)->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    'mo'          => Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    'bailleur'    => Financer::where('code_acteur',$codeActeur)->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    default       => collect(),
-                };
-            }
-    
-            // si aucun projet pour le rôle → renvoyer vide
-            if ($ids->isEmpty()) {
-                $statutsProjets = collect();
-                return view('TableauBord.stat_nombre_projet_lien', compact('ecran','statutsProjets'))
-                       ->with('Statuts', collect());
-            }
-    
-            $base->whereIn('ps.code_projet', $ids->all());
-        }
-    
-        // 5) Récupérer la liste EXACTE des projets correspondant au clic
-        $codes = $base->distinct()->pluck('ps.code_projet');
-    
-        // 6) Charger les projets et leurs infos pour l’affichage
-        $statutsProjets = Projet::query()
-            ->with([
-                'dernierStatut.statut',
-                'sousDomaine',
-                'devise',
-                'localisations.localite.decoupage',
-            ])
-            ->whereIn('code_projet', $codes)
-            ->orderBy('code_projet')
-            ->get();
-    
-        Log::info("🔎 Détail -> type=$type role=$role statut=$statutK segment=$segment | total=".$statutsProjets->count());
-    
-        // (la vue n’a pas besoin de $Statuts si tu utilises $projet->dernierStatut)
-        $Statuts = ProjetStatut::with('statut')->whereIn('code_projet',$codes)->get();
-    
-        return view('TableauBord.stat_nombre_projet_lien', compact('ecran','statutsProjets','Statuts'));
     }
-    
 
-    /**
-     * Vue détail – Finances
-     */
-    // ===================== PAGE DÉTAIL — FINANCE (sommes) =====================
-
-    public function statFinanceData(Request $request)
+    /* --------------------------------------------------------------
+     |  Agrégateur NOMBRE
+     |-------------------------------------------------------------- */
+    private function aggregateCount($builder, array $statusMap, array $statusOrder)
     {
+        $empty = $this->emptyBag($statusOrder);
+
+        $isPublic = "SUBSTR(ps.code_projet,7,1)='1'";
+        $isPrive  = "SUBSTR(ps.code_projet,7,1)='2'";
+
+        $parts = [];
+
+        foreach ($statusOrder as $k) {
+            $in = "('" . implode("','", $statusMap[$k]) . "')";
+            $parts[] = "SUM(CASE WHEN ts.libelle IN $in THEN 1 ELSE 0 END) as total_$k";
+            $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPublic THEN 1 ELSE 0 END) as public_$k";
+            $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPrive  THEN 1 ELSE 0 END) as prive_$k";
+        }
+
+        $row = $builder->selectRaw(implode(",\n", $parts))->first();
+        if (!$row) return $empty;
+
+        foreach ($empty as $key => $val) {
+            $empty[$key] = (int)($row->$key ?? 0);
+        }
+
+        return $empty;
+    }
+
+    /* --------------------------------------------------------------
+     |  Agrégateur FINANCE
+     |-------------------------------------------------------------- */
+    private function aggregateFinance($builder, array $statusMap, array $statusOrder)
+    {
+        $empty = $this->emptyBag($statusOrder);
+
+        $isPublic = "SUBSTR(ps.code_projet,7,1)='1'";
+        $isPrive  = "SUBSTR(ps.code_projet,7,1)='2'";
+
+        $parts = [];
+
+        foreach ($statusOrder as $k) {
+            $in = "('" . implode("','", $statusMap[$k]) . "')";
+            $parts[] = "SUM(CASE WHEN ts.libelle IN $in THEN COALESCE(p.cout_projet,0) ELSE 0 END) as total_$k";
+            $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPublic THEN COALESCE(p.cout_projet,0) ELSE 0 END) as public_$k";
+            $parts[] = "SUM(CASE WHEN ts.libelle IN $in AND $isPrive  THEN COALESCE(p.cout_projet,0) ELSE 0 END) as prive_$k";
+        }
+
+        $row = $builder->selectRaw(implode(",\n", $parts))->first();
+        if (!$row) return $empty;
+
+        foreach ($empty as $key => $val) {
+            $empty[$key] = (float)($row->$key ?? 0);
+        }
+
+        return $empty;
+    }
+
+    /* ==============================================================
+     |  PAGE PRINCIPALE FUSIONNÉE (Nombre + Finance)
+     |  -> Affiche le tableau avec switch entre Nombre / Finance
+     |============================================================== */
+         public function statDashboard(Request $request)
+         {
+             /* ============================
+              *       PARAMETRES
+              * ============================ */
+             $ecran   = Ecran::find($request->input('ecran_id'));
+             $typeVue = $request->input('vue', 'nombre'); // nombre | finance
+             $mode    = $request->input('mode', 'table'); // table | graph
+     
+             $country = session('pays_selectionne');
+             $group   = session('projet_selectionne');
+             $prefix  = ($country ?? '') . ($group ?? '') . '%';
+     
+             /* === DATES (prévisionnelles + effectives) === */
+             $dateDebutPrev = $request->input('date_debut_prev');
+             $dateFinPrev   = $request->input('date_fin_prev');
+             $dateDebutEff  = $request->input('date_debut_effectif');
+             $dateFinEff    = $request->input('date_fin_effectif');
+     
+             /* ============================
+              *      META STATUTS
+              * ============================ */
+             $meta         = $this->statusMeta();
+             $statusOrder  = $meta['order'];
+             $statusTitles = $meta['titles'];
+             $statusMap    = $this->statusMap();
+     
+             $empty = $this->emptyBag($statusOrder);
+     
+             /* ============================
+              *  BASE = dernier statut / projet
+              * ============================ */
+             $baseLatest = $this->baseLatest($prefix)
+                                 ->join('projets as p', 'p.code_projet', '=', 'ps.code_projet');
+     
+             /* === FILTRE PAR DATES (INFRASTRUCTURE) === */
+             if ($dateDebutPrev) {
+                 $baseLatest->where('p.date_demarrage_prevue', '>=', $dateDebutPrev);
+             }
+             if ($dateFinPrev) {
+                 $baseLatest->where('p.date_fin_prevue', '<=', $dateFinPrev);
+             }
+     
+             if ($dateDebutEff || $dateFinEff) {
+                 $baseLatest->leftJoin('dates_effectives_projet as dep', 'dep.code_projet', '=', 'p.code_projet');
+     
+                 if ($dateDebutEff) {
+                     $baseLatest->where('dep.date_debut_effective', '>=', $dateDebutEff);
+                 }
+                 if ($dateFinEff) {
+                     $baseLatest->where('dep.date_fin_effective', '<=', $dateFinEff);
+                 }
+             }
+     
+             /* =
+              * Pour la Finance, besoin du montant aussi
+              * ============================ */
+             $baseLatestFinance = clone $baseLatest;
+     
+             /* ============================
+              *       NATIONAL
+              * ============================ */
+             if ($typeVue === 'finance') {
+                 $national = $this->aggregateFinance($baseLatestFinance, $statusMap, $statusOrder);
+             } else {
+                 $national = $this->aggregateCount($baseLatest, $statusMap, $statusOrder);
+             }
+     
+             /* ============================
+              *       ROLES
+              * ============================ */
+             $roles = [];
+             $codeActeur = auth()->user()->acteur->code_acteur ?? null;
+             if ($codeActeur) $roles = $this->detectRoles($codeActeur);
+     
+             $idsForRole = function(string $role) use ($codeActeur, $prefix) {
+                 return match($role) {
+                     'chef_projet' => Executer::where('code_acteur',$codeActeur)
+                                         ->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'moe'         => Controler::where('code_acteur',$codeActeur)
+                                         ->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'mo'          => Posseder::where('code_acteur',$codeActeur)
+                                         ->where('isAssistant',0)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'bailleur'    => Financer::where('code_acteur',$codeActeur)
+                                         ->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     default       => collect(),
+                 };
+             };
+     
+             $mine = $empty;
+             $statsMoi = [];
+     
+             foreach ($roles as $role) {
+                 $ids = $idsForRole($role);
+     
+                 if ($ids->isEmpty()) {
+                     $statsMoi[$role] = $empty;
+                     continue;
+                 }
+     
+                 if ($typeVue === 'finance') {
+                     $bag = $this->aggregateFinance(
+                         (clone $baseLatestFinance)->whereIn('ps.code_projet', $ids),
+                         $statusMap,
+                         $statusOrder
+                     );
+                 } else {
+                     $bag = $this->aggregateCount(
+                         (clone $baseLatest)->whereIn('ps.code_projet', $ids),
+                         $statusMap,
+                         $statusOrder
+                     );
+                 }
+     
+                 $statsMoi[$role] = $bag;
+     
+                 foreach ($bag as $k => $v) {
+                     $mine[$k] += $v;
+                 }
+             }
+     
+             /* ============================
+              *       RATIO
+              * ============================ */
+             $ratio = $empty;
+             foreach ($ratio as $k => $v) {
+                 $den = $national[$k] ?? 0;
+                 $num = $mine[$k] ?? 0;
+                 $ratio[$k] = $den > 0 ? round(($num / $den) * 100, 0) : 0;
+             }
+     
+             /* ============================
+              *       PRÉVISUALISATION
+              * ============================ */
+             $previsuData = $this->buildPrevisualisationGraphiqueData(
+                 $dateDebutPrev, $dateFinPrev, $dateDebutEff, $dateFinEff
+             );
+     
+             /* ============================
+              *        VIEW
+              * ============================ */
+             return view('TableauBord.EtudeProjet',
+                 array_merge(
+                     [
+                         'ecran'        => $ecran,
+                         'roles'        => $roles,
+                         'statusOrder'  => $statusOrder,
+                         'statusTitles' => $statusTitles,
+                         'typeVue'      => $typeVue,
+                         'national'     => $national,
+                         'statsMoi'     => $statsMoi,
+                         'ratio'        => $ratio,
+                         'mode'         => $mode,
+                     ],
+                     $previsuData
+                 )
+             );
+         }
+         
+    /* ==============================================================
+     |  PAGE PRINCIPALE FUSIONNÉE POUR PROJETS (Nombre + Finance)
+     |  -> Affiche le tableau avec switch entre Nombre / Finance
+     |============================================================== */
+    public function statProjetDashboard(Request $request)
+    {
+        /* ============================
+         *       PARAMETRES
+         * ============================ */
         $ecran   = Ecran::find($request->input('ecran_id'));
-        $type    = $request->input('type');          // national | personnel
-        $role    = $request->input('role');          // chef_projet | moe | mo | bailleur (si personnel)
-        $statutK = $request->input('statut');        // prevu | en_cours | cloture | termine | redemarre | suspendu | annule
-        $segment = $request->input('segment');       // total | public | prive
+        $typeVue = $request->input('vue', 'nombre'); // nombre | finance
+        $mode    = $request->input('mode', 'table'); // table | graph
 
-        $country = session('pays_selectionne');
-        $group   = session('projet_selectionne');
-        $prefix  = ($country ?? '').($group ?? '').'%';
+            $country = session('pays_selectionne');
+            $group   = session('projet_selectionne');
+            $prefix  = ($country ?? '') . ($group ?? '') . '%';
 
-        $statusMap = [
-            'prevu'     => ["Prévu"],
-            'en_cours'  => ["En cours"],
-            'cloture'   => ["Clôturé","Clôturés"],
-            'termine'   => ["Terminé"],
-            'redemarre' => ["Redémarré"],
-            'suspendu'  => ["Suspendu"],
-            'annule'    => ["Annulé"],
+        /* === DATES (prévisionnelles + effectives) === */
+        $dateDebutPrev = $request->input('date_debut_prev');
+        $dateFinPrev   = $request->input('date_fin_prev');
+        $dateDebutEff  = $request->input('date_debut_effectif');
+        $dateFinEff    = $request->input('date_fin_effectif');
+
+        /* ============================
+         *      META STATUTS
+         * ============================ */
+        $meta         = $this->statusMeta();
+        $statusOrder  = $meta['order'];
+        $statusTitles = $meta['titles'];
+        $statusMap    = $this->statusMap();
+
+        $empty = $this->emptyBag($statusOrder);
+
+        /* ============================
+         *  BASE = dernier statut / projet
+         * ============================ */
+        $baseLatest = $this->baseLatest($prefix)
+                            ->join('projets as p', 'p.code_projet', '=', 'ps.code_projet');
+
+        /* === FILTRE PAR DATES === */
+        if ($dateDebutPrev) {
+            $baseLatest->where('p.date_demarrage_prevue', '>=', $dateDebutPrev);
+        }
+        if ($dateFinPrev) {
+            $baseLatest->where('p.date_fin_prevue', '<=', $dateFinPrev);
+        }
+
+        if ($dateDebutEff || $dateFinEff) {
+            $baseLatest->leftJoin('dates_effectives_projet as dep', 'dep.code_projet', '=', 'p.code_projet');
+
+            if ($dateDebutEff) {
+                $baseLatest->where('dep.date_debut_effective', '>=', $dateDebutEff);
+            }
+            if ($dateFinEff) {
+                $baseLatest->where('dep.date_fin_effective', '<=', $dateFinEff);
+            }
+        }
+
+        /* ============================
+         *  Pour la Finance, besoin du montant aussi
+         * ============================ */
+        $baseLatestFinance = clone $baseLatest;
+
+        /* ============================
+         *       NATIONAL
+         * ============================ */
+        if ($typeVue === 'finance') {
+            $national = $this->aggregateFinance($baseLatestFinance, $statusMap, $statusOrder);
+        } else {
+            $national = $this->aggregateCount($baseLatest, $statusMap, $statusOrder);
+        }
+
+        /* ============================
+         *       ROLES
+         * ============================ */
+        $roles = [];
+        $codeActeur = auth()->user()->acteur->code_acteur ?? null;
+        if ($codeActeur) $roles = $this->detectRoles($codeActeur);
+
+        $idsForRole = function(string $role) use ($codeActeur, $prefix) {
+            return match($role) {
+                'chef_projet' => Executer::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                'moe'         => Controler::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                'mo'          => Posseder::where('code_acteur',$codeActeur)
+                                    ->where('isAssistant',0)->where('is_active',1)
+                                    ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                'bailleur'    => Financer::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                default       => collect(),
+            };
+        };
+
+        $mine = $empty;
+        $statsMoi = [];
+
+        foreach ($roles as $role) {
+            $ids = $idsForRole($role);
+
+            if ($ids->isEmpty()) {
+                $statsMoi[$role] = $empty;
+                continue;
+            }
+
+            if ($typeVue === 'finance') {
+                $bag = $this->aggregateFinance(
+                    (clone $baseLatestFinance)->whereIn('ps.code_projet', $ids),
+                    $statusMap,
+                    $statusOrder
+                );
+            } else {
+                $bag = $this->aggregateCount(
+                    (clone $baseLatest)->whereIn('ps.code_projet', $ids),
+                    $statusMap,
+                    $statusOrder
+                );
+            }
+
+            $statsMoi[$role] = $bag;
+
+            foreach ($bag as $k => $v) {
+                $mine[$k] += $v;
+            }
+        }
+
+        /* ============================
+         *       RATIO
+         * ============================ */
+        $ratio = $empty;
+        foreach ($ratio as $k => $v) {
+            $den = $national[$k] ?? 0;
+            $num = $mine[$k] ?? 0;
+            $ratio[$k] = $den > 0 ? round(($num / $den) * 100, 0) : 0;
+        }
+
+        /* ============================
+         *       PROJECT STATUS COUNTS (pour KPI)
+         * ============================ */
+        $statusKeys = ['Prévu','En cours','Clôturés','Suspendu','Annulé','Terminé','Redémarré'];
+            $latestForCounts = DB::table('projet_statut as ps1')
+                ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
+                ->where('ps1.code_projet','like',$prefix)
+                ->groupBy('ps1.code_projet');
+
+            $statusCounts = DB::table('projet_statut AS ps')
+                ->joinSub($latestForCounts, 'last', function ($j) {
+                    $j->on('ps.code_projet','=','last.code_projet')
+                      ->on('ps.date_statut','=','last.max_date');
+                })
+                ->join('type_statut AS ts','ps.type_statut','=','ts.id')
+                ->join('projets AS p','p.code_projet','=','ps.code_projet')
+            ->where('p.code_projet','like',$prefix);
+
+        /* Appliquer les filtres de dates pour les counts aussi */
+        if ($dateDebutPrev) {
+            $statusCounts->where('p.date_demarrage_prevue', '>=', $dateDebutPrev);
+        }
+        if ($dateFinPrev) {
+            $statusCounts->where('p.date_fin_prevue', '<=', $dateFinPrev);
+        }
+        if ($dateDebutEff || $dateFinEff) {
+            $statusCounts->leftJoin('dates_effectives_projet as dep', 'dep.code_projet', '=', 'p.code_projet');
+            if ($dateDebutEff) {
+                $statusCounts->where('dep.date_debut_effective', '>=', $dateDebutEff);
+            }
+            if ($dateFinEff) {
+                $statusCounts->where('dep.date_fin_effective', '<=', $dateFinEff);
+            }
+        }
+
+        $statusCounts = $statusCounts->select('ts.libelle', DB::raw('COUNT(*) AS total'))
+            ->groupBy('ts.libelle')
+            ->pluck('total','libelle')->toArray();
+
+        $projectStatusCounts = array_fill_keys($statusKeys, 0);
+        foreach ($statusCounts as $lib => $n) {
+            if ($lib === 'Clôturé') $lib = 'Clôturés';
+            if (isset($projectStatusCounts[$lib])) {
+                $projectStatusCounts[$lib] = $n;
+            }
+        }
+
+        /* ============================
+         *       PRÉVISUALISATION GRAPHIQUE
+         * ============================ */
+        $previsuData = $this->buildPrevisualisationGraphiqueDataProjet(
+            $dateDebutPrev, $dateFinPrev, $dateDebutEff, $dateFinEff
+        );
+
+        /* ============================
+         *   DONNÉES GRAPHIQUES GLOBAL (comme dash)
+         * ============================ */
+        $enabledFamilies = ['PROJET'];
+        $statusKeys  = ['Prévu','En cours','Clôturés','Suspendu','Annulé','Terminé','Redémarré'];
+        $emptyStatus = fn() => array_fill_keys($statusKeys, 0);
+
+        $byFamily = [
+            'totaux'      => [],
+            'status'      => [],
+            'financement' => [],
+            'parAnnee'    => [],
+            'budgets'     => [],
         ];
 
-        // base: dernier statut par projet + jointure projet
-        $latest = DB::table('projet_statut as ps1')
+        // PROJET uniquement
+        $pref = $prefix;
+        $byFamily['totaux']['PROJET'] = DB::table('projets')
+            ->whereNotNull('code_projet')
+            ->where('code_projet','like',$pref)
+            ->count();
+
+        $latestProj = DB::table('projet_statut')
+            ->select('code_projet', DB::raw('MAX(date_statut) AS max_date'))
+            ->groupBy('code_projet');
+
+        $statusCountsFam = DB::table('projet_statut AS ps')
+            ->joinSub($latestProj, 'last', function ($j) {
+                $j->on('ps.code_projet','=','last.code_projet')
+                  ->on('ps.date_statut','=','last.max_date');
+            })
+            ->join('type_statut AS ts','ps.type_statut','=','ts.id')
+            ->join('projets AS p','p.code_projet','=','ps.code_projet')
+            ->where('p.code_projet','like',$pref)
+                ->select('ts.libelle', DB::raw('COUNT(*) AS total'))
+                ->groupBy('ts.libelle')
+                ->pluck('total','libelle')->toArray();
+
+        $bagFam = $emptyStatus();
+        foreach ($statusCountsFam as $lib=>$n) {
+            if ($lib === 'Clôturé') $lib = 'Clôturés';
+            if (isset($bagFam[$lib])) $bagFam[$lib] = $n;
+        }
+        $byFamily['status']['PROJET'] = $bagFam;
+
+        $byFamily['financement']['PROJET'] = DB::table('type_financement AS tf')
+            ->leftJoin(DB::raw("
+                (
+                    SELECT code_projet,
+                           SUBSTRING(code_projet, 7, 1) AS type_financement
+                    FROM projets
+                    WHERE code_projet IS NOT NULL
+                      AND LENGTH(code_projet) >= 7
+                      AND code_projet LIKE '{$pref}'
+                ) AS p
+            "), 'p.type_financement','=','tf.code_type_financement')
+            ->select('tf.libelle', DB::raw('COUNT(p.code_projet) AS total_projets'))
+            ->groupBy('tf.libelle')->orderBy('tf.libelle')->get();
+
+        $byFamily['parAnnee']['PROJET'] = DB::table('projets')
+            ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) AS annee, COUNT(*) AS total")
+            ->whereNotNull('code_projet')->where('code_projet','like',$pref)
+            ->groupBy('annee')->orderBy('annee')
+            ->pluck('total','annee')->toArray();
+
+        $byFamily['budgets']['PROJET'] = DB::table('projets')
+            ->selectRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(code_projet, '_', 4), '_', -1) AS annee, SUM(cout_projet)/1000000000 AS total")
+            ->whereNotNull('code_projet')->where('code_projet','like',$pref)
+            ->groupBy('annee')->orderBy('annee')
+            ->pluck('total','annee')->toArray();
+
+        // Acteurs globaux
+        $actorsCounts = [
+            'Maîtres d’Ouvrage' => DB::table('posseder AS mo')
+                ->join('projets AS p','mo.code_projet','=','p.code_projet')
+                ->where('p.code_projet','like',$pref)->count(),
+            'Maîtres d’Œuvre' => DB::table('executer AS ex')
+                ->join('projets AS p','ex.code_projet','=','p.code_projet')
+                ->where('p.code_projet','like',$pref)->count(),
+            'Bailleurs' => DB::table('financer AS f')
+                ->join('projets AS p','f.code_projet','=','p.code_projet')
+                ->where('p.code_projet','like',$pref)->count(),
+            'Chefs de Projet' => DB::table('controler AS cp')
+                ->join('projets AS p','cp.code_projet','=','p.code_projet')
+                ->where('p.code_projet','like',$pref)->count(),
+            'Bénéficiaires' => DB::table('beneficier AS b')
+                ->join('projets AS p','b.code_projet','=','p.code_projet')
+                ->where('p.code_projet','like',$pref)->count(),
+        ];
+
+        // Financements globaux (agrégation déjà unique ici)
+        $financements = $byFamily['financement']['PROJET'];
+
+        // Séries annuelles globales
+        $projectsParAnnee = $byFamily['parAnnee']['PROJET'] ?? [];
+        ksort($projectsParAnnee);
+        $budgetsParAnnee  = $byFamily['budgets']['PROJET'] ?? [];
+        ksort($budgetsParAnnee);
+
+        /* ============================
+         *        VIEW
+         * ============================ */
+        return view('TableauBord.projet',
+            array_merge(
+                [
+                    'ecran'                => $ecran,
+                    'roles'                => $roles,
+                    'statusOrder'          => $statusOrder,
+                    'statusTitles'         => $statusTitles,
+                    'typeVue'              => $typeVue,
+                    'national'             => $national,
+                    'statsMoi'             => $statsMoi,
+                    'ratio'                => $ratio,
+                    'mode'                 => $mode,
+                    'projectStatusCounts'  => $projectStatusCounts,
+                    'enabledFamilies'      => $enabledFamilies,
+                    'byFamily'             => $byFamily,
+                    'actorsCounts'         => $actorsCounts,
+                    'financements'         => $financements,
+                    'projectsParAnnee'     => $projectsParAnnee,
+                    'budgetsParAnnee'      => $budgetsParAnnee,
+                ],
+                $previsuData
+            )
+        );
+    }
+
+    public function statProjet(Request $request)
+    {
+        /* ============================
+         *       PARAMÈTRES DE BASE
+         * ============================ */
+        $ecran   = Ecran::find($request->input('ecran_id'));
+    
+        // Valeurs attendues par la vue
+        $typeVue = $request->input('vue', 'nombre'); // nombre | finance
+        $mode    = $request->input('mode', 'table'); // table | graph
+    
+        $type    = $request->input('type');   // national | personnel
+        $role    = $request->input('role');   // chef_projet | moe | mo | bailleur
+        $statutK = $request->input('statut'); // prevu | en_cours | ...
+        $segment = $request->input('segment');// total | public | prive
+    
+        $country = session('pays_selectionne');
+        $group   = session('projet_selectionne');
+        $prefix  = ($country ?? '') . ($group ?? '') . '%';
+    
+        /* ============================
+         *      META STATUTS (OBLIGATOIRE)
+         * ============================ */
+        $meta         = $this->statusMeta();
+        $statusOrder  = $meta['order'];
+        $statusTitles = $meta['titles'];
+        $statusMap    = $this->statusMap();
+    
+        /* ============================
+         *       ROLES UTILISATEUR
+         * ============================ */
+        $roles = [];
+        $codeActeur = auth()->user()->acteur->code_acteur ?? null;
+        if ($codeActeur) {
+            $roles = $this->detectRoles($codeActeur);
+        }
+    
+        /* ============================
+         *       KPI – COUNTS STATUTS
+         * ============================ */
+        $statusKeys = ['Prévu','En cours','Clôturés','Suspendu','Annulé','Terminé','Redémarré'];
+    
+        $latestForCounts = DB::table('projet_statut as ps1')
             ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
             ->where('ps1.code_projet','like',$prefix)
             ->groupBy('ps1.code_projet');
-
-        $base = DB::table('projet_statut as ps')
-            ->joinSub($latest,'lp', function($j){
-                $j->on('ps.code_projet','=','lp.code_projet')
-                ->on('ps.date_statut','=','lp.max_date');
+    
+        $statusCounts = DB::table('projet_statut AS ps')
+            ->joinSub($latestForCounts, 'last', function ($j) {
+                $j->on('ps.code_projet','=','last.code_projet')
+                  ->on('ps.date_statut','=','last.max_date');
             })
-            ->join('type_statut as ts','ts.id','=','ps.type_statut')
-            ->join('projets as p','p.code_projet','=','ps.code_projet')
-            ->where('ps.code_projet','like',$prefix);
+            ->join('type_statut AS ts','ps.type_statut','=','ts.id')
+            ->where('ps.code_projet','like',$prefix)
+            ->select('ts.libelle', DB::raw('COUNT(*) AS total'))
+            ->groupBy('ts.libelle')
+            ->pluck('total','libelle')
+            ->toArray();
 
-        if ($statutK && isset($statusMap[$statutK])) {
-            $base->whereIn('ts.libelle', $statusMap[$statutK]);
-        }
+            $projectStatusCounts = array_fill_keys($statusKeys, 0);
+            foreach ($statusCounts as $lib => $n) {
+                if ($lib === 'Clôturé') $lib = 'Clôturés';
+                if (isset($projectStatusCounts[$lib])) {
+                    $projectStatusCounts[$lib] = $n;
+                }
+            }
 
-        if ($segment === 'public') {
-            $base->whereRaw("SUBSTR(ps.code_projet,7,1)='1'");
-        } elseif ($segment === 'prive') {
-            $base->whereRaw("SUBSTR(ps.code_projet,7,1)='2'");
-        }
+        /* ============================
+         *       BASE : DERNIER STATUT
+         * ============================ */
+            $latest = DB::table('projet_statut as ps1')
+                ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
+                ->where('ps1.code_projet','like',$prefix)
+                ->groupBy('ps1.code_projet');
 
-        if ($type === 'personnel') {
-            $codeActeur = auth()->user()->acteur->code_acteur ?? null;
+            $base = DB::table('projet_statut as ps')
+                ->joinSub($latest,'lp', function($j){
+                    $j->on('ps.code_projet','=','lp.code_projet')
+                      ->on('ps.date_statut','=','lp.max_date');
+                })
+                ->join('type_statut as ts','ts.id','=','ps.type_statut')
+                ->join('projets as p','p.code_projet','=','ps.code_projet')
+                ->where('ps.code_projet','like',$prefix);
 
+        /* ============================
+         *       FILTRES STATUT / SEGMENT
+         * ============================ */
+            if ($statutK && isset($statusMap[$statutK])) {
+                $base->whereIn('ts.libelle', $statusMap[$statutK]);
+            }
+
+            if ($segment === 'public') {
+                $base->whereRaw("SUBSTR(ps.code_projet,7,1)='1'");
+            } elseif ($segment === 'prive') {
+                $base->whereRaw("SUBSTR(ps.code_projet,7,1)='2'");
+            }
+            
+        /* ============================
+         *       FILTRE PERSONNEL
+         * ============================ */
             $ids = collect();
-            if ($codeActeur) {
-                $ids = match ($role) {
-                    'chef_projet' => Executer::where('code_acteur',$codeActeur)->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    'moe'         => Controler::where('code_acteur',$codeActeur)->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    'mo'          => Posseder::where('code_acteur',$codeActeur)->where('is_active',1)->where('isAssistant',0)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    'bailleur'    => Financer::where('code_acteur',$codeActeur)->where('is_active',1)->where('code_projet','like',$prefix)->pluck('code_projet'),
-                    default       => collect(),
-                };
+                
+        if ($type === 'personnel' && $codeActeur) {
+                    $ids = match ($role) {
+                'chef_projet' => Executer::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->pluck('code_projet'),
+                'moe'         => Controler::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->pluck('code_projet'),
+                'mo'          => Posseder::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->where('isAssistant',0)->pluck('code_projet'),
+                'bailleur'    => Financer::where('code_acteur',$codeActeur)
+                                    ->where('is_active',1)->pluck('code_projet'),
+                        default       => collect(),
+                    };
+    
+            if ($ids->isNotEmpty()) {
+                $base->whereIn('ps.code_projet', $ids);
+                }
             }
 
-            if ($ids->isEmpty()) {
-                $statutsProjets = collect();
-                return view('TableauBord.stat_fincance_lien', compact('ecran','statutsProjets'));
-            }
+        /* ============================
+         *       PROJETS FINAUX
+         * ============================ */
+                $codes = $base->distinct()->pluck('ps.code_projet');
 
-            $base->whereIn('ps.code_projet', $ids->all());
-        }
+        $statutsProjets = Projet::with([
+                        'dernierStatut.statut',
+                        'sousDomaine',
+                        'devise',
+                        'localisations.localite.decoupage',
+                    ])
+                    ->whereIn('code_projet', $codes)
+                    ->orderBy('code_projet')
+                    ->get();
+    
+        /* ============================
+         *       RETOUR VUE
+         * ============================ */
+        return view('TableauBord.projet', [
+            'ecran'               => $ecran,
+            'typeVue'             => $typeVue,
+            'mode'                => $mode,
+            'roles'               => $roles,
+            'statusOrder'         => $statusOrder,
+            'statusTitles'        => $statusTitles,
+            'statutsProjets'      => $statutsProjets,
+            'projectStatusCounts' => $projectStatusCounts,
+        ]);
+    }
+        
+     
+     
+     /* ========================================================
+      *     GRAPHIQUES PROJETS — avec filtres de dates
+      * ======================================================== */
+     private function buildPrevisualisationGraphiqueDataProjet(
+         $dateDebutPrev,
+         $dateFinPrev,  
+         $dateDebutEff,
+         $dateFinEff
+      ): array
+     {
+         $groupeProjet = session('projet_selectionne');
+         $codePays     = session('pays_selectionne');
+         $prefix       = $codePays . $groupeProjet . '%';
 
-        // codes projets correspondant au clic
-        $codes = $base->distinct()->pluck('ps.code_projet');
+         $rows = collect();
+         $targetStatus = 'Prévu';
 
-        // charge les projets pour la liste (la vue détail finance peut être la même que détail nombre)
-        $statutsProjets = Projet::query()
-            ->with([
-                'dernierStatut.statut',
-                'sousDomaine',
-                'devise',
-                'localisations.localite.decoupage',
-            ])
-            ->whereIn('code_projet', $codes)
-            ->orderBy('code_projet')
-            ->get();
+         /* ====================================================
+          *     PROJETS INFRASTRUCTURE
+          * ==================================================== */
+         $latest = DB::table('projet_statut')
+             ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
+             ->groupBy('code_projet');
 
-        Log::info("🔎 Détail FINANCE -> type=$type role=$role statut=$statutK segment=$segment | total projets=".$statutsProjets->count());
+         $p = DB::table('projets as p')
+             ->joinSub($latest, 'last', function ($j) {
+                 $j->on('p.code_projet','=','last.code_projet');
+             })
+             ->join('projet_statut as ps', function ($j) {
+                 $j->on('ps.code_projet','=','last.code_projet')
+                   ->on('ps.date_statut','=','last.max_date');
+             })
+             ->join('type_statut as ts', 'ps.type_statut', '=', 'ts.id')
+             ->where('p.code_projet','like',$prefix);
 
-        return view('TableauBord.stat_fincance_lien', compact('ecran','statutsProjets'));
+         /* === FILTRES PREVISIONNELS === */
+         if ($dateDebutPrev) $p->where('p.date_demarrage_prevue', '>=', $dateDebutPrev);
+         if ($dateFinPrev)   $p->where('p.date_fin_prevue', '<=', $dateFinPrev);
+
+         /* === FILTRES EFFECTIFS === */
+         if ($dateDebutEff || $dateFinEff) {
+             $p->leftJoin('dates_effectives_projet as dep', 'dep.code_projet', '=', 'p.code_projet');
+             if ($dateDebutEff) $p->where('dep.date_debut_effective', '>=', $dateDebutEff);
+             if ($dateFinEff)   $p->where('dep.date_fin_effective', '<=', $dateFinEff);
+         }
+
+         $p->where('ts.libelle','=',$targetStatus);
+
+         $projets = $p->select([
+             'p.code_projet as code',
+             'p.libelle_projet as intitule',
+             DB::raw("'INFRASTRUCTURE' as famille"),
+             'ts.libelle as statut',
+             'p.date_demarrage_prevue as date_debut',
+             'p.date_fin_prevue as date_fin',
+             'p.cout_projet as montant',
+         ])->get();
+
+         $rows = $rows->concat($projets);
+
+         /* ========= Agrégations ========= */
+         $byFamily = $rows->groupBy('famille')->map->count()->toArray();
+
+         /* === Création par année === */
+         $deriveYear = function ($code, $dateDebut) {
+             if (!empty($dateDebut)) {
+                 try { return (int) date('Y', strtotime($dateDebut)); } catch (\Throwable $e) {}
+             }
+             if (preg_match('/(19|20)\d{2}/', (string)$code, $m)) {
+                 return (int) $m[0];
+         }      
+             return null;
+         };
+
+         $yearCounts = [];
+         foreach ($rows as $r) {
+             $y = $deriveYear($r->code, $r->date_debut);
+             if ($y) $yearCounts[$y] = ($yearCounts[$y] ?? 0) + 1;
+         }
+         ksort($yearCounts);
+
+         /* === Acteurs === */
+         $codesAll  = $rows->pluck('code')->values()->all();
+
+         $countActors = function(array $codes) {
+             if (empty($codes)) {
+                 return [
+                     "Maîtres d'Ouvrage" => 0,
+                     "Maîtres d'Œuvre"   => 0,
+                     "Bailleurs"         => 0,
+                     "Chefs de Projet"   => 0,
+                     "Bénéficiaires"     => 0,
+                 ];
+             }
+             return [
+                 "Maîtres d'Ouvrage" => DB::table('posseder')->whereIn('code_projet', $codes)->count(),
+                 "Maîtres d'Œuvre"   => DB::table('executer')->whereIn('code_projet', $codes)->count(),
+                 "Bailleurs"         => DB::table('financer')->whereIn('code_projet', $codes)->count(),
+                 "Chefs de Projet"   => DB::table('controler')->whereIn('code_projet', $codes)->count(),
+                 "Bénéficiaires"     => DB::table('beneficier')->whereIn('code_projet', $codes)->count(),
+             ];
+         };
+
+         $actorCounts = $countActors($codesAll);
+         $actorCountsByFamily = [
+             'INFRASTRUCTURE' => $countActors($codesAll),
+         ];
+
+         return [
+             'rows'                => $rows,
+             'byFamily'            => $byFamily,
+             'yearCounts'          => $yearCounts,
+             'totalPV'             => $rows->count(),
+             'actorCounts'         => $actorCounts,
+             'actorCountsByFamily' => $actorCountsByFamily,
+         ];
+     }
+     
+         /* ========================================================
+          *     GRAPHIQUES — avec filtres de dates
+          * ======================================================== */
+         private function buildPrevisualisationGraphiqueData(
+             $dateDebutPrev,
+             $dateFinPrev,  
+             $dateDebutEff,
+             $dateFinEff
+          ): array 
+         {
+     
+             $groupeProjet = session('projet_selectionne');
+             $codePays     = session('pays_selectionne');
+     
+             $enabled = ['INFRASTRUCTURE','ETUDE','APPUI'];
+     
+             $prefixes = [
+                 'INFRASTRUCTURE' => $codePays . $groupeProjet . '%',
+                 'ETUDE'          => 'ET_' . $codePays . '_' . $groupeProjet . '%',
+                 'APPUI'          => 'APPUI_' . $codePays . '_' . $groupeProjet . '%',
+             ];
+     
+             $rows = collect();
+             $targetStatus = 'Prévu';
+     
+     
+             /* ====================================================
+              *     INFRASTRUCTURE
+              * ==================================================== */
+             if (in_array('INFRASTRUCTURE', $enabled, true)) {
+     
+                 $latest = DB::table('projet_statut')
+                     ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
+                     ->groupBy('code_projet');
+     
+                 $p = DB::table('projets as p')
+                     ->joinSub($latest, 'last', function ($j) {
+                         $j->on('p.code_projet','=','last.code_projet');
+                     })
+                     ->join('projet_statut as ps', function ($j) {
+                         $j->on('ps.code_projet','=','last.code_projet')
+                           ->on('ps.date_statut','=','last.max_date');
+                     })
+                     ->join('type_statut as ts', 'ps.type_statut', '=', 'ts.id')
+                     ->where('p.code_projet','like',$prefixes['INFRASTRUCTURE']);
+     
+                 /* === FILTRES PREVISIONNELS === */
+                 if ($dateDebutPrev) $p->where('p.date_demarrage_prevue', '>=', $dateDebutPrev);
+                 if ($dateFinPrev)   $p->where('p.date_fin_prevue', '<=', $dateFinPrev);
+     
+                 /* === FILTRES EFFECTIFS === */
+                 if ($dateDebutEff || $dateFinEff) {
+                     $p->leftJoin('dates_effectives_projet as dep', 'dep.code_projet', '=', 'p.code_projet');
+                     if ($dateDebutEff) $p->where('dep.date_debut_effective', '>=', $dateDebutEff);
+                     if ($dateFinEff)   $p->where('dep.date_fin_effective', '<=', $dateFinEff);
+                 }
+     
+                 $p->where('ts.libelle','=',$targetStatus);
+     
+                 $infra = $p->select([
+                     'p.code_projet as code',
+                     'p.libelle_projet as intitule',
+                     DB::raw("'INFRASTRUCTURE' as famille"),
+                     'ts.libelle as statut',
+                     'p.date_demarrage_prevue as date_debut',
+                     'p.date_fin_prevue as date_fin',
+                     'p.cout_projet as montant',
+                 ])->get();
+     
+                 $rows = $rows->concat($infra);
+             }
+     
+     
+             /* ====================================================
+              *     ETUDE DE PROJET
+              * ==================================================== */
+             if (in_array('ETUDE', $enabled, true)) {
+     
+                 $e = ModelsEtudeProjet::with('dernierStatut.statut')
+                     ->where('code_projet_etude','like',$prefixes['ETUDE']);
+     
+                 /* === PREVISIONNEL === */
+                 if ($dateDebutPrev) $e->where('date_debut_previsionnel', '>=', $dateDebutPrev);
+                 if ($dateFinPrev)   $e->where('date_fin_previsionnel', '<=', $dateFinPrev);
+     
+                 /* === EFFECTIF === */
+                 if ($dateDebutEff || $dateFinEff) {
+                     $e->leftJoin('dates_effectives_projet as dep',
+                         'dep.code_projet', '=', 'etude_projets.code_projet_etude');
+     
+                     if ($dateDebutEff) $e->where('dep.date_debut_effective', '>=', $dateDebutEff);
+                     if ($dateFinEff)   $e->where('dep.date_fin_effective', '<=', $dateFinEff);
+                 }
+     
+                 $etudes = $e->get()->filter(function ($e) use ($targetStatus) {
+                     return optional(optional($e->dernierStatut)->statut)->libelle === $targetStatus
+                            || is_null(optional($e->dernierStatut)->statut);
+                 });
+     
+                 $rows = $rows->concat($etudes->map(function ($e) use ($targetStatus) {
+                     return (object)[
+                         'code'       => $e->code_projet_etude,
+                         'intitule'   => $e->intitule,
+                         'famille'    => 'ETUDE',
+                         'statut'     => optional(optional($e->dernierStatut)->statut)->libelle ?? $targetStatus,
+                         'date_debut' => $e->date_debut_previsionnel,
+                         'date_fin'   => $e->date_fin_previsionnel,
+                         'montant'    => $e->montant_budget_previsionnel,
+                     ];
+                 }));
+             }
+     
+     
+             /* ====================================================
+              *     APPUI PROJET
+              * ==================================================== */
+             if (in_array('APPUI', $enabled, true)) {
+     
+                 $a = AppuiProjet::with('dernierStatut.statut')
+                     ->where('code_projet_appui','like',$prefixes['APPUI']);
+     
+                 /* === PREVISIONNEL === */
+                 if ($dateDebutPrev) $a->where('date_debut_previsionnel', '>=', $dateDebutPrev);
+                 if ($dateFinPrev)   $a->where('date_fin_previsionnel', '<=', $dateFinPrev);
+     
+                 /* === EFFECTIF === */
+                 if ($dateDebutEff || $dateFinEff) {
+                     $a->leftJoin('dates_effectives_projet as dep',
+                         'dep.code_projet', '=', 'appui_projets.code_projet_appui');
+     
+                     if ($dateDebutEff) $a->where('dep.date_debut_effective', '>=', $dateDebutEff);
+                     if ($dateFinEff)   $a->where('dep.date_fin_effective', '<=', $dateFinEff);
+                 }
+     
+                 $appuis = $a->get()->filter(function ($a) use ($targetStatus) {
+                     return optional(optional($a->dernierStatut)->statut)->libelle === $targetStatus
+                            || is_null(optional($a->dernierStatut)->statut);
+                 });
+     
+                 $rows = $rows->concat($appuis->map(function ($a) use ($targetStatus) {
+                     return (object)[
+                         'code'       => $a->code_projet_appui,
+                         'intitule'   => $a->intitule,
+                         'famille'    => 'APPUI',
+                         'statut'     => optional(optional($a->dernierStatut)->statut)->libelle ?? $targetStatus,
+                         'date_debut' => $a->date_debut_previsionnel,
+                         'date_fin'   => $a->date_fin_previsionnel,
+                         'montant'    => $a->montant_budget_previsionnel,
+                     ];
+                 }));
+             }
+     
+             /* ========= Agrégations ========= */
+             $byFamily = $rows->groupBy('famille')->map->count()->toArray();
+     
+             /* === Création par année === */
+             $deriveYear = function ($code, $dateDebut) {
+                 if (!empty($dateDebut)) {
+                     try { return (int) date('Y', strtotime($dateDebut)); } catch (\Throwable $e) {}
+                 }
+                 if (preg_match('/(19|20)\d{2}/', (string)$code, $m)) {
+                     return (int) $m[0];
+                 }
+                 return null;
+             };
+     
+             $yearCounts = [];
+             foreach ($rows as $r) {
+                 $y = $deriveYear($r->code, $r->date_debut);
+                 if ($y) $yearCounts[$y] = ($yearCounts[$y] ?? 0) + 1;
+             }
+             ksort($yearCounts);
+     
+             /* === Acteurs === */
+             $codesAll  = $rows->pluck('code')->values()->all();
+             $codesProj = $rows->where('famille','INFRASTRUCTURE')->pluck('code')->values()->all();
+             $codesEtud = $rows->where('famille','ETUDE')->pluck('code')->values()->all();
+             $codesApp  = $rows->where('famille','APPUI')->pluck('code')->values()->all();
+     
+             $countActors = function(array $codes) {
+                 if (empty($codes)) {
+                     return [
+                         "Maîtres d’Ouvrage" => 0,
+                         "Maîtres d’Œuvre"   => 0,
+                         "Bailleurs"         => 0,
+                         "Chefs de Projet"   => 0,
+                         "Bénéficiaires"     => 0,
+                     ];
+                 }
+                 return [
+                     "Maîtres d’Ouvrage" => DB::table('posseder')->whereIn('code_projet', $codes)->count(),
+                     "Maîtres d’Œuvre"   => DB::table('executer')->whereIn('code_projet', $codes)->count(),
+                     "Bailleurs"         => DB::table('financer')->whereIn('code_projet', $codes)->count(),
+                     "Chefs de Projet"   => DB::table('controler')->whereIn('code_projet', $codes)->count(),
+                     "Bénéficiaires"     => DB::table('beneficier')->whereIn('code_projet', $codes)->count(),
+                 ];
+             };
+     
+             $actorCounts = $countActors($codesAll);
+             $actorCountsByFamily = [
+                 'INFRASTRUCTURE' => $countActors($codesProj),
+                 'ETUDE'          => $countActors($codesEtud),
+                 'APPUI'          => $countActors($codesApp),
+             ];
+     
+             return [
+                 'rows'                => $rows,
+                 'byFamily'            => $byFamily,
+                 'yearCounts'          => $yearCounts,
+                 'totalPV'             => $rows->count(),
+                 'actorCounts'         => $actorCounts,
+                 'actorCountsByFamily' => $actorCountsByFamily,
+             ];
+         }
+     
+     
+        
+    /* ============================================================
+     |    VUE DÉTAIL — NOMBRE DE PROJETS
+     |============================================================ */
+     public function statNombreData(Request $request)
+     {
+         $ecran   = Ecran::find($request->input('ecran_id'));
+         $type    = $request->input('type');         // national | personnel
+         $role    = $request->input('role');         // chef_projet | moe | mo | bailleur
+         $statutK = $request->input('statut');       // prevu | en_cours | cloture | termine | redemarre | suspendu | annule
+         $segment = $request->input('segment');      // total | public | prive
+ 
+         $country = session('pays_selectionne');
+         $group   = session('projet_selectionne');
+         $prefix  = ($country ?? '') . ($group ?? '') . '%';
+ 
+         $statusMap = $this->statusMap();    // ex: 'en_cours' => ["En cours"]
+ 
+         /* ---------------- BASE ---------------- */
+         $latest = DB::table('projet_statut as ps1')
+             ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
+             ->where('ps1.code_projet','like',$prefix)
+             ->groupBy('ps1.code_projet');
+ 
+         $base = DB::table('projet_statut as ps')
+             ->joinSub($latest, 'lp', function($j){
+                 $j->on('ps.code_projet','=','lp.code_projet')
+                   ->on('ps.date_statut','=','lp.max_date');
+             })
+             ->join('type_statut as ts','ts.id','=','ps.type_statut')
+             ->where('ps.code_projet','like',$prefix);
+ 
+         /* ---------------- FILTRES ---------------- */
+         if ($statutK && isset($statusMap[$statutK])) {
+             $base->whereIn('ts.libelle', $statusMap[$statutK]);
+         }
+ 
+         if ($segment === 'public') {
+             $base->whereRaw("SUBSTR(ps.code_projet,7,1)='1'");
+         } elseif ($segment === 'prive') {
+             $base->whereRaw("SUBSTR(ps.code_projet,7,1)='2'");
+         }
+ 
+         // filtre personnel ?
+         if ($type === 'personnel') {
+ 
+             $codeActeur = auth()->user()->acteur->code_acteur ?? null;
+             $ids = collect();
+ 
+             if ($codeActeur) {
+                 $ids = match ($role) {
+                     'chef_projet' => Executer::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'moe'         => Controler::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'mo'          => Posseder::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('isAssistant',0)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'bailleur'    => Financer::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     default       => collect(),
+                 };
+             }
+ 
+             if ($ids->isEmpty()) {
+                 return view('TableauBord.stat_nombre_projet_lien', [
+                     'ecran' => $ecran,
+                     'statutsProjets' => collect(),
+                     'Statuts' => collect()
+                 ]);
+             }
+ 
+             $base->whereIn('ps.code_projet', $ids->all());
+         }
+ 
+         /* ---------------- PROJETS EXACTS ---------------- */
+         $codes = $base->distinct()->pluck('ps.code_projet');
+ 
+         $statutsProjets = Projet::query()
+             ->with([
+                 'dernierStatut.statut',
+                 'sousDomaine',
+                 'devise',
+                 'localisations.localite.decoupage',
+             ])
+             ->whereIn('code_projet', $codes)
+             ->orderBy('code_projet')
+             ->get();
+ 
+         $Statuts = ProjetStatut::with('statut')
+             ->whereIn('code_projet', $codes)->get();
+ 
+         return view('TableauBord.stat_nombre_projet_lien',
+             compact('ecran','statutsProjets','Statuts')
+         );
+     }
+ 
+ 
+ 
+     /* ============================================================
+      |    VUE DÉTAIL — FINANCE
+      |============================================================ */
+     public function statFinanceData(Request $request)
+     {
+         $ecran   = Ecran::find($request->input('ecran_id'));
+         $type    = $request->input('type');
+         $role    = $request->input('role');
+         $statutK = $request->input('statut');
+         $segment = $request->input('segment');
+ 
+         $country = session('pays_selectionne');
+         $group   = session('projet_selectionne');
+         $prefix  = ($country ?? '') . ($group ?? '') . '%';
+ 
+         $statusMap = $this->statusMap();
+ 
+         /* ---------------- BASE ---------------- */
+         $latest = DB::table('projet_statut as ps1')
+             ->select('ps1.code_projet', DB::raw('MAX(ps1.date_statut) as max_date'))
+             ->where('ps1.code_projet','like',$prefix)
+             ->groupBy('ps1.code_projet');
+ 
+         $base = DB::table('projet_statut as ps')
+             ->joinSub($latest,'lp', function($j){
+                 $j->on('ps.code_projet','=','lp.code_projet')
+                   ->on('ps.date_statut','=','lp.max_date');
+             })
+             ->join('type_statut as ts','ts.id','=','ps.type_statut')
+             ->join('projets as p','p.code_projet','=','ps.code_projet')
+             ->where('ps.code_projet','like',$prefix);
+ 
+         /* ---------------- FILTRES ---------------- */
+         if ($statutK && isset($statusMap[$statutK])) {
+             $base->whereIn('ts.libelle', $statusMap[$statutK]);
+         }
+ 
+         if ($segment === 'public') {
+             $base->whereRaw("SUBSTR(ps.code_projet,7,1)='1'");
+         } elseif ($segment === 'prive') {
+             $base->whereRaw("SUBSTR(ps.code_projet,7,1)='2'");
+         }
+ 
+         // filtre acteur ?
+         if ($type === 'personnel') {
+ 
+             $codeActeur = auth()->user()->acteur->code_acteur ?? null;
+             $ids = collect();
+ 
+             if ($codeActeur) {
+                 $ids = match ($role) {
+                     'chef_projet' => Executer::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'moe'         => Controler::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'mo'          => Posseder::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('isAssistant',0)->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     'bailleur'    => Financer::where('code_acteur',$codeActeur)->where('is_active',1)
+                                         ->where('code_projet','like',$prefix)->pluck('code_projet'),
+                     default       => collect(),
+                 };
+             }
+ 
+             if ($ids->isEmpty()) {
+                 return view('TableauBord.stat_fincance_lien', [
+                     'ecran' => $ecran,
+                     'statutsProjets' => collect()
+                 ]);
+             }
+ 
+             $base->whereIn('ps.code_projet', $ids->all());
+         }
+ 
+         /* ---------------- PROJETS EXACTS ---------------- */
+         $codes = $base->distinct()->pluck('ps.code_projet');
+ 
+         $statutsProjets = Projet::query()
+             ->with([
+                 'dernierStatut.statut',
+                 'sousDomaine',
+                 'devise',
+                 'localisations.localite.decoupage',
+             ])
+             ->whereIn('code_projet', $codes)
+             ->orderBy('code_projet')
+             ->get();
+ 
+         return view('TableauBord.stat_fincance_lien',
+             compact('ecran','statutsProjets')
+         );
+     }
+
+    /* ============================================================
+     |    ALIAS POUR PROJETS (utilise les mêmes méthodes)
+     |============================================================ */
+    public function statProjetNombreData(Request $request)
+    {
+        return $this->statNombreData($request);
     }
 
-}
+    public function statProjetFinanceData(Request $request)
+    {
+        return $this->statFinanceData($request);
+    }
+     
+}  

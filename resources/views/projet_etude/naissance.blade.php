@@ -1,0 +1,229 @@
+@extends('layouts.app')
+
+<style>
+    body { background-color: #f8f9fa; }
+    .container {
+        background: white; padding: 30px; border-radius: 10px;
+        box-shadow: 0px 0px 10px rgba(0,0,0,.1);
+    }
+    .form-group label { font-weight: bold; }
+    .upload-box { border: 2px dashed #007bff; padding: 20px; text-align: center; cursor: pointer; background: #f8f9fa; }
+    #fixedPositionResults {
+        position: absolute; width: 100%; max-height: 181px; overflow-y: auto;
+        background: white; border: 1px solid #ddd; border-radius: 4px; z-index: 2050 !important;
+        box-shadow: 0px 4px 6px rgba(0,0,0,.1);
+    }
+    #fixedPositionResults li { padding: 10px; cursor: pointer; }
+    #fixedPositionResults li:hover { background: #f1f1f1; }
+    .modal-dialog { max-width: 80%; width: auto; min-width: 600px; }
+    .modal-content { overflow-y: auto; max-height: 90vh; }
+    .table-container { max-height: 300px; overflow-y: auto; }
+    #beneficiaireTable { width: 100%; border-collapse: collapse; }
+    #beneficiaireTable th, #beneficiaireTable td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    #beneficiaireTable th { background-color: #f2f2f2; }
+    .upload-box:hover { background: #e2e6ea; }
+    .uploaded-files { margin-top: 10px; }
+    .step { display: none; }
+    #documentModal .modal-body ul li { color: black; }
+    .step.active { display: block; }
+    .progress { height: 5px; }
+    .upload-dropzone {
+        border: 2px dashed #007bff; border-radius: 8px; padding: 30px; text-align: center;
+        background-color: #f8f9fa; transition: all .3s; cursor: pointer;
+    }
+    .upload-dropzone:hover { background-color: #e9f5ff; border-color: #0056b3; }
+    .upload-dropzone i { font-size: 48px; color: #007bff; margin-bottom: 15px; }
+    .uploaded-files-list { border: 1px solid #dee2e6; border-radius: 5px; }
+    .list-header {
+        display: flex; justify-content: space-between; padding: 10px 15px;
+        background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; font-weight: bold;
+    }
+    .files-container { max-height: 300px; overflow-y: auto; }
+    .file-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; }
+    .file-item:last-child { border-bottom: none; }
+    .file-icon { margin-right: 10px; color: #6c757d; }
+    .file-info { flex-grow: 1; }
+    .file-name { font-weight: 500; }
+    .file-size { font-size: .8em; color: #6c757d; }
+    .file-remove { color: #dc3545; cursor: pointer; }
+    .progress-info { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .carac-item { display: flex; gap: .5rem; font-size: .875rem; line-height: 1.5; }
+    .carac-label { min-width: 130px; font-weight: 500; text-align: right; }
+    .carac-separator { margin-right: 4px; }
+    .carac-value { flex: 1; }
+</style>
+
+@section('content')
+
+@can("consulter_ecran_" . $ecran->id)
+
+@if (session('success'))
+<script>
+  $('#alertMessage').text("{{ session('success') }}");
+  $('#alertModal').modal('show');
+</script>
+@endif
+
+<section id="multiple-column-form">
+  <div class="page-heading">
+    <div class="page-title">
+      <div class="row">
+        <div class="col-sm-12">
+          <li class="breadcrumb-item" style="list-style:none; text-align:right; padding:5px;">
+            <span id="date-now" style="color:#34495E;"></span>
+          </li>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12 col-md-6 order-md-1 order-last">
+          <h3><i class="bi bi-arrow-return-left return" onclick="goBack()"></i>Projet</h3>
+        </div>
+        <div class="col-12 col-md-6 order-md-2 order-first">
+          <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="">Etudes projets</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Naissance / modelisation</li>
+            </ol>
+            <div class="row">
+              <script>
+                setInterval(function() {
+                  document.getElementById('date-now').textContent = new Date().toLocaleString();
+                }, 1000);
+              </script>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Naissance</h5>
+
+        @if (session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
+        @if (session('error'))   <div class="alert alert-danger">{{ session('error') }}</div>   @endif
+
+        @if ($errors->any())
+          <div class="alert alert-danger">
+            <ul>
+              @foreach ($errors->all() as $error) <li>{{ $error }}</li> @endforeach
+            </ul>
+          </div>
+        @endif
+      </div>
+
+      <div class="card-content">
+        <div class="col-12">
+          <div class="container mt-5">
+            <h2 class="text-center mb-4 text-primary">
+                📌 Demande de Projet - d'étude
+                @if(isset($directMode) && $directMode)
+                    <span class="badge bg-success ms-2">Enregistrement Direct (Sans Validation)</span>
+                @else
+                    <span class="badge bg-warning ms-2">Avec Validation</span>
+                @endif
+            </h2>
+
+            <!-- Barre de progression (sans largeur initiale) -->
+            <div class="progress mb-4">
+              <div class="progress-bar bg-success" role="progressbar" id="progressBar"></div>
+            </div>
+
+            @canany(["ajouter_ecran_" . $ecran->id, "modifier_ecran_" . $ecran->id])
+            <form class="col-12" id="projectForm">
+              {{-- ----- ORDRE DES STEPS ----- --}}
+              @include('projet_etude.steps.Information_Generales')  {{-- step-1 (active) --}}
+              @include('projet_etude.steps.maitreOuvrages')         {{-- step-2 (ton MOA/MOE si renommé) --}}
+              @include('projet_etude.steps.maitreOuvre')            {{-- step-3 (si besoin) --}}
+              @include('projet_etude.steps.Financement')            {{-- step-4 --}}
+              @include('projet_etude.steps.document')               {{-- step-5 --}}
+            </form>
+            @else
+              <div class="alert alert-info mt-3">
+                Vous pouvez consulter cette page, mais vous n’avez pas les droits pour créer ou modifier ce projet.
+              </div>
+            @endcanany
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+@else
+  <div class="alert alert-warning mt-3">
+    Vous n’êtes pas autorisé à consulter cette page (permission requise : <code>consulter_ecran_{{ $ecran->id }}</code>).
+  </div>
+@endcan
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{{-- =================== WIZARD CONTROLLER (PLACÉ APRÈS LES @include) =================== --}}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    let steps = Array.from(document.querySelectorAll('.step'));
+    let totalSteps = steps.length;
+
+    // Si aucune step n'est active, activer la première
+    let currentIndex = steps.findIndex(s => s.classList.contains('active'));
+    if (currentIndex === -1 && totalSteps > 0) {
+      steps[0].classList.add('active');
+      currentIndex = 0;
+    }
+
+    function setProgress(idx) {
+      const bar = document.getElementById('progressBar');
+      if (!bar || totalSteps === 0) return;
+      const pct = Math.round(((idx + 1) / totalSteps) * 100);
+      bar.style.width = pct + '%';
+    }
+
+    function showIndex(idx) {
+      if (totalSteps === 0) return;
+      idx = Math.max(0, Math.min(idx, totalSteps - 1));
+      steps.forEach((el, i) => el.classList.toggle('active', i === idx));
+      currentIndex = idx;
+      setProgress(currentIndex);
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) {}
+      console.log('[Wizard] Step =', currentIndex + 1, '/', totalSteps);
+    }
+
+    // Expose en global
+    window.nextStep = function () {
+      console.log('[Wizard] nextStep() from', currentIndex + 1);
+      if (currentIndex < totalSteps - 1) showIndex(currentIndex + 1);
+    };
+    window.prevStep = function () {
+      console.log('[Wizard] prevStep() from', currentIndex + 1);
+      if (currentIndex > 0) showIndex(currentIndex - 1);
+    };
+    window.showStep = function (n) { showIndex((n|0) - 1); };
+
+    // Si tu ajoutes/enlèves des steps dynamiquement :
+    window.refreshSteps = function () {
+      steps = Array.from(document.querySelectorAll('.step'));
+      totalSteps = steps.length;
+      if (currentIndex > totalSteps - 1) currentIndex = totalSteps - 1;
+      if (currentIndex < 0) currentIndex = 0;
+      showIndex(currentIndex);
+      console.log('[Wizard] Steps rafraîchis =>', totalSteps);
+    };
+
+    // init progress
+    setProgress(currentIndex);
+  });
+</script>
+
+{{-- =================== TES FONCTIONS GÉNÉRALES (facultatif) =================== --}}
+<script>
+  // Séparateur de milliers pour les champs montants
+  function formatNumber(input) {
+    let value = (input.value || '').replace(/\s/g, '').replace(/[^\d]/g, '');
+    input.value = value ? Number(value).toLocaleString('fr-FR') : '';
+  }
+</script>
+
+@endsection

@@ -42,7 +42,7 @@
     <!-- Formulaire caché par défaut -->
     <div class="card mt-3" id="user-form-card" style="display: none;">
         <div class="card-header">
-            <h5>Formulaire Utilisateur</h5>
+            <h5>Utilisateur</h5>
         </div>
         <div class="card-body">
             <form id="user-form" action="{{ route('utilisateurs.store') }}" method="POST">

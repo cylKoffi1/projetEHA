@@ -31,6 +31,10 @@ class Infrastructure extends Model
     {
         return $this->belongsTo(GroupeProjet::class, 'code_groupe_projet', 'code');
     }
+    public function pays()
+    {
+        return $this->belongsTo(Pays::class, 'code_pays', 'alpha3');
+    }
     // Relation avec la famille d'infrastructure
     public function familleInfrastructure()
     {

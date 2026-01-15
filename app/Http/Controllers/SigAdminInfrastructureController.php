@@ -17,6 +17,7 @@ use App\Models\TypeStatut;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SigAdminInfrastructureController extends Controller
 {
@@ -107,7 +108,7 @@ class SigAdminInfrastructureController extends Controller
     }
 
     /* ------------------------------
-     * AGRÉGAT (nb d’infras bénéficiaires) pour la carte
+     * AGRÉGAT (nb d'infras bénéficiaires) pour la carte
      * ------------------------------ */
     public function aggregateProjectsInfras(Request $request)
     {
@@ -167,6 +168,277 @@ class SigAdminInfrastructureController extends Controller
     }
 
     /* ------------------------------
+     * API pour récupérer les coordonnées (centroïde) d'une localité
+     * à partir de son code en utilisant les GeoJSON
+     * ------------------------------ */
+    public function getLocaliteCoordinates(Request $request)
+    {
+        $alpha3 = session('pays_selectionne');
+        $codeLocalite = $request->input('code'); // ex: "01", "0101", "010101"
+        
+        if (!$alpha3 || !$codeLocalite) {
+            return response()->json(['error' => 'Paramètres manquants'], 400);
+        }
+        
+        // Déterminer le niveau selon la longueur du code
+        $level = strlen($codeLocalite) / 2; // 2 chars = niveau 1, 4 = niveau 2, 6 = niveau 3
+        
+        if ($level < 1 || $level > 3) {
+            return response()->json(['error' => 'Code de localité invalide'], 400);
+        }
+        
+        $level = (int)$level;
+        
+        // Charger le GeoJSON correspondant
+        $geoJsonPath = storage_path("geojson/gadm41_{$alpha3}_{$level}.json");
+        
+        if (!file_exists($geoJsonPath)) {
+            Log::warning("[LocaliteCoords] GeoJSON non trouvé: {$geoJsonPath}");
+            return response()->json(['error' => 'GeoJSON non trouvé'], 404);
+        }
+        
+        $geoJson = json_decode(file_get_contents($geoJsonPath), true);
+        
+        if (!$geoJson || !isset($geoJson['features'])) {
+            return response()->json(['error' => 'GeoJSON invalide'], 500);
+        }
+        
+        // Trouver la feature correspondante
+        // Les codes peuvent être dans différentes propriétés selon le niveau
+        $feature = null;
+        foreach ($geoJson['features'] as $feat) {
+            $props = $feat['properties'] ?? [];
+            
+            // Essayer différents formats de codes
+            $found = false;
+            if ($level === 1) {
+                // Niveau 1 : chercher dans GID_1 ou NAME_1
+                $gid1 = substr($props['GID_1'] ?? '', -2);
+                $name1 = $props['NAME_1'] ?? '';
+                if ($gid1 === $codeLocalite || $name1 === $codeLocalite) {
+                    $found = true;
+                }
+            } elseif ($level === 2) {
+                // Niveau 2 : chercher dans GID_2
+                $gid2 = substr($props['GID_2'] ?? '', -4);
+                if ($gid2 === $codeLocalite) {
+                    $found = true;
+                }
+            } elseif ($level === 3) {
+                // Niveau 3 : chercher dans GID_3
+                $gid3 = substr($props['GID_3'] ?? '', -6);
+                if ($gid3 === $codeLocalite) {
+                    $found = true;
+                }
+            }
+            
+            if ($found) {
+                $feature = $feat;
+                break;
+            }
+        }
+        
+        if (!$feature) {
+            // Essayer de trouver par le libellé de la localité
+            $pays = Pays::where('alpha3', $alpha3)->first();
+            if ($pays) {
+                $localite = LocalitesPays::where('code_rattachement', $codeLocalite)
+                    ->where('id_pays', $pays->id)
+                    ->first();
+            
+                if ($localite) {
+                    $libelle = $localite->libelle;
+                    foreach ($geoJson['features'] as $feat) {
+                        $props = $feat['properties'] ?? [];
+                        $nameKey = "NAME_{$level}";
+                        if (isset($props[$nameKey]) && $props[$nameKey] === $libelle) {
+                            $feature = $feat;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (!$feature) {
+            return response()->json(['error' => 'Localité non trouvée dans le GeoJSON'], 404);
+        }
+        
+        // Calculer le centroïde de la feature
+        $geometry = $feature['geometry'] ?? null;
+        if (!$geometry || $geometry['type'] !== 'Polygon' && $geometry['type'] !== 'MultiPolygon') {
+            return response()->json(['error' => 'Géométrie invalide'], 500);
+        }
+        
+        // Calcul simple du centroïde (moyenne des coordonnées)
+        $coords = [];
+        if ($geometry['type'] === 'Polygon') {
+            foreach ($geometry['coordinates'][0] as $coord) {
+                $coords[] = [$coord[1], $coord[0]]; // lat, lng
+            }
+        } elseif ($geometry['type'] === 'MultiPolygon') {
+            foreach ($geometry['coordinates'] as $polygon) {
+                foreach ($polygon[0] as $coord) {
+                    $coords[] = [$coord[1], $coord[0]]; // lat, lng
+                }
+            }
+        }
+        
+        if (empty($coords)) {
+            return response()->json(['error' => 'Impossible de calculer le centroïde'], 500);
+        }
+        
+        // Calculer la moyenne
+        $sumLat = 0;
+        $sumLng = 0;
+        $count = count($coords);
+        foreach ($coords as $coord) {
+            $sumLat += $coord[0];
+            $sumLng += $coord[1];
+        }
+        
+        $centroid = [
+            'lat' => $sumLat / $count,
+            'lng' => $sumLng / $count
+        ];
+        
+        return response()->json([
+            'code' => $codeLocalite,
+            'level' => $level,
+            'centroid' => $centroid
+        ]);
+    }
+    
+    /**
+     * Version interne de getLocaliteCoordinates (sans Request)
+     * pour être utilisée dans markersInfras
+     */
+    private function getLocaliteCoordinatesInternal($alpha3, $codeLocalite, $level = null)
+    {
+        if (!$alpha3 || !$codeLocalite) {
+            return null;
+        }
+        
+        // Déterminer le niveau si non fourni
+        if ($level === null) {
+            $level = strlen($codeLocalite) / 2;
+            if ($level < 1 || $level > 3) {
+                return null;
+            }
+            $level = (int)$level;
+        }
+        
+        // Charger le GeoJSON correspondant
+        $geoJsonPath = storage_path("geojson/gadm41_{$alpha3}_{$level}.json");
+        
+        if (!file_exists($geoJsonPath)) {
+            return null;
+        }
+        
+        $geoJson = json_decode(file_get_contents($geoJsonPath), true);
+        
+        if (!$geoJson || !isset($geoJson['features'])) {
+            return null;
+        }
+        
+        // Trouver la feature correspondante
+        $feature = null;
+        foreach ($geoJson['features'] as $feat) {
+            $props = $feat['properties'] ?? [];
+            
+            $found = false;
+            if ($level === 1) {
+                $gid1 = substr($props['GID_1'] ?? '', -2);
+                $name1 = $props['NAME_1'] ?? '';
+                if ($gid1 === $codeLocalite || $name1 === $codeLocalite) {
+                    $found = true;
+                }
+            } elseif ($level === 2) {
+                $gid2 = substr($props['GID_2'] ?? '', -4);
+                if ($gid2 === $codeLocalite) {
+                    $found = true;
+                }
+            } elseif ($level === 3) {
+                $gid3 = substr($props['GID_3'] ?? '', -6);
+                if ($gid3 === $codeLocalite) {
+                    $found = true;
+                }
+            }
+            
+            if ($found) {
+                $feature = $feat;
+                break;
+            }
+        }
+        
+        if (!$feature) {
+            // Essayer par libellé
+            $pays = Pays::where('alpha3', $alpha3)->first();
+            if ($pays) {
+                $localite = LocalitesPays::where('code_rattachement', $codeLocalite)
+                    ->where('id_pays', $pays->id)
+                    ->first();
+                
+                if ($localite) {
+                    $libelle = $localite->libelle;
+                    foreach ($geoJson['features'] as $feat) {
+                        $props = $feat['properties'] ?? [];
+                        $nameKey = "NAME_{$level}";
+                        if (isset($props[$nameKey]) && $props[$nameKey] === $libelle) {
+                            $feature = $feat;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (!$feature) {
+            return null;
+        }
+        
+        // Calculer le centroïde
+        $geometry = $feature['geometry'] ?? null;
+        if (!$geometry || ($geometry['type'] !== 'Polygon' && $geometry['type'] !== 'MultiPolygon')) {
+            return null;
+        }
+        
+        $coords = [];
+        if ($geometry['type'] === 'Polygon') {
+            foreach ($geometry['coordinates'][0] as $coord) {
+                $coords[] = [$coord[1], $coord[0]];
+            }
+        } elseif ($geometry['type'] === 'MultiPolygon') {
+            foreach ($geometry['coordinates'] as $polygon) {
+                foreach ($polygon[0] as $coord) {
+                    $coords[] = [$coord[1], $coord[0]];
+                }
+            }
+        }
+        
+        if (empty($coords)) {
+            return null;
+        }
+        
+        $sumLat = 0;
+        $sumLng = 0;
+        $count = count($coords);
+        foreach ($coords as $coord) {
+            $sumLat += $coord[0];
+            $sumLng += $coord[1];
+        }
+        
+        return [
+            'code' => $codeLocalite,
+            'level' => $level,
+            'centroid' => [
+                'lat' => $sumLat / $count,
+                'lng' => $sumLng / $count
+            ]
+        ];
+    }
+
+    /* ------------------------------
      * MARKERS agrégés (icône/couleur) par niveau
      * - level: 1,2,3
      * - code: préfixe de localité (ex 01, 0101, 010101)
@@ -178,17 +450,169 @@ class SigAdminInfrastructureController extends Controller
     {
         $alpha3  = session('pays_selectionne');
         $group   = session('projet_selectionne'); // peut être 'BTP'
-        if (!$alpha3) return response()->json(['markers'=>[]]);
+        
+        Log::info('[InfraMarkers API] Requête reçue', [
+            'alpha3' => $alpha3,
+            'group' => $group,
+            'level' => $request->input('level'),
+            'prefix' => $request->input('code'),
+            'status' => $request->input('status', 'all')
+        ]);
+        
+        if (!$alpha3) {
+            Log::warning('[InfraMarkers API] Pas de pays sélectionné');
+            return response()->json(['markers'=>[]]);
+        }
 
-        $level  = max(1, min(3, (int) $request->input('level', 1)));
+        $level  = (int) $request->input('level', 1);
+        if ($level < 1) $level = 1;
         $prefix = (string) $request->input('code', '');
         $status = $request->input('status', 'all'); // all|done|todo
+        // niveau > 3: infrastructures individuelles avec libellé + nb projets
+        if ($level > 3) {
+            $q = DB::table('infrastructures as i')
+                ->leftJoin('jouir as j', 'j.code_Infrastructure', '=', 'i.code')
+                ->leftJoin('projets as p', 'p.code_projet', '=', 'j.code_projet')
+                ->where('i.code_pays', $alpha3)
+                ->select([
+                    'i.code as infra_code',
+                    'i.libelle as infra_lib',
+                    'i.latitude','i.longitude',
+                    'i.code_localite',
+                    'i.code_Ssys as famille_code',
+                    DB::raw('COUNT(DISTINCT p.code_projet) as nb_projets')
+                ])
+                ->groupBy('i.code','i.libelle','i.latitude','i.longitude','i.code_localite','i.code_Ssys');
+
+            if ($status === 'done') $q->where('i.IsOver', 1);
+            if ($status === 'todo') $q->where(function($s){ $s->whereNull('i.IsOver')->orWhere('i.IsOver', 0); });
+
+            $rows = $q->get();
+            
+            // Récupérer les coordonnées pour les infrastructures sans lat/lng
+            $pays = Pays::where('alpha3', $alpha3)->first();
+            if (!$pays) {
+                Log::warning("[InfraMarkers] Pays non trouvé pour alpha3: {$alpha3}");
+                return response()->json(['markers'=>[]]);
+            }
+            
+            $localitesCache = [];
+            
+            foreach ($rows as $r) {
+                if (empty($r->latitude) || empty($r->longitude)) {
+                    $codeLocalite = $r->code_localite;
+                    
+                    if ($codeLocalite) {
+                        // Essayer différents niveaux (3, 2, 1)
+                        $found = false;
+                        $prefixLocalite = null;
+                        for ($lvl = 3; $lvl >= 1; $lvl--) {
+                            $len = $lvl * 2;
+                            if (strlen($codeLocalite) >= $len) {
+                                $prefixLocalite = substr($codeLocalite, 0, $len);
+                                
+                                if (!isset($localitesCache[$prefixLocalite])) {
+                                    // Appeler l'API interne pour obtenir les coordonnées
+                                    try {
+                                        $coordsResponse = $this->getLocaliteCoordinatesInternal($alpha3, $prefixLocalite, $lvl);
+                                        if ($coordsResponse && isset($coordsResponse['centroid'])) {
+                                            $localitesCache[$prefixLocalite] = $coordsResponse['centroid'];
+                                            $found = true;
+                                            break;
+                                        }
+                                    } catch (\Exception $e) {
+                                        Log::warning("[InfraMarkers] Erreur récupération coordonnées pour {$prefixLocalite}: " . $e->getMessage());
+                                    }
+                                }
+                                } else {
+                                    $found = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if ($found && $prefixLocalite && isset($localitesCache[$prefixLocalite])) {
+                            $r->latitude = $localitesCache[$prefixLocalite]['lat'];
+                            $r->longitude = $localitesCache[$prefixLocalite]['lng'];
+                        }
+                    }
+                }
+            }
+            
+            // Filtrer les lignes qui ont maintenant des coordonnées
+            $rows = $rows->filter(function($r) {
+                return !empty($r->latitude) && !empty($r->longitude);
+            })->values();
+            
+            // Système de décalage pour éviter les chevauchements
+            $markers = [];
+            $usedPositions = [];
+            $offsetDistance = 0.005; // Distance plus petite pour les infrastructures individuelles
+            
+            foreach ($rows as $r) {
+                $baseLat = (float) $r->latitude;
+                $baseLng = (float) $r->longitude;
+                
+                $finalLat = $baseLat;
+                $finalLng = $baseLng;
+                $maxAttempts = 10;
+                $attempt = 0;
+                
+                while ($attempt < $maxAttempts) {
+                    $tooClose = false;
+                    foreach ($usedPositions as $used) {
+                        $distance = sqrt(
+                            pow($finalLat - $used['lat'], 2) + 
+                            pow($finalLng - $used['lng'], 2)
+                        );
+                        
+                        if ($distance < $offsetDistance) {
+                            $tooClose = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$tooClose) {
+                        break;
+                    }
+                    
+                    $attempt++;
+                    $angle = ($attempt * 60) * (M_PI / 180);
+                    $radius = $offsetDistance * $attempt;
+                    $finalLat = $baseLat + ($radius * cos($angle));
+                    $finalLng = $baseLng + ($radius * sin($angle));
+                }
+                
+                $usedPositions[] = [
+                    'lat' => $finalLat,
+                    'lng' => $finalLng
+                ];
+                
+                $markers[] = [
+                    'lat'   => $finalLat,
+                    'lng'   => $finalLng,
+                    'count' => (int) $r->nb_projets,
+                    'class' => 'infra',
+                    'code'  => $r->infra_code,
+                    'label' => $r->infra_lib,
+                    'famille_code' => $r->famille_code,
+                ];
+            }
+            
+            Log::info('[InfraMarkers API] Niveau > 3 - ' . count($markers) . ' marqueur(s) retourné(s)');
+            return response()->json(['markers'=>$markers]);
+        }
+        
+        $level = max(1, min(3, $level));
 
         // jointure infra ↔ jouir ↔ projets (pour récupérer sous-domaine & groupe projet)
         $q = DB::table('infrastructures as i')
             ->join('jouir as j', 'j.code_Infrastructure', '=', 'i.code')
             ->join('projets as p', 'p.code_projet', '=', 'j.code_projet')
             ->where('i.code_pays', $alpha3)
+            ->when($group, function($qq) use ($group) {
+                $qq->where('i.code_groupe_projet', $group);
+            })
             ->when($prefix !== '', function($qq) use ($level,$prefix){
                 $len = $level * 2;
                 $qq->where(DB::raw("LEFT(i.code_localite, {$len})"), $prefix);
@@ -197,45 +621,164 @@ class SigAdminInfrastructureController extends Controller
         if ($status === 'done') $q->where('i.IsOver', 1);
         if ($status === 'todo') $q->where(function($s){ $s->whereNull('i.IsOver')->orWhere('i.IsOver', 0); });
 
-        // champs utiles
+        // champs utiles - inclure aussi les infrastructures sans coordonnées
         $rows = $q->select([
                 'i.latitude','i.longitude','i.code_localite','i.IsOver',
                 DB::raw("SUBSTRING(p.code_projet,4,3) as gcode"),
                 DB::raw("LEFT(p.code_sous_domaine,2) as domain2"),
                 'p.code_sous_domaine as sdomaine'
-            ])->whereNotNull('i.latitude')->whereNotNull('i.longitude')->get();
+            ])->get();
 
         if ($rows->isEmpty()) return response()->json(['markers'=>[]]);
+        
+        // Récupérer les coordonnées pour les infrastructures sans lat/lng
+        $pays = Pays::where('alpha3', $alpha3)->first();
+        if (!$pays) {
+            Log::warning("[InfraMarkers] Pays non trouvé pour alpha3: {$alpha3}");
+            return response()->json(['markers'=>[]]);
+        }
+        
+        $localitesCache = []; // Cache pour éviter les appels multiples
+        
+        foreach ($rows as $r) {
+            if (empty($r->latitude) || empty($r->longitude)) {
+                $codeLocalite = $r->code_localite;
+                
+                if (!empty($codeLocalite)) {
+                    // Extraire le préfixe selon le niveau
+                    $len = $level * 2;
+                    if (strlen($codeLocalite) >= $len) {
+                        $prefixLocalite = substr($codeLocalite, 0, $len);
+                        
+                        if (!isset($localitesCache[$prefixLocalite])) {
+                            // Appeler l'API interne pour obtenir les coordonnées
+                            try {
+                                $coordsResponse = $this->getLocaliteCoordinatesInternal($alpha3, $prefixLocalite, $level);
+                                if ($coordsResponse && isset($coordsResponse['centroid'])) {
+                                    $localitesCache[$prefixLocalite] = $coordsResponse['centroid'];
+                                }
+                            } catch (\Exception $e) {
+                                Log::warning("[InfraMarkers] Erreur récupération coordonnées pour {$prefixLocalite}: " . $e->getMessage());
+                            }
+                        }
+                        
+                        if (isset($localitesCache[$prefixLocalite])) {
+                            $r->latitude = $localitesCache[$prefixLocalite]['lat'];
+                            $r->longitude = $localitesCache[$prefixLocalite]['lng'];
+                        }
+                    }
+                }
+            }
+        
+        // Filtrer les lignes qui ont maintenant des coordonnées
+        $rows = $rows->filter(function($r) {
+            return !empty($r->latitude) && !empty($r->longitude);
+        })->values();
+        
+        if ($rows->isEmpty()) return response()->json(['markers'=>[]]);
 
-        // agrégation : on calcule un centroïde SIMPLE (moyenne lat/lng) par clef
-        $isBTP = ($group === 'BTP');
-
+        // agrégation : on calcule un centroïde SIMPLE (moyenne lat/lng) par groupe projet
+        // Pour admin/autresRequetes : les marqueurs représentent les groupes projets
+        // Niveau 1-3 : groupes projets (BAT, ENE, EHA, TRP, TIC, AXU, BTP)
+        // IMPORTANT : On utilise directement code_groupe_projet depuis l'infrastructure
+        
         $buckets = []; // key => ['sumLat','sumLng','n','count','label','class','code']
         foreach ($rows as $r) {
-            if (!$isBTP) {
-                if ($level === 1) { $class='group'; $code=$r->gcode;     $label=$r->gcode; }
-                elseif ($level === 2){ $class='domain'; $code=$r->domain2; $label=$r->domain2; }
-                else { $class='sub'; $code=$r->sdomaine; $label=$r->sdomaine; }
-            } else {
-                // BTP = niveau 1 => domaines
-                if ($level === 1) { $class='domain'; $code=$r->domain2; $label=$r->domain2; }
-                elseif ($level === 2){ $class='sub'; $code=$r->sdomaine; $label=$r->sdomaine; }
-                else { $class='sub'; $code=$r->sdomaine; $label=$r->sdomaine; }
+            // Utiliser le groupe projet directement depuis l'infrastructure
+            $class = 'group';
+            $code = $r->gcode; // code_groupe_projet de l'infrastructure
+            $label = $code;
+            
+            // Si le code est vide, ignorer cette infrastructure
+            if (empty($code)) {
+                continue;
+            }
+            
+            // Libellés des groupes projets (fallback si pas dans la base)
+            $groupLabels = [
+                'BAT' => 'Bâtiment',
+                'ENE' => 'Énergie',
+                'EHA' => 'Eau, Hygiène et Assainissement',
+                'TRP' => 'Transport',
+                'TIC' => 'Informatique et télécommunication',
+                'AXU' => 'Aménagement des axes urbains',
+                'BTP' => 'Bâtiments Travaux Publics'
+            ];
+            
+            if (isset($groupLabels[$code])) {
+                $label = $groupLabels[$code];
             }
 
             $k = $class.'|'.$code;
-            if (!isset($buckets[$k])) $buckets[$k]=['sumLat'=>0,'sumLng'=>0,'n'=>0,'count'=>0,'class'=>$class,'code'=>$code,'label'=>$label];
+            if (!isset($buckets[$k])) {
+                $buckets[$k] = [
+                    'sumLat' => 0,
+                    'sumLng' => 0,
+                    'n' => 0,
+                    'count' => 0,
+                    'class' => $class,
+                    'code' => $code,
+                    'label' => $label
+                ];
+            }
             $buckets[$k]['sumLat'] += (float)$r->latitude;
             $buckets[$k]['sumLng'] += (float)$r->longitude;
             $buckets[$k]['n']++;
             $buckets[$k]['count']++;
         }
 
+        // Système de décalage pour éviter les chevauchements
         $markers = [];
+        $usedPositions = []; // Pour tracker les positions utilisées
+        $offsetDistance = 0.01; // Distance de décalage en degrés (environ 1km)
+        
         foreach ($buckets as $b) {
+            $baseLat = $b['sumLat'] / max(1, $b['n']);
+            $baseLng = $b['sumLng'] / max(1, $b['n']);
+            
+            // Vérifier si la position est déjà utilisée
+            $finalLat = $baseLat;
+            $finalLng = $baseLng;
+            $offset = 0;
+            $maxAttempts = 10;
+            $attempt = 0;
+            
+            while ($attempt < $maxAttempts) {
+                $tooClose = false;
+                foreach ($usedPositions as $used) {
+                    $distance = sqrt(
+                        pow($finalLat - $used['lat'], 2) + 
+                        pow($finalLng - $used['lng'], 2)
+                    );
+                    
+                    // Si la distance est trop petite, décaler
+                    if ($distance < $offsetDistance) {
+                        $tooClose = true;
+                        break;
+                    }
+                }
+                
+                if (!$tooClose) {
+                    break;
+                }
+                
+                // Décaler en spirale
+                $attempt++;
+                $angle = ($attempt * 60) * (M_PI / 180); // 60 degrés par tentative
+                $radius = $offsetDistance * $attempt;
+                $finalLat = $baseLat + ($radius * cos($angle));
+                $finalLng = $baseLng + ($radius * sin($angle));
+            }
+            
+            // Enregistrer la position utilisée
+            $usedPositions[] = [
+                'lat' => $finalLat,
+                'lng' => $finalLng
+            ];
+            
             $markers[] = [
-                'lat'   => $b['sumLat'] / max(1,$b['n']),
-                'lng'   => $b['sumLng'] / max(1,$b['n']),
+                'lat'   => $finalLat,
+                'lng'   => $finalLng,
                 'count' => $b['count'],
                 'class' => $b['class'],     // group|domain|sub
                 'code'  => $b['code'],
@@ -243,6 +786,11 @@ class SigAdminInfrastructureController extends Controller
             ];
         }
 
+        Log::info('[InfraMarkers API] Niveau ' . $level . ' - ' . count($markers) . ' marqueur(s) retourné(s)', [
+            'group' => $group,
+            'exemples' => array_slice($markers, 0, 3)
+        ]);
+        
         return response()->json(['markers'=>$markers]);
     }
 
@@ -341,4 +889,5 @@ class SigAdminInfrastructureController extends Controller
         });
         return response()->json($projects);
     }
+
 }

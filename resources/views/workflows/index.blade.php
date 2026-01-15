@@ -4,7 +4,7 @@
 <div class="container py-3">
   <div class="d-flex align-items-center mb-3">
     <h3 class="me-auto">Workflows d’approbation</h3>
-    <a href="{{ route('workflows.index') }}" class="btn btn-outline-secondary me-2">Rafraîchir</a>
+    {{-- <a href="{{ route('workflows.index') }}" class="btn btn-outline-secondary me-2">Rafraîchir</a> --}}
     <a href="{{ route('workflows.createForm') }}" class="btn btn-primary">Nouveau workflow</a>
   </div>
 

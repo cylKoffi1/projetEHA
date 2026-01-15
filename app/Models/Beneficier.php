@@ -19,6 +19,6 @@ class Beneficier extends Model
     {
         return $this->belongsTo(Acteur::class, 'code_acteur', 'code_acteur');
     }
-    
+
 
 }

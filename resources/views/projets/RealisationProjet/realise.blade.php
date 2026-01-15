@@ -310,18 +310,30 @@
 
                                 </div>
                             </div>
-
                             <div class="row">
                                 <div class="col-md-3">
+                                    <label class="form-label">Type de projet</label>
+                                    <select id="real_type_projet" class="form-select">
+                                        @can('projettype.select', 'INF')
+                                            <option value="PROJET">Projet d'infrastructure</option>
+                                        @endcan
+                                        @can('projettype.select', 'APP')
+                                            <option value="APPUI">Projet d'appui</option>
+                                        @endcan
+                                        @can('projettype.select', 'ETU')
+                                            <option value="ETUDE">Projet d'étude</option>
+                                        @endcan
+                                    </select>
+                                    <small class="text-muted">Choisissez un type pour filtrer la liste.</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                
+
+                                <div class="col-md-3">
                                     <label for="code_projet" class="form-label">Code projet</label>
-                                    <select name="code_projet" id="code_projet" class="form-select"
-                                            onchange="checkProjectDetails()">
+                                    <select name="code_projet" id="code_projet" class="form-select">
                                         <option value="">Sélectionner un projet</option>
-                                        @foreach ($projets as $projet)
-                                        <option value="{{ $projet->code_projet }}">
-                                            {{ $projet->code_projet }}
-                                        </option>
-                                        @endforeach
                                     </select>
                                 </div>
 
@@ -354,7 +366,7 @@
                                     <input type="text" id="devise" class="form-control" name="devise" readonly>
                                 </div>
 
-                                <div class="col-md-2">
+                                <div class="col-md-2 mt-2">
                                     <label for="statut">Statut</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
@@ -364,30 +376,44 @@
                                 </div>
                             </div>
 
+
                             <input type="hidden" id="codeProjetHidden">
 
-
-                        <div class="row mt-4">
+                        <div class="row mt-4" id="actionsBlock">
                             <div class="col-12">
                                 <div class="table-container mt-3">
-                                    <table id="actionTable" class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>N° ordre</th>
-                                                <th>Action à mener</th>
-                                                <th>Quantité</th>
-                                                <th>Infrastructure</th>
-                                                <th>Bénéficiaire</th>
-                                                <th>Caractéristiques</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="beneficiaire-table-body">
-                                            <!-- Données chargées dynamiquement -->
-                                        </tbody>
-                                    </table>
+                                <table id="actionTable" class="table table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>N° ordre</th>
+                                        <th>Action à mener</th>
+                                        <th>Quantité</th>
+                                        <th>Infrastructure</th>
+                                        <th>Bénéficiaire</th>
+                                        <th>Caractéristiques</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="beneficiaire-table-body"></tbody>
+                                </table>
                                 </div>
                             </div>
                         </div>
+                        <!-- Tableau pour projets d'appui (simple, sans card) -->
+                        <table id="tableAppuiBenefs" class="table table-bordered table-striped mt-3" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Designation (bénéficiaire)</th>
+                                    <th>Type</th>
+                                    <th>Projet source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyAppuiBenefs">
+                                <tr><td colspan="4" class="text-center text-muted">Sélectionnez un projet d'appui...</td></tr>
+                            </tbody>
+                        </table>
+
+
 
                         <div class="row mt-3">
                             <div class="col-12">
@@ -571,6 +597,55 @@
         </div>
     </div>
 
+    <script>
+  // Recharge la table "Voir la liste complète..." selon le type choisi
+  async function reloadListeProjetsFull() {
+    const type = document.getElementById('real_type_projet')?.value || 'PROJET';
+    const tbody = document.querySelector('#table1 tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center">Chargement...</td></tr>`;
+
+    try {
+      const url = @json(route('realise.listeProjets')) + '?type=' + encodeURIComponent(type);
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await res.json();
+
+      tbody.innerHTML = '';
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Aucun projet</td></tr>`;
+        return;
+      }
+
+      data.forEach(row => {
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${row.code}</td>
+            <td>${row.domaine ?? '-'}</td>
+            <td>${row.date_debut ? new Date(row.date_debut).toLocaleDateString() : '-'}</td>
+            <td>${row.date_fin   ? new Date(row.date_fin).toLocaleDateString()   : '-'}</td>
+            <td class="text-end">${row.cout ? (Number(row.cout).toLocaleString('fr-FR')) : '-'}</td>
+            <td>${row.devise ?? '-'}</td>
+            <td><span class="badge bg-primary">${row.statut ?? '-'}</span></td>
+          </tr>
+        `);
+      });
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Erreur de chargement</td></tr>`;
+    }
+  }
+
+  // Ouvre/ferme la liste -> au moment où on l’affiche, on recharge
+  document.getElementById('voir-liste-link')?.addEventListener('click', (e) => {
+    setTimeout(reloadListeProjetsFull, 50);
+  });
+
+  // Si on change de type, on recalcule la liste si le bloc est visible
+  document.getElementById('real_type_projet')?.addEventListener('change', () => {
+    const bloc = document.getElementById('liste-projets');
+    if (bloc && bloc.style.display !== 'none') reloadListeProjetsFull();
+  });
+</script>
 
 <script>
     $(document).ready(function() {
@@ -597,50 +672,41 @@
             formatNumberInput(e.target);
         });
     });
-
-
-
-
     function checkProjectDetails() {
         const codeProjet = $('#code_projet').val();
         if (!codeProjet) return;
 
         $.ajax({
-            url: '{{ url("/fetchProjectDetails")}}',
+            url: '{{ url("/fetchProjectDetails") }}',
             method: 'GET',
             data: {
-                _token: '{{ csrf_token() }}',
                 code_projet: codeProjet
             },
-            beforeSend: function() {
-                // Afficher un indicateur de chargement
-                $('#code_projet').addClass('loading');
-            },
-            success: function(response) {
-                console.log('la reponse', response);
-                $('#date_debut').val(response.date_debut);
-                $('#date_fin').val(response.date_fin);
-                $('#cout').val(formatNumber(response.cout));
-                $('#statutInput').val(response.statutInput);
+            success: function (response) {
+                $('#date_debut').val(response.date_debut || '');
+                $('#date_fin').val(response.date_fin || '');
+                $('#cout').val(response.cout ? formatNumber(response.cout) : '');
+                $('#statutInput').val(response.statutInput || '');
+                $('#devise').val(response.devise || '');
                 $('#codeProjetHidden').val(response.codeProjet);
-                $('#devise').val(response.devise);
-                const codeProjet = response.codeProjet;
-                // Mettre à jour le tableau des actions
-                updateTableData(codeProjet, response.actions || []);
+                $('#code_projet_effectif').val(response.codeProjet);
 
-                // Animation de mise à jour
-                $('.form-control').addClass('highlight');
-                setTimeout(() => $('.form-control').removeClass('highlight'), 1500);
-            },
-            complete: function() {
-                $('#code_projet').removeClass('loading');
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erreur',
-                    text: xhr.responseJSON?.message || 'Une erreur est survenue'
-                });
+                const type = response.type || detectTypeFromCode(response.codeProjet);
+                toggleBlocksByType(type);
+
+                if (type === 'PROJET') {
+                    updateTableData(response.codeProjet, response.actions || []);
+                }
+                else if (type === 'APPUI') {
+                    // Tableau simple : affiche les bénéficiaires appui
+                    loadBeneficiairesAppui(response.codeProjet);
+                    $('#beneficiaire-table-body').html('');
+                }
+                else {
+                    // ETUDE
+                    $('#beneficiaire-table-body').html('');
+                    $('#tbodyAppuiBenefs').html('<tr><td colspan="4" class="text-center text-muted">Projet d\'étude</td></tr>');
+                }
             }
         });
     }
@@ -963,6 +1029,146 @@
         });
 
 
+</script>
+<script>
+  // Reprend la même logique que dans l’autre écran
+  function detectTypeFromCode(code) {
+    if (!code) return 'PROJET';
+    if (code.startsWith('ET_')) return 'ETUDE';
+    if (code.startsWith('APPUI_')) return 'APPUI';
+    return 'PROJET';
+  }
+
+    function toggleBlocksByType(type) {
+        const actionsTable = document.getElementById('actionTable');
+        const appuiTable   = document.getElementById('tableAppuiBenefs');
+
+        if (type === 'ETUDE') {
+            actionsTable.style.display = 'none';
+            appuiTable.style.display = 'none';
+        } 
+        else if (type === 'APPUI') {
+            actionsTable.style.display = 'none';
+            appuiTable.style.display = '';
+        } 
+        else {
+            // PROJET
+            actionsTable.style.display = '';
+            appuiTable.style.display = 'none';
+        }
+    }
+
+    async function loadBeneficiairesAppui(codeAppui) {
+        const tbody = document.getElementById('tbodyAppuiBenefs');
+
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center">Chargement...</td></tr>`;
+
+        try {
+            const url = "{{ route('appui.beneficiaires', ['code_appui' => 'CODE']) }}".replace("CODE", codeAppui);
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Aucun bénéficiaire</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = "";
+            data.forEach(b => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${b.code}</td>
+                        <td>${b.libelle ?? "-"}</td>
+                        <td>${b.type}</td>
+                        <td>${b.projet_source.code} - ${b.projet_source.libelle}</td>
+
+                    </tr>`;
+            });
+
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Erreur de chargement</td></tr>`;
+        }
+    }
+
+</script>
+
+<script>
+  // Détection par préfixe (même règle que ton autre écran)
+  const PREFIX_TO_TYPE_REAL = [
+    { prefix: 'ET_',    type: 'ETUDE'  },
+    { prefix: 'APPUI_', type: 'APPUI'  },
+  ];
+  function detectTypeFromCodeReal(code) {
+    if (!code) return 'PROJET';
+    const hit = PREFIX_TO_TYPE_REAL.find(p => code.startsWith(p.prefix));
+    return hit ? hit.type : 'PROJET';
+  }
+
+  const typeSelectReal   = document.getElementById('real_type_projet');
+  const projetSelectReal = document.getElementById('code_projet');
+
+  async function reloadProjetOptionsReal(type, preselect=null) {
+    projetSelectReal.innerHTML = '<option value="">Chargement...</option>';
+    try {
+        const url = @json(route('realise.optionsProjets')) 
+          + '?type=' + encodeURIComponent(type || 'PROJET')
+          + '&statut=1';
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await res.json();
+
+      projetSelectReal.innerHTML = '<option value="">Sélectionner un projet</option>';
+      (data || []).forEach(row => {
+        const opt = document.createElement('option');
+        opt.value = row.code;
+        opt.textContent = row.code + (row.label ? ' — ' + row.label : '');
+        projetSelectReal.appendChild(opt);
+      });
+
+      if (preselect && (data || []).some(d => d.code === preselect)) {
+        projetSelectReal.value = preselect;
+        // déclenche chargement des détails (logique existante)
+        checkProjectDetails();
+      } else {
+        // on nettoie la fiche si on change de type
+        document.getElementById('date_debut').value = '';
+        document.getElementById('date_fin').value   = '';
+        document.getElementById('cout').value       = '';
+        document.getElementById('devise').value     = '';
+        document.getElementById('statutInput').value= '';
+        $('#beneficiaire-table-body').empty();
+      }
+    } catch (e) {
+      projetSelectReal.innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+  }
+
+  // Init au chargement
+  document.addEventListener('DOMContentLoaded', () => {
+    reloadProjetOptionsReal(typeSelectReal.value);
+  });
+
+  // Quand on change de type, on recharge la liste
+  typeSelectReal.addEventListener('change', () => {
+    reloadProjetOptionsReal(typeSelectReal.value);
+  });
+
+  // Quand on choisit un projet : auto-corrige le type si nécessaire, puis charge les détails
+  projetSelectReal.addEventListener('change', function() {
+    const code = this.value;
+    if (!code) return;
+
+    const autoType = detectTypeFromCodeReal(code);
+    if (autoType !== typeSelectReal.value) {
+      typeSelectReal.value = autoType;
+      reloadProjetOptionsReal(autoType, code);
+      return;
+    }
+    // Utilise ta logique existante
+    checkProjectDetails();
+
+    // Alimente aussi le champ du modal démarrage (tu l’avais déjà)
+    $('#code_projet_effectif').val(code);
+  });
 </script>
 
 @endsection

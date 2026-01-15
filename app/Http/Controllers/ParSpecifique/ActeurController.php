@@ -256,15 +256,18 @@ class ActeurController extends Controller
             'type_fin'      => $r->input('type_financement'),
             'has_photo'     => $r->hasFile('photo'),
         ]);
-
+    
+        // Validation
         $rules = $this->rules($r->input('type_personne'), 'store');
         Log::debug('[Acteurs::store] validation rules', ['keys' => array_keys($rules)]);
         $r->validate($rules, $this->messages());
-
+    
         try {
-            return DB::transaction(function() use ($r, $t0) {
+            return DB::transaction(function () use ($r, $t0) {
+                // 1) Contexte pays
                 $alpha3 = session('pays_selectionne') ?? $r->input('code_pays');
-
+    
+                // 2) Création Acteur (commun)
                 $acteur = new Acteur();
                 $acteur->code_pays        = $alpha3;
                 $acteur->type_acteur      = $r->input('type_acteur'); // code
@@ -275,67 +278,90 @@ class ActeurController extends Controller
                 $acteur->telephone        = $r->input('telephoneBureauIndividu') ?: $r->input('telephone1RL');
                 $acteur->adresse          = $r->input('adresseSiegeIndividu') ?: $r->input('AdresseSiègeEntreprise');
                 $acteur->is_active        = true;
+                $acteur->is_user          = 0;
                 $acteur->save();
-
+    
+                // Important : s'assurer de récupérer la PK générée
+                $acteur->refresh();
+    
                 Log::info('[Acteurs::store] acteur créé', [
                     'code_acteur' => $acteur->code_acteur,
                     'pays' => $acteur->code_pays,
                     'type' => $acteur->type_acteur,
                     'fin'  => $acteur->type_financement,
                 ]);
-
+    
+                // 3) Photo (optionnelle)
                 if ($r->hasFile('photo')) {
                     $path = $r->file('photo')->store('acteurs', 'public');
-                    $acteur->photo = 'storage/'.$path;
+                    $acteur->photo = 'storage/' . $path;
                     $acteur->save();
                     Log::info('[Acteurs::store] photo stockée', ['photo' => $acteur->photo]);
                 }
-
+    
+                // 4) Branches PF/PM
                 if ($r->input('type_personne') === 'physique') {
+    
+                    // Nettoyages
+                    $numeroFiscal = trim((string)$r->input('numeroFiscal', ''));
+                    if ($numeroFiscal === '' || $numeroFiscal === '?') {
+                        $numeroFiscal = null;
+                    }
+    
+                    // ⚠️ On garde le code du genre tel quel (ex: 'h', 'f'), pas de lookup sur un id inexistant
+                    $genreCode = trim((string)$r->input('genre', ''));
+                    if ($genreCode === '') {
+                        $genreCode = null;
+                    }
+    
                     $pp = PersonnePhysique::create([
-                        'code_acteur'              => $acteur->code_acteur,
-                        'nom'                      => $r->input('nom'),
-                        'prenom'                   => $r->input('prenom'),
-                        'date_naissance'           => $r->input('date_naissance'),
-                        'nationalite'              => $r->input('nationnalite'),
-                        'email'                    => $r->input('emailI'),
-                        'code_postal'              => $r->input('CodePostalI'),
-                        'adresse_postale'          => $r->input('AdressePostaleIndividu'),
-                        'adresse_siege'            => $r->input('adresseSiegeIndividu'),
-                        'telephone_bureau'         => $r->input('telephoneBureauIndividu'),
-                        'telephone_mobile'         => $r->input('telephoneMobileIndividu'),
-                        'num_fiscal'               => $r->input('numeroFiscal'),
-                        'genre_id'                 => $r->input('genre'),
-                        'situation_matrimoniale_id'=> $r->input('situationMatrimoniale'),
-                        'is_active'                => true,
+                        'code_acteur'               => $acteur->code_acteur,               // <== non null après refresh()
+                        'nom'                       => $r->input('nom'),
+                        'prenom'                    => $r->input('prenom'),
+                        'date_naissance'            => $r->input('date_naissance'),
+                        'nationalite'               => $r->input('nationnalite'),
+                        'email'                     => $r->input('emailI'),
+                        'code_postal'               => $r->input('CodePostalI'),
+                        'adresse_postale'           => $r->input('AdressePostaleIndividu'),
+                        'adresse_siege'             => $r->input('adresseSiegeIndividu'),
+                        'telephone_bureau'          => $r->input('telephoneBureauIndividu'),
+                        'telephone_mobile'          => $r->input('telephoneMobileIndividu'),
+                        'num_fiscal'                => $numeroFiscal,
+                        'genre_id'                  => $genreCode,                        // <== code direct
+                        'situation_matrimoniale_id' => $r->input('situationMatrimoniale'),
+                        'is_active'                 => true,
                     ]);
-                    Log::info('[Acteurs::store] PP créée', ['pp_id' => $pp->id]);
-
-                    if ($r->filled(['piece_identite','numeroPiece'])) {
+                    Log::info('[Acteurs::store] PP créée', ['pp_id' => $pp->id ?? null]);
+    
+                    // Pièce d’identité (optionnelle)
+                    if ($r->filled(['piece_identite', 'numeroPiece'])) {
                         $pc = Possederpiece::create([
                             'idPieceIdent'        => $r->input('piece_identite'),
-                            'idPersonnePhysique'  => $acteur->code_acteur,
+                            'idPersonnePhysique'  => $acteur->code_acteur, // FK sur code_acteur (schéma existant)
                             'NumPieceIdent'       => $r->input('numeroPiece'),
                             'DateEtablissement'   => $r->input('dateEtablissement'),
                             'DateExpiration'      => $r->input('dateExpiration'),
                         ]);
                         Log::info('[Acteurs::store] pièce identité créée', ['possederpiece_id' => $pc->id ?? null]);
                     }
-
+    
+                    // Secteurs activité (PP)
                     $sect = (array)$r->input('SecteurActI', []);
                     foreach ($sect as $s) {
                         SecteurActiviteActeur::create([
-                            'code_acteur' => $acteur->code_acteur,
-                            'code_secteur'=> $s,
+                            'code_acteur'  => $acteur->code_acteur,
+                            'code_secteur' => $s,
                         ]);
                     }
                     Log::info('[Acteurs::store] secteurs PP', ['count' => count($sect)]);
-
+    
+                    // Fonction utilisateur (si Acteur lié à un user)
                     if ($acteur->user && $r->filled('fonctionUser')) {
                         $acteur->user->update(['fonction_utilisateur' => $r->input('fonctionUser')]);
                         Log::info('[Acteurs::store] user fonction maj', ['fonction' => $r->input('fonctionUser')]);
                     }
                 } else {
+                    // Personne morale
                     $pm = PersonneMorale::create([
                         'code_acteur'         => $acteur->code_acteur,
                         'raison_sociale'      => $r->input('libelle_long'),
@@ -350,8 +376,9 @@ class ActeurController extends Controller
                         'adresse_postale'     => $r->input('AdressePostaleEntreprise'),
                         'adresse_siege'       => $r->input('AdresseSiègeEntreprise'),
                     ]);
-                    Log::info('[Acteurs::store] PM créée', ['pm_id' => $pm->id]);
-
+                    Log::info('[Acteurs::store] PM créée', ['pm_id' => $pm->id ?? null]);
+    
+                    // Représentants légaux
                     $rl = (array)$r->input('nomRL', []);
                     foreach ($rl as $repId) {
                         Representants::create([
@@ -359,11 +386,12 @@ class ActeurController extends Controller
                             'representant_id'     => $repId,
                             'role'                => 'Représentant Légal',
                             'idPays'              => $acteur->code_pays,
-                            'date_representation' => Carbon::today(),
+                            'date_représentation' => Carbon::today(),
                         ]);
                     }
                     Log::info('[Acteurs::store] RL ajoutés', ['count' => count($rl)]);
-
+    
+                    // Personnes de contact
                     $pcs = (array)$r->input('nomPC', []);
                     foreach ($pcs as $pcId) {
                         Representants::create([
@@ -371,51 +399,63 @@ class ActeurController extends Controller
                             'representant_id'     => $pcId,
                             'role'                => 'Personne de Contact',
                             'idPays'              => $acteur->code_pays,
-                            'date_representation' => Carbon::today(),
+                            'date_représentation' => Carbon::today(),
                         ]);
                     }
                     Log::info('[Acteurs::store] PC ajoutés', ['count' => count($pcs)]);
-
+    
+                    // Secteurs activité (PM)
                     $sect = (array)$r->input('secteurActivite', []);
                     foreach ($sect as $s) {
                         SecteurActiviteActeur::create([
-                            'code_acteur' => $acteur->code_acteur,
-                            'code_secteur'=> $s,
+                            'code_acteur'  => $acteur->code_acteur,
+                            'code_secteur' => $s,
                         ]);
                     }
                     Log::info('[Acteurs::store] secteurs PM', ['count' => count($sect)]);
                 }
-
+                $ecran = Ecran::find($r->input('ecran_id'));
+    
                 $this->logEnd('store', $t0, ['code_acteur' => $acteur->code_acteur]);
-                return redirect()->route('acteurs.index', ['ecran_id' => $r->input('ecran_id')])
+                /*return redirect()
+                    ->route('acteurs.index', ['ecran_id' => $r->input('ecran_id')])
                     ->with('success', 'Acteur créé avec succès.');
-            });
+                */return back()->with('success', 'Acteur créé avec succès.');
+
+                });
         } catch (\Throwable $e) {
             $this->logCatch('store', $e);
             $this->logEnd('store', $t0, ['error' => true]);
-            return back()->withErrors("Erreur lors de la création : ".$e->getMessage());
+            return back()->withErrors("Erreur lors de la création : " . $e->getMessage());
         }
     }
-
+    
     // =======================
     // UPDATE
     // =======================
     public function update(Request $r, $id)
     {
         $t0 = $this->logStart('update', ['id' => $id, 'type_personne' => $r->input('type_personne')]);
-
-        $acteur = Acteur::with(['personnePhysique','personneMorale','possederpiece','representants','secteurActiviteActeur','user'])
-            ->where('code_acteur',$id)->firstOrFail();
-
+    
+        $acteur = Acteur::with([
+            'personnePhysique',
+            'personneMorale',
+            'possederpiece',
+            'representants',
+            'secteurActiviteActeur',
+            'user'
+        ])->where('code_acteur', $id)->firstOrFail();
+    
         $typePersonne = $r->input('type_personne', $acteur->personnePhysique ? 'physique' : 'morale');
-
-        $rules = $this->rules($typePersonne,'update');
+    
+        // Validation
+        $rules = $this->rules($typePersonne, 'update');
         Log::debug('[Acteurs::update] validation rules', ['keys' => array_keys($rules)]);
         $r->validate($rules, $this->messages());
-
+    
         try {
-            return DB::transaction(function() use ($r,$acteur,$typePersonne,$t0) {
-                // communs
+            return DB::transaction(function () use ($r, $acteur, $typePersonne, $t0) {
+                // 1) Champs communs
                 $acteur->type_acteur      = $r->input('type_acteur', $acteur->type_acteur);
                 $acteur->type_financement = $r->input('type_financement', $acteur->type_financement);
                 $acteur->libelle_long     = $r->input('libelle_long') ?: $acteur->libelle_long;
@@ -425,46 +465,64 @@ class ActeurController extends Controller
                 $acteur->adresse          = $r->input('adresse') ?: $r->input('adresseSiegeIndividu') ?: $r->input('AdresseSiègeEntreprise') ?: $acteur->adresse;
                 $acteur->code_pays        = session('pays_selectionne') ?? $r->input('code_pays', $acteur->code_pays);
                 $acteur->save();
-
+    
                 Log::info('[Acteurs::update] acteur maj', [
                     'code_acteur' => $acteur->code_acteur,
-                    'type' => $acteur->type_acteur,
-                    'fin'  => $acteur->type_financement,
+                    'type'        => $acteur->type_acteur,
+                    'fin'         => $acteur->type_financement,
                 ]);
-
+    
+                // 2) Photo (optionnelle)
                 if ($r->hasFile('photo')) {
                     if ($acteur->photo && str_starts_with($acteur->photo, 'storage/')) {
                         $rel = substr($acteur->photo, strlen('storage/'));
-                        if (Storage::disk('public')->exists($rel)) Storage::disk('public')->delete($rel);
+                        if (Storage::disk('public')->exists($rel)) {
+                            Storage::disk('public')->delete($rel);
+                        }
                     }
-                    $path = $r->file('photo')->store('acteurs','public');
-                    $acteur->photo = 'storage/'.$path;
+                    $path = $r->file('photo')->store('acteurs', 'public');
+                    $acteur->photo = 'storage/' . $path;
                     $acteur->save();
                     Log::info('[Acteurs::update] photo remplacée', ['photo' => $acteur->photo]);
                 }
-
+    
+                // 3) Branches PF/PM
                 if ($typePersonne === 'physique') {
+    
+                    // Nettoyages
+                    $numeroFiscal = trim((string)$r->input('numeroFiscal', ''));
+                    if ($numeroFiscal === '' || $numeroFiscal === '?') {
+                        $numeroFiscal = null;
+                    }
+    
+                    // ⚠️ On stocke le code tel quel
+                    $genreCode = trim((string)$r->input('genre', ''));
+                    if ($genreCode === '') {
+                        $genreCode = null;
+                    }
+    
                     if ($pp = $acteur->personnePhysique) {
                         $pp->update([
-                            'nom'                      => $r->input('nom'),
-                            'prenom'                   => $r->input('prenom'),
-                            'date_naissance'           => $r->input('date_naissance'),
-                            'nationalite'              => $r->input('nationnalite'),
-                            'email'                    => $r->input('emailI'),
-                            'code_postal'              => $r->input('CodePostalI'),
-                            'adresse_postale'          => $r->input('AdressePostaleIndividu'),
-                            'adresse_siege'            => $r->input('adresseSiegeIndividu'),
-                            'telephone_bureau'         => $r->input('telephoneBureauIndividu'),
-                            'telephone_mobile'         => $r->input('telephoneMobileIndividu'),
-                            'num_fiscal'               => $r->input('numeroFiscal'),
-                            'genre_id'                 => $r->input('genre'),
-                            'situation_matrimoniale_id'=> $r->input('situationMatrimoniale'),
+                            'nom'                       => $r->input('nom'),
+                            'prenom'                    => $r->input('prenom'),
+                            'date_naissance'            => $r->input('date_naissance'),
+                            'nationalite'               => $r->input('nationnalite'),
+                            'email'                     => $r->input('emailI'),
+                            'code_postal'               => $r->input('CodePostalI'),
+                            'adresse_postale'           => $r->input('AdressePostaleIndividu'),
+                            'adresse_siege'             => $r->input('adresseSiegeIndividu'),
+                            'telephone_bureau'          => $r->input('telephoneBureauIndividu'),
+                            'telephone_mobile'          => $r->input('telephoneMobileIndividu'),
+                            'num_fiscal'                => $numeroFiscal,
+                            'genre_id'                  => $genreCode, // <== code direct
+                            'situation_matrimoniale_id' => $r->input('situationMatrimoniale'),
                         ]);
-                        Log::info('[Acteurs::update] PP maj', ['pp_id' => $pp->id]);
+                        Log::info('[Acteurs::update] PP maj', ['pp_id' => $pp->id ?? null]);
                     }
-
+    
+                    // Pièce d’identité (upsert simple)
                     $piece = $acteur->possederpiece->first();
-                    if ($r->filled(['piece_identite','numeroPiece'])) {
+                    if ($r->filled(['piece_identite', 'numeroPiece'])) {
                         if ($piece) {
                             $piece->update([
                                 'idPieceIdent'      => $r->input('piece_identite'),
@@ -484,22 +542,25 @@ class ActeurController extends Controller
                             Log::info('[Acteurs::update] pièce créée', ['possederpiece_id' => $pc->id ?? null]);
                         }
                     }
-
+    
+                    // Secteurs (remplace l’existant)
                     SecteurActiviteActeur::where('code_acteur', $acteur->code_acteur)->delete();
                     $sect = (array)$r->input('SecteurActI', []);
                     foreach ($sect as $s) {
                         SecteurActiviteActeur::create([
-                            'code_acteur' => $acteur->code_acteur,
-                            'code_secteur'=> $s
+                            'code_acteur'  => $acteur->code_acteur,
+                            'code_secteur' => $s,
                         ]);
                     }
                     Log::info('[Acteurs::update] secteurs PP maj', ['count' => count($sect)]);
-
+    
+                    // Fonction utilisateur (si présent)
                     if ($acteur->user && $r->filled('fonctionUser')) {
                         $acteur->user->update(['fonction_utilisateur' => $r->input('fonctionUser')]);
                         Log::info('[Acteurs::update] user fonction maj', ['fonction' => $r->input('fonctionUser')]);
                     }
                 } else {
+                    // Personne morale
                     if ($pm = $acteur->personneMorale) {
                         $pm->update([
                             'raison_sociale'      => $r->input('libelle_long'),
@@ -514,67 +575,65 @@ class ActeurController extends Controller
                             'adresse_postale'     => $r->input('AdressePostaleEntreprise'),
                             'adresse_siege'       => $r->input('AdresseSiègeEntreprise'),
                         ]);
-                        Log::info('[Acteurs::update] PM maj', ['pm_id' => $pm->id]);
+                        Log::info('[Acteurs::update] PM maj', ['pm_id' => $pm->id ?? null]);
                     }
-
-                    // RL diffs
+    
+                    // Représentants légaux (diffs)
                     $incomingRL = collect((array)$r->input('nomRL', []))->filter()->values();
-                    $existingRL = $acteur->representants()->where('role','Représentant Légal')->pluck('representant_id');
-                    $toAdd = $incomingRL->diff($existingRL);
-                    $toDel = $existingRL->diff($incomingRL);
-                    Log::info('[Acteurs::update] RL diffs', ['add' => $toAdd->values(), 'del' => $toDel->values()]);
-
-                    foreach ($toAdd as $representantId) {
+                    $existingRL = $acteur->representants()->where('role', 'Représentant Légal')->pluck('representant_id');
+                    $toAddRL = $incomingRL->diff($existingRL);
+                    $toDelRL = $existingRL->diff($incomingRL);
+                    foreach ($toAddRL as $representantId) {
                         Representants::updateOrCreate(
-                            ['entreprise_id'=>$acteur->code_acteur,'representant_id'=>$representantId,'role'=>'Représentant Légal'],
-                            ['idPays'=>$acteur->code_pays,'date_representation'=>Carbon::today()]
+                            ['entreprise_id' => $acteur->code_acteur, 'representant_id' => $representantId, 'role' => 'Représentant Légal'],
+                            ['idPays' => $acteur->code_pays, 'date_représentation' => Carbon::today()]
                         );
                     }
-                    if ($toDel->isNotEmpty()) {
-                        Representants::where('entreprise_id',$acteur->code_acteur)
-                            ->where('role','Représentant Légal')
-                            ->whereIn('representant_id',$toDel)->delete();
+                    if ($toDelRL->isNotEmpty()) {
+                        Representants::where('entreprise_id', $acteur->code_acteur)
+                            ->where('role', 'Représentant Légal')
+                            ->whereIn('representant_id', $toDelRL)->delete();
                     }
-
-                    // PC diffs
+    
+                    // Personnes de contact (diffs)
                     $incomingPC = collect((array)$r->input('nomPC', []))->filter()->values();
-                    $existingPC = $acteur->representants()->where('role','Personne de Contact')->pluck('representant_id');
-                    $toAdd = $incomingPC->diff($existingPC);
-                    $toDel = $existingPC->diff($incomingPC);
-                    Log::info('[Acteurs::update] PC diffs', ['add' => $toAdd->values(), 'del' => $toDel->values()]);
-
-                    foreach ($toAdd as $contactId) {
+                    $existingPC = $acteur->representants()->where('role', 'Personne de Contact')->pluck('representant_id');
+                    $toAddPC = $incomingPC->diff($existingPC);
+                    $toDelPC = $existingPC->diff($incomingPC);
+                    foreach ($toAddPC as $contactId) {
                         Representants::updateOrCreate(
-                            ['entreprise_id'=>$acteur->code_acteur,'representant_id'=>$contactId,'role'=>'Personne de Contact'],
-                            ['idPays'=>$acteur->code_pays,'date_representation'=>Carbon::today()]
+                            ['entreprise_id' => $acteur->code_acteur, 'representant_id' => $contactId, 'role' => 'Personne de Contact'],
+                            ['idPays' => $acteur->code_pays, 'date_représentation' => Carbon::today()]
                         );
                     }
-                    if ($toDel->isNotEmpty()) {
-                        Representants::where('entreprise_id',$acteur->code_acteur)
-                            ->where('role','Personne de Contact')
-                            ->whereIn('representant_id',$toDel)->delete();
+                    if ($toDelPC->isNotEmpty()) {
+                        Representants::where('entreprise_id', $acteur->code_acteur)
+                            ->where('role', 'Personne de Contact')
+                            ->whereIn('representant_id', $toDelPC)->delete();
                     }
-
+    
+                    // Secteurs (remplace l’existant)
                     SecteurActiviteActeur::where('code_acteur', $acteur->code_acteur)->delete();
                     $sect = (array)$r->input('secteurActivite', []);
                     foreach ($sect as $s) {
                         SecteurActiviteActeur::create([
-                            'code_acteur' => $acteur->code_acteur,
-                            'code_secteur'=> $s
+                            'code_acteur'  => $acteur->code_acteur,
+                            'code_secteur' => $s,
                         ]);
                     }
                     Log::info('[Acteurs::update] secteurs PM maj', ['count' => count($sect)]);
                 }
-
+    
                 $this->logEnd('update', $t0, ['code_acteur' => $acteur->code_acteur]);
-                return back()->with('success','Acteur mis à jour.');
+                return back()->with('success', 'Acteur mis à jour.');
             });
         } catch (\Throwable $e) {
             $this->logCatch('update', $e, ['id' => $id]);
             $this->logEnd('update', $t0, ['error' => true]);
-            return back()->withErrors("Erreur lors de la mise à jour : ".$e->getMessage());
+            return back()->withErrors("Erreur lors de la mise à jour : " . $e->getMessage());
         }
     }
+    
 
     // =======================
     // DESTROY
@@ -738,7 +797,7 @@ class ActeurController extends Controller
 
             // PP
             'email'                  => $isPhysique ? ($a->personnePhysique->email ?? $a->email) : $a->email,
-            'date_naissance'         => $isPhysique ? optional($a->personnePhysique->date_naissance)->format('Y-m-d') : null,
+            'date_naissance'         => $isPhysique ? $a->personnePhysique->date_naissance : null,
             'nationnalite'           => $isPhysique ? $a->personnePhysique->nationalite : null,
             'CodePostalI'            => $isPhysique ? $a->personnePhysique->code_postal : null,
             'AdressePostaleIndividu' => $isPhysique ? $a->personnePhysique->adresse_postale : null,

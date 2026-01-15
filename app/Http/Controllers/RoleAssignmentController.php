@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ecran;
+use App\Models\GroupeProjetPaysUser;
 use App\Models\GroupeUtilisateur;
 use App\Models\RoleHasRubrique;
 use App\Models\Rubriques;
 use App\Models\SousMenu;
+use App\Models\TypeUtilisateur;
+use App\Models\User;
+use App\Models\Utilisateur;
 use App\Models\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -62,13 +66,15 @@ class RoleAssignmentController extends Controller
     public function habilitations(Request $request)
     {
         try {
-            $views     = View::all();
-            $ecran     = Ecran::find($request->input('ecran_id')) ?? Ecran::first();
-            $roles     = GroupeUtilisateur::all();   // ⚠️ ton modèle "rôle" custom
-            $rubriques = Rubriques::with(['ecrans', 'sousMenus.ecrans', 'sousMenus.sousSousMenusRecursive'])
-                ->orderBy('ordre')->get();
+            $views = View::all();
+            $ecran = Ecran::find($request->input('ecran_id')) ?? Ecran::first();
+            $roles = GroupeUtilisateur::all();  
+            $rubriques = Rubriques::with(['ecrans', 'sousMenus.ecrans', 'sousMenus.sousSousMenusRecursive'])->orderBy('ordre')->get();
+            $typesUtilisateurs = TypeUtilisateur::with('groupesUtilisateurs')
+                ->orderBy('libelle')
+                ->get();
 
-            return view('habilitations.habilitations', compact('roles', 'ecran', 'views', 'rubriques'));
+            return view('habilitations.habilitations', compact('roles','typesUtilisateurs', 'ecran', 'views', 'rubriques'));
         } catch (\Throwable $e) {
             Log::error('Erreur chargement habilitations', ['error' => $e->getMessage()]);
             return redirect()->back()->withErrors("Impossible de charger la page d’habilitations.");
@@ -76,7 +82,6 @@ class RoleAssignmentController extends Controller
     }
 
     /* ===================== Enregistrement (optimisé + logs) ===================== */
-
     public function assignRoles(Request $request)
     {
         $request->validate([
@@ -102,6 +107,8 @@ class RoleAssignmentController extends Controller
             'supprimerSousMenuEcran'     => 'nullable|array',
             'supprimerSousMenuEcran.*'   => 'integer',
             'ecran_id'                   => 'nullable',
+            'projetTypes'                => 'nullable|array',
+            'projetTypes.*'              => 'in:INF,APP,ETU',
         ]);
     
         $t0 = microtime(true);
@@ -127,12 +134,18 @@ class RoleAssignmentController extends Controller
             $request->input('supprimerRubriqueEcran', []),
             $request->input('supprimerSousMenuEcran', [])
         )));
-    
+
+        $selectedTypes = collect($request->input('projetTypes', []))
+        ->map(fn($c)=>strtoupper($c))
+        ->unique()
+        ->values()
+        ->all();
+
         $t1 = microtime(true);
     
         DB::transaction(function () use (
             $role, $rubriqueCodes, $sousMenuCodes,
-            $ecranConsulter, $ecranAjouter, $ecranModifier, $ecranSupprimer
+            $ecranConsulter, $ecranAjouter, $ecranModifier, $ecranSupprimer, $selectedTypes
         ) {
             // ---------- 0) Assainissement / création des permissions manquantes (guard web) ----------
             $guard = 'web';
@@ -237,6 +250,14 @@ class RoleAssignmentController extends Controller
             foreach ($ecranAjouter as $id)   { $names->push("ajouter_ecran_$id"); }
             foreach ($ecranModifier as $id)  { $names->push("modifier_ecran_$id"); }
             foreach ($ecranSupprimer as $id) { $names->push("supprimer_ecran_$id"); }
+            foreach ($selectedTypes as $code) {
+                Permission::firstOrCreate([
+                    'name'       => "projettype.select.$code",
+                    'guard_name' => $guard,
+                ]);
+                $names->push("projettype.select.$code");
+            }
+
     
             $names = $names->unique()->values();
     
@@ -272,7 +293,43 @@ class RoleAssignmentController extends Controller
     
             $permIds = $names->map(fn($n) => $permIdMap[$n] ?? null)->filter()->values()->all();
     
-            $role->permissions()->sync($permIds);
+            // ----------- Gestion pays multi-pays / single-pays -----------
+
+            // Si le rôle est administrateur plateforme ("ab") → multi-pays
+            if ($role->code === 'ab') {
+
+                // Récupérer tous les pays rattachés à l'utilisateur dans groupe_projet_pays_user
+                $acteurConnect = User::select('acteur_id')->where('id', auth()->id())->first();
+              
+                $paysList = GroupeProjetPaysUser::where('user_id', $acteurConnect->acteur_id)
+                    ->pluck('pays_code')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+            } else {
+                // Rôle normal → 1 seul pays
+                $paysList = [ session('pays_selectionne') ];
+            }
+
+            // --- Suppression des habilitations existantes pour ces pays ---
+            DB::table('role_permission_pays')
+                ->where('role_code', $role->code)
+                ->whereIn('pays_alpha3', $paysList)
+                ->delete();
+
+            // --- Réinsertion des permissions pour CHAQUE pays concerné ---
+            foreach ($paysList as $pays) {
+                foreach ($permIds as $pid) {
+                    DB::table('role_permission_pays')->insert([
+                        'role_code'     => $role->code,
+                        'permission_id' => $pid,
+                        'pays_alpha3'   => $pays,
+                        'can_assign'    => 1
+                    ]);
+                }
+            }
+
         });
     
         // ---------- 4) Cache Spatie
@@ -290,6 +347,7 @@ class RoleAssignmentController extends Controller
                 'ecrans_modifier'  => count($ecranModifier),
                 'ecrans_supprimer' => count($ecranSupprimer),
             ],
+            'project_types' => $selectedTypes,
             'timing_ms' => round(1000*($t6 - $t0)),
         ]);
     
@@ -304,29 +362,43 @@ class RoleAssignmentController extends Controller
     {
         try {
             $role = GroupeUtilisateur::findOrFail($roleId);
-
-            // IDs de permissions déjà associées au rôle
-            $permNames = $role->permissions()->pluck('name')->all();
-
-            // Regrouper par action
+    
+            // Récupère TOUTES les permissions du rôle (tous pays confondus)
+            $permNames = DB::table('role_permission_pays AS rpp')
+                ->join('permissions AS p', 'p.id', '=', 'rpp.permission_id')
+                ->where('rpp.role_code', $roleId)
+                ->pluck('p.name')
+                ->unique()
+                ->values()
+                ->all();
+    
+            // Regrouper par actions
             $ecransConsulter = Ecran::whereHas('permission', function($q) use ($permNames){
                     $q->whereIn('name', $permNames);
                 })
-                ->pluck('id'); // ceux qui ont la perm "consulter" via permission_id
-
+                ->pluck('id');
+    
             $ecransAjouter   = Ecran::whereIn('id', $this->extractIdsByPrefix($permNames, 'ajouter_ecran_'))->pluck('id');
             $ecransModifier  = Ecran::whereIn('id', $this->extractIdsByPrefix($permNames, 'modifier_ecran_'))->pluck('id');
             $ecransSupprimer = Ecran::whereIn('id', $this->extractIdsByPrefix($permNames, 'supprimer_ecran_'))->pluck('id');
-
-            // Rubriques / Sous-menus cochés (via leurs permission_id)
+    
+            // Rubriques / Sous-menus cochés
             $rubriques = Rubriques::whereHas('permission', function($q) use ($permNames){
                     $q->whereIn('name', $permNames);
                 })->pluck('code');
-
+    
             $sousMenus = SousMenu::whereHas('permission', function($q) use ($permNames){
                     $q->whereIn('name', $permNames);
                 })->pluck('code');
-
+    
+            // --- Correction projet types ---
+            $projectTypes = collect($permNames)
+                ->filter(fn($n) => str_starts_with($n, 'projettype.select.'))
+                ->map(fn($n) => strtoupper(str_replace('projettype.select.', '', $n)))
+                ->unique()
+                ->values()
+                ->all();
+    
             return response()->json([
                 'rubriques'        => $rubriques,
                 'sous_menus'       => $sousMenus,
@@ -334,12 +406,15 @@ class RoleAssignmentController extends Controller
                 'ecrans_ajouter'   => $ecransAjouter,
                 'ecrans_modifier'  => $ecransModifier,
                 'ecrans_supprimer' => $ecransSupprimer,
+                'project_types'    => $projectTypes,
             ]);
+    
         } catch (\Throwable $e) {
             Log::error('getRolePermissions error', ['roleId' => $roleId, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Impossible de récupérer les permissions du rôle.'], 500);
         }
     }
+    
 
     private function extractIdsByPrefix(array $names, string $prefix): array
     {

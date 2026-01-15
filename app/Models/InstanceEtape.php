@@ -12,7 +12,7 @@ class InstanceEtape extends Model
     protected $table = 'instances_etapes';
     protected $fillable = [
         'instance_approbation_id','etape_workflow_id','statut_id',
-        'quorum_requis','nombre_approbations','date_debut','date_fin'
+        'quorum_requis','nombre_approbations','date_debut','date_fin','notifie_le'
     ];
     protected $casts = [
         'statut_id' => 'integer',

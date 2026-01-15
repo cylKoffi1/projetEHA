@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Notifications\Messages\MailMessage;
 
 class User extends Authenticatable implements CanResetPasswordContract, MustVerifyEmail
 {
@@ -175,5 +176,16 @@ class User extends Authenticatable implements CanResetPasswordContract, MustVeri
     public function scopeWithInactive($query)
     {
         return $query->where('is_active', false);
+    }
+
+    /**
+     * Envoie la notification de réinitialisation de mot de passe.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
     }
 }

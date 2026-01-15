@@ -1,20 +1,30 @@
 @php
     $valeur = $valeurs[$carac->idCaracteristique] ?? null;
-    $type = strtolower($carac->type->libelleTypeCaracteristique ?? '');
-    $name = "caracteristiques[" . ($valeur?->idValeurCaracteristique ?? 'new_' . $carac->idCaracteristique) . "]";
-    $val = $valeur?->valeur ?? '';
-    $valeursPossibles = $carac->valeursPossibles ?? [];
-    $unite = $valeur?->unite?->symbole ?? $carac->unite?->symbole ?? null;
-    $hasChildren = $carac->enfants->isNotEmpty();
+    $type = strtolower(optional($carac->type)->libelleTypeCaracteristique ?? '');
+    $valeurId = $valeur && isset($valeur->idValeurCaracteristique) ? $valeur->idValeurCaracteristique : 'new_' . $carac->idCaracteristique;
+    $name = "caracteristiques[" . $valeurId . "]";
+    $val = $valeur && isset($valeur->valeur) ? $valeur->valeur : '';
+    $valeursPossibles = $carac->valeursPossibles ?? collect();
+    $uniteSymbole = null;
+    if ($valeur && $valeur->unite && isset($valeur->unite->symbole)) {
+        $uniteSymbole = $valeur->unite->symbole;
+    } elseif ($carac->unite && isset($carac->unite->symbole)) {
+        $uniteSymbole = $carac->unite->symbole;
+    }
+    $unite = $uniteSymbole;
+    $hasChildren = $carac->enfants && $carac->enfants->isNotEmpty();
     $toggleId = 'carac-children-' . $carac->idCaracteristique;
     $itemId = 'carac-item-' . $carac->idCaracteristique;
     $isEven = ($index ?? 0) % 2 === 0;
     $isLast = ($index ?? 0) === ($totalItems ?? 1) - 1;
 
-    $idUniteRef = $carac->unite?->idUnite ?? null;
-    $selectedUniteId = $valeur?->uniteDerivee?->id ?? ($idUniteRef && isset($unitesDerivees[$idUniteRef]) && count($unitesDerivees[$idUniteRef]) > 0
-        ? $unitesDerivees[$idUniteRef][0]->id
-        : null);
+    $idUniteRef = $carac->unite && isset($carac->unite->idUnite) ? $carac->unite->idUnite : null;
+    $selectedUniteId = null;
+    if ($valeur && $valeur->uniteDerivee && isset($valeur->uniteDerivee->id)) {
+        $selectedUniteId = $valeur->uniteDerivee->id;
+    } elseif ($idUniteRef && isset($unitesDerivees[$idUniteRef]) && count($unitesDerivees[$idUniteRef]) > 0) {
+        $selectedUniteId = $unitesDerivees[$idUniteRef][0]->id;
+    }
 @endphp
 
 

@@ -74,7 +74,7 @@
                                 <div class="col">
                                     <div class="row">
                                         <div class="row">
-                                            <div class="col-md-1 col-sm-17"><label>Dates:</label></div>
+                                            <div class="col-md-2 col-sm-17"><label>Dates:</label></div>
                                             <div class="col">
                                                 <label><input type="radio" id="radioButton1" name="radioButtons" value="prévisionnelles"> prévisionnelles</label>
                                             </div>
@@ -162,6 +162,22 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-2">
+                                <label class="form-control-label">Infrastructure</label>
+                                <input type="checkbox" class="checkbox" id="projInfrasLayer" onchange="handleCheckboxChange(this.id,'infras')">
+                            </div>
+                            <div class="col-2">
+                                <center>
+                                    <label class="form-control-label">Appui</label>
+                                    <input type="checkbox" id="projAppuiLayer" onchange="handleCheckboxChange(this.id,'appui')">
+                                </center>                                
+                            </div>
+                            <div class="col-3">
+                                <label class="form-control-label">Infrastructure & Appui</label>
+                                <input type="checkbox" id="projCumulLayer" onchange="handleCheckboxChange(this.id,'cumul')">
+                            </div>
                         </div> <!-- row -->
                     </div> <!-- card-header -->
                 </div>
@@ -226,10 +242,12 @@
 
 <script>
     // Coche cumul et nombre par défaut
+        window.currentProjectType = 'cumul';
     document.getElementById('cumulLayer').checked = true;
     document.getElementById('nombreLayer').checked = true;
     window.currentMapFilter = 'cumul'; // cumul | public | private
     window.currentMapMetric = 'count'; // count | cost
+
 
     // Drawer elements
     const drawer = document.getElementById('projectDrawer');
@@ -352,7 +370,7 @@
         drawerSearch.value = ''; // reset recherche
 
         const qs = new URLSearchParams({ code, filter, domain, _: Date.now() }).toString();
-        fetch(`/api/project-details?${qs}`)
+        fetch(`{{ url('/') }}/api/project-details?${qs}`)
             .then(r => r.json())
             .then(data => {
                 window.drawerProjects = data.projects || [];
@@ -399,7 +417,7 @@
         const dateType = dateTypeRadio.value; // 'prévisionnelles' | 'effectives' | 'Tous'
 
         if (dateType === 'Tous') {
-            fetch(`{{ url('/') }}/api/projects?country={{ session('pays_selectionne') }}&group={{ session('projet_selectionne') }}`)
+            fetch(`{{ url('/') }}api/filtrer-projets?project_type=cumul`)
                 .then(res => res.json())
                 .then(data => updateMap({ projets: data }))
                 .catch(console.error);
@@ -412,13 +430,14 @@
             status,
             bailleur,
             date_type: dateType,
+            project_type: window.currentProjectType,
             _: Date.now()
         }).toString();
 
         fetch(`{{ url('/') }}/api/filtrer-projets?${query}`)
             .then(res => res.json())
             .then(data => {
-                updateMap(data); // data.projets = agrégat
+                updateMap(data); 
                 // (Optionnel) désactivation d’options indisponibles
                 disableUnavailableOptions('bailleur', data.bailleurs);
                 disableUnavailableOptions('status',   data.statuts);
@@ -461,6 +480,7 @@
     function handleCheckboxChange(checkboxId){
         const filterCheckboxes = {'cumulLayer':'cumul','priveLayer':'private','publicLayer':'public'};
         const metricCheckboxes = {'financeLayer':'Finance','nombreLayer':'Nombre'};
+        const typeProjet = {'projInfrasLayer':'infras', 'projAppuiLayer':'appui', 'projCumulLayer':'cumul'};
 
         if (filterCheckboxes[checkboxId]) {
             Object.keys(filterCheckboxes).forEach(id => { if (id !== checkboxId) document.getElementById(id).checked = false; });
@@ -470,6 +490,28 @@
             window.reloadMapWithNewStyle?.();
             return;
         }
+        if (typeProjet[checkboxId]) {
+            Object.keys(typeProjet).forEach(id => {
+                if (id !== checkboxId) document.getElementById(id).checked = false;
+            });
+
+            const checkbox = document.getElementById(checkboxId);
+
+            // 🔥 ON MET BIEN LE TYPE DE PROJET DANS currentProjectType
+            window.currentProjectType = checkbox.checked 
+                ? checkboxId === "projInfrasLayer" ? "infras"
+                : checkboxId === "projAppuiLayer"  ? "appui"
+                : "cumul"
+                : "cumul";
+
+            if (!checkbox.checked) {
+                document.getElementById("projCumulLayer").checked = true;
+            }
+
+            console.log("🔥 TYPE PROJET =", window.currentProjectType);
+            return;
+        }
+
         if (metricCheckboxes[checkboxId]) {
             Object.keys(metricCheckboxes).forEach(id => { if (id !== checkboxId) document.getElementById(id).checked = false; });
             const checkbox = document.getElementById(checkboxId);
@@ -480,6 +522,17 @@
                 window.reloadMapWithNewStyle?.();
             }
         }
+
+        if (checkboxId === 'projInfrasLayer') {
+            window.currentProjectType = 'infras';
+        }
+        if (checkboxId === 'projAppuiLayer') {
+            window.currentProjectType = 'appui';
+        }
+        if (checkboxId === 'projCumulLayer') {
+            window.currentProjectType = 'cumul';
+        }
+
     }
 </script>
 

@@ -1,11 +1,9 @@
 <?php
 
 use App\Http\Controllers\PlateformeController;
-use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Models\Ecran;
-use App\Models\Pays;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnnexeController;
@@ -14,7 +12,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\CaracteristiqueStructureController;
 use App\Http\Controllers\cloturerProjetController;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\CodificationSchemaController;
 use App\Http\Controllers\EtatController;
 use App\Http\Controllers\EtudeProjet;
 use App\Http\Controllers\GanttController;
@@ -25,16 +23,15 @@ use App\Http\Controllers\InfrastructureController;
 use App\Http\Controllers\InfrastructureMapController;
 use App\Http\Controllers\PaysController;
 use App\Http\Controllers\ProjetController;
-use App\Http\Controllers\SigController;
-use App\Http\Controllers\Naissance;
 use App\Http\Controllers\ParGeneraux\FonctionTypeActeurController;
 use App\Http\Controllers\ParGeneraux\GroupProjectPermissionsController;
 use App\Http\Controllers\ParGeneraux\RolePermissionsController;
 use App\Http\Controllers\ParGeneraux\TypeActeurController;
 use App\Http\Controllers\ParSpecifique\ActeurController;
-use App\Http\Controllers\pibController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\ProjectStatusController;
+use App\Http\Controllers\ProjetAppuiController;
+use App\Http\Controllers\ProjetEtudeController;
 use App\Http\Controllers\ProjetValidationController;
 use App\Http\Controllers\RealiseProjetController;
 use App\Http\Controllers\representationGraphique;
@@ -43,19 +40,10 @@ use App\Http\Controllers\SigAdminInfrastructureController;
 use App\Http\Controllers\StatController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\WorkflowValidationController;
-use App\Models\Domaine;
-use App\Models\EtudeProject;
 use App\Models\LocalitesPays;
-use App\Models\Renforcement;
 use App\Models\SousDomaine;
-use App\Models\Utilisateur;
-use App\Services\GridFsService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Laravel\Ui\Presets\React;
-use PasswordResetController as GlobalPasswordResetController;
-
 
 use Illuminate\Support\Facades\Session;
 Session::start();
@@ -75,15 +63,10 @@ Route::get('/test-session', function () {
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-Route::get('/', function () {
-    $ecran = Ecran::find(29);
-    $ecrans = Ecran::all();
-    return view('index', compact('ecran','ecrans'));
 
-});
+
 Route::get('/admin/modele', function () {
     return view('armonisation.modele');
-
 });
 
 // Exemple de route protégée (accessible uniquement aux utilisateurs authentifiés)
@@ -129,6 +112,11 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::post('admin/localites/import',  [GestionDemographieController::class, 'importLocalite'])->name('localites.import');
     Route::get('admin/localites/template', [GestionDemographieController::class, 'templateLocalite'])->name('localites.template');
 
+    //******************CODIFICATION DES ENTITES */    
+    Route::get('admin/codifications', [CodificationSchemaController::class, 'index'])->name('codif.index');
+    Route::post('/codifications', [CodificationSchemaController::class, 'store'])->name('codif.store');
+    Route::delete('/codifications/{schema}', [CodificationSchemaController::class, 'destroy'])->name('codif.destroy');
+        
     //***************** Genre ************* */
     Route::get('admin/genre', [PlateformeController::class, 'genre'])->name('genre');
     Route::get('admin/genre/{code}', [PlateformeController::class, 'getGenre'])->name('genre.show');
@@ -239,6 +227,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     //***************** PROJETS ************* */
     Route::get('admin/projets/liste', [ProjetController::class, 'ConsultationProjet'])->name('projets.consultation');
     Route::get('admin/projet', [ProjetController::class, 'projet'])->name('projet');
+    Route::get('/contrats/options-projets', [ProjetController::class, 'optionsProjets'])->name('contrats.optionsProjets');
     Route::get('/get-sous-domaines/{domaineCode}', [ProjetController::class, 'getSousDomaines']);
     Route::get('admin/get-cours_eau/{eauId}', [ProjetController::class, 'getCours_eau']);
     Route::get('admin/get-insfrastructures/{domaineId}', [ProjetController::class, 'getInsfrastructures']);
@@ -254,7 +243,9 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
     Route::get('/contrats/{id}/pdf', [ProjetController::class, 'pdf'])->name('contrats.pdf');
     Route::put('/contrats/{id}', [ProjetController::class, 'update'])->name('contrats.update');
     Route::delete('/contrats/{id}', [ProjetController::class, 'destroy'])->name('contrats.destroy');
-    Route::get('admin/projet/changementChefProjet', [ProjetController::class, 'changerChef']);
+
+    Route::get('admin/projet/changementChefProjet', [ProjetController::class, 'changerChef'])->name('contrats.chef.page');
+    Route::get('/contrats/options-contrats', [ProjetController::class, 'optionsContrats'])->name('contrats.optionsContrats'); // AJAX
     Route::post('/contrats/chef/update', [ProjetController::class, 'changerChefUpdate'])->name('contrats.chef.update');
 
         /*****************ETUDE DE PROJET**************** */
@@ -262,7 +253,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
         Route::get('/pays/{alpha3}/niveaux', [EtudeProjet::class, 'getNiveauxAdministratifs']);
         Route::get('/pays/{alpha3}/niveau/{niveau}/localites', [EtudeProjet::class, 'getLocalitesByNiveau']);
         Route::get('/get-latest-project-number/{location}/{category}/{typeFinancement}', [EtudeProjet::class, 'getLatestProjectNumber']);
-        Route::get('admin/modeliser', [EtudeProjet::class, 'modelisation']);
+        Route::get('admin/consulterProjetType', [EtudeProjet::class, 'consulter']);
         Route::get('/get-bailleurs', [EtudeProjet::class, 'getBailleursParStatutLocal']);
 
                 /*******************SAUVEGARDE DE DEMANDE DE PROJET */
@@ -275,16 +266,63 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                 Route::post('/projets/temp/save-step7', [EtudeProjet::class, 'saveStep7'])->name('projets.temp.save.step7');
                 Route::post('/projets/finaliser', [EtudeProjet::class, 'finaliserProjet'])->name('projets.finaliser');
 
-        /***********************VALIDATION***************** */
+        /***********************PROJET APPUI ***************************** */              
+            Route::get('admin/projetAppui', [ProjetAppuiController::class, 'createNaissanceAppui'])->name('project.create');
+        
+            // Recherche et informations projets
+            Route::get('/projets/search', [ProjetAppuiController::class, 'searchProjets'])->name('projets.search');
+            Route::get('/projets/info/{codeProjet}', [ProjetAppuiController::class, 'getProjetInfo'])->name('projets.info');
+        
+            // Sauvegardes temporaires (wizard)
+            Route::post('/projets/appui/temp/save/step1', [ProjetAppuiController::class, 'saveAppuiStep1'])->name('projet.appui.temp.save.step1');
+            Route::post('/projets/appui/temp/save-step2', [ProjetAppuiController::class, 'saveAppuiStep2'])->name('projet.appui.temp.save.step2');
+            Route::post('/projets/appui/temp/save-step3', [ProjetAppuiController::class, 'saveAppuiStep3'])->name('projet.appui.temp.save.step3');
+            Route::post('/projets/appui/temp/save-step4', [ProjetAppuiController::class, 'saveAppuiStep4'])->name('projet.appui.temp.save.step4');
+            Route::post('/projets/appui/temp/save-step5', [ProjetAppuiController::class, 'saveAppuiStep5'])->name('projet.appui.temp.save.step5');
+            Route::post('/projets/appui/temp/save-step6', [ProjetAppuiController::class, 'saveAppuiStep6'])->name('projet.appui.temp.save.step6');
+            Route::post('/projets/appui/temp/save-step7', [ProjetAppuiController::class, 'saveAppuiStep7'])->name('projet.appui.temp.save.step7');
+            // Finalisation (création projet + liaisons + workflow)
+            Route::post('/projets/appui/finaliser', [ProjetAppuiController::class, 'finaliser'])->name('projets.finaliser');
+            Route::get('/projets/{codeProjet}/beneficiaires', [ProjetAppuiController::class, 'getBeneficiairesProjet'])->name('projets.beneficiaires');
+            // Référentiels / listes dépendantes
+            Route::get('/get-sous-domaines/{codeDomaine}', [ProjetAppuiController::class, 'getSousDomaines']);
+        
+        
+        /***********************PROJET ETUDE ***************************** */              
+        Route::get('admin/etudeProjet', [ProjetEtudeController::class, 'createNaissanceEtude'])->name('project.create');
+        
+        // Recherche et informations projets
+        Route::get('/projets/search', [ProjetEtudeController::class, 'searchProjets'])->name('projets.search');
+        Route::get('/projets/info/{codeProjet}', [ProjetEtudeController::class, 'getProjetInfo'])->name('projets.info');
+    
+        // Sauvegardes temporaires (wizard)
+        Route::post('/projets/etude/temp/save/step1', [ProjetEtudeController::class, 'saveEtudeStep1'])->name('projet.etude.temp.save.step1');
+        Route::post('/projets/etude/temp/save-step2', [ProjetEtudeController::class, 'saveEtudeStep2'])->name('projet.etude.temp.save.step2');
+        Route::post('/projets/etude/temp/save-step3', [ProjetEtudeController::class, 'saveEtudeStep3'])->name('projet.etude.temp.save.step3');
+        Route::post('/projets/etude/temp/save-step4', [ProjetEtudeController::class, 'saveEtudeStep4'])->name('projet.etude.temp.save.step4');
+        Route::post('/projets/etude/temp/save-step5', [ProjetEtudeController::class, 'saveEtudeStep5'])->name('projet.etude.temp.save.step5');
+       
+        // Finalisation (création projet + liaisons + workflow)
+        Route::post('/projets/etude/finaliser', [ProjetEtudeController::class, 'finaliser'])->name('projets.finaliser');
+
+        /***********************ECRAN UNIFIE (SANS VALIDATION) ***************************** */              
+        Route::get('admin/naissanceProjetUnifie', [EtudeProjet::class, 'createNaissanceUnifie'])->name('project.create.unifie');
+        // Routes de finalisation directe (sans validation)
+        Route::post('/projets/finaliserDirect', [EtudeProjet::class, 'finaliserProjetDirect'])->name('projets.finaliser.direct');
+        Route::post('/projets/etude/finaliserDirect', [ProjetEtudeController::class, 'finaliserDirect'])->name('projets.etude.finaliser.direct');
+        Route::post('/projets/appui/finaliserDirect', [ProjetAppuiController::class, 'finaliserDirect'])->name('projets.appui.finaliser.direct');
+    
+        
+       /***********************VALIDATION***************** */
 
             Route::get('admin/validationProjetss', [EtudeProjet::class, 'validation'])->name('projects.validate');
             Route::get('/planning/show', [EtudeProjet::class, 'showPlanning'])->name('planning.show');
             Route::post('/planning/{id}/approve', [EtudeProjet::class, 'approve'])->name('projects.approve');
             Route::get('/get-infrastructure-localite/{code}', [EtudeProjet::class, 'getLocaliteInfrastructure']);
 
-            Route::get('admin/validationProjet', [ProjetValidationController::class, 'index'])->name('projets.validation.index');
+            Route::get('admin/validationProjetsss', [ProjetValidationController::class, 'index'])->name('projets.validation.index');
             Route::get('/projets/validation/{codeProjet}', [ProjetValidationController::class, 'show'])->name('projets.validation.show');
-
+    
             Route::post('/projets/validation/{codeProjet}/valider', [ProjetValidationController::class, 'valider'])->name('projets.validation.valider');
             Route::post('/projets/validation/{codeProjet}/refuser', [ProjetValidationController::class, 'refuser'])->name('projets.validation.refuser');
         /************************SUIVRE APPROBATION************* */
@@ -313,22 +351,30 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
                     Route::delete('/activiteDelete/{id}', [EtudeProjet::class, 'deleteActivite'])->name('travaux_connexes.destroy');
                     Route::put('/activite/{id}', [EtudeProjet::class, 'updateConnexe'])->name('travaux_connexes.update');
                 /**************************** REATTRIBUTION DE PROJET ******************************/
-                    Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('maitre_ouvrage.index');
-                    Route::get('/get-execution-by-projet/{code_projet}', [ProjetController::class, 'getExecutionByProjet']);
-                    Route::get('/getProjetADeleted/{code_projet}', [ProjetController::class, 'getProjetSupprimer']);
-                    Route::prefix('reatributionProjet')->group(function () {
-                        Route::post('/', [ProjetController::class, 'storeReatt'])->name('maitre_ouvrage.store');
-                        Route::put('/{id}', [ProjetController::class, 'updateReatt'])->name('maitre_ouvrage.update');
-                        Route::delete('/{id}', [ProjetController::class, 'destroyReatt'])->name('maitre_ouvrage.destroy');
-                    });
+                Route::get('admin/reatributionProjet', [ProjetController::class, 'reatributionProjet'])->name('maitre_ouvrage.index');            
+                Route::get('/reatributionProjet/options-projets', [ProjetController::class, 'optionsProjetsMOE'])->name('reattribution.optionsProjets');
+                Route::get('/get-execution-by-projet/{code_projet}', [ProjetController::class, 'getExecutionByProjet'])->name('reattribution.executionByProjet');
+                Route::get('/getProjetADeleted/{code_projet}', [ProjetController::class, 'getProjetCard'])->name('reattribution.projetCard');
+                Route::get('/reatributionProjet/executions', [ProjetController::class, 'apiExecutionsList'])
+    ->name('reattribution.executionsList');
+                Route::prefix('reatributionProjet')->group(function () {
+                    Route::post('/', [ProjetController::class, 'storeReatt'])->name('maitre_ouvrage.store');
+                    Route::put('/{id}', [ProjetController::class, 'updateReatt'])->name('maitre_ouvrage.update');
+                    Route::delete('/{id}', [ProjetController::class, 'destroyReatt'])->name('maitre_ouvrage.destroy');
+                });
                 /**************************** ANNULER DE PROJET ******************************/
                 Route::get('admin/annulProjet', [ProjetController::class, 'formAnnulation'])->name('projets.annulation.form');
                 Route::post('/projets/annulation', [ProjetController::class, 'annulerProjet'])->name('projets.annulation.store');
                 Route::post('/projets/redemarrer', [ProjetController::class, 'redemarrerProjet'])->name('projets.redemarrer');
 
+                Route::get('/annulation/options-projets', [ProjetController::class, 'annulationOptionsProjets'])->name('annulation.optionsProjets');
                 /*******************************SUSPENDRE PROJET ***************************** */
                 Route::get('admin/attenteProjet', [ProjetController::class, 'formSuspension'])->name('projets.suspension.form');
+                Route::get('/projets/suspension/options-projets', [ProjetController::class, 'suspensionOptionsProjets'])->name('projets.suspension.options');
+                Route::get('/getProjetCard/{code}', [ProjetController::class, 'getProjetCardSus'])->name('projets.card');
                 Route::post('/projets/suspendre', [ProjetController::class, 'suspendreProjet'])->name('projets.suspension.store');
+
+                Route::post('/projets/redemarrer', [ProjetController::class, 'redemarrerProjet'])->name('projets.redemarrer');
 
 
 
@@ -362,6 +408,9 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::get('/get-familles-by-projet', [RealiseProjetController::class, 'getFamillesByProjet']);
             Route::get('/recuperer-caracteristiques', [RealiseProjetController::class, 'recupererCaracteristiques'])
             ->name('projets.recuperer.caracteristiques');
+            // Bénéficiaires d’un projet d’appui (agrégés depuis ses projets d’infra liés)
+            Route::get('/appui/{code_appui}/beneficiaires', [RealiseProjetController::class, 'beneficiairesAppui'])
+            ->name('appui.beneficiaires');
 
             //Route::get('/getDataDateEffective', [RealiseProjetController::class, 'obtenirDonneesProjet'])->name('obtenir-donnees-projet');
             Route::get('admin/etatAvancement', [RealiseProjetController::class, 'etatAvancement']);
@@ -377,9 +426,19 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
 
             Route::post('/caracteristiques/store', [RealiseProjetController::class, 'storeCaracteristiques'])->name('caracteristique.store');
             Route::get('/get-donnees-suivi', [RealiseProjetController::class, 'getDonneesFormulaireSimplifie'])->name('get.donnees.suivi');
+            // Liste JSON des projets par type (alimente la table "Voir la liste complète...")
+            Route::get('/realise/liste-projets', [RealiseProjetController::class, 'listeProjetsByType'])
+                ->name('realise.listeProjets');
+// routes/web.php
+Route::get('/projets/liste-by-type', [\App\Http\Controllers\RealiseProjetController::class, 'listeProjetsByType'])
+    ->name('projets.listeByType');
 
+            // Fiche projet unifiée (inspirée de getProjetCard...) — sert à remplir les champs en haut
+            Route::get('/realise/project-card/{code}', [RealiseProjetController::class, 'projectCard'])
+                ->name('realise.projectCard');
             Route::get('/verifier-projet-finalisable', [RealiseProjetController::class, 'verifierProjetFinalisable'])->name('verifier.projet.finalisable');
 
+            Route::get('/realise/options-projets', [RealiseProjetController::class, 'optionsProjets'])->name('realise.optionsProjets');
             Route::get('/get-project-status/{id}', [ProjectStatusController::class, 'getProjectStatus']);    //***************** GESTION FINANCIERE ************* */
             Route::get('admin/graphique', [representationGraphique::class, 'graphique']);
 
@@ -390,37 +449,25 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             //***************** GESTION SIG ************* */
             Route::get('admin/carte', [sigAdminController::class, 'carte']);
             //Route::get('admin/autresRequetes', [InfrastructureMapController::class, 'showMap'])->name('infrastructures.map');
-            Route::get('admin/autresRequetes', [sigAdminController::class, 'page'])->name('sig.infras.page');
+            Route::get('admin/autresRequetes', [\App\Http\Controllers\AutresRequetesController::class, 'page'])->name('sig.infras.page');
             Route::get('/api/infrastructures/geojson', [InfrastructureMapController::class, 'getInfrastructuresGeoJson']);
+            Route::get('/api/infrastructures/markers', [SigAdminInfrastructureController::class, 'markersInfras']);
+            Route::get('/api/infrastructures/markers-by-level', [InfrastructureMapController::class, 'getMarkersByLevel']);
             Route::get('/api/infrastructures/familles-colors', [InfrastructureMapController::class, 'getFamillesColors']);
+            
+            // Routes API pour autresRequetes
+            Route::get('/api/autres-requetes/aggregate', [\App\Http\Controllers\AutresRequetesController::class, 'aggregate'])->name('api.autres.requetes.aggregate');
+            Route::get('/api/autres-requetes/details', [\App\Http\Controllers\AutresRequetesController::class, 'details'])->name('api.autres.requetes.details');
+            Route::get('/api/autres-requetes/legend', [\App\Http\Controllers\AutresRequetesController::class, 'legend'])->name('api.autres.requetes.legend');
+            Route::get('/api/autres-requetes/markers', [\App\Http\Controllers\AutresRequetesController::class, 'markers'])->name('api.autres.requetes.markers');
+            Route::get('/api/autres-requetes/repartition', [\App\Http\Controllers\AutresRequetesController::class, 'repartition'])->name('api.autres.requetes.repartition');
 
             Route::get('', [sigAdminController::class, 'Autrecarte']);
-            //Route::get('/filtre-options', [sigAdminController::class, 'getFiltreOptions']);
-            //Route::get('admin/autresRequetes', [sigAdminController::class, 'page'])->name('sig.infras.page');
-            // Légende dynamique
-            
-            Route::get('admin/autresRequetes', [SigAdminInfrastructureController::class, 'pageInfras'])->name('sig.infras');
 
-            // agrégats & légende
-            /*          Route::get('/api/legende/{groupe}', [SigAdminInfrastructureController::class, 'getByGroupe']);
-
-                        // Agrégat principal (utilisé par map.js → loadProjectData)
-                        Route::get('/api/projects', [SigAdminInfrastructureController::class, 'getProjects']);
-                        Route::get('/api/filtrer-projets', [SigAdminInfrastructureController::class, 'getFiltreOptionsEtProjets']);
-
-                        // Détails (tiroir)
-                        Route::get('/api/project-details', [SigAdminInfrastructureController::class, 'getProjectDetails']);
-
-                        // Légende fallback (optionnel)
-                        Route::get('/api/legend', [SigAdminInfrastructureController::class, 'legend']);
-
-                        // Carte Afrique
-                        Route::get('/api/projects/all', [SigAdminInfrastructureController::class, 'getAllProjects']);
-
-                        // (optionnels, si utilisés ailleurs)
-                        Route::get('/api/aggregate', [SigAdminInfrastructureController::class, 'aggregate']);
-                        Route::get('/api/details',   [SigAdminInfrastructureController::class, 'details']);
-            */
+            // Routes API pour les infrastructures bénéficiaires (via table jouir)
+            Route::get('/api/infras-beneficiaires/aggregate', [sigAdminController::class, 'aggregate'])->name('api.infras.beneficiaires.aggregate');
+            Route::get('/api/infras-beneficiaires/details', [sigAdminController::class, 'details'])->name('api.infras.beneficiaires.details');
+            Route::get('/api/infras-beneficiaires/legend', [sigAdminController::class, 'legend'])->name('api.infras.beneficiaires.legend');
 
             Route::get('/get-projet-data', 'ProjetController@getProjetData');
 
@@ -429,37 +476,51 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             })->name('dash');
 
             /***************************WORKFLOW DE VALIDATION******************** */
-                        
-                    // --- VUES (toutes servies par le contrôleur) ---
-                    Route::get('admin/workflows/ui',                 [WorkflowValidationController::class, 'ui'])->name('workflows.ui');
-                    Route::get('admin/workflows/create',             [WorkflowValidationController::class, 'createForm'])->name('workflows.createForm');
-                    Route::get('admin/workflows/{id}/design',        [WorkflowValidationController::class, 'designForm'])->name('workflows.designForm');
-                    Route::get('admin/workflows/{id}/bindings',      [WorkflowValidationController::class, 'bindingsView'])->name('workflows.bindingsView');
+                // UI admin
+                
+                    Route::get('admin/workflows/ui', [WorkflowValidationController::class, 'ui'])->name('workflows.ui');
+                    Route::get('admin/workflows/create', [WorkflowValidationController::class, 'createForm'])->name('workflows.createForm');
+                    Route::get('admin/workflows/{id}/design', [WorkflowValidationController::class, 'designForm'])->name('workflows.designForm');
+                    Route::get('admin/workflows/{id}/bindings', [WorkflowValidationController::class, 'bindingsView'])->name('workflows.bindingsView');
                     Route::get('admin/approbations/{instance}/view', [WorkflowValidationController::class, 'instanceView'])->name('approbations.instanceView');
-                    Route::get('admin/approbations/dashboard', [WorkflowValidationController::class, 'dashboard'])->name('approbations.dashboard');
-                   
-                    // --- Conception / Admin (JSON) ---
-                    Route::get('/workflows',                [WorkflowValidationController::class, 'index'])->name('workflows.index');
-                    Route::post('/workflows',               [WorkflowValidationController::class, 'store'])->name('workflows.store');
-                    Route::get('/workflows/{id}',           [WorkflowValidationController::class, 'show'])->name('workflows.show');
-                    Route::put('/workflows/{id}',           [WorkflowValidationController::class, 'update'])->name('workflows.update');
-                    Route::post('/workflows/{id}/publish',  [WorkflowValidationController::class, 'publish'])->name('workflows.publish');
-                    Route::delete('/workflows/{id}',        [WorkflowValidationController::class, 'destroy'])->name('workflows.destroy');
+                    Route::get('admin/validationProjet', [WorkflowValidationController::class, 'dashboard'])->name('approbations.dashboard');
+                    Route::get('admin/approbations/historique', [WorkflowValidationController::class, 'HistoriqueApprobation'])->name('approbations.history');
+                    // Aperçu/fiche de l'objet lié à une approbation
+                    Route::get('/approbations/objet/{module}/{type}/{id}',[WorkflowValidationController::class, 'objectView'])->name('approbations.objectView');
+               
 
-                    // Liaisons (bindings)
-                    Route::post('/workflows/{id}/bind',     [WorkflowValidationController::class, 'bind'])->name('workflows.bind');
-                    Route::get('/workflows/{id}/bindings',  [WorkflowValidationController::class, 'bindings'])->name('workflows.bindings');
+                // API Conception / Admin
+                    Route::get('/workflows', [WorkflowValidationController::class, 'index'])->name('workflows.index');
+                    Route::post('/workflows', [WorkflowValidationController::class, 'store'])->name('workflows.store');
+                    Route::get('/workflows/{id}', [WorkflowValidationController::class, 'show'])->name('workflows.show');
+                    Route::put('/workflows/{id}', [WorkflowValidationController::class, 'update'])->name('workflows.update');
+                    Route::post('/workflows/{id}/publish', [WorkflowValidationController::class, 'publish'])->name('workflows.publish');
+                    Route::delete('/workflows/{id}', [WorkflowValidationController::class, 'destroy'])->name('workflows.destroy');
 
-                    // --- Exécution (JSON) ---
-                    Route::post('/approbations/start',      [WorkflowValidationController::class, 'start'])->name('approbations.start');
-                    Route::get('/approbations/{instance}',  [WorkflowValidationController::class, 'showInstance'])->name('approbations.show');
+                    Route::post('/workflows/{id}/bind', [WorkflowValidationController::class, 'bind'])->name('workflows.bind');
+                    Route::get('/workflows/{id}/bindings', [WorkflowValidationController::class, 'bindings'])->name('workflows.bindings');
 
-                    // Actions
-                    Route::post('/approbations/etapes/{stepInstance}/act', [WorkflowValidationController::class, 'act'])->name('approbations.act');
+                    Route::post('/workflows/{id}/bind-dynamic', [WorkflowValidationController::class, 'bindDynamic'])->name('workflows.bindDynamic');
+                    Route::delete('/workflows/{workflow}/bindings/{binding}', [WorkflowValidationController::class, 'destroyBinding'])->name('workflows.bindings.destroy');
 
-                    // Simulation & SLA
-                    Route::post('/workflows/{id}/simulate', [WorkflowValidationController::class, 'simulate'])->name('workflows.simulate');
-                    Route::post('/workflows/sla/tick',      [WorkflowValidationController::class, 'slaTick'])->name('workflows.slaTick');
+                    Route::get('/workflow/model-candidates', [WorkflowValidationController::class, 'modelCandidates'])->name('workflows.modelCandidates');
+                    Route::get('/workflow/model-fields', [WorkflowValidationController::class, 'modelFields'])->name('workflows.modelFields');
+                    Route::post('/workflow/modules', [WorkflowValidationController::class, 'storeModule'])->name('workflows.modules.save');
+
+                    Route::get('/modules-workflow', [WorkflowValidationController::class, 'modulesDisponibles'])->name('workflows.modules');
+                    Route::get('/modules-workflow/{id}/instances', [WorkflowValidationController::class, 'moduleInstances'])->name('workflows.module.instances');
+               
+
+                // Exécution (droits plus larges mais nécessitent auth)
+                Route::post('/approbations/start', [WorkflowValidationController::class, 'start'])->name('approbations.start')->middleware('can:approval.start');
+                Route::get('/approbations/{instance}', [WorkflowValidationController::class, 'showInstance'])->name('approbations.show')->middleware('can:approval.view');
+                Route::post('/approbations/etapes/{stepInstance}/act', [WorkflowValidationController::class, 'act'])->name('approbations.act')->whereNumber('stepInstance')->middleware('can:approval.act,stepInstance');
+
+                // Simulation & SLA
+                Route::post('/workflows/{id}/simulate', [WorkflowValidationController::class, 'simulate'])->name('workflows.simulate')->middleware('can:workflow.view');
+                Route::post('/workflows/sla/tick', [WorkflowValidationController::class, 'slaTick'])->name('workflows.slaTick')->middleware('can:workflow.admin');
+            /****************************GESTION CABINET D'ETUDE ************************************** */
+
 
             /****************************GESTION FINANCIERE  **********************************************/
             Route::get('gf/decaissements/financements/{codeProjet}', [GestionFinanciereController::class, 'financementsByProjet'])
@@ -501,11 +562,23 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             Route::delete('/banques/{id}', [PlateformeController::class, 'destroyBanque'])->name('banques.destroy');
             /**************************** GESTION DES STATISTIQUES **********************************/
 
-            Route::prefix('admin')->group(function () {
+            /*Route::prefix('admin')->group(function () {
                 Route::get('stat_nombre_projet', [StatController::class, 'statNombreProjet'])->name('tb.nombre.vue');
                 Route::get('stat-finance',       [StatController::class, 'statFinance'])->name('tb.finance.vue');
-            });
+            });*/
+            Route::get('admin/stat-etudeprojet', [StatController::class, 'statDashboard'])->name('stat.dashboard');
+            Route::get('admin/stat-projet-dashboard', [StatController::class, 'statProjetDashboard'])->name('projet.dashboard');
+            //Route::get('admin/stat-projet', [StatController::class, 'statProjet'])->name('stat.projet.dashboard');
+            Route::get('admin/stat-projet', [StatController::class, 'statProjet'])->name('projet.stat');
+            Route::get('/tableau-bord/projet/detail-nombre', [StatController::class, 'statProjetNombreData'])->name('projet.nombre.data');
+            Route::get('/tableau-bord/projet/detail-finance', [StatController::class, 'statProjetFinanceData'])->name('projet.finance.data');
+        /* ========= DETAILS NOMBRE ========= */
+            Route::get('/statistiques/nombre/data', [StatController::class, 'statNombreData'])
+                ->name('nombre.data');
 
+            /* ========= DETAILS FINANCE ========= */
+            Route::get('/statistiques/finance/data', [StatController::class, 'statFinanceData'])
+                ->name('finance.data');
             Route::get('/nombreProjetLien',            [StatController::class, 'statNombreData'])->name('nombre.data');
             Route::get('/stat-finance_projet/data',    [StatController::class, 'statFinanceData'])->name('finance.data');
 
@@ -707,7 +780,7 @@ Route::middleware(['auth', 'auth.session', 'check.projet'/*, 'prevent.multiple.s
             });
 
         return response()->json($sousDomaines);
-    });
+    })->name('sousdomaines.by.domaine');
 
 
     /*************************ACTEURS *******/
@@ -805,11 +878,14 @@ route::get('/geojson', function () {
 
 });
 
-
+Route::get('/', function () {
+    return view('index');
+});
 // Routes d'authentification
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
 
 Route::post('/login/check', [LoginController::class, 'checkUserAssociations'])->name('login.check');
+Route::post('/login/verify-otp', [LoginController::class, 'verifyOtp'])->name('login.verifyOtp');
 Route::post('/login/select-country', [LoginController::class, 'selectCountry'])->name('login.selectCountry');
 Route::post('/login/select-group', [LoginController::class, 'selectGroup'])->name('login.selectGroup');
 Route::post('/login/finalize', [LoginController::class, 'finalizeLogin'])->name('login.finalize');
@@ -822,27 +898,15 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 Route::get('/projetDistricts', [ProjetController::class, 'projetDistrict']);
 
 // Routes pour la réinitialisation de mot de passe
-Route::get('/password/reset', [LoginController::class, 'showResetForm'])->name('password.request')->middleware('guest')->name('password.request');
-Route::post('/forgot-password', [LoginController::class, 'postResetForm'])->middleware('guest')->name('password.email');
-
-Route::get('/reset-password/{token}', [LoginController::class, 'ResetPasswordToken'])->middleware('guest')->name('password.reset');
-
-Route::post('/reset-password', [LoginController::class, 'ResetPassword'])->middleware('guest')->name('password.update');
+Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request')->middleware('guest');
+Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email')->middleware('guest');
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset')->middleware('guest');
+Route::post('password/reset', [ResetPasswordController::class, 'resetPassword'])->name('password.update')->middleware('guest');
 
 //Routes changer de mot de passe accueil
 
 //génération du code geojson
 Route::get('/test', [AdminController::class, 'test']);
-
-// routes/web.php
-
-// Routes pour la réinitialisation de mot de passe
-Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
-Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-Route::post('password/reset', [ResetPasswordController::class, 'resetPassword'])->name('password.update');
-
-Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
 
 Route::get('/etat/pdf', [EtatController::class, 'generatePDF'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 

@@ -1027,6 +1027,10 @@ class GestionFinanciereController extends Controller
       /** Page unifiée PIB (séries + gestion + graphe par secteur) */
       public function pibIndex(Request $request)
       {
+        $ecran = Ecran::find($request->input('ecran_id'));
+        if (!$ecran) {
+            return redirect()->back()->with('error', 'Écran non trouvé.');
+        }
           $annee = (int) ($request->input('annee') ?? date('Y'));
   
           // Pays courant depuis la session
@@ -1043,7 +1047,7 @@ class GestionFinanciereController extends Controller
           // Devises (adapte si besoin)
           $devises = Devise::orderBy('code_long')->get();
   
-          return view('GestionFinanciere.pib', compact('annee','groupeProjet', 'pays', 'pibs', 'devises'));
+          return view('GestionFinanciere.pib', compact('ecran','annee','groupeProjet', 'pays', 'pibs', 'devises'));
       }
   
       /** Données JSON pour le graphe “PIB par secteur” */

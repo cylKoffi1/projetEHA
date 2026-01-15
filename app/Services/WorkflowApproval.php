@@ -6,27 +6,49 @@ use App\Models\LiaisonWorkflow;
 use App\Models\VersionWorkflow;
 use App\Models\InstanceApprobation;
 use App\Models\InstanceEtape;
-use App\Models\ModeWorkflow;
+use App\Models\EtapeWorkflow;
 use App\Models\EtapeRegle;
+use App\Models\OperateurRegle;
+use App\Support\SnapshotNormalizer;
 use Illuminate\Support\Facades\DB;
 use DomainException;
 
+/**
+ * Service d’exécution des workflows d’approbation (côté “start”).
+ * - Résout la version publiée via les liaisons
+ * - Crée l’instance + ses étapes
+ * - Active la première étape
+ * - Notifie automatiquement les approbateurs de l’étape active
+ */
 class WorkflowApproval
 {
+    public function __construct(
+        private SnapshotNormalizer $normalizer,
+        private ApprovalNotifier   $notifier,   // ✅ notifications d’étape active
+    ) {}
+
     /**
      * Lance (ou récupère) une instance d’approbation pour un objet.
+     *
      * @return array{instance: InstanceApprobation, created: bool, message?: string}
      * @throws DomainException si aucune liaison/version publiée trouvée
      */
     public function start(string $module, string $type, string $id, array $snapshot = []): array
     {
-        // 1) Résoudre la version publiée via les liaisons
-        $version = $this->resolveVersion($module, $type, $id);
+        // 0) Normaliser/enrichir le snapshot (owner_*/demandeur_*…)
+        $snapshot = $this->normalizer->normalize($snapshot);
+
+        // 1) Trouver la version publiée
+        // appeler resolveVersion avec scope s'ils sont dans $snapshot
+        $pays = $snapshot['pays_code'] ?? ($snapshot['code_pays'] ?? null);
+        $groupe = $snapshot['groupe_projet_id'] ?? null;
+
+        $version = $this->resolveVersion($module, $type, $id, $pays, $groupe);
         if (!$version) {
             throw new DomainException("Aucune version publiée liée à ($module, $type, $id).");
         }
 
-        // 2) Si une instance active existe déjà → on la renvoie (idempotent)
+        // 2) Idempotence : une instance active existe-t-elle déjà ?
         $active = InstanceApprobation::query()
             ->where('module_code', $module)
             ->where('type_cible',  $type)
@@ -41,7 +63,7 @@ class WorkflowApproval
             return ['instance' => $active, 'created' => false, 'message' => 'Instance déjà active'];
         }
 
-        // 3) Créer l’instance + ses étapes
+        // 3) Créer l’instance et ses étapes
         $created = DB::transaction(function () use ($version, $module, $type, $id, $snapshot) {
 
             $inst = InstanceApprobation::create([
@@ -53,9 +75,10 @@ class WorkflowApproval
                 'instantane'          => $snapshot ?: null,
             ]);
 
-            // Générer les étapes d’instance à partir des étapes de la version
+            // Charger les sous-relations nécessaires
             $version->loadMissing('etapes.approbateurs', 'etapes.regles');
 
+            // Générer toutes les étapes d’instance
             foreach ($version->etapes()->orderBy('position')->get() as $etape) {
                 $statut = $this->shouldSkip($etape, $inst->instantane)
                     ? $this->statutEtapeId('SAUTE')
@@ -75,64 +98,89 @@ class WorkflowApproval
             // Activer la première étape non sautée
             $this->activateNextStep($inst);
 
+            // 🔔 Notifier automatiquement les approbateurs de l’étape active
+            $this->notifier->notifyActiveApprovers($inst);
+
             return $inst->fresh(['etapes']);
         });
 
         return ['instance' => $created, 'created' => true];
     }
 
-    /* --------------------- Helpers privés --------------------- */
+    /* =========================================================
+     *                      Helpers privés
+     * ========================================================= */
 
-    private function resolveVersion(string $module, string $type, string $id): ?VersionWorkflow
+    /**
+     * Version publiée via (ordre de priorité) :
+     * 1) Liaison spécifique (module,type,id) + scope match
+     * 2) Liaison spécifique (module,type,id) (ignore scope)
+     * 3) Liaison par défaut (module,type,id=null, par_defaut=1) + scope match
+     * 4) Liaison par défaut globale (module,type,id=null, par_defaut=1)
+     * ⚠️ On ne retombe plus sur "n'importe quelle" liaison par défaut sans filtrer module/type.
+     */
+    private function resolveVersion(string $module, string $type, string $id, ?string $pays = null, ?string $groupeProjet = null): ?VersionWorkflow
     {
-        // 1) Liaison spécifique (module, type, id)
-        $liaison = LiaisonWorkflow::where([
-            'module_code' => $module,
-            'type_cible'  => $type,
-            'id_cible'    => $id,
-        ])->whereHas('version', fn($q) => $q->where('publie', 1))
-          ->latest('id')->first();
+        // candidates (ordre de priorité : le plus spécifique -> le plus global)
+        $candidates = [];
 
-        if ($liaison) {
-            return $liaison->version()->with('etapes.approbateurs','etapes.regles')->first();
-        }
+        // exact (module,type,id) + scope match
+        $candidates[] = fn($q) => $q->where('module_code',$module)->where('type_cible',$type)->where('id_cible',$id)
+            ->where(function($s) use($pays){ $s->whereNull('code_pays')->orWhere('code_pays',$pays); })
+            ->where(function($s) use($groupeProjet){ $s->whereNull('groupe_projet_id')->orWhere('groupe_projet_id',$groupeProjet); });
 
-        // 2) Liaison par type (module, type, id=null, par_defaut=1)
-        $liaison = LiaisonWorkflow::where([
-            'module_code' => $module,
-            'type_cible'  => $type,
-            'id_cible'    => null,
-            'par_defaut'  => 1,
-        ])->whereHas('version', fn($q) => $q->where('publie', 1))
-          ->latest('id')->first();
+        // exact id (ignore scope)
+        $candidates[] = fn($q) => $q->where('module_code',$module)->where('type_cible',$type)->where('id_cible',$id);
 
-        if ($liaison) {
-            return $liaison->version()->with('etapes.approbateurs','etapes.regles')->first();
+        // par_defaut scoped
+        $candidates[] = fn($q) => $q->where('module_code',$module)->where('type_cible',$type)->whereNull('id_cible')->where('par_defaut',1)
+            ->where(function($s) use($pays){ $s->whereNull('code_pays')->orWhere('code_pays',$pays); })
+            ->where(function($s) use($groupeProjet){ $s->whereNull('groupe_projet_id')->orWhere('groupe_projet_id',$groupeProjet); });
+
+        // par_defaut global (module,type)
+        $candidates[] = fn($q) => $q->where('module_code',$module)->where('type_cible',$type)->whereNull('id_cible')->where('par_defaut',1);
+
+        foreach ($candidates as $build) {
+            $liaison = LiaisonWorkflow::whereHas('version', fn($q)=> $q->where('publie',1))
+                ->where(function($q) use ($build){ $build($q); })
+                ->latest('id')->first();
+
+            if ($liaison) {
+                return $liaison->version()->with('etapes.approbateurs','etapes.regles')->first();
+            }
         }
 
         return null;
     }
 
-    private function shouldSkip($etape, ?array $snapshot): bool
+    /**
+     * Règle “sauter_si_vide” : si AUCUNE règle ne matche → on saute l’étape.
+     */
+    private function shouldSkip(EtapeWorkflow $etape, ?array $snapshot): bool
     {
         if (!$etape->sauter_si_vide) return false;
-        $rules = $etape->regles ?? collect();
+
+        $rules = $etape->relationLoaded('regles')
+            ? $etape->regles
+            : $etape->regles()->get();
+
         if ($rules->isEmpty()) return false;
 
-        // "Sauter si vide" = si AUCUNE règle ne matche
         foreach ($rules as $r) {
             if ($this->ruleMatches($r, $snapshot)) {
-                return false;
+                return false; // au moins une règle matche → on NE saute PAS
             }
         }
-        return true;
+        return true; // aucune règle ne matche → on saute
     }
 
+    /**
+     * Évalue une règle sur le snapshot.
+     */
     private function ruleMatches(EtapeRegle $r, ?array $snap): bool
     {
         $val = data_get($snap, $r->champ);
-        $op  = optional($r->operateur)->code ?? optional($r->operateur_id && \App\Models\OperateurRegle::find($r->operateur_id))->code;
-
+        $op  = $this->opCode($r);
         $exp = is_string($r->valeur) ? (json_decode($r->valeur, true) ?? $r->valeur) : $r->valeur;
 
         return match ($op) {
@@ -149,11 +197,28 @@ class WorkflowApproval
         };
     }
 
+    /**
+     * Récupère le code opérateur de la règle (relation ou fallback par ID).
+     */
+    private function opCode(EtapeRegle $r): ?string
+    {
+        if ($r->relationLoaded('operateur') && $r->operateur) {
+            return $r->operateur->code;
+        }
+        if ($r->operateur_id) {
+            return OperateurRegle::find($r->operateur_id)?->code;
+        }
+        return null;
+    }
+
+    /**
+     * Active la première étape PENDING (par position) ou clôt l’instance si tout est approuvé/sauté.
+     */
     private function activateNextStep(InstanceApprobation $inst): void
     {
         $steps = $inst->etapes()->with('etape')->get();
 
-        // si toutes les étapes sont APPROUVE/SAUTE → approuver l'instance
+        // Tout approuvé/sauté ?
         $allApproved = $steps->every(function ($s) {
             $code = $this->codeStatutEtape($s->statut_id);
             return in_array($code, ['APPROUVE', 'SAUTE']);
@@ -167,10 +232,11 @@ class WorkflowApproval
             return;
         }
 
-        // activer la première PENDING par position
-        $next = $steps->filter(fn($s) => in_array($this->codeStatutEtape($s->statut_id), ['PENDING','EN_COURS']))
-                      ->sortBy(fn($s) => $s->etape->position)
-                      ->first();
+        // Activer la première étape PENDING (ordre position)
+        $next = $steps
+            ->filter(fn($s) => in_array($this->codeStatutEtape($s->statut_id), ['PENDING','EN_COURS']))
+            ->sortBy(fn($s) => $s->etape->position)
+            ->first();
 
         if ($next && $this->codeStatutEtape($next->statut_id) === 'PENDING') {
             $next->update([
@@ -180,17 +246,20 @@ class WorkflowApproval
         }
     }
 
-    /* ---- raccourcis statut ---- */
+    /* ---------------- Raccourcis statuts ---------------- */
+
     private function statutInstanceId(string $code): int
     {
         return \App\Models\StatutInstance::where('code', $code)->firstOrFail()->id;
     }
+
     private function statutEtapeId(string $code): int
     {
         return \App\Models\StatutEtapeInstance::where('code', $code)->firstOrFail()->id;
     }
+
     private function codeStatutEtape(int $id): ?string
     {
-        return optional(\App\Models\StatutEtapeInstance::find($id))->code;
+        return \App\Models\StatutEtapeInstance::find($id)?->code;
     }
 }

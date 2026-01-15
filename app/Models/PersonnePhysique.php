@@ -11,7 +11,9 @@ class PersonnePhysique extends Model
 
     protected $table = 'personne_physique';
     protected $primaryKey = 'id';
-
+    public $incrementing = true;
+    protected $keyType = 'int';
+    public $timestamps = true;
     protected $fillable = [
         'code_acteur', 'nom', 'prenom', 'date_naissance', 'nationalite',
         'email', 'code_postal', 'adresse_postale', 'adresse_siege',

@@ -163,8 +163,8 @@
                                 <!-- Étape 1 : Identifiants -->
                                 <div id="step-login">
                                     <div class="form-group">
-                                        <label> <i class="fas fa-envelope"></i> Email :</label>
-                                        <input type="email" id="email" class="form-control" required>
+                                        <label> <i class="fas fa-user"></i> Login ou Email :</label>
+                                        <input type="text" id="login" class="form-control" placeholder="Entrez votre login ou votre email" required>
                                     </div>
                                     <div class="form-group">
                                         <label><i class="fas fa-lock"></i> Mot de passe :</label>
@@ -176,6 +176,22 @@
                                     <div>
                                         <a href="{{ route('password.request') }}" class="link-secondary text-decoration-none">Mot de passe oublié ?</a>
                                     </div><br>
+                                </div>
+
+                                <!-- Étape 1b : Vérification du code OTP -->
+                                <div id="step-otp" class="hidden">
+                                    <div class="alert alert-info mb-3" role="alert">
+                                        <i class="fas fa-envelope-open-text me-2"></i>
+                                        <strong>Vérifiez votre boîte mail</strong><br>
+                                        Un code de vérification a été envoyé à l'adresse : <strong id="user-email"></strong>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-key"></i> Code de vérification (6 chiffres) :</label>
+                                        <input type="text" id="otp-code" class="form-control" maxlength="6" placeholder="Entrez le code reçu par email" autocomplete="off">
+                                    </div>
+                                    <hr class="mt-4">
+                                    <button type="button" id="verify-otp" class="btn btn-primary w-100">Vérifier le code</button><br>
+                                    <small class="text-muted">Le code est valable 10 minutes.</small>
                                 </div>
 
                                 <!-- Étape 2 : Sélection du Pays -->
@@ -239,35 +255,97 @@
     $(document).ready(function () {
         //console.log('Vue initialisée : Étape 1 affichée.');
 
+        // Variable pour éviter les doubles clics
+        let isSubmitting = false;
+
         // Étape 1 : Vérification des identifiants
         $('#verify-login').click(function () {
-            const email = $('#email').val();
+            // Empêcher les doubles clics
+            if (isSubmitting) {
+                return;
+            }
+            
+            const login = $('#login').val();
             const password = $('#password').val();
 
-            if (!email || !password) {
+            if (!login || !password) {
                 alert('Saisissez vos informations', 'info');
-                //console.log('Erreur : Champs email ou mot de passe vide.');
+                //console.log('Erreur : Champs login ou mot de passe vide.');
                 return;
             }
 
-            //console.log('Identifiants soumis :', { email, password });
+            // Désactiver le bouton pendant la requête
+            isSubmitting = true;
+            const $btn = $(this);
+            $btn.prop('disabled', true).text('Vérification...');
 
-            $.post("{{ route('login.check') }}", { email, password, _token: '{{ csrf_token() }}' }, function (response) {
+            //console.log('Identifiants soumis :', { login, password });
+
+            $.post("{{ route('login.check') }}", { login, password, _token: '{{ csrf_token() }}' }, function (response) {
+                // Réactiver le bouton
+                isSubmitting = false;
+                $btn.prop('disabled', false).text('Suivant');
                 //console.log('Réponse du serveur après vérification :', response);
 
-                if (response.step === 'choose_country') {
+                if (response.step === 'verify_otp') {
+                    // Afficher l'email de l'utilisateur
+                    if (response.email) {
+                        $('#user-email').text(response.email);
+                    }
+                    $('#step-login').addClass('hidden');
+                    $('#step-otp').removeClass('hidden');
+                    // Focus sur le champ de code
+                    $('#otp-code').focus();
+                } else if (response.step === 'choose_country') {
                     //console.log('Étape suivante : Sélection de pays.');
                     populateCountries(response.data);
-                    $('#step-login').addClass('hidden');
+                    $('#step-otp').addClass('hidden');
                     $('#step-country').removeClass('hidden');
-                }else if (response.step === 'choose_group') {
+                } else if (response.step === 'choose_group') {
                     //console.log('Étape suivante : Sélection de groupe projet (direct depuis pays unique).');
                     populateGroups(response.data);
-                    $('#step-login').addClass('hidden');
+                    $('#step-otp').addClass('hidden');
                     $('#step-group').removeClass('hidden');
                 }
                 else if (response.step === 'finalize') {
                     //console.log('Connexion finalisée. Redirection...');
+                    window.location.href = "{{ route('projets.index') }}";
+                }
+            }).fail(function (xhr) {
+                // Réactiver le bouton en cas d'erreur
+                isSubmitting = false;
+                const $btn = $('#verify-login');
+                $btn.prop('disabled', false).text('Suivant');
+                
+                if (xhr.status === 500) {
+                    alert("Une erreur est survenue. Veuillez recharger la page.", 'error');
+                } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                    alert(xhr.responseJSON.error, 'error');
+                } else {
+                    alert("Une erreur inattendue est survenue.", 'error');
+                }
+            });
+
+        });
+
+        // Étape 1b : Vérification du code OTP
+        $('#verify-otp').click(function () {
+            const code = $('#otp-code').val();
+            if (!code) {
+                alert('Veuillez saisir le code reçu par email.', 'info');
+                return;
+            }
+
+            $.post("{{ route('login.verifyOtp') }}", { code, _token: '{{ csrf_token() }}' }, function (response) {
+                if (response.step === 'choose_country') {
+                    populateCountries(response.data);
+                    $('#step-otp').addClass('hidden');
+                    $('#step-country').removeClass('hidden');
+                } else if (response.step === 'choose_group') {
+                    populateGroups(response.data);
+                    $('#step-otp').addClass('hidden');
+                    $('#step-group').removeClass('hidden');
+                } else if (response.step === 'finalize') {
                     window.location.href = "{{ route('projets.index') }}";
                 }
             }).fail(function (xhr) {
@@ -279,7 +357,6 @@
                     alert("Une erreur inattendue est survenue.", 'error');
                 }
             });
-
         });
 
         // Étape 2 : Sélection d'un pays

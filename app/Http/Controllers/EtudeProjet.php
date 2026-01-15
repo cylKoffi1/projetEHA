@@ -8,6 +8,7 @@ use App\Models\Acteur;
 use App\Models\ActionMener;
 use App\Models\ActionType;
 use App\Models\Approbateur;
+use App\Models\AppuiProjet;
 use App\Models\Bailleur;
 use App\Models\DecoupageAdministratif;
 use App\Models\DecoupageAdminPays;
@@ -55,6 +56,7 @@ use App\Models\ProjetActionAMener;
 use App\Models\Jouir;
 use App\Models\Profiter;
 use App\Models\Beneficier;
+use App\Models\EtudeProjet as ModelsEtudeProjet;
 use App\Models\Executer;
 use App\Models\FamilleDomaine;
 use App\Models\Financer;
@@ -88,6 +90,7 @@ class EtudeProjet extends Controller
         public function createNaissance(Request $request)
         {
             $ecran   = Ecran::find($request->input('ecran_id'));
+            $directMode = false; // Mode avec validation
             // Générer le code par défaut pour Public (1)
             $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA', 1); // 1 pour Public
             $paysSelectionne = session('pays_selectionne');
@@ -154,7 +157,86 @@ class EtudeProjet extends Controller
             ->get()
             ->groupBy('id_unite_base');
 
-            return view('etudes_projets.naissance', compact('ecran','unitesDerivees', 'familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener'));
+            return view('etudes_projets.naissance', compact('ecran','unitesDerivees', 'familleInfrastructures','typeFinancements','Devises', 'bailleurActeurs', 'infrastructures', 'acteurs','TypeCaracteristiques','deviseCouts','acteurRepres','Pieceidentite','NaturesTravaux', 'formeJuridiques','SituationMatrimoniales','genres', 'SecteurActivites', 'Pays','SousDomaines','Domaines','GroupeProjets','ecran','generatedCodeProjet','natures','groupeSelectionne', 'tousPays', 'devises','actionMener', 'directMode'));
+        }
+
+        /**
+         * Écran unifié avec 3 checkboxes (Étude, Appui, Infrastructure)
+         * Affiche les formulaires correspondants selon les sélections
+         * Mode DIRECT (sans validation) - enregistrement immédiat
+         */
+        public function createNaissanceUnifie(Request $request)
+        {
+            $ecran = Ecran::find($request->input('ecran_id'));
+            $directMode = true; // Toujours en mode direct (sans validation) pour cet écran
+            
+            $paysSelectionne = session('pays_selectionne');
+            $groupeSelectionne = session('projet_selectionne');
+            $user = auth()->user();
+            $groupe = GroupeUtilisateur::where('code', $user->groupe_utilisateur_id)->first();
+
+            // ========== DONNÉES COMMUNES POUR TOUS LES FORMULAIRES ==========
+            $natures = NatureTravaux::all();
+            $GroupeProjets = GroupeProjet::all();
+            $Domaines = Domaine::where('groupe_projet_code', $groupeSelectionne)->get();
+            $SousDomaines = SousDomaine::all();
+            $SecteurActivites = SecteurActivite::all();
+            $localite = LocalitesPays::all();
+            $Pays = GroupeProjetPaysUser::with('pays')
+                ->select('pays_code')
+                ->distinct()
+                ->where('pays_code', $paysSelectionne)
+                ->get()
+                ->pluck('pays.nom_fr_fr', 'pays.alpha3')
+                ->sort();
+            $Dpays = Pays::where('alpha3', $paysSelectionne)->first();
+
+            $deviseCouts = Devise::select('libelle', 'code_long')
+                ->where('code_long', $Dpays->code_devise ?? '')
+                ->first();
+
+            $actionMener = ActionMener::all();
+            $tousPays = Pays::whereNotIn('id', [0, 300, 301, 302, 303, 304])->get();
+            $DecoupageAdminPays = DecoupageAdminPays::all();
+            $Niveau = DecoupageAdministratif::all();
+            $formeJuridiques = FormeJuridique::all();
+            $genres = Genre::all();
+            $NaturesTravaux = NatureTravaux::all();
+            $SituationMatrimoniales = SituationMatrimonial::all();
+
+            $acteurRepres = DB::table('acteur as a')
+                ->join('personne_physique as pp', 'pp.code_acteur', '=', 'a.code_acteur')
+                ->select('a.code_acteur', 'a.libelle_long', 'a.libelle_court', 'pp.telephone_mobile', 'pp.telephone_bureau', 'pp.email')
+                ->where('a.type_acteur', 'etp')
+                ->where('a.code_pays', $paysSelectionne)
+                ->get();
+
+            $typeFinancements = TypeFinancement::all();
+            $devises = Pays::where('alpha3', $paysSelectionne)->first()->code_devise ?? '';
+            $Pieceidentite = Pieceidentite::all();
+            $TypeCaracteristiques = TypeCaracteristique::all();
+
+            $infrastructures = Infrastructure::where('code_pays', $paysSelectionne)->get();
+            $acteurs = Acteur::where('type_acteur', '=', 'etp')
+                ->where('code_pays', $paysSelectionne)
+                ->get();
+            $familleInfrastructures = FamilleInfrastructure::all();
+            $bailleurActeurs = Acteur::whereIn('code_pays', ['NEU', 'ARB', 'AFQ', 'ONU', 'ZAF', $paysSelectionne])->get();
+            $Devises = Pays::where('alpha3', $paysSelectionne)->get();
+            $unitesDerivees = UniteDerivee::with('uniteBase')->get()->groupBy('id_unite_base');
+            $generatedCodeProjet = $this->generateProjectCode('CI', 'EHA', 1);
+
+            // ========== DONNÉES SPÉCIFIQUES POUR ÉTUDE ==========
+            $EtudeTypes = \App\Models\EtudeType::orderBy('libelle')->get(['code','libelle']);
+            $Livrables = \App\Models\EtudeLivrable::orderBy('libelle')->get(['id','code','libelle']);
+
+            return view('projets.unifie', compact(
+                'ecran', 'directMode', 'unitesDerivees', 'familleInfrastructures', 'typeFinancements', 'Devises',
+                'bailleurActeurs', 'infrastructures', 'acteurs', 'TypeCaracteristiques', 'deviseCouts', 'acteurRepres',
+                'Pieceidentite', 'NaturesTravaux', 'formeJuridiques', 'SituationMatrimoniales', 'genres',
+                'SecteurActivites', 'Pays', 'SousDomaines', 'Domaines', 'GroupeProjets', 'generatedCodeProjet',
+                'natures', 'groupeSelectionne', 'tousPays', 'devises', 'actionMener', 'EtudeTypes', 'Livrables'
+            ));
         }
 
         public function getInfrastructures($domaine, $sousDomaine, $pays)
@@ -862,10 +944,158 @@ class EtudeProjet extends Controller
         }
     }
     ///////////////MODELISER
-    public function modelisation(Request $request)
+    public function consulter(Request $request)
     {
         $ecran = Ecran::find($request->input('ecran_id'));
-        return view('etudes_projets.modeliser', compact('ecran'));
+    
+        $groupeProjet = session('projet_selectionne'); // ex: EHA
+        $codePays     = session('pays_selectionne');   // ex: CIV
+    
+        $enabled = ['PROJET','ETUDE','APPUI'];
+    
+        // Préfixes
+        $prefixes = [
+            'PROJET' => $codePays . $groupeProjet . '%',             // CIVEHA%
+            'ETUDE'  => 'ET_' . $codePays . '_' . $groupeProjet . '%',
+            'APPUI'  => 'APPUI_' . $codePays . '_' . $groupeProjet . '%',
+        ];
+    
+        $rows = collect();
+        $targetStatus = 'Prévu';
+    
+        // ===== PROJET (dernier statut = Prévu)
+        if (in_array('PROJET', $enabled, true)) {
+            $latest = DB::table('projet_statut')
+                ->select('code_projet', DB::raw('MAX(date_statut) as max_date'))
+                ->groupBy('code_projet');
+    
+            $projetsPrevus = DB::table('projets as p')
+                ->joinSub($latest, 'last', function ($j) {
+                    $j->on('p.code_projet','=','last.code_projet');
+                })
+                ->join('projet_statut as ps', function ($j) {
+                    $j->on('ps.code_projet','=','last.code_projet')
+                      ->on('ps.date_statut','=','last.max_date');
+                })
+                ->join('type_statut as ts', 'ps.type_statut', '=', 'ts.id')
+                ->where('p.code_projet','like',$prefixes['PROJET'])
+                ->where('ts.libelle','=',$targetStatus)
+                ->select([
+                    'p.code_projet as code',
+                    'p.libelle_projet as intitule',
+                    DB::raw("'PROJET' as famille"),
+                    'ts.libelle as statut',
+                    'p.date_demarrage_prevue as date_debut',
+                    'p.date_fin_prevue as date_fin',
+                    'p.cout_projet as montant',
+                ])
+                ->get();
+    
+            $rows = $rows->concat($projetsPrevus);
+        }
+    
+        // ===== ETUDE (dernier statut = Prévu)
+        if (in_array('ETUDE', $enabled, true)) {
+            $etudes = ModelsEtudeProjet::with('dernierStatut.statut')
+                ->where('code_projet_etude','like',$prefixes['ETUDE'])
+                ->get()
+                ->filter(fn($e) => optional(optional($e->dernierStatut)->statut)->libelle === $targetStatus
+                                   || is_null(optional($e->dernierStatut)->statut));
+    
+            $rows = $rows->concat($etudes->map(function ($e) use ($targetStatus) {
+                return (object)[
+                    'code'       => $e->code_projet_etude,
+                    'intitule'   => $e->intitule,
+                    'famille'    => 'ETUDE',
+                    'statut'     => optional(optional($e->dernierStatut)->statut)->libelle ?? $targetStatus,
+                    'date_debut' => $e->date_debut_previsionnel,
+                    'date_fin'   => $e->date_fin_previsionnel,
+                    'montant'    => $e->montant_budget_previsionnel,
+                ];
+            }));
+        }
+    
+        // ===== APPUI (dernier statut = Prévu)
+        if (in_array('APPUI', $enabled, true)) {
+            $appuis = AppuiProjet::with('dernierStatut.statut')
+                ->where('code_projet_appui','like',$prefixes['APPUI'])
+                ->get()
+                ->filter(fn($a) => optional(optional($a->dernierStatut)->statut)->libelle === $targetStatus
+                                   || is_null(optional($a->dernierStatut)->statut));
+    
+            $rows = $rows->concat($appuis->map(function ($a) use ($targetStatus) {
+                return (object)[
+                    'code'       => $a->code_projet_appui,
+                    'intitule'   => $a->intitule,
+                    'famille'    => 'APPUI',
+                    'statut'     => optional(optional($a->dernierStatut)->statut)->libelle ?? $targetStatus,
+                    'date_debut' => $a->date_debut_previsionnel,
+                    'date_fin'   => $a->date_fin_previsionnel,
+                    'montant'    => $a->montant_budget_previsionnel,
+                ];
+            }));
+        }
+    
+        // ===== Stats globales (famille + année)
+        $byFamily = $rows->groupBy('famille')->map->count()->toArray();
+    
+        $deriveYear = function ($code, $dateDebut) {
+            if (!empty($dateDebut)) {
+                try { return (int) date('Y', strtotime($dateDebut)); } catch (\Throwable $e) {}
+            }
+            if (preg_match('/(19|20)\d{2}/', (string)$code, $m)) {
+                return (int) $m[0];
+            }
+            return null;
+        };
+        $yearCounts = [];
+        foreach ($rows as $r) {
+            $y = $deriveYear($r->code, $r->date_debut);
+            if ($y) $yearCounts[$y] = ($yearCounts[$y] ?? 0) + 1;
+        }
+        ksort($yearCounts);
+    
+        // ===== Stats Acteurs (GLOBAL & PAR FAMILLE)
+        $codesAll  = $rows->pluck('code')->values()->all();
+        $codesProj = $rows->where('famille','PROJET')->pluck('code')->values()->all();
+        $codesEtud = $rows->where('famille','ETUDE')->pluck('code')->values()->all();
+        $codesApp  = $rows->where('famille','APPUI')->pluck('code')->values()->all();
+    
+        $countActors = function(array $codes) {
+            if (empty($codes)) {
+                return [
+                    "Maîtres d’Ouvrage" => 0,
+                    "Maîtres d’Œuvre"   => 0,
+                    "Bailleurs"         => 0,
+                    "Chefs de Projet"   => 0,
+                    "Bénéficiaires"     => 0,
+                ];
+            }
+            return [
+                "Maîtres d’Ouvrage" => DB::table('posseder')->whereIn('code_projet', $codes)->count(),
+                "Maîtres d’Œuvre"   => DB::table('executer')->whereIn('code_projet', $codes)->count(),
+                "Bailleurs"         => DB::table('financer')->whereIn('code_projet', $codes)->count(),
+                "Chefs de Projet"   => DB::table('controler')->whereIn('code_projet', $codes)->count(),
+                "Bénéficiaires"     => DB::table('beneficier')->whereIn('code_projet', $codes)->count(),
+            ];
+        };
+    
+        $actorCounts = $countActors($codesAll);
+        $actorCountsByFamily = [
+            'PROJET' => $countActors($codesProj),
+            'ETUDE'  => $countActors($codesEtud),
+            'APPUI'  => $countActors($codesApp),
+        ];
+    
+        return view('etudes_projets.consulterTousProjet', [
+            'ecran'               => $ecran,
+            'rows'                => $rows,
+            'byFamily'            => $byFamily,
+            'yearCounts'          => $yearCounts,
+            'totalPV'             => $rows->count(),
+            'actorCounts'         => $actorCounts,          // global
+            'actorCountsByFamily' => $actorCountsByFamily,  // par famille
+        ]);
     }
 
     private function genererCodeEtude($codePays, $codeGroupeProjet)
@@ -893,6 +1123,12 @@ class EtudeProjet extends Controller
             'form_step4', 'form_step5', 'form_step6', 'form_step7',
             'code_localisation'
         ]);
+    }
+
+    private function resetWizardSessions(): void
+    {
+        // Alias pour compatibilité avec les autres contrôleurs
+        $this->nettoyerSessionsEtFichiers();
     }
 
     private function genererCodeProjet($codeSousDomaine, $typeFinancement, $codeLocalisation, $dateDebut)
@@ -1285,7 +1521,7 @@ class EtudeProjet extends Controller
 
     
 
-    use ApprovesWithWorkflow;
+
 
     public function finaliserProjet()
     {
@@ -1594,28 +1830,38 @@ class EtudeProjet extends Controller
                 ]);*/
 
                 Log::info('[Finaliser] Étude créée', ['code_etude' => $codeEtude]);
-                try {
-                    $res = $this->startApproval(
-                        module:  'NAISSANCE_PROJET_INFRASTRUCTURE',
-                        type:    'projets',
-                        idObjet: (string) $codeProjet,  
-                        snapshot: []
-                    );
-                
-                    // feedback si besoin
-                    if ($res['created']) {
-                        Log::info('[Finaliser] Approbation lancée', ['instance_id' => $res['instance']->id]);
-                    } else {
-                        Log::info('[Finaliser] Instance déjà active', ['instance_id' => $res['instance']->id]);
-                    }
-                } catch (\DomainException $e) {
-                    // Aucune version publiée liée
-                    Log::warning('[Finaliser] Aucun workflow lié', ['err' => $e->getMessage()]);
-                    // À toi de décider : bloquer ou laisser passer
-                }
-                // 🔁 Nettoyage
-                $this->nettoyerSessionsEtFichiers();
-                Log::info('[Finaliser] Nettoyage sessions OK');
+           
+            // On prend le MOA principal en "demandeur" si présent (step4)
+            $demandeurActeur = $step4['acteurs'][0]['code_acteur'] ?? null;
+
+            try {
+                $codeLocalisation = session('code_localisation');
+                $snapshot = array_filter([
+                    // --- Hints standard (clés que le normalizer comprend) ---
+                    'owner_user_id'         => optional(auth()->user())->getKey(),
+                    'owner_email'           => optional(auth()->user())->email,
+                    'owner_acteur_code'     => optional(auth()->user())->acteur_id,
+                    'demandeur_acteur_code' => $demandeurActeur,
+    
+                    // --- Champs métier utiles aux règles/aprobateurs dynamiques ---
+                    'code_projet'           => $codeProjet,
+                    'pays_code'             => session('pays_selectionne'),
+                    'groupe_projet_id'      => session('projet_selectionne'),
+                    'cout_projet'           => $step1['cout_projet'] ?? null,
+                    'code_devise'           => $step1['code_devise'] ?? null,
+                    'type_financement'      => $step6['type_financement'] ?? null,
+                    'date_demarrage_prevue' => $step1['date_demarrage_prevue'] ?? null,
+                    'date_fin_prevue'       => $step1['date_fin_prevue'] ?? null,
+                    'localisation_code'     => $codeLocalisation ?? null,
+                ], fn($v) => !is_null($v) && $v !== '');
+                $res = $this->startApproval('PROJET', 'CREATION', (string) $codeProjet, $snapshot);
+                Log::info('[Finaliser projet] workflow', ['created' => (int)($res['created'] ?? 0)]);
+            } catch (\Throwable $e) {
+                Log::warning('[Finaliser projet] workflow not started', ['err' => $e->getMessage()]);
+            }
+    
+            // 11) Nettoyage sessions
+            $this->resetWizardSessions();
 
                 return response()->json([
                     'success'     => true,
@@ -1630,11 +1876,236 @@ class EtudeProjet extends Controller
                     'trace' => $e->getTraceAsString(),
                 ]);
 
-                // On relance l’exception pour que la transaction sache qu’il faut annuler
+                // On relance l'exception pour que la transaction sache qu'il faut annuler
                 throw $e;
             }
         }, 3 );
     }
+
+    /**
+     * Finalisation directe SANS validation (enregistrement immédiat)
+     * Version sans workflow pour les projets qui ne nécessitent pas d'approbation
+     */
+    public function finaliserProjetDirect()
+    {
+        return DB::transaction(function () {
+            try {
+                Log::info('[Finaliser Direct] Début finalisation SANS validation');
+
+                // Réutiliser la même logique que finaliserProjet mais SANS startApproval
+                $step1 = session('form_step1', []);
+                $step2 = session('form_step2', []);
+                $step3 = session('form_step3', []);
+                $step4 = session('form_step4', []);
+                $step5 = session('form_step5', []);
+                $step6 = session('form_step6', []);
+                $step7 = session('form_step7', []);
+
+                // Checks essentiels
+                foreach ([
+                    'form_step1' => $step1,
+                    'form_step2' => $step2,
+                    'form_step6' => $step6,
+                ] as $k => $v) {
+                    if (empty($v)) {
+                        throw new \Exception("Données manquantes ($k).");
+                    }
+                }
+
+                $codeLocalisation = collect($step2['localites'] ?? [])
+                    ->pluck('code_rattachement')->filter()->first();
+
+                // Générer code projet
+                $codeProjet = $this->genererCodeProjet(
+                    $step1['code_sous_domaine'] ?? null,
+                    $step6['type_financement'] ?? null,
+                    $codeLocalisation,
+                    $step1['date_demarrage_prevue'] ?? null,
+                );
+
+                if (!$codeProjet) {
+                    throw new \Exception('Échec génération code projet');
+                }
+
+                // Créer le projet (même logique que finaliserProjet)
+                $projet = Projet::create([
+                    'code_projet'           => $codeProjet,
+                    'libelle_projet'        => $step1['libelle_projet'] ?? null,
+                    'commentaire'           => $step1['commentaire'] ?? null,
+                    'code_sous_domaine'     => $step1['code_sous_domaine'] ?? null,
+                    'date_demarrage_prevue' => $step1['date_demarrage_prevue'] ?? null,
+                    'date_fin_prevue'       => $step1['date_fin_prevue'] ?? null,
+                    'cout_projet'           => $step1['cout_projet'] ?? null,
+                    'code_devise'           => $step1['code_devise'] ?? null,
+                    'code_alpha3_pays'      => $step1['code_pays'] ?? null,
+                ]);
+
+                projets_natureTravaux::create([
+                    'code_projet' => $codeProjet,
+                    'code_nature' => $step1['code_nature'] ?? null,
+                    'date'        => now(),
+                ]);
+
+                ProjetStatut::create([
+                    'code_projet' => $codeProjet,
+                    'type_statut' => 1,
+                    'date_statut' => now(),
+                ]);
+
+                $codePays = session('pays_selectionne');
+
+                // Localisations
+                foreach (($step2['localites'] ?? []) as $loc) {
+                    ProjetLocalisation::create([
+                        'code_projet'  => $codeProjet,
+                        'code_localite'=> $loc['code_rattachement'] ?? null,
+                        'niveau'       => $loc['niveau'] ?? null,
+                        'decoupage'    => $loc['code_decoupage'] ?? null,
+                        'pays_code'    => $step1['code_pays'] ?? null,
+                    ]);
+                }
+
+                // Infrastructures (même logique)
+                if (!empty($step2['infrastructures'])) {
+                    foreach ($step2['infrastructures'] as $infra) {
+                        $codeFamille = $infra['famille_code'] ?? null;
+                        if (!$codeFamille) continue;
+
+                        $infraDB = Infrastructure::where('code', $infra['code'] ?? '')
+                            ->where('libelle', $infra['libelle'] ?? '')
+                            ->first();
+
+                        if (!$infraDB) {
+                            $famille = FamilleInfrastructure::where('code_Ssys', $codeFamille)->first();
+                            if (!$famille) continue;
+
+                            $prefix = ($codePays ?? '') . $codeFamille;
+                            $last   = Infrastructure::where('code', 'like', $prefix.'%')->orderByDesc('code')->first();
+                            $nextNumber = $last ? ((int) substr($last->code, strlen($prefix))) + 1 : 1;
+                            $codeInfra  = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
+                            $infraDB = Infrastructure::create([
+                                'code'               => $codeInfra,
+                                'libelle'            => $infra['libelle'] ?? ("Infra_$codeInfra"),
+                                'code_Ssys'          => $codeFamille,
+                                'code_groupe_projet' => session('projet_selectionne'),
+                                'code_pays'          => $codePays,
+                                'code_localite'      => $infra['localisation_id'] ?? null,
+                                'date_operation'     => now(),
+                                'IsOver'             => false,
+                            ]);
+                        }
+
+                        ProjetInfrastructure::create([
+                            'idInfrastructure' => $infraDB->id,
+                            'code_projet'      => $codeProjet,
+                            'localisation_id'  => $infra['localisation_id'] ?? $codeLocalisation,
+                        ]);
+
+                        foreach (($infra['caracteristiques'] ?? []) as $index => $carac) {
+                            if (!isset($carac['id'], $carac['valeur']) || $carac['valeur'] === '') continue;
+                            ValeurCaracteristique::create([
+                                'infrastructure_code' => $infraDB->code,
+                                'idCaracteristique'   => $carac['id'],
+                                'idUnite'             => $carac['unite_id'] ?? null,
+                                'valeur'              => $carac['valeur'],
+                                'ordre'               => $index + 1,
+                            ]);
+                        }
+                    }
+                }
+
+                // Actions à mener
+                foreach (($step3['actions'] ?? []) as $k => $action) {
+                    ProjetActionAMener::create([
+                        'code_projet'       => $codeProjet,
+                        'Num_ordre'         => $action['ordre'] ?? ($k+1),
+                        'Action_mener'      => $action['action_code'] ?? null,
+                        'Quantite'          => $action['quantite'] ?? null,
+                        'Infrastrucrues_id' => $action['infrastructure_code'] ?? 0,
+                    ]);
+
+                    foreach (($action['beneficiaires'] ?? []) as $b) {
+                        $type = $b['type'] ?? '';
+                        match ($type) {
+                            'acteur' => Beneficier::create([
+                                'code_projet' => $codeProjet,
+                                'code_acteur' => $b['code'] ?? null,
+                                'is_active'   => true,
+                            ]),
+                            'localite' => Profiter::create([
+                                'code_projet'     => $codeProjet,
+                                'code_pays'       => $b['codePays'] ?? null,
+                                'code_rattachement'=> $b['codeRattachement'] ?? null,
+                            ]),
+                            'infrastructure' => Jouir::create([
+                                'code_projet'       => $codeProjet,
+                                'code_Infrastructure'=> $b['code'] ?? null,
+                            ]),
+                            default => null,
+                        };
+                    }
+                }
+
+                // Maîtres d'Ouvrage
+                foreach (($step4['acteurs'] ?? []) as $acteur) {
+                    Posseder::create([
+                        'code_projet' => $codeProjet,
+                        'code_acteur' => $acteur['code_acteur'] ?? null,
+                        'secteur_id'  => $acteur['secteur_code'] ?? null,
+                        'isAssistant' => !empty($acteur['is_assistant']),
+                        'date'        => now(),
+                        'is_active'   => true,
+                    ]);
+                }
+
+                // Maîtres d'œuvre
+                foreach (($step5['acteurs'] ?? []) as $acteur) {
+                    Executer::create([
+                        'code_projet' => $codeProjet,
+                        'code_acteur' => $acteur['code_acteur'] ?? null,
+                        'secteur_id'  => $acteur['secteur_id'] ?? null,
+                        'is_active'   => true,
+                    ]);
+                }
+
+                // Financements
+                foreach (($step6['financements'] ?? []) as $fin) {
+                    Financer::create([
+                        'code_projet'       => $codeProjet,
+                        'code_acteur'       => $fin['bailleur'] ?? null,
+                        'montant_finance'   => $fin['montant'] ?? null,
+                        'devise'            => $fin['devise'] ?? null,
+                        'financement_local' => in_array(strtolower((string)($fin['local'] ?? '')), ['oui','1','true'], true),
+                        'commentaire'       => $fin['commentaire'] ?? null,
+                        'FinancementType'   => $step6['type_financement'] ?? null,
+                        'is_active'         => true,
+                    ]);
+                }
+
+                // ⚠️ PAS DE WORKFLOW - Enregistrement direct
+                Log::info('[Finaliser Direct] Projet créé SANS validation', ['code_projet' => $codeProjet]);
+
+                // Nettoyage sessions
+                $this->resetWizardSessions();
+
+                return response()->json([
+                    'success'     => true,
+                    'code_projet' => $codeProjet,
+                    'message'     => 'Projet enregistré directement avec succès (sans validation).',
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('[Finaliser Direct] ERREUR', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                throw $e;
+            }
+        }, 3);
+    }
+
+
+
 }
 
 

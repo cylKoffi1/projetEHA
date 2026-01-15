@@ -66,7 +66,6 @@
     </div>
 </div>
 
-
   @can("consulter_ecran_" . $ecran->id)
   <div class="card shadow-sm border-0">
     <div class="card-header text-white">
@@ -78,7 +77,38 @@
         <input type="hidden" name="ecran_id" value="{{ $ecran->id }}">
 
         <div class="row g-3 mb-4">
-          <div class="col-sm-4">
+          <div class="row g-3 mb-4">
+              {{-- Type utilisateur --}}
+              <div class="col-sm-4">
+                  <label for="type_utilisateur" class="form-label fw-semibold">
+                      <i class="bi bi-person-badge me-1"></i>Type d'utilisateur
+                  </label>
+                  <select class="form-select" id="type_utilisateur">
+                      <option value="">Tous les types</option>
+                      @foreach($typesUtilisateurs as $type)
+                          <option value="{{ $type->id }}">{{ $type->libelle }}</option>
+                      @endforeach
+                  </select>
+              </div>
+
+              {{-- Groupe utilisateur --}}
+              <div class="col-sm-4">
+                  <label for="role" class="form-label fw-semibold">
+                      <i class="bi bi-people me-1"></i>Groupe utilisateur
+                  </label>
+                  <select class="form-select" id="role" name="role" required>
+                      <option value="" selected>Sélectionnez un groupe utilisateur</option>
+                      @foreach($roles as $r)
+                          <option value="{{ $r->code }}"
+                                  data-type="{{ $r->type_utilisateur_id }}">
+                              {{ $r->libelle_groupe }}
+                          </option>
+                      @endforeach
+                  </select>
+              </div>
+          </div>
+          
+          {{--<div class="col-sm-4">
             <label for="role" class="form-label fw-semibold"><i class="bi bi-people me-1"></i>Groupe utilisateur</label>
             <select class="form-select" id="role" name="role" required>
               <option value="" selected>Sélectionnez un groupe utilisateur</option>
@@ -87,7 +117,47 @@
               @endforeach
             </select>
           </div>
+        </div>--}}
+
+        {{-- ========== BLOC INDEPENDANT : DROITS PAR TYPE DE PROJET ========== --}}
+        <div class="card border-0 mb-3">
+          <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Droits par type de projet</h6>
+          </div>
+          <div class="card-body">
+            <div class="row gy-2">
+              <div class="col-md-3">
+                <div class="form-check">
+                  <input class="form-check-input projet-type-cb" type="checkbox" id="typeINF" name="projetTypes[]" value="INF">
+                  <label class="form-check-label" for="typeINF">
+                    Projet d'infrastructure
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-check">
+                  <input class="form-check-input projet-type-cb" type="checkbox" id="typeAPP" name="projetTypes[]" value="APP">
+                  <label class="form-check-label" for="typeAPP">
+                    Projet d'appui 
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-check">
+                  <input class="form-check-input projet-type-cb" type="checkbox" id="typeETU" name="projetTypes[]" value="ETU">
+                  <label class="form-check-label" for="typeETU">
+                    Projet d'étude
+                  </label>
+                </div>
+              </div>
+            </div>
+            <small class="text-muted d-block mt-2">
+              Ces cases attribuent les permissions Spatie&nbsp;:
+              <code>projettype.select.INF</code>, <code>.APP</code>, <code>.ETU</code> au groupe sélectionné.
+            </small>
+          </div>
         </div>
+        {{-- ========== FIN BLOC TYPES ========== --}}
 
         <div class="table-responsive rounded">
           <table class="table table-hover align-middle">
@@ -137,7 +207,7 @@
                   @endcan
                 </th>
 
-                {{-- Consulter (affecter la permission de consultation) --}}
+                {{-- Consulter --}}
                 <th class="text-center">
                   @canany(["ajouter_ecran_" . $ecran->id, "modifier_ecran_" . $ecran->id, "supprimer_ecran_" . $ecran->id])
                     <div class="form-check d-flex justify-content-center align-items-center">
@@ -166,7 +236,7 @@
                     </button>
                   </td>
 
-                  {{-- Ajouter / Modifier / Supprimer: cellules vides au niveau Rubrique (pas d'action directe) --}}
+                  {{-- Ajouter / Modifier / Supprimer: cellules vides au niveau Rubrique --}}
                   <td class="text-center"><i class="bi bi-dash text-muted"></i></td>
                   <td class="text-center"><i class="bi bi-dash text-muted"></i></td>
                   <td class="text-center"><i class="bi bi-dash text-muted"></i></td>
@@ -234,7 +304,7 @@
                       @endcan
                     </td>
 
-                    {{-- Consulter (affecter consulter sur cet écran) --}}
+                    {{-- Consulter --}}
                     <td class="text-center">
                       @canany(["ajouter_ecran_" . $ecran->id, "modifier_ecran_" . $ecran->id, "supprimer_ecran_" . $ecran->id])
                         <div class="form-check d-flex justify-content-center">
@@ -253,7 +323,7 @@
                 @include('partials.row', [
                   'sousMenus' => $rubrique->sousMenus,
                   'level'     => 1,
-                  'ecranId'   => $ecran->id,   {{-- passe l'id à la vue partielle --}}
+                  'ecranId'   => $ecran->id,
                 ])
               @endforeach
             </tbody>
@@ -302,7 +372,7 @@
         sel = 'input[name="consulterRubrique[]"], input[name="consulterSousMenu[]"], input[name="consulterRubriqueEcran[]"], input[name="consulterSousMenuEcran[]"]'; break;
     }
     const master = document.getElementById('checkAll' + type.charAt(0).toUpperCase() + type.slice(1));
-    if (!master) return; // si pas le droit: pas de master
+    if (!master) return;
     document.querySelectorAll(sel).forEach(cb => {
       if (!cb.disabled) cb.checked = master.checked;
     });
@@ -313,7 +383,6 @@
     document.querySelectorAll('.' + className).forEach(tr => {
       tr.style.display = (tr.style.display === 'none' || !tr.style.display) ? 'table-row' : 'none';
     });
-    
     if (icon.classList.contains('bi-plus')) {
       icon.classList.remove('bi-plus');
       icon.classList.add('bi-dash');
@@ -326,6 +395,7 @@
   // Pré-cochage quand on change de rôle
   document.getElementById('role').addEventListener('change', function(){
     const roleId = this.value;
+    // reset
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
       if (!cb.disabled) cb.checked = false;
     });
@@ -340,11 +410,13 @@
           const el = document.querySelector(`input[name="consulterRubrique[]"][value="${code}"]`);
           if (el && !el.disabled) el.checked = true;
         });
+
         // Sous-menus
         (data.sous_menus || []).forEach(code => {
           const el = document.querySelector(`input[name="consulterSousMenu[]"][value="${code}"]`);
           if (el && !el.disabled) el.checked = true;
         });
+
         // Écrans: consulter
         (data.ecrans_consulter || []).forEach(id => {
           const el = document.querySelector(
@@ -352,6 +424,7 @@
           );
           if (el && !el.disabled) el.checked = true;
         });
+
         // Écrans: CRUD
         (data.ecrans_ajouter || []).forEach(id => {
           const el = document.querySelector(
@@ -371,6 +444,13 @@
           );
           if (el && !el.disabled) el.checked = true;
         });
+
+        // >>> NOUVEAU : Types de projet
+        document.querySelectorAll('.projet-type-cb').forEach(cb => cb.checked = false);
+        (data.project_types || []).forEach(code => {
+          const el = document.querySelector(`.projet-type-cb[value="${code}"]`);
+          if (el) el.checked = true;
+        });
       })
       .catch(console.error);
   });
@@ -388,4 +468,77 @@
     });
   }
 </script>
+<script>
+
+  // --- Filtrage des groupes par type utilisateur ---
+  (function () {
+    const typeSelect = document.getElementById('type_utilisateur');
+    const roleSelect = document.getElementById('role');
+
+    if (!typeSelect || !roleSelect) return;
+
+    // On sauve toutes les options originales (sauf le placeholder)
+    const allRoleOptions = Array.from(roleSelect.querySelectorAll('option'))
+      .map(opt => ({
+        value: opt.value,
+        text: opt.textContent,
+        typeId: opt.getAttribute('data-type'),
+        isPlaceholder: opt.value === ''
+      }));
+
+    // Quand on change de type
+    typeSelect.addEventListener('change', function () {
+      const selectedTypeId = this.value || '';
+
+      // Reset du select role
+      roleSelect.innerHTML = '';
+
+      // On recrée le placeholder
+      const placeholder = allRoleOptions.find(o => o.isPlaceholder);
+      if (placeholder) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholder.text;
+        roleSelect.appendChild(opt);
+      }
+
+      // On ajoute les groupes du type (ou tous si aucun type)
+      allRoleOptions
+        .filter(o => !o.isPlaceholder)
+        .filter(o => selectedTypeId === '' || (o.typeId == selectedTypeId))
+        .forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.value;
+          opt.textContent = o.text;
+          opt.setAttribute('data-type', o.typeId ?? '');
+          roleSelect.appendChild(opt);
+        });
+
+      // On vide les cochages existants dès qu'on change de type
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (!cb.disabled) cb.checked = false;
+      });
+
+      // On remet le select role à vide (il faudra choisir un groupe)
+      roleSelect.value = '';
+    });
+  })();
+</script>
+<!--code d'utilisation de type de projet dans les blades et controler-->
+<!-- 
+@can('projettype.select', 'INF')
+  <option value="INF">Projet d'infrastructure</option>
+@endcan
+@can('projettype.select', 'APP')
+  <option value="APP">Projet d'appui</option>
+@endcan
+@can('projettype.select', 'ETU')
+  <option value="ETU">Projet d'étude</option>
+@endcan
+
+if ($request->filled('projet_type_code')) {
+    $code = strtoupper($request->input('projet_type_code'));
+    abort_if(\Gate::denies('projettype.select', $code), 403, "Vous n'êtes pas autorisé à sélectionner le type $code.");
+}
+-->
 @endsection

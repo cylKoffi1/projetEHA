@@ -23,7 +23,6 @@ use App\Models\ProjetStatut;
 use App\Models\TypeCaracteristique;
 use App\Models\User;
 use App\Models\ValeurCaracteristique;
-use App\Services\FileProcService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -351,7 +350,7 @@ class RealiseProjetController extends Controller
     }
 
 
-    public function fetchProjectDetails(Request $request)
+    /*public function fetchProjectDetails(Request $request)
     {
         // Récupérer les données de la requête
         $code_projet =  $request->input('code_projet');
@@ -414,7 +413,7 @@ class RealiseProjetController extends Controller
             'actions' => $actions,
 
         ]);
-    }
+    }*/
     private function generateCodeCaractFamille($familleCode)
     {
         // Ajoutez votre logique pour générer la valeur de 'CodeCaractFamille' en fonction de $familleCode
@@ -426,49 +425,63 @@ class RealiseProjetController extends Controller
     {
         try {
             $request->validate([
-                'code_projet' => 'required|string|exists:projets,code_projet',
+                'code_projet' => 'required|string',
                 'date_debut'  => 'required|date',
                 'commentaire' => 'nullable|string',
             ]);
-
-            $projet = Projet::where('code_projet', $request->code_projet)->first();
-            if (!$projet) {
-                if ($request->expectsJson()) {
-                    return response()->json(['success' => false, 'message' => 'Projet introuvable.'], 404);
-                }
-                return redirect()->back()->with('error', 'Projet introuvable.');
+    
+            $code = (string) $request->code_projet;
+            $famille = $this->detectFamilyFromCode($code); // PROJET | ETUDE | APPUI
+    
+            // 1) Charger l’en-tête + date prévisionnelle selon le type
+            $previsionnelle = null;
+    
+            if ($famille === 'PROJET') {
+                $p = \App\Models\Projet::where('code_projet', $code)->first();
+                if (!$p) return $this->jsonNotFound($request, 'Projet introuvable.');
+                $previsionnelle = $p->date_demarrage_prevue;
+            } elseif ($famille === 'ETUDE') {
+                $e = \App\Models\EtudeProjet::where('code_projet_etude', $code)->first();
+                if (!$e) return $this->jsonNotFound($request, 'Étude introuvable.');
+                $previsionnelle = $e->date_debut_previsionnel;
+            } else { // APPUI
+                $a = \App\Models\AppuiProjet::where('code_projet_appui', $code)->first();
+                if (!$a) return $this->jsonNotFound($request, 'Projet d’appui introuvable.');
+                $previsionnelle = $a->date_debut_previsionnel;
             }
-
-            if ($projet->date_demarrage_prevue && $request->date_debut < $projet->date_demarrage_prevue) {
-                if ($request->expectsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La date effective ne peut pas être antérieure à la date prévisionnelle.'
-                    ], 422);
-                }
-                return redirect()->back()->with('error', 'La date effective ne peut pas être antérieure à la date prévisionnelle.');
+    
+            // 2) Garde-fou sur la date (si une prévision existe)
+            if ($previsionnelle && $request->date_debut < $previsionnelle) {
+                $msg = 'La date effective ne peut pas être antérieure à la date prévisionnelle.';
+                return $request->expectsJson()
+                    ? response()->json(['success'=>false,'message'=>$msg], 422)
+                    : redirect()->back()->with('error', $msg);
             }
-
-            // Enregistrement ou mise à jour
+    
+            DB::beginTransaction();
+    
+            // 3) Enregistrer la date effective (table unifiée)
+            // Si ta table `dates_effectives_projet` est commune aux 3 familles (ce que suggère ton code),
+            // on peut y stocker directement:
             DateEffectiveProjet::updateOrCreate(
-                ['code_projet' => $request->code_projet],
+                ['code_projet' => $code],
                 [
                     'date_debut_effective' => $request->date_debut,
                     'description'          => $request->commentaire,
                 ]
             );
-
-            // Mise à jour du statut projet
-            ProjetStatut::create([
-                'code_projet' => $request->code_projet,
-                'type_statut' => 2,
-                'date_statut' => now(),
-            ]);
-
-            // URL cible avec ecran_id
+    
+            // 4) Statut "démarré" (type_statut = 2) selon la famille
+           
+                ProjetStatut::updateOrCreate(
+                    ['code_projet' => $code, 'type_statut' => 2],
+                    ['date_statut' => now()]
+                );
+            
+            DB::commit();
+    
             $redirectUrl = route('projet.realise', ['ecran_id' => $request->ecran_id]);
-
-            // Si JSON attendu → retour JSON
+    
             if ($request->expectsJson()) {
                 return response()->json([
                     'success'      => true,
@@ -477,13 +490,13 @@ class RealiseProjetController extends Controller
                     'redirect_url' => $redirectUrl,
                 ]);
             }
-
-            // Sinon redirection classique
+    
             return redirect()->to($redirectUrl)->with('success', 'Le projet a bien été lancé avec succès.');
-
+    
         } catch (\Throwable $e) {
+            DB::rollBack();
             Log::error('Erreur lors du lancement du projet', ['error' => $e->getMessage()]);
-
+    
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -491,10 +504,17 @@ class RealiseProjetController extends Controller
                     'error'   => $e->getMessage(),
                 ], 500);
             }
-
             return redirect()->back()->with('error', 'Une erreur est survenue lors de l’enregistrement.');
         }
     }
+    
+    private function jsonNotFound(Request $request, string $msg)
+    {
+        return $request->expectsJson()
+            ? response()->json(['success'=>false,'message'=>$msg], 404)
+            : redirect()->back()->with('error', $msg);
+    }
+    
 
 
 
@@ -872,51 +892,49 @@ class RealiseProjetController extends Controller
         public function saveAvancement(Request $request)
         {
             try {
-                // 1) Validation (PAS de pourcentage_Modal ici)
                 $request->validate([
-                    'code_projet'          => 'required',
-                    'num_ordre'            => 'required|integer',
-                    // Le slider envoie un % (0..100)
-                    'quantite_reel'        => 'required|numeric|min:0|max:100',
-                    'date_avancement'      => 'required|date',
-                    'photos_avancement'    => 'nullable|array|max:15',
-                    'photos_avancement.*'  => 'nullable|image|max:5120', // 5 Mo / fichier
-                    'date_fin_effective'   => 'nullable|date',
-                    'description_finale'   => 'nullable|string|max:500',
+                    'code_projet'         => 'required',
+                    'num_ordre'           => 'required|integer',
+                    'quantite_reel'       => 'required|numeric|min:0|max:100', // slider %
+                    'date_avancement'     => 'required|date',
+                    'photos_avancement'   => 'nullable|array|max:15',
+                    'photos_avancement.*' => 'nullable|image|max:5120',
+                    'date_fin_effective'  => 'nullable|date',
+                    'description_finale'  => 'nullable|string|max:500',
+        
+                    // Nouveaux champs fichiers
+                    'livrables'           => 'nullable|array|max:10',
+                    'livrables.*'         => 'nullable|file|max:20480',             // 20 Mo
+                    'rapport_appui'       => 'nullable|file|max:20480|mimes:pdf,doc,docx,odt',
                 ]);
         
-                // 2) Récupération action & garde-fous
-                $action = ProjetActionAMener::where('code_projet', $request->code_projet)
-                    ->where('Num_ordre', $request->num_ordre)
-                    ->first();
+                $code    = (string) $request->code_projet;
+                $famille = $this->detectFamilyFromCode($code);
+                $pct     = max(0, min(100, (int) $request->quantite_reel));
+                $numOrdre = (int) $request->num_ordre;
         
-                if (!$action || (float)$action->Quantite <= 0) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La quantité prévue est introuvable ou égale à zéro.'
-                    ], 400);
+                if ($famille !== 'PROJET') {
+                    // suivi global pour APPUI / ETUDE
+                    $numOrdre = 0;
                 }
         
-                // 3) Normalise le pourcentage reçu du slider (0..100)
-                $pourcentage = (int) $request->quantite_reel;
-                $pourcentage = max(0, min(100, $pourcentage));
-        
-                // 4) Dernier état (anti-régression)
-                $stats = AvancementProjet::where('code_projet', $request->code_projet)
-                    ->where('num_ordre', $request->num_ordre)
+                // Anti-régression
+                $stats = AvancementProjet::where('code_projet', $code)
+                    ->where('num_ordre', $numOrdre)
                     ->selectRaw('MAX(pourcentage) as max_pct, MAX(date_avancement) as max_date')
                     ->first();
+        
                 $lastPct  = (int)($stats->max_pct ?? 0);
                 $lastDate = $stats->max_date ? Carbon::parse($stats->max_date) : null;
         
                 if ($lastPct >= 100) {
                     throw ValidationException::withMessages([
-                        'pourcentage' => "Cette action est déjà à 100%. Aucun nouveau suivi n'est possible."
+                        'pourcentage' => "Cette action/projet est déjà à 100%. Aucun nouveau suivi n'est possible."
                     ]);
                 }
-                if ($pourcentage <= $lastPct) {
+                if ($pct <= $lastPct) {
                     throw ValidationException::withMessages([
-                        'pourcentage' => "Le nouvel avancement ({$pourcentage}%) doit être strictement supérieur au précédent ({$lastPct}%)."
+                        'pourcentage' => "Le nouvel avancement ({$pct}%) doit être strictement supérieur au précédent ({$lastPct}%)."
                     ]);
                 }
                 if ($lastDate && Carbon::parse($request->date_avancement)->lt($lastDate)) {
@@ -925,85 +943,166 @@ class RealiseProjetController extends Controller
                     ]);
                 }
         
-                // 5) Calcule quantité réelle à partir du %
-                $quantitePrevue = (float) $action->Quantite;
-                $quantiteReelle = round(($pourcentage / 100) * $quantitePrevue, 4);
-        
                 DB::beginTransaction();
         
-                // 6) Crée l’avancement (sans photos au départ)
                 $payload = [
-                    'code_projet'        => $request->code_projet,
-                    'num_ordre'          => $request->num_ordre,
-                    // On garde le champ existant "quantite" = prévue (pour compat)
-                    'quantite'           => $quantitePrevue,
-                    'pourcentage'        => $pourcentage,
-                    'date_avancement'    => $request->date_avancement,
-                    'photos'             => null,
-                    'date_fin_effective' => null,
-                    'description_finale' => null,
-                    'code_acteur'        => auth()->user()->acteur_id ?? null,
+                    'code_projet'     => $code,
+                    'num_ordre'       => $numOrdre,
+                    'quantite'        => 0, // compat (on mettra la vraie quantité pour PROJET)
+                    'pourcentage'     => $pct,
+                    'date_avancement' => $request->date_avancement,
+                    'photos'          => null,
+                    'code_acteur'     => auth()->user()->acteur_id ?? null,
                 ];
         
-                // Si la colonne quantite_reelle existe, on la remplit aussi
-                try {
-                    if (Schema::hasColumn((new AvancementProjet)->getTable(), 'quantite_reelle')) {
-                        $payload['quantite_reelle'] = $quantiteReelle;
+                if ($famille === 'PROJET') {
+                    $action = ProjetActionAMener::where('code_projet', $code)
+                        ->where('Num_ordre', $numOrdre)
+                        ->first();
+        
+                    if (!$action || (float) $action->Quantite <= 0) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'La quantité prévue est introuvable ou égale à zéro.'
+                        ], 400);
                     }
-                } catch (\Throwable $e) {
-                    // ignore si pas de connexion schema en prod
+        
+                    $payload['quantite'] = (float) $action->Quantite;
+        
+                    // Si la colonne existe, renseigner la quantité réelle
+                    try {
+                        if (Schema::hasColumn((new AvancementProjet)->getTable(), 'quantite_reelle')) {
+                            $payload['quantite_reelle'] = round(($pct / 100) * (float) $action->Quantite, 4);
+                        }
+                    } catch (\Throwable $e) {}
+                } else {
+                    // APPUI / ETUDE : base 100
+                    try {
+                        if (Schema::hasColumn((new AvancementProjet)->getTable(), 'quantite_reelle')) {
+                            $payload['quantite_reelle'] = $pct; // 100 = terminé
+                        }
+                    } catch (\Throwable $e) {}
                 }
         
                 $avancement = AvancementProjet::create($payload);
         
-                // 7) Upload photos (GridFS / Storage) + MAJ colonne photos (CSV d’IDs)
-                $photoIds = [];
+                // ---------- UPLOAD PHOTOS ----------
+                $photoPaths = [];
                 if ($request->hasFile('photos_avancement')) {
+                    $baseDir = public_path(
+                        'Data' . DIRECTORY_SEPARATOR . 'avancement' . DIRECTORY_SEPARATOR .
+                        $famille . DIRECTORY_SEPARATOR . $code . DIRECTORY_SEPARATOR .
+                        date('Y') . DIRECTORY_SEPARATOR . date('m')
+                    );
+        
+                    if (!is_dir($baseDir)) {
+                        @mkdir($baseDir, 0775, true);
+                    }
+        
                     foreach ($request->file('photos_avancement') as $photo) {
                         if (!$photo || !$photo->isValid()) continue;
         
-                        $res = app(FileProcService::class)->handle([
-                            'owner_type'  => 'Projet',
-                            'owner_id'    => (string)$request->code_projet,
-                            'categorie'   => 'AVANCEMENT_PHOTO',
-                            'file'        => $photo,
-                            'uploaded_by' => optional($request->user())->id,
-                        ]);
+                        $ext = strtolower($photo->getClientOriginalExtension() ?: $photo->extension() ?: 'jpg');
+                        $safeExt = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? $ext : 'jpg';
         
-                        if (empty($res['id'])) {
-                            throw new \RuntimeException('Échec upload photo.');
-                        }
-                        $photoIds[] = (string)$res['id'];
+                        $fileName = time() . '_' . Str::random(10) . '.' . $safeExt;
+                        $photo->move($baseDir, $fileName);
+        
+                        $relative = 'Data/avancement/' . $famille . '/' . $code . '/' . date('Y') . '/' . date('m') . '/' . $fileName;
+                        $photoPaths[] = $relative;
                     }
                 }
-                if ($photoIds) {
-                    $avancement->photos = implode(',', $photoIds);
+        
+                if ($photoPaths) {
+                    $avancement->photos = implode(',', $photoPaths);
                     $avancement->save();
                 }
         
-                // 8) Finalisation si 100%
-                if ($pourcentage >= 100) {
+                // ---------- UPLOAD LIVRABLES (ETUDE, quand 100%) ----------
+                if ($famille === 'ETUDE' && $pct >= 100 && $request->hasFile('livrables')) {
+                    $livrablesPaths = [];
+        
+                    $baseDir = public_path(
+                        'Data' . DIRECTORY_SEPARATOR . 'livrables' . DIRECTORY_SEPARATOR .
+                        'ETUDE' . DIRECTORY_SEPARATOR . $code . DIRECTORY_SEPARATOR .
+                        date('Y') . DIRECTORY_SEPARATOR . date('m')
+                    );
+                    if (!is_dir($baseDir)) {
+                        @mkdir($baseDir, 0775, true);
+                    }
+        
+                    foreach ($request->file('livrables') as $file) {
+                        if (!$file || !$file->isValid()) continue;
+        
+                        $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+                        $fileName = time() . '_' . Str::random(10) . '.' . $ext;
+                        $file->move($baseDir, $fileName);
+        
+                        $relative = 'Data/livrables/ETUDE/' . $code . '/' . date('Y') . '/' . date('m') . '/' . $fileName;
+                        $livrablesPaths[] = $relative;
+                    }
+        
+                    if (!empty($livrablesPaths)) {
+                        try {
+                            if (Schema::hasColumn((new AvancementProjet)->getTable(), 'livrables')) {
+                                $avancement->livrables = implode(',', $livrablesPaths);
+                                $avancement->save();
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('Colonne livrables absente ou erreur de sauvegarde', ['err' => $e->getMessage()]);
+                        }
+                    }
+                }
+        
+                // ---------- UPLOAD RAPPORT (APPUI) ----------
+                if ($famille === 'APPUI' && $request->hasFile('rapport_appui')) {
+                    $rapport = $request->file('rapport_appui');
+                    if ($rapport && $rapport->isValid()) {
+        
+                        $baseDir = public_path(
+                            'Data' . DIRECTORY_SEPARATOR . 'rapports' . DIRECTORY_SEPARATOR .
+                            'APPUI' . DIRECTORY_SEPARATOR . $code . DIRECTORY_SEPARATOR .
+                            date('Y') . DIRECTORY_SEPARATOR . date('m')
+                        );
+                        if (!is_dir($baseDir)) {
+                            @mkdir($baseDir, 0775, true);
+                        }
+        
+                        $ext = strtolower($rapport->getClientOriginalExtension() ?: $rapport->extension() ?: 'pdf');
+                        $fileName = time() . '_' . Str::random(10) . '.' . $ext;
+                        $rapport->move($baseDir, $fileName);
+        
+                        $relative = 'Data/rapports/APPUI/' . $code . '/' . date('Y') . '/' . date('m') . '/' . $fileName;
+        
+                        try {
+                            if (Schema::hasColumn((new AvancementProjet)->getTable(), 'rapport_appui')) {
+                                $avancement->rapport_appui = $relative;
+                                $avancement->save();
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('Colonne rapport_appui absente ou erreur de sauvegarde', ['err' => $e->getMessage()]);
+                        }
+                    }
+                }
+        
+                // ---------- Finalisation à 100% ----------
+                if ($pct >= 100) {
                     if (!$request->date_fin_effective) {
                         throw ValidationException::withMessages([
-                            'date_fin_effective' => 'La date de fin effective est obligatoire pour clôturer.'
+                            'date_fin_effective' => 'La date effective de fin est obligatoire pour clôturer.'
                         ]);
                     }
         
                     ProjetStatut::updateOrCreate(
-                        ['code_projet' => $request->code_projet, 'type_statut' => 3], 
+                        ['code_projet' => $code, 'type_statut' => 3],
                         ['date_statut' => now()]
                     );
         
                     DateEffectiveProjet::updateOrCreate(
-                        ['code_projet' => $request->code_projet],
+                        ['code_projet' => $code],
                         ['date_fin_effective' => $request->date_fin_effective]
                     );
-        
-                    // Flag infra si liée
-                    if (!empty($action->infrastructure_idCode)) {
-                        Infrastructure::where('code', $action->infrastructure_idCode)
-                            ->update(['isOver' => true]);
-                    }
         
                     $avancement->update([
                         'date_fin_effective' => $request->date_fin_effective,
@@ -1021,135 +1120,105 @@ class RealiseProjetController extends Controller
                     'errors'  => $ve->errors(),
                 ], 422);
             } catch (\Throwable $e) {
-                Log::error('Erreur lors de l’enregistrement de l’avancement', [
-                    'exception'    => $e->getMessage(),
-                    'code_projet'  => $request->code_projet ?? null,
-                    'num_ordre'    => $request->num_ordre ?? null,
-                    'trace'        => $e->getTraceAsString(),
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Une erreur est survenue lors de l’enregistrement.'
-                ], 500);
+                DB::rollBack();
+                Log::error('Erreur lors de saveAvancement', ['error' => $e->getMessage()]);
+                return response()->json(['success' => false, 'message' => 'Une erreur est survenue lors de l’enregistrement.'], 500);
             }
         }
         
         public function deleteSuivi($id)
         {
-            // 0) Récupération + autorisation
             $suivi = AvancementProjet::findOrFail($id);
         
-            // TODO: Policy/Gate si tu en as une
-            // $this->authorize('delete', $suivi);
+            // 1) Supprimer fichiers physiques (photos, livrables, rapport)
+            $paths = [];
         
-            // 1) Suppression des fichiers AVANT la transaction DB
-            //    - évite d'avoir une DB "propre" et des blobs orphelins
-            $photoIds = [];
             if (!empty($suivi->photos)) {
-                $photoIds = array_values(array_filter(array_map('trim', explode(',', (string) $suivi->photos))));
+                $paths = array_merge($paths, array_values(array_filter(array_map('trim', explode(',', (string) $suivi->photos)))));
+            }
+            if (!empty($suivi->livrables)) {
+                $paths = array_merge($paths, array_values(array_filter(array_map('trim', explode(',', (string) $suivi->livrables)))));
+            }
+            if (!empty($suivi->rapport_appui)) {
+                $paths[] = (string) $suivi->rapport_appui;
             }
         
-            try {
-                foreach ($photoIds as $pid) {
-                    try {
-                        // Doit tolérer les fichiers déjà supprimés côté stockage
-                        app(FileProcService::class)->delete($pid);
-                    } catch (\Throwable $e) {
-                        // Si c'est un "not found" tolérable, log en warning et continue.
-                        // Sinon, si c'est un vrai échec de stockage, on ABANDONNE pour éviter l’incohérence.
-                        Log::warning("Suppression fichier avancement: $pid échouée", ['error' => $e->getMessage()]);
-                        // -> Si tu veux être strict et ABORTER :
-                        // throw new \RuntimeException("Impossible de supprimer la pièce jointe $pid");
-                    }
+            foreach ($paths as $rel) {
+                if (!$rel) continue;
+                $abs = public_path($rel);
+                try {
+                    if (is_file($abs)) @unlink($abs);
+                } catch (\Throwable $e) {
+                    Log::warning("Suppression fichier échouée", ['path' => $abs, 'err' => $e->getMessage()]);
                 }
-            } catch (\Throwable $e) {
-                Log::error("Suppression des pièces jointe interrompue", ['id' => $id, 'error' => $e->getMessage()]);
-                return response()->json([
-                    'success' => false,
-                    'message' => "Impossible de supprimer les pièces jointes de ce suivi. Suppression annulée."
-                ], 500);
             }
         
-            // 2) Transaction DB : suppression + remise en cohérence
             DB::beginTransaction();
             try {
                 $codeProjet = $suivi->code_projet;
                 $numOrdre   = $suivi->num_ordre;
         
-                // Pour recalculs après suppression :
-                // On récupère l'action et l'infrastructure liée
+                // Récupère action liée (PROJET)
                 $action = ProjetActionAMener::where('code_projet', $codeProjet)
                     ->where('Num_ordre', $numOrdre)
                     ->first();
         
-                $infraCode = $action?->infrastructure_idCode;
-        
-                // (a) Supprimer le suivi
+                // (a) Supprime le suivi
                 $suivi->delete();
         
-                // (b) Recalculer l’avancement max de l’action concernée
-                $maxPctAction = AvancementProjet::where('code_projet', $codeProjet)
+                // (b) Recalcule avancement max de l'action (optionnel : à ta convenance)
+                $maxPctAction = (int) AvancementProjet::where('code_projet', $codeProjet)
                     ->where('num_ordre', $numOrdre)
-                    ->max('pourcentage') ?? 0;
+                    ->max('pourcentage');
         
-                // (c) Si une infrastructure est liée, recalculer son "isOver"
-                if (!empty($infraCode)) {
-                    // Une infra est "over" si TOUTES ses actions associées au projet ont un dernier avancement à 100
+                // (c) Si infra liée → recalcul isOver (toutes actions sur la même infra à 100)
+                if ($action && $action->Infrastrucrues_id) {
+                    $infraId = $action->Infrastrucrues_id;
+        
                     $actionsInfra = ProjetActionAMener::where('code_projet', $codeProjet)
-                        ->where('infrastructure_idCode', $infraCode)
+                        ->where('Infrastrucrues_id', $infraId)
                         ->pluck('Num_ordre');
         
                     $all100 = true;
                     foreach ($actionsInfra as $ord) {
-                        $pct = AvancementProjet::where('code_projet', $codeProjet)
+                        $pct = (int) AvancementProjet::where('code_projet', $codeProjet)
                             ->where('num_ordre', $ord)
-                            ->max('pourcentage') ?? 0;
-        
-                        if ((int)$pct < 100) {
-                            $all100 = false;
-                            break;
-                        }
+                            ->max('pourcentage');
+                        if ($pct < 100) { $all100 = false; break; }
                     }
         
-                    Infrastructure::where('code', $infraCode)->update(['isOver' => $all100]);
+                    Infrastructure::where('id', $infraId)->update(['isOver' => $all100]);
                 }
         
-                // (d) Recalculer la finalisation du PROJET (optionnel mais recommandé)
-                //     Projet "terminé" si TOUTES ses actions ont un dernier % = 100
-                $ordresProjet = ProjetActionAMener::where('code_projet', $codeProjet)->pluck('Num_ordre');
+                // (d) Recalcule la finalisation projet
+                $famille = $this->detectFamilyFromCode($codeProjet);
+                $projectAll100 = false;
         
-                $projectAll100 = true;
-                foreach ($ordresProjet as $ord) {
-                    $pct = AvancementProjet::where('code_projet', $codeProjet)
-                        ->where('num_ordre', $ord)
-                        ->max('pourcentage') ?? 0;
-        
-                    if ((int)$pct < 100) {
-                        $projectAll100 = false;
-                        break;
+                if ($famille === 'PROJET') {
+                    $ordres = ProjetActionAMener::where('code_projet', $codeProjet)->pluck('Num_ordre');
+                    $projectAll100 = true;
+                    foreach ($ordres as $ord) {
+                        $pct = (int) AvancementProjet::where('code_projet', $codeProjet)
+                            ->where('num_ordre', $ord)
+                            ->max('pourcentage');
+                        if ($pct < 100) { $projectAll100 = false; break; }
                     }
+                } else {
+                    // APPUI / ETUDE : suivi global (num_ordre = 0)
+                    $pct = (int) AvancementProjet::where('code_projet', $codeProjet)
+                        ->where('num_ordre', 0)
+                        ->max('pourcentage');
+                    $projectAll100 = ($pct >= 100);
                 }
         
                 if ($projectAll100) {
-                    // Le projet reste finalisé : s’assurer du statut/date OK (no-op)
                     ProjetStatut::updateOrCreate(
                         ['code_projet' => $codeProjet, 'type_statut' => 3],
                         ['date_statut' => now()]
                     );
-                    // On ne touche pas DateEffectiveProjet ici (ou on la conserve telle quelle)
                 } else {
-                    // Le projet n'est plus "terminé" suite à cette suppression :
-                    // - soit on supprime le statut 7
-                    // - soit on le rétrograde (selon ta gouvernance)
-                    ProjetStatut::where('code_projet', $codeProjet)
-                        ->where('type_statut', 3)
-                        ->delete();
-        
-                    // Option : effacer la date effective si plus de 100% nulle part
-                    // (à confirmer avec ta règle métier)
-                    DateEffectiveProjet::where('code_projet', $codeProjet)
-                        ->update(['date_fin_effective' => null]);
+                    ProjetStatut::where('code_projet', $codeProjet)->where('type_statut', 3)->delete();
+                    DateEffectiveProjet::where('code_projet', $codeProjet)->update(['date_fin_effective' => null]);
                 }
         
                 DB::commit();
@@ -1157,75 +1226,411 @@ class RealiseProjetController extends Controller
         
             } catch (\Throwable $e) {
                 DB::rollBack();
-                Log::error("Erreur lors de la suppression du suivi", [
-                    'id' => $id,
-                    'error' => $e->getMessage()
-                ]);
-        
-                return response()->json([
-                    'success' => false,
-                    'message' => "Impossible de supprimer ce suivi."
-                ], 500);
+                Log::error("Erreur suppression suivi", ['id' => $id, 'err' => $e->getMessage()]);
+                return response()->json(['success' => false, 'message' => "Impossible de supprimer ce suivi."], 500);
             }
         }
+        
         
         public function getDonneesFormulaireSimplifie(Request $request)
         {
             $code_projet = $request->input('code_projet');
-            $num_ordre = $request->input('num_ordre');
-
-            if (!$code_projet || !$num_ordre) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Paramètres manquants.'
-                ], 400);
+            $num_ordre   = (int) $request->input('num_ordre');
+        
+            if (!$code_projet) {
+                return response()->json(['success'=>false,'message'=>'Paramètres manquants.'], 400);
             }
-
-            $data = DB::table('projet_action_a_mener as pam')
-                ->leftJoin('projets_naturetravaux as pnt', 'pam.code_projet', '=', 'pnt.code_projet')
-                ->leftJoin('nature_traveaux as nt', 'nt.code', '=', 'pnt.code_nature')
-                ->leftJoin('dates_effectives_projet as dde', 'pam.code_projet', '=', 'dde.code_projet')
-                ->where('pam.code_projet', $code_projet)
-                ->where('pam.Num_ordre', $num_ordre)
-                ->select(
-                    'pam.Quantite',
-                    'nt.libelle as nature_travaux',
-                    'dde.date_debut_effective as date_debut_effective'
-                )
-                ->first();
-
-            if (!$data) {
+        
+            $type = $this->detectFamilyFromCode($code_projet);
+        
+            if ($type === 'PROJET') {
+                // logique existante (légèrement consolidée)
+                $data = DB::table('projet_action_a_mener as pam')
+                    ->leftJoin('projets_naturetravaux as pnt', 'pam.code_projet', '=', 'pnt.code_projet')
+                    ->leftJoin('nature_traveaux as nt', 'nt.code', '=', 'pnt.code_nature')
+                    ->leftJoin('dates_effectives_projet as dep', 'pam.code_projet', '=', 'dep.code_projet')
+                    ->where('pam.code_projet', $code_projet)
+                    ->where('pam.Num_ordre', $num_ordre)
+                    ->select(
+                        'pam.Quantite',
+                        'nt.libelle as nature_travaux',
+                        'dep.date_debut_effective as date_debut_effective'
+                    )
+                    ->first();
+        
+                if (!$data) {
+                    return response()->json(['success'=>false,'message'=>'Aucune donnée trouvée.'], 404);
+                }
+        
+                // dernier %
+                $lastPct = (int) AvancementProjet::where('code_projet', $code_projet)
+                    ->where('num_ordre', $num_ordre)
+                    ->max('pourcentage');
+        
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Aucune donnée trouvée pour ce projet et numéro d’ordre.'
-                ], 404);
+                    'success' => true,
+                    'result' => [
+                        'Quantite'             => $data->Quantite,
+                        'nature_travaux'       => $data->nature_travaux,
+                        'date_debut_effective' => $data->date_debut_effective,
+                        'dernier_pourcentage'  => $lastPct,
+                    ]
+                ]);
             }
-
+        
+            // APPUI / ETUDE → suivi global (num_ordre = 0)
+            $dateDebut = DateEffectiveProjet::where('code_projet', $code_projet)->value('date_debut_effective');
+            $lastPct   = (int) AvancementProjet::where('code_projet', $code_projet)
+                            ->where('num_ordre', 0)
+                            ->max('pourcentage');
+        
             return response()->json([
                 'success' => true,
-                'result' => $data
+                'result' => [
+                    'Quantite'             => 100,                          // base 100
+                    'nature_travaux'       => 'Suivi global',
+                    'date_debut_effective' => $dateDebut,
+                    'dernier_pourcentage'  => $lastPct,
+                ]
             ]);
         }
+        
 
 
         public function verifierProjetFinalisable(Request $request)
         {
-            $code_projet = $request->code_projet;
+            $code = (string)$request->code_projet;
+            $famille = $this->detectFamilyFromCode($code);
+        
+            if ($famille === 'PROJET') {
+                $actions = ProjetActionAMener::where('code_projet', $code)->pluck('Num_ordre');
+                $nonCompletes = AvancementProjet::where('code_projet', $code)
+                    ->whereIn('num_ordre', $actions)
+                    ->select('num_ordre', DB::raw('MAX(pourcentage) as max_pourcentage'))
+                    ->groupBy('num_ordre')
+                    ->havingRaw('max_pourcentage < 100')
+                    ->count();
+                return response()->json(['finalisable' => $nonCompletes == 0]);
+            }
+        
+            // APPUI / ETUDE → suivi global
+            $pct = (int) AvancementProjet::where('code_projet', $code)
+                ->where('num_ordre', 0)
+                ->max('pourcentage');
+            return response()->json(['finalisable' => $pct >= 100]);
+        }
+                
+        // ⬇️ Remplace ta méthode optionsProjets par celle-ci
 
-            $actions = ProjetActionAMener::where('code_projet', $code_projet)->pluck('Num_ordre');
+        public function optionsProjets(Request $request)
+        {
+            $type   = strtoupper((string) $request->query('type', 'PROJET'));
+            $statut = (int) $request->query('statut', 1); // 1 = Prévu (démarrage), 2 = En cours (suivi)
+            if (!in_array($type, ['PROJET','ETUDE','APPUI'], true)) {
+                return response()->json([]);
+            }
 
-            $nonCompletes = AvancementProjet::where('code_projet', $code_projet)
-                ->whereIn('num_ordre', $actions)
-                ->select('num_ordre', DB::raw('MAX(pourcentage) as max_pourcentage'))
-                ->groupBy('num_ordre')
-                ->havingRaw('max_pourcentage < 100')
-                ->count();
+            $country = (string) session('pays_selectionne');
+            $group   = (string) session('projet_selectionne');
+            if ($country === '' || $group === '') return response()->json([]);
 
-            return response()->json([
-                'finalisable' => $nonCompletes == 0
-            ]);
+            $prefixProjet = $country.$group.'%';
+            $prefixEtude  = 'ET_'.$country.'_'.$group.'%';
+            $prefixAppui  = 'APPUI_'.$country.'_'.$group.'%';
+
+            $byDernierStatut = fn($q) => $q->where('type_statut', $statut);
+
+            if ($type === 'ETUDE') {
+                $rows = \App\Models\EtudeProjet::query()
+                    ->selectRaw('etude_projets.code_projet_etude as code, etude_projets.intitule as label')
+                    ->where('etude_projets.code_pays', $country)
+                    ->where('etude_projets.code_projet_etude','like',$prefixEtude)
+                    ->whereHas('dernierStatut', $byDernierStatut)
+                    ->orderBy('etude_projets.code_projet_etude')
+                    ->get();
+                return response()->json($rows);
+            }
+
+            if ($type === 'APPUI') {
+                $rows = \App\Models\AppuiProjet::query()
+                    ->selectRaw('appui_projets.code_projet_appui as code, appui_projets.intitule as label')
+                    ->where('appui_projets.code_pays', $country)
+                    ->where('appui_projets.code_projet_appui','like',$prefixAppui)
+                    ->whereHas('dernierStatut', $byDernierStatut)
+                    ->orderBy('appui_projets.code_projet_appui')
+                    ->get();
+                return response()->json($rows);
+            }
+
+            $rows = \App\Models\Projet::query()
+                ->selectRaw('projets.code_projet as code, projets.libelle_projet as label')
+                ->where('projets.code_alpha3_pays', $country)
+                ->where('projets.code_projet','like',$prefixProjet)
+                ->whereHas('dernierStatut', $byDernierStatut)
+                ->orderBy('projets.code_projet')
+                ->get();
+
+            return response()->json($rows);
+        }
+
+        private function detectFamilyFromCode(string $code): string
+        {
+            if (str_starts_with($code, 'ET_'))     return 'ETUDE';
+            if (str_starts_with($code, 'APPUI_'))  return 'APPUI';
+            return 'PROJET';
+        }
+        /**
+         * Renvoie un "card view model" commun, inspiré de getProjetCard…
+         * {
+         *   code_projet, libelle_projet, nature, domaine, sousDomaine,
+         *   cout, devise, date_demarrage_prevue, date_fin_prevue
+         * }
+         */
+        private function buildUnifiedProjectCard(string $code): ?array
+        {
+            $famille = $this->detectFamilyFromCode($code);
+
+            if ($famille === 'PROJET') {
+                $p = \App\Models\Projet::with(['statuts.statut','sousDomaine.Domaine','devise'])
+                    ->where('code_projet', $code)->first();
+                if (!$p) return null;
+
+                return [
+                    'code_projet'            => $p->code_projet,
+                    'libelle_projet'         => $p->libelle_projet,
+                    'nature'                 => $p->statuts?->statut?->libelle,
+                    'domaine'                => $p->sousDomaine?->Domaine?->libelle,
+                    'sousDomaine'            => $p->sousDomaine?->lib_sous_domaine ?? $p->sousDomaine?->libelle,
+                    'cout'                   => $p->cout_projet,
+                    'devise'                 => $p->devise?->code_long ?? $p->code_devise,
+                    'date_demarrage_prevue'  => $p->date_demarrage_prevue,
+                    'date_fin_prevue'        => $p->date_fin_prevue,
+                ];
+            }
+
+            if ($famille === 'ETUDE') {
+                $e = \App\Models\EtudeProjet::with(['statuts.statut','sousDomaine.Domaine'])
+                    ->where('code_projet_etude', $code)->first();
+                if (!$e) return null;
+
+                return [
+                    'code_projet'            => $e->code_projet_etude,
+                    'libelle_projet'         => $e->intitule,
+                    'nature'                 => $e->statuts?->statut?->libelle,
+                    'domaine'                => $e->sousDomaine?->Domaine?->libelle,
+                    'sousDomaine'            => $e->sousDomaine?->lib_sous_domaine ?? $e->sousDomaine?->libelle,
+                    'cout'                   => $e->montant_budget_previsionnel,
+                    'devise'                 => $e->code_devise,
+                    'date_demarrage_prevue'  => $e->date_debut_previsionnel,
+                    'date_fin_prevue'        => $e->date_fin_previsionnel,
+                ];
+            }
+
+            // APPUI
+            $a = \App\Models\AppuiProjet::with(['statuts.statut','sousDomaine.Domaine'])
+                ->where('code_projet_appui', $code)->first();
+            if (!$a) return null;
+
+            return [
+                'code_projet'            => $a->code_projet_appui,
+                'libelle_projet'         => $a->intitule,
+                'nature'                 => $a->statuts?->statut?->libelle,
+                'domaine'                => $a->sousDomaine?->Domaine?->libelle,
+                'sousDomaine'            => $a->sousDomaine?->lib_sous_domaine ?? $a->sousDomaine?->libelle,
+                'cout'                   => $a->montant_budget_previsionnel,
+                'devise'                 => $a->code_devise,
+                'date_demarrage_prevue'  => $a->date_debut_previsionnel,
+                'date_fin_prevue'        => $a->date_fin_previsionnel,
+            ];
+        }
+        public function listeProjetsByType(Request $request)
+        {
+            $type = strtoupper((string)$request->query('type', 'PROJET'));
+            if (!in_array($type, ['PROJET','ETUDE','APPUI'], true)) {
+                return response()->json([]);
+            }
+        
+            $country = (string) session('pays_selectionne');
+            $group   = (string) session('projet_selectionne');
+            if ($country === '' || $group === '') return response()->json([]);
+        
+            $prefixProjet = $country.$group.'%';
+            $prefixEtude  = 'ET_'.$country.'_'.$group.'%';
+            $prefixAppui  = 'APPUI_'.$country.'_'.$group.'%';
+        
+            // Dernier statut = 1 (Prévu). Tu peux élargir si besoin.
+            if ($type === 'ETUDE') {
+                $rows = \App\Models\EtudeProjet::query()
+                    ->with(['sousDomaine.Domaine'])
+                    ->where('code_pays',$country)
+                    ->where('code_projet_etude','like',$prefixEtude)
+                    ->whereHas('dernierStatut', fn($q)=>$q->where('type_statut',1))
+                    ->orderBy('code_projet_etude')
+                    ->get()
+                    ->map(function($e){
+                        return [
+                            'code'    => $e->code_projet_etude,
+                            'domaine' => $e->sousDomaine?->Domaine?->libelle,
+                            'date_debut' => $e->date_debut_previsionnel,
+                            'date_fin'   => $e->date_fin_previsionnel,
+                            'cout'    => $e->montant_budget_previsionnel,
+                            'devise'  => $e->code_devise,
+                            'statut'  => $e->dernierStatut?->statut?->libelle ?? 'Prévu',
+                        ];
+                    });
+        
+                return response()->json($rows);
+            }
+        
+            if ($type === 'APPUI') {
+                $rows = \App\Models\AppuiProjet::query()
+                    ->with(['sousDomaine.Domaine'])
+                    ->where('code_pays',$country)
+                    ->where('code_projet_appui','like',$prefixAppui)
+                    ->whereHas('dernierStatut', fn($q)=>$q->where('type_statut',1))
+                    ->orderBy('code_projet_appui')
+                    ->get()
+                    ->map(function($a){
+                        return [
+                            'code'    => $a->code_projet_appui,
+                            'domaine' => $a->sousDomaine?->Domaine?->libelle,
+                            'date_debut' => $a->date_debut_previsionnel,
+                            'date_fin'   => $a->date_fin_previsionnel,
+                            'cout'    => $a->montant_budget_previsionnel,
+                            'devise'  => $a->code_devise,
+                            'statut'  => $a->dernierStatut?->statut?->libelle ?? 'Prévu',
+                        ];
+                    });
+        
+                return response()->json($rows);
+            }
+        
+            // PROJET
+            $rows = \App\Models\Projet::query()
+                ->with(['sousDomaine.Domaine','devise','statuts.statut'])
+                ->where('code_alpha3_pays',$country)
+                ->where('code_projet','like',$prefixProjet)
+                ->whereHas('dernierStatut', fn($q)=>$q->where('type_statut',1))
+                ->orderBy('code_projet')
+                ->get()
+                ->map(function($p){
+                    return [
+                        'code'    => $p->code_projet,
+                        'domaine' => $p->sousDomaine?->Domaine?->libelle,
+                        'date_debut' => $p->date_demarrage_prevue,
+                        'date_fin'   => $p->date_fin_prevue,
+                        'cout'    => $p->cout_projet,
+                        'devise'  => $p->devise?->code_long ?? $p->code_devise,
+                        'statut'  => $p->statuts?->statut?->libelle ?? 'Prévu',
+                    ];
+                });
+        
+            return response()->json($rows);
+        }
+        public function projectCard(string $code)
+        {
+            $card = $this->buildUnifiedProjectCard($code);
+            if (!$card) {
+                return response()->json(null, 404);
+            }
+            return response()->json($card);
+        }
+        
+        // ⬇️ Remplace beneficiairesAppui par cette version
+
+        public function beneficiairesAppui(string $code_appui)
+        {
+            $appui = \App\Models\AppuiProjet::with([
+                'projets.beneficiairesActeurs.acteur',
+                'projets.beneficiairesLocalites.localite',
+                'projets.beneficiairesInfrastructures.infrastructure',
+            ])->where('code_projet_appui', $code_appui)->first();
+
+            if (!$appui) return response()->json([], 404);
+
+            $list = collect();
+
+            foreach ($appui->projets as $p) {
+                foreach ($p->beneficiairesActeurs as $b) {
+                    if ($b->acteur) {
+                        $list->push([
+                            'code'   => $b->acteur->code_acteur,
+                            'type'   => 'acteur',
+                            'libelle'=> $b->acteur->libelle_long ?? $b->acteur->libelle_court ?? '',
+                            'projet_source' => ['code'=>$p->code_projet,'libelle'=>$p->libelle_projet],
+                        ]);
+                    }
+                }
+                foreach ($p->beneficiairesLocalites as $b) {
+                    if ($b->localite) {
+                        $list->push([
+                            'code'   => $b->localite->code_decoupage ?? $b->localite->code_rattachement,
+                            'type'   => 'localite',
+                            'libelle'=> $b->localite->libelle ?? '',
+                            'projet_source' => ['code'=>$p->code_projet,'libelle'=>$p->libelle_projet],
+                        ]);
+                    }
+                }
+                foreach ($p->beneficiairesInfrastructures as $b) {
+                    if ($b->infrastructure) {
+                        $list->push([
+                            'code'   => $b->infrastructure->code,
+                            'type'   => 'infrastructure',
+                            'libelle'=> $b->infrastructure->libelle ?? '',
+                            'projet_source' => ['code'=>$p->code_projet,'libelle'=>$p->libelle_projet],
+                        ]);
+                    }
+                }
+            }
+
+            return response()->json($list->unique(fn($x)=>$x['type'].'#'.$x['code'])->values());
         }
 
 
+        public function fetchProjectDetails(Request $request)
+        {
+            $code_projet = (string) $request->code_projet;
+            $type = $this->detectFamilyFromCode($code_projet);
+        
+            $card = $this->buildUnifiedProjectCard($code_projet); // ta méthode unifiée si déjà ajoutée
+            if (!$card) {
+                return response()->json(['message' => 'Projet introuvable.'], 404);
+            }
+        
+            // Par défaut : pas d’actions
+            $actions = collect();
+        
+            if ($type === 'PROJET') {
+                $actions = \App\Models\ProjetActionAMener::with('infrastructure','actionMener')
+                    ->where('code_projet', $code_projet)
+                    ->get()
+                    ->map(function ($action) {
+                        return [
+                            'code'                  => $action->code,
+                            'Num_ordre'             => $action->Num_ordre,
+                            'action_libelle'        => $action->actionMener?->libelle,
+                            'Quantite'              => $action->Quantite,
+                            'Infrastrucrues_id'     => $action->Infrastrucrues_id,
+                            'infrastructure_idCode' => $action->infrastructure?->id,
+                            'infrastructure_libelle'=> $action->infrastructure?->libelle,
+                        ];
+                    });
+            }
+        
+            return response()->json([
+                'type'        => $type,
+                'codeProjet'  => $card['code_projet'],
+                'date_debut'  => $card['date_demarrage_prevue'],
+                'date_fin'    => $card['date_fin_prevue'],
+                'cout'        => $card['cout'],
+                'statutInput' => $card['nature'] ?? 'Prévu',
+                'devise'      => $card['devise'],
+                'libelle_projet' => $card['libelle_projet'],
+                'domaine'        => $card['domaine'],
+                'sousDomaine'    => $card['sousDomaine'],
+                'actions'     => $actions, // vide pour ETUDE/APPUI
+            ]);
+        }
+        
 }
 

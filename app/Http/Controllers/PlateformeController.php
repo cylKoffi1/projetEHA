@@ -550,7 +550,7 @@ class PlateformeController extends Controller
         {
            $ecran = Ecran::find($request->input('ecran_id'));
             $actionMener = ActionMener::orderBy('libelle', 'asc')->get();
-            return view('parGeneraux.actionmener', ['actionMener' => $actionMener,  'ecran' => $ecran]);
+            return view('parGeneraux.actionmener', compact('actionMener',  'ecran'));
         }
 
 

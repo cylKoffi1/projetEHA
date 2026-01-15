@@ -16,14 +16,14 @@ class GroupeProjet extends Model
     protected $primaryKey = 'code';
     public $incrementing = false;
 
-    protected $fillable = ['code', 'libelle'];
+    protected $fillable = ['code', 'libelle', 'icon', 'icon_color'];
 
     /**
      * Récupère les utilisateurs associés à ce groupe projet.
      */
     public function utilisateurs()
     {
-        return $this->hasMany(GroupeProjetPaysUser::class, 'groupe_projet_id', 'id');
+        return $this->hasMany(GroupeProjetPaysUser::class, 'groupe_projet_id', 'code');
     }
 
     /**
